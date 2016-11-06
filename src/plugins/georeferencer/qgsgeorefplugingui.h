@@ -39,6 +39,8 @@ class QgsPoint;
 class QgsRasterLayer;
 class QgsRectangle;
 class QgsMessageBar;
+// mj10777
+class QgsVectorLayer;
 
 class QgsGeorefDockWidget : public QgsDockWidget
 {
@@ -156,6 +158,23 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     void saveGCPs();
     QgsGeorefPluginGui::SaveGCPs checkNeedGCPSave();
 
+    // mj10777
+    int i_gcp_srid;
+    QString s_gcp_authid;
+    QString s_gcp_description;
+    QString s_gcp_points_table_name;
+    int id_gcp_coverage;
+    bool isGCPDb();
+    bool createGCPDb();
+    bool updateGCPDb(QString s_coverage_name);
+    bool b_spatialite_gcp_enabled;
+    // mj10777: add gui logic for this and store in setting
+    bool b_gdalscript_or_gcp_list;
+    // mj10777: add gui logic for this and store in setting
+    bool b_points_or_spatialite_gcp;
+    QString mError;
+    QgsGeorefTransform mTransformType;
+
     // georeference
     bool georeference();
     bool writeWorldFile( const QgsPoint& origin, double pixelXSize, double pixelYSize, double rotation );
@@ -171,6 +190,9 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
      * a value of -1 indicates that thin plate spline interpolation should be used for warping.*/
     QString generateGDALwarpCommand( const QString& resampling, const QString& compress, bool useZeroForTrans, int order,
                                      double targetResX, double targetResY );
+
+    // mj10777
+    QString generateGDALgcpCommand();
 
     // utils
     bool checkReadyGeoref();
@@ -226,6 +248,13 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     QString mPdfOutputMapFile;
     double  mUserResX, mUserResY;  // User specified target scale
 
+    // mj10777
+    bool bGCPFileName; // Save GCP-Text to a text-file
+    bool bPointsFileName; // Save old Points-file to a text-file
+    QString mGCPFileName;
+    QString mGCPdatabaseFileName;
+    QString mGCPbaseFileName;
+
     QgsGeorefTransform::TransformParametrisation mTransformParam;
     QgsImageWarper::ResamplingMethod mResamplingMethod;
     QgsGeorefTransform mGeorefTransform;
@@ -238,6 +267,12 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     QgsMapCanvas *mCanvas;
     QgsRasterLayer *mLayer;
     bool mAgainAddRaster;
+
+    // mj10777
+    QString mGcp_points_layername;
+    QgsVectorLayer *layer_gcp_points;
+    QString mGcp_pixel_layername;
+    QgsVectorLayer *layer_gcp_pixels;
 
     QgsMapTool *mToolZoomIn;
     QgsMapTool *mToolZoomOut;
