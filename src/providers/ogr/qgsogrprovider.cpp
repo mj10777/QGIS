@@ -3856,14 +3856,14 @@ void QgsOgrProvider::open( OpenMode mode )
       }
     }
   }
-  // printf( "-I-> QgsOgrProvider::open gdal[%d,%d,%d,%s] SubLayerString[%s] dataSourceUri[%s]\n", QGis::GDAL_RUNTIME_VERSION_MAJOR, QGis::GDAL_RUNTIME_VERSION_MINOR, QGis::GDAL_RUNTIME_VERSION_REV, QGis::GDAL_RUNTIME_VERSION.toLocal8Bit().constData(), SubLayerString().toLocal8Bit().constData(), dataSourceUri().toLocal8Bit().constData() );
-  // For debug/testing purposes
+  // For debug/testing purposes [how is the Property to be retrieved??]
+  QString s_open_mode="read-only";
   if ( !mValid )
-    setProperty( "_debug_open_mode", "invalid" );
+    s_open_mode="invalid";
   else if ( mWriteAccess )
-    setProperty( "_debug_open_mode", "read-write" );
-  else
-    setProperty( "_debug_open_mode", "read-only" );
+    s_open_mode="read-write";
+  setProperty( "_debug_open_mode", s_open_mode );
+  qDebug()<< QString("-I-> QgsOgrProvider::open gdal[%1,%2,%3,%4] open_mode[%5] SubLayerString[%6] dataSourceUri[%7]").arg(QGis::GDAL_RUNTIME_VERSION_MAJOR).arg(QGis::GDAL_RUNTIME_VERSION_MINOR).arg(QGis::GDAL_RUNTIME_VERSION_REV).arg(QGis::GDAL_RUNTIME_VERSION).arg(s_open_mode).arg(SubLayerString()).arg(dataSourceUri());
 }
 
 void QgsOgrProvider::close()

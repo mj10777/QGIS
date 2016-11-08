@@ -20,6 +20,7 @@
 #include "qgsmapcoordsdialog.h"
 #include "qgsimagewarper.h"
 #include "qgscoordinatereferencesystem.h"
+#include "layertree/qgslayertreegroup.h"
 
 #include <QPointer>
 
@@ -41,6 +42,7 @@ class QgsRectangle;
 class QgsMessageBar;
 // mj10777
 class QgsVectorLayer;
+class QgsLayerTreeGroup;
 
 class QgsGeorefDockWidget : public QgsDockWidget
 {
@@ -166,7 +168,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     int id_gcp_coverage;
     bool isGCPDb();
     bool createGCPDb();
-    bool updateGCPDb(QString s_coverage_name);
+    bool updateGCPDb( QString s_coverage_name );
     bool b_spatialite_gcp_enabled;
     // mj10777: add gui logic for this and store in setting
     bool b_gdalscript_or_gcp_list;
@@ -238,10 +240,11 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     QLabel *mEPSG;
     unsigned int mMousePrecisionDecimalPlaces;
 
-    QString mRasterFileName;
-    QString mModifiedRasterFileName;
+    QString mRasterFilePath; // Path to the file
+    QString mRasterFileName; // Absolute-FilePath of input raster
+    QString mModifiedRasterFileName; // Output geo-tiff
     QString mWorldFileName;
-    QString mTranslatedRasterFileName;
+    QString mTranslatedRasterFileName; // Input File-Name in temp-dir
     QString mGCPpointsFileName;
     QgsCoordinateReferenceSystem mProjection;
     QString mPdfOutputFile;
@@ -254,6 +257,12 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     QString mGCPFileName;
     QString mGCPdatabaseFileName;
     QString mGCPbaseFileName;
+    QString mCoverage_Name;
+    QString mCoverage_Name_Base;
+    int mRasterYear;
+    int mRasterScale;
+    QgsLayerTreeGroup *group_georeferencer;
+    QgsLayerTreeGroup *group_gcp_points;
 
     QgsGeorefTransform::TransformParametrisation mTransformParam;
     QgsImageWarper::ResamplingMethod mResamplingMethod;
