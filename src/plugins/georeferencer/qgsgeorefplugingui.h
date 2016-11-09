@@ -176,6 +176,8 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     bool b_points_or_spatialite_gcp;
     QString mError;
     QgsGeorefTransform mTransformType;
+    QString mGcpLabelExpression;
+    int mGcp_label_type;
 
     // georeference
     bool georeference();
@@ -210,6 +212,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     void logTransformOptions();
     void logRequaredGCPs();
     void clearGCPData();
+    bool setGcpLayerSettings(QgsVectorLayer *layer_gcp);
 
     /**
      * Calculates root mean squared error for the currently active
