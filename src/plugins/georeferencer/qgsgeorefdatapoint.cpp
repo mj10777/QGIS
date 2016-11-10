@@ -20,22 +20,31 @@
 #include "qgsgeorefdatapoint.h"
 
 QgsGeorefDataPoint::QgsGeorefDataPoint( QgsMapCanvas* srcCanvas, QgsMapCanvas *dstCanvas,
-                                        const QgsPoint& pixelCoords, const QgsPoint& mapCoords,
-                                        bool enable )
+                                        const QgsPoint& pixelCoords, const QgsPoint& mapCoords, int id_gcp,
+                                        bool enable, int i_LegacyMode )
     : mSrcCanvas( srcCanvas )
     , mDstCanvas( dstCanvas )
     , mPixelCoords( pixelCoords )
     , mMapCoords( mapCoords )
-    , mId( -1 )
+    , mId( id_gcp )
     , mEnabled( enable )
+    , mLegacyMode( i_LegacyMode )
 {
-  mGCPSourceItem = new QgsGCPCanvasItem( srcCanvas, this, true );
-  mGCPDestinationItem = new QgsGCPCanvasItem( dstCanvas, this, false );
+  mGCPSourceItem = nullptr;
+  mGCPDestinationItem = nullptr;
+  switch ( mLegacyMode )
+  {
+    case 0:
+    case 2:
+      mGCPSourceItem = new QgsGCPCanvasItem( srcCanvas, this, true );
+      mGCPDestinationItem = new QgsGCPCanvasItem( dstCanvas, this, false );
+      mGCPSourceItem->setEnabled( enable );
+      mGCPDestinationItem->setEnabled( enable );
+      mGCPSourceItem->show();
+      mGCPDestinationItem->show();
+      break;
+  }
 
-  mGCPSourceItem->setEnabled( enable );
-  mGCPDestinationItem->setEnabled( enable );
-  mGCPSourceItem->show();
-  mGCPDestinationItem->show();
 }
 
 QgsGeorefDataPoint::QgsGeorefDataPoint( const QgsGeorefDataPoint &p )
@@ -65,8 +74,14 @@ QgsGeorefDataPoint::~QgsGeorefDataPoint()
 void QgsGeorefDataPoint::setPixelCoords( const QgsPoint &p )
 {
   mPixelCoords = p;
-  mGCPSourceItem->update();
-  mGCPDestinationItem->update();
+  if ( mGCPSourceItem )
+  {
+    mGCPSourceItem->update();
+  }
+  if ( mGCPDestinationItem )
+  {
+    mGCPDestinationItem->update();
+  }
 }
 
 void QgsGeorefDataPoint::setMapCoords( const QgsPoint &p )
@@ -129,6 +144,8 @@ void QgsGeorefDataPoint::updateCoords()
 
 bool QgsGeorefDataPoint::contains( QPoint p, bool isMapPlugin )
 {
+  if ( ! mGCPSourceItem )
+    return false;
   if ( isMapPlugin )
   {
     QPointF pnt = mGCPSourceItem->mapFromScene( p );
@@ -143,6 +160,8 @@ bool QgsGeorefDataPoint::contains( QPoint p, bool isMapPlugin )
 
 void QgsGeorefDataPoint::moveTo( QPoint p, bool isMapPlugin )
 {
+  if ( ! mGCPSourceItem )
+    return;
   if ( isMapPlugin )
   {
     QgsPoint pnt = mGCPSourceItem->toMapCoordinates( p );

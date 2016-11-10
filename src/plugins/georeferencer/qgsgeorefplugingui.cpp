@@ -101,8 +101,14 @@ QgsGeorefPluginGui::QgsGeorefPluginGui( QgisInterface* theQgisInterface, QWidget
 
   // mj10777: when false: old behavior with points file
   b_points_or_spatialite_gcp = false;
-  layer_gcp_points = NULL;
-  layer_gcp_pixels = NULL;
+  mLegacyMode = 1;
+  layer_gcp_points = nullptr;
+  layer_gcp_pixels = nullptr;
+  /*
+  mAddFeature = nullptr;
+  mMoveFeature = nullptr;
+  mNodeTool = nullptr;
+  */
   // mj10777: when false: old behavior or no spatialite
   b_gdalscript_or_gcp_list = false;
   mTransformParam = QgsGeorefTransform::PolynomialOrder1;
@@ -117,6 +123,8 @@ QgsGeorefPluginGui::QgsGeorefPluginGui( QgisInterface* theQgisInterface, QWidget
   group_gcp_points = nullptr;
   mGcp_label_type = 1;
   mGcpLabelExpression = "id_gcp"; // "id_gcp||'['||point_x||', '||point_y||']''"
+  QFont appFont = QApplication::font();
+  fontPointSize = ( double )appFont.pointSize();
 
   QSettings s;
   restoreGeometry( s.value( "/Plugin-GeoReferencer/Window/geometry" ).toByteArray() );
@@ -192,6 +200,14 @@ QgsGeorefPluginGui::~QgsGeorefPluginGui()
   delete mToolDeletePoint;
   delete mToolMovePoint;
   delete mToolMovePointQgis;
+  /*
+   if (mAddFeature)
+    delete mAddFeature;
+   if (mMoveFeature)
+    delete mMoveFeature;
+   if (mNodeTool)
+    delete mNodeTool;
+  */
 }
 
 // ----------------------------- protected --------------------------------- //
@@ -340,13 +356,11 @@ void QgsGeorefPluginGui::openRaster()
     mModifiedRasterFileName = QString( "%1.0.map.%3" ).arg( mGCPbaseFileName ).arg( fileInfo.suffix() );
   }
   qDebug() << "QgsGeorefPluginGui::openRaster[1] - addRaster";
-  // Add raster
-  addRaster( mRasterFileName );
-
   // load previously added points
   mGCPpointsFileName = mRasterFileName + ".points";
   ( void )loadGCPs();
-
+  // Add raster [after loadGCPs]
+  addRaster( mRasterFileName );
   qDebug() << "QgsGeorefPluginGui::openRaster[2] - setExtent";
   mCanvas->setExtent( mLayer->extent() );
   mCanvas->refresh();
@@ -564,11 +578,9 @@ void QgsGeorefPluginGui::linkGeorefToQGis( bool link )
 }
 
 // GCPs slots
-void QgsGeorefPluginGui::addPoint( const QgsPoint& pixelCoords, const QgsPoint& mapCoords,
-                                   bool enable, bool refreshCanvas/*, bool verbose*/ )
+void QgsGeorefPluginGui::addPoint( const QgsPoint& pixelCoords, const QgsPoint& mapCoords,  bool enable, bool refreshCanvas, int id_gcp )
 {
-  QgsGeorefDataPoint* pnt = new QgsGeorefDataPoint( mCanvas, mIface->mapCanvas(),
-      pixelCoords, mapCoords, enable );
+  QgsGeorefDataPoint* pnt = new QgsGeorefDataPoint( mCanvas, mIface->mapCanvas(), pixelCoords, mapCoords, id_gcp, enable, mLegacyMode );
   mPoints.append( pnt );
   mGCPsDirty = true;
   mGCPListWidget->setGCPList( &mPoints );
@@ -1034,34 +1046,32 @@ void QgsGeorefPluginGui::createMapCanvas()
   mToolPan = new QgsMapToolPan( mCanvas );
   mToolPan->setAction( mActionPan );
 
-  mToolAddPoint = new QgsGeorefToolAddPoint( mCanvas );
-  mToolAddPoint->setAction( mActionAddPoint );
-  connect( mToolAddPoint, SIGNAL( showCoordDialog( const QgsPoint & ) ),
-           this, SLOT( showCoordDialog( const QgsPoint & ) ) );
+  switch ( mLegacyMode )
+  {
+    case 0:
+    case 2:
+      mToolAddPoint = new QgsGeorefToolAddPoint( mCanvas );
+      mToolAddPoint->setAction( mActionAddPoint );
+      connect( mToolAddPoint, SIGNAL( showCoordDialog( const QgsPoint & ) ), this, SLOT( showCoordDialog( const QgsPoint & ) ) );
 
-  mToolDeletePoint = new QgsGeorefToolDeletePoint( mCanvas );
-  mToolDeletePoint->setAction( mActionDeletePoint );
-  connect( mToolDeletePoint, SIGNAL( deleteDataPoint( const QPoint & ) ),
-           this, SLOT( deleteDataPoint( const QPoint& ) ) );
+      mToolDeletePoint = new QgsGeorefToolDeletePoint( mCanvas );
+      mToolDeletePoint->setAction( mActionDeletePoint );
+      connect( mToolDeletePoint, SIGNAL( deleteDataPoint( const QPoint & ) ), this, SLOT( deleteDataPoint( const QPoint& ) ) );
 
-  mToolMovePoint = new QgsGeorefToolMovePoint( mCanvas );
-  mToolMovePoint->setAction( mActionMoveGCPPoint );
-  connect( mToolMovePoint, SIGNAL( pointPressed( const QPoint & ) ),
-           this, SLOT( selectPoint( const QPoint & ) ) );
-  connect( mToolMovePoint, SIGNAL( pointMoved( const QPoint & ) ),
-           this, SLOT( movePoint( const QPoint & ) ) );
-  connect( mToolMovePoint, SIGNAL( pointReleased( const QPoint & ) ),
-           this, SLOT( releasePoint( const QPoint & ) ) );
+      mToolMovePoint = new QgsGeorefToolMovePoint( mCanvas );
+      mToolMovePoint->setAction( mActionMoveGCPPoint );
+      connect( mToolMovePoint, SIGNAL( pointPressed( const QPoint & ) ), this, SLOT( selectPoint( const QPoint & ) ) );
+      connect( mToolMovePoint, SIGNAL( pointMoved( const QPoint & ) ), this, SLOT( movePoint( const QPoint & ) ) );
+      connect( mToolMovePoint, SIGNAL( pointReleased( const QPoint & ) ), this, SLOT( releasePoint( const QPoint & ) ) );
 
-  // Point in Qgis Map
-  mToolMovePointQgis = new QgsGeorefToolMovePoint( mIface->mapCanvas() );
-  mToolMovePointQgis->setAction( mActionMoveGCPPoint );
-  connect( mToolMovePointQgis, SIGNAL( pointPressed( const QPoint & ) ),
-           this, SLOT( selectPoint( const QPoint & ) ) );
-  connect( mToolMovePointQgis, SIGNAL( pointMoved( const QPoint & ) ),
-           this, SLOT( movePoint( const QPoint & ) ) );
-  connect( mToolMovePointQgis, SIGNAL( pointReleased( const QPoint & ) ),
-           this, SLOT( releasePoint( const QPoint & ) ) );
+      // Point in Qgis Map
+      mToolMovePointQgis = new QgsGeorefToolMovePoint( mIface->mapCanvas() );
+      mToolMovePointQgis->setAction( mActionMoveGCPPoint );
+      connect( mToolMovePointQgis, SIGNAL( pointPressed( const QPoint & ) ), this, SLOT( selectPoint( const QPoint & ) ) );
+      connect( mToolMovePointQgis, SIGNAL( pointMoved( const QPoint & ) ), this, SLOT( movePoint( const QPoint & ) ) );
+      connect( mToolMovePointQgis, SIGNAL( pointReleased( const QPoint & ) ), this, SLOT( releasePoint( const QPoint & ) ) );
+      break;
+  }
 
   QSettings s;
   double zoomFactor = s.value( "/qgis/zoom_factor", 2 ).toDouble();
@@ -1124,18 +1134,16 @@ void QgsGeorefPluginGui::createDockWidgets()
   //  mLogViewer->setWordWrapMode(QTextOption::NoWrap);
   //  dockWidgetLogView->setWidget(mLogViewer);
 
-  mGCPListWidget = new QgsGCPListWidget( this );
+  mGCPListWidget = new QgsGCPListWidget( this, mLegacyMode );
   mGCPListWidget->setGeorefTransform( &mGeorefTransform );
   dockWidgetGCPpoints->setWidget( mGCPListWidget );
 
   connect( mGCPListWidget, SIGNAL( jumpToGCP( uint ) ), this, SLOT( jumpToGCP( uint ) ) );
 #if 0
-  connect( mGCPListWidget, SIGNAL( replaceDataPoint( QgsGeorefDataPoint*, int ) ),
-           this, SLOT( replaceDataPoint( QgsGeorefDataPoint*, int ) ) );
+  // connect( mGCPListWidget, SIGNAL( replaceDataPoint( QgsGeorefDataPoint*, int ) ), this, SLOT( replaceDataPoint( QgsGeorefDataPoint*, int ) ) );
 // Warning: Object::connect: No such signal QgsGCPListWidget::replaceDataPoint( QgsGeorefDataPoint*, int )
 #endif
-  connect( mGCPListWidget, SIGNAL( deleteDataPoint( int ) ),
-           this, SLOT( deleteDataPoint( int ) ) );
+  connect( mGCPListWidget, SIGNAL( deleteDataPoint( int ) ), this, SLOT( deleteDataPoint( int ) ) );
   connect( mGCPListWidget, SIGNAL( pointEnabled( QgsGeorefDataPoint*, int ) ), this, SLOT( updateGeorefTransform() ) );
 }
 
@@ -1190,8 +1198,7 @@ void QgsGeorefPluginGui::removeOldLayer()
   // delete layer (and don't signal it as it's our private layer)
   if ( mLayer )
   {
-    QgsMapLayerRegistry::instance()->removeMapLayers(
-      ( QStringList() << mLayer->id() ) );
+    QgsMapLayerRegistry::instance()->removeMapLayers(( QStringList() << mLayer->id() ) );
     mLayer = nullptr;
   }
   mCanvas->refresh();
@@ -1243,7 +1250,15 @@ void QgsGeorefPluginGui::addRaster( const QString& file )
   QList<QgsMapCanvasLayer> layers;
   if ( isGCPDb() )
   {
-    layers.append( QgsMapCanvasLayer( layer_gcp_pixels ) );
+    switch ( mLegacyMode )
+    {
+      case 1:
+        if ( layer_gcp_pixels )
+        {
+          layers.append( QgsMapCanvasLayer( layer_gcp_pixels ) );
+        }
+        break;
+    }
   }
   layers.append( QgsMapCanvasLayer( mLayer ) );
   mCanvas->setLayerSet( layers );
@@ -1308,27 +1323,32 @@ bool QgsGeorefPluginGui::loadGCPs( /*bool verbose*/ )
   // check if the used spatialite has GCP-enabled
   bool b_database_exists = createGCPDb();
   bool b_load_points_file = false;
-  mGcp_points_layername = QString( "%1(gcp_point)" ).arg( s_gcp_points_table_name );
   if ( b_database_exists )
   {
+    mGcp_points_layername = QString( "%1(gcp_point)" ).arg( s_gcp_points_table_name );
     QString s_gcp_points_layer = QString( "%1|layername=%2" ).arg( mGCPdatabaseFileName ).arg( mGcp_points_layername );
     layer_gcp_points = new QgsVectorLayer( s_gcp_points_layer, mGcp_points_layername,  "ogr" );
     Q_CHECK_PTR( layer_gcp_points );
     if ( setGcpLayerSettings( layer_gcp_points ) )
     { // pointer and isValid == true ; default Label settings done
-      //   mActionShowComposerManager->setIcon( QgsApplication::getThemeIcon( "/rendererPointDisplacementSymbol.svg" ) );
-      // QgsMarkerSymbolLayerV2
-      //  symbols = layer_gcp_points.rendererV2().symbols()
-      // symbol = symbols[0]
-      // symbol.setColor(QtGui.QColor.fromRgb(50,50,250))
-      // http://gis.stackexchange.com/questions/59682/how-to-set-marker-line-symbol-for-qgsvectorlayer-by-using-python
       mGcp_pixel_layername = QString( "%1(gcp_pixel)" ).arg( s_gcp_points_table_name );
       QString s_gcp_pixel_layer = QString( "%1|layername=%2" ).arg( mGCPdatabaseFileName ).arg( mGcp_pixel_layername );
       layer_gcp_pixels = new QgsVectorLayer( s_gcp_pixel_layer, mGcp_pixel_layername, "ogr" );
       if ( setGcpLayerSettings( layer_gcp_pixels ) )
       {
         // add pixels-layer to georeferencer-map canvas and add points-layer to georeferencergroup in application QgsLayerTree
-        QgsMapLayerRegistry::instance()->addMapLayers( QList<QgsMapLayer *>() << layer_gcp_pixels  << layer_gcp_points, false );
+        switch ( mLegacyMode )
+        {
+          case 1:
+            QgsMapLayerRegistry::instance()->addMapLayers( QList<QgsMapLayer *>()  << layer_gcp_pixels, false );
+            // will be added to 'mCanvas' inin addRaster
+            // QList<QgsMapCanvasLayer> layers_pixels;
+            // layers_pixels.append( QgsMapCanvasLayer( layer_gcp_pixels ) );
+            // mIface->mapCanvas()->setLayerSet( layers_pixels );
+            // mCanvas->setLayerSet( layers_pixels );
+            break;
+        }
+        QgsMapLayerRegistry::instance()->addMapLayers( QList<QgsMapLayer *>() << layer_gcp_points, false );
         QList<QgsMapCanvasLayer> layers_points;
         layers_points.append( QgsMapCanvasLayer( layer_gcp_points ) );
         group_georeferencer = QgsProject::instance()->layerTreeRoot()->insertGroup( 0, QString( "georeferencer" ) );
@@ -1337,7 +1357,10 @@ bool QgsGeorefPluginGui::loadGCPs( /*bool verbose*/ )
         // qDebug()<< QgsProject::instance()->layerTreeRoot()->dump();
         layer_gcp_pixels->startEditing();
         layer_gcp_points->startEditing();
-        QgsFeatureIterator fit_pixels = layer_gcp_pixels->getFeatures( QgsFeatureRequest().setSubsetOfAttributes( QgsAttributeList() ) );
+        QgsAttributeList lst_needed_fields;
+        lst_needed_fields.append( 0 ); // id_gcp
+        lst_needed_fields.append( 10 ); // gcp_enable
+        QgsFeatureIterator fit_pixels = layer_gcp_pixels->getFeatures( QgsFeatureRequest().setSubsetOfAttributes( lst_needed_fields ) );
         QgsFeature fet_pixel;
         QgsFeatureIterator fit_points = layer_gcp_points->getFeatures( QgsFeatureRequest().setSubsetOfAttributes( QgsAttributeList() ) );
         QgsFeature fet_point;
@@ -1349,15 +1372,20 @@ bool QgsGeorefPluginGui::loadGCPs( /*bool verbose*/ )
             fit_points.nextFeature( fet_point );
             if ( fet_point .geometry() && fet_point.geometry()->type() == QGis::Point )
             {
+              int id_gcp = fet_pixel.attribute( QString( "id_gcp" ) ).toInt();
+              int enable = fet_pixel.attribute( QString( "gcp_enable" ) ).toInt();
               QgsPoint pt_pixel = fet_pixel.geometry()->vertexAt( 0 );
               QgsPoint pt_point = fet_point.geometry()->vertexAt( 0 );
               i_count++;
-              addPoint( pt_pixel, pt_point, true, false );
+              QgsGeorefDataPoint* pnt = new QgsGeorefDataPoint( mCanvas, mIface->mapCanvas(), pt_pixel, pt_point, id_gcp, enable, mLegacyMode );
+              mPoints.append( pnt );
+              connect( mCanvas, SIGNAL( extentsChanged() ), pnt, SLOT( updateCoords() ) );
             }
           }
         }
+        // Do this only once instead after the reading each point
         mInitialPoints = mPoints;
-        mCanvas->refresh();
+        mGCPsDirty = true;
         qDebug() << QString( "QgsGeorefPluginGui::loadGCPs[2] count[%1] geom[%2]" ).arg( layer_gcp_pixels->featureCount() ).arg( mGcp_pixel_layername );
       }
       else
@@ -1366,8 +1394,6 @@ bool QgsGeorefPluginGui::loadGCPs( /*bool verbose*/ )
   }
   if ( layer_gcp_pixels == NULL )
     b_load_points_file = true;
-  // 201603-19: override for the moment.
-  //b_load_points_file = true;
   if ( b_load_points_file )
   {
     if ( pointFile.open( QIODevice::ReadOnly ) )
@@ -1394,24 +1420,34 @@ bool QgsGeorefPluginGui::loadGCPs( /*bool verbose*/ )
 
         QgsPoint mapCoords( ls.at( 0 ).toDouble(), ls.at( 1 ).toDouble() ); // map x,y
         QgsPoint pixelCoords( ls.at( 2 ).toDouble(), ls.at( 3 ).toDouble() ); // pixel x,y
+        QgsGeorefDataPoint* pnt;
         if ( ls.count() == 5 )
         {
           bool enable = ls.at( 4 ).toInt();
-          addPoint( pixelCoords, mapCoords, enable, false/*, verbose*/ ); // enabled
+          pnt = new QgsGeorefDataPoint( mCanvas, mIface->mapCanvas(), pixelCoords, mapCoords, i + 1, enable, mLegacyMode );
         }
         else
-          addPoint( pixelCoords, mapCoords, true, false );
+          pnt = new QgsGeorefDataPoint( mCanvas, mIface->mapCanvas(), pixelCoords, mapCoords, i + 1, true, mLegacyMode );
+
+        mPoints.append( pnt );
+        connect( mCanvas, SIGNAL( extentsChanged() ), pnt, SLOT( updateCoords() ) );
 
         ++i;
       }
       mInitialPoints = mPoints;
-      //    showMessageInLog(tr("GCP points loaded from"), mGCPpointsFileName);
-      mCanvas->refresh();
+      mGCPsDirty = true;
     }
   }
   else
   {
     qDebug() << QString( "-W-> QgsGeorefPluginGui::loadGCPs[%1] not loading point_file  (layer_gcp_pixels != NULL)" ).arg( mGcp_pixel_layername );
+  }
+  if ( mGCPsDirty )
+  {
+    mGCPListWidget->setGCPList( &mPoints );
+    updateGeorefTransform();
+    mCanvas->refresh();
+    mIface->mapCanvas()->refresh();
   }
 
   return true;
@@ -2404,6 +2440,8 @@ bool QgsGeorefPluginGui::isGCPDb()
 }
 bool QgsGeorefPluginGui::createGCPDb()
 {
+  if ( mLegacyMode == 0 )
+    return false;
   QFile pointFile( mGCPpointsFileName );
   qDebug() << QString( "-I-> QgsGeorefPluginGui::createGCPDb -0- GCPdatabaseFileName[%1] " ).arg( mGCPdatabaseFileName );
   // After being opened (with CREATE), the file will exist, so store if it exist now
@@ -3269,6 +3307,8 @@ bool QgsGeorefPluginGui::createGCPDb()
 }
 bool QgsGeorefPluginGui::updateGCPDb( QString s_coverage_name )
 {
+  if ( mLegacyMode == 0 )
+    return false;
   bool b_database_exists = QFile( mGCPdatabaseFileName ).exists();
   if ( b_database_exists )
   {
@@ -3321,134 +3361,149 @@ bool QgsGeorefPluginGui::updateGCPDb( QString s_coverage_name )
 bool QgsGeorefPluginGui::setGcpLayerSettings( QgsVectorLayer *layer_gcp )
 { // Note: these are 'Point'-Layers
   Q_CHECK_PTR( layer_gcp );
-  switch ( mGcp_label_type )
+  if ( mLegacyMode > 0 )
   {
-    case 1:
-      mGcpLabelExpression = "id_gcp";
-      break;
-    case 2:
-      if ( layer_gcp->name() == mGcp_points_layername )
-        mGcpLabelExpression = "id_gcp||' ['||point_x||', '||point_y||']'";
+    switch ( mGcp_label_type )
+    {
+      case 1:
+        mGcpLabelExpression = "id_gcp";
+        break;
+      case 2:
+        if ( layer_gcp->name() == mGcp_points_layername )
+          mGcpLabelExpression = "id_gcp||' ['||point_x||', '||point_y||']'";
+        else
+          mGcpLabelExpression = "id_gcp||' ['||pixel_x||', '||pixel_y||']'";
+        break;
+      default:
+        mGcp_label_type = 0;
+        break;
+    }
+    double d_size_base = fontPointSize;
+    if ( d_size_base < 10.0 )
+      d_size_base = 15.0;
+    double d_size_font = d_size_base * 0.8;
+    d_size_base = d_size_base / 3;
+    double d_size_symbol_big = d_size_base * 1.5; // 7.5
+    double d_size_symbol_small = d_size_base * 1.25;   // 6.26
+    // Labels:
+    if (( layer_gcp->isValid() ) && ( mGcp_label_type > 0 ) )
+    { // see: core/qgspallabeling.cpp/h and  app/qgslabelingwidget.cpp
+      // fontPointSize=15 ; _size_font=12
+      QgsPalLayerSettings gcp_layer_settings;
+      gcp_layer_settings.readFromLayer( layer_gcp );
+      gcp_layer_settings.enabled = true;
+      gcp_layer_settings.drawLabels = true;
+      gcp_layer_settings.fieldName = mGcpLabelExpression;
+      gcp_layer_settings.isExpression = true;
+      // Text
+      gcp_layer_settings.textColor = Qt::black;
+      gcp_layer_settings.fontSizeInMapUnits = false;
+      gcp_layer_settings.textFont.setPointSizeF( d_size_font );
+      // Wrap
+      if ( mGcp_label_type == 2 )
+      {
+        gcp_layer_settings.wrapChar = QString( "[" );
+        gcp_layer_settings.multilineHeight = 1.0;
+        gcp_layer_settings.multilineAlign = QgsPalLayerSettings::MultiLeft;
+      }
+      // Background [shape]
+      gcp_layer_settings.shapeDraw = true;
+      if ( mGcp_label_type == 1 )
+      {
+        gcp_layer_settings.shapeType = QgsPalLayerSettings::ShapeCircle;
+      }
       else
-        mGcpLabelExpression = "id_gcp||' ['||pixel_x||', '||pixel_y||']'";
-      break;
-    default:
-      mGcp_label_type = 0;
-      break;
-  }
-  // Labels:
-  if (( layer_gcp->isValid() ) && ( mGcp_label_type > 0 ) )
-  { // see: core/qgspallabeling.cpp/h and  app/qgslabelingwidget.cpp
-    QgsPalLayerSettings gcp_layer_settings;
-    gcp_layer_settings.readFromLayer( layer_gcp );
-    gcp_layer_settings.enabled = true;
-    gcp_layer_settings.drawLabels = true;
-    gcp_layer_settings.fieldName = mGcpLabelExpression;
-    gcp_layer_settings.isExpression = true;
-    // Text
-    gcp_layer_settings.textColor = Qt::black;
-    gcp_layer_settings.fontSizeInMapUnits = false;
-    gcp_layer_settings.fontSizeMapUnitScale = 15;
-    // Wrap
-    if ( mGcp_label_type == 2 )
-    {
-      gcp_layer_settings.wrapChar = QString( "[" );
-      gcp_layer_settings.multilineHeight = 1.0;
-      gcp_layer_settings.multilineAlign = QgsPalLayerSettings::MultiLeft;
+      {
+        gcp_layer_settings.shapeType = QgsPalLayerSettings::ShapeRectangle;
+      }
+      gcp_layer_settings.shapeFillColor = Qt::yellow;
+      gcp_layer_settings.shapeBorderColor = Qt::black;
+      gcp_layer_settings.shapeTransparency = 0;
+      gcp_layer_settings.shapeBorderWidth = 1;
+      gcp_layer_settings.shapeBorderWidthUnits = QgsPalLayerSettings::MM;
+      // Placement
+      gcp_layer_settings.placement = QgsPalLayerSettings::OrderedPositionsAroundPoint;
+      // gcp_layer_settings.placementFlags = QgsPalLayerSettings::AboveLine | QgsPalLayerSettings::MapOrientation;
+      gcp_layer_settings.placementFlags = QgsPalLayerSettings::AboveLine;
+      gcp_layer_settings.dist = 5;
+      gcp_layer_settings.distInMapUnits = false;
+      // Drop shadow
+      gcp_layer_settings.shadowDraw = true;
+      gcp_layer_settings.shadowUnder = QgsPalLayerSettings::ShadowLowest;
+      gcp_layer_settings.shadowOffsetAngle = 135;
+      gcp_layer_settings.shadowOffsetDist = 0;
+      gcp_layer_settings.shadowOffsetUnits = QgsPalLayerSettings::MM;
+      gcp_layer_settings.shadowOffsetMapUnitScale = false;
+      gcp_layer_settings.shadowOffsetGlobal = true;
+      gcp_layer_settings.shadowRadius = 1.50;
+      gcp_layer_settings.shadowRadiusUnits = QgsPalLayerSettings::MM;
+      gcp_layer_settings.shadowRadiusMapUnitScale = false;
+      gcp_layer_settings.shadowRadiusAlphaOnly = false;
+      gcp_layer_settings.shadowTransparency = 30.0;
+      gcp_layer_settings.shadowScale = 100;
+      gcp_layer_settings.shadowColor = Qt::cyan;
+      gcp_layer_settings.shadowBlendMode = QPainter::CompositionMode_Multiply;
+      // Write settings to layer
+      gcp_layer_settings.writeToLayer( layer_gcp );
     }
-    // Background [shape]
-    gcp_layer_settings.shapeDraw = true;
-    if ( mGcp_label_type == 1 )
-    {
-      gcp_layer_settings.shapeType = QgsPalLayerSettings::ShapeCircle;
-    }
-    else
-    {
-      gcp_layer_settings.shapeType = QgsPalLayerSettings::ShapeRectangle;
-    }
-    gcp_layer_settings.shapeFillColor = Qt::yellow;
-    gcp_layer_settings.shapeBorderColor = Qt::black;
-    gcp_layer_settings.shapeTransparency = 0;
-    gcp_layer_settings.shapeBorderWidth = 1;
-    gcp_layer_settings.shapeBorderWidthUnits = QgsPalLayerSettings::MM;
-    // Placement
-    gcp_layer_settings.placement = QgsPalLayerSettings::OrderedPositionsAroundPoint;
-    // gcp_layer_settings.placementFlags = QgsPalLayerSettings::AboveLine | QgsPalLayerSettings::MapOrientation;
-    gcp_layer_settings.placementFlags = QgsPalLayerSettings::AboveLine;
-    gcp_layer_settings.dist = 5;
-    gcp_layer_settings.distInMapUnits = false;
-    // Drop shadow
-    gcp_layer_settings.shadowDraw = true;
-    gcp_layer_settings.shadowUnder = QgsPalLayerSettings::ShadowLowest;
-    gcp_layer_settings.shadowOffsetAngle = 135;
-    gcp_layer_settings.shadowOffsetDist = 0;
-    gcp_layer_settings.shadowOffsetUnits = QgsPalLayerSettings::MM;
-    gcp_layer_settings.shadowOffsetMapUnitScale = false;
-    gcp_layer_settings.shadowOffsetGlobal = true;
-    gcp_layer_settings.shadowRadius = 1.50;
-    gcp_layer_settings.shadowRadiusUnits = QgsPalLayerSettings::MM;
-    gcp_layer_settings.shadowRadiusMapUnitScale = false;
-    gcp_layer_settings.shadowRadiusAlphaOnly = false;
-    gcp_layer_settings.shadowTransparency = 30.0;
-    gcp_layer_settings.shadowScale = 100;
-    gcp_layer_settings.shadowColor = Qt::cyan;
-    gcp_layer_settings.shadowBlendMode = QPainter::CompositionMode_Multiply;
-    // Write settings to layer
-    gcp_layer_settings.writeToLayer( layer_gcp );
-  }
-  // Symbols:
-  if (( layer_gcp->isValid() ) && ( layer_gcp->rendererV2() ) )
-  {  // see: gui/symbology-ng/qgsrendererv2propertiesdialog.cpp, qgslayerpropertieswidget.cpp and  app/qgsvectorlayerproperties.cpp
-    QgsFeatureRendererV2 *gcp_layer_renderer = layer_gcp->rendererV2();
-    if ( gcp_layer_renderer )
-    {
+    // Symbols:
+    if (( layer_gcp->isValid() ) && ( layer_gcp->rendererV2() ) )
+    {  // see: gui/symbology-ng/qgsrendererv2propertiesdialog.cpp, qgslayerpropertieswidget.cpp and  app/qgsvectorlayerproperties.cpp
+      QgsFeatureRendererV2 *gcp_layer_renderer = layer_gcp->rendererV2();
+      if ( gcp_layer_renderer )
+      {
 
-      QgsRenderContext gcp_layer_symbols_context;
-      QgsSymbolV2List gcp_layer_symbols = gcp_layer_renderer->symbols( gcp_layer_symbols_context );
-      if ( gcp_layer_symbols.count() == 1 )
-      { // Being a Point, there should only be 1
-        bool isDirty = false;
-        QgsSymbolV2 *gcp_layer_symbol_container = gcp_layer_symbols.at( 0 );
-        if ( gcp_layer_symbol_container )
-        {
-          if (( gcp_layer_symbol_container->type() == QgsSymbolV2::Marker ) && ( gcp_layer_symbol_container->symbolLayerCount() == 1 ) )
-          { // remove the only QgsSymbolV2 from the list [will be replaced with a big green pentagon containing a small red cross]
-            QgsSimpleMarkerSymbolLayerV2 *gcp_layer_symbol_pentagon =  static_cast<QgsSimpleMarkerSymbolLayerV2*>(gcp_layer_symbol_container->takeSymbolLayer( 0 ));
-            if ( gcp_layer_symbol_pentagon )
-            { // prepair the second QgsSymbolV2 from the first
-              QgsSimpleMarkerSymbolLayerV2 *gcp_layer_symbol_cross = static_cast<QgsSimpleMarkerSymbolLayerV2*>(gcp_layer_symbol_pentagon->clone());
-              if ( gcp_layer_symbol_cross )
-              { // see core/symbology-ng/qgssymbolv2.h, qgsmarkersymbollayerv2.h
-                gcp_layer_symbol_pentagon->setFillColor( Qt::darkGreen );
-                gcp_layer_symbol_pentagon->setOutlineColor( Qt::black );
-                gcp_layer_symbol_pentagon->setOutputUnit( QgsSymbolV2::MM );
-                gcp_layer_symbol_pentagon->setSize( 9.0 );
-                gcp_layer_symbol_pentagon->setMapUnitScale( 0 );
-                gcp_layer_symbol_pentagon->setShape( QgsSimpleMarkerSymbolLayerBase::Pentagon );
-                gcp_layer_symbol_pentagon->setOutlineStyle( Qt::SolidLine );
-                gcp_layer_symbol_pentagon->setPenJoinStyle( Qt::BevelJoin );
-                gcp_layer_symbol_cross->setFillColor( Qt::red );
-                gcp_layer_symbol_cross->setOutlineColor( Qt::black );
-                gcp_layer_symbol_cross->setOutputUnit( QgsSymbolV2::MM );
-                gcp_layer_symbol_cross->setSize( 7.0 );
-                gcp_layer_symbol_cross->setMapUnitScale( 0 );
-                gcp_layer_symbol_cross->setShape( QgsSimpleMarkerSymbolLayerBase::CrossFill );
-                gcp_layer_symbol_cross->setAngle(45.0);
-                gcp_layer_symbol_cross->setOutlineStyle( Qt::SolidLine );
-                gcp_layer_symbol_cross->setPenJoinStyle( Qt::BevelJoin );
-                gcp_layer_symbol_container->appendSymbolLayer( gcp_layer_symbol_pentagon );
-                gcp_layer_symbol_container->appendSymbolLayer( gcp_layer_symbol_cross );
-                if (( gcp_layer_symbol_container->type() == QgsSymbolV2::Marker ) && ( gcp_layer_symbol_container->symbolLayerCount() == 2 ) )
-                { // checking that we have what is desired
-                  isDirty = true;
+        QgsRenderContext gcp_layer_symbols_context;
+        QgsSymbolV2List gcp_layer_symbols = gcp_layer_renderer->symbols( gcp_layer_symbols_context );
+        if ( gcp_layer_symbols.count() == 1 )
+        { // Being a Point, there should only be 1
+          bool isDirty = false;
+          QgsSymbolV2 *gcp_layer_symbol_container = gcp_layer_symbols.at( 0 );
+          if ( gcp_layer_symbol_container )
+          {
+            if (( gcp_layer_symbol_container->type() == QgsSymbolV2::Marker ) && ( gcp_layer_symbol_container->symbolLayerCount() == 1 ) )
+            { // remove the only QgsSymbolV2 from the list [will be replaced with a big green pentagon containing a small red cross]
+              QgsSimpleMarkerSymbolLayerV2 *gcp_layer_symbol_pentagon =  static_cast<QgsSimpleMarkerSymbolLayerV2*>( gcp_layer_symbol_container->takeSymbolLayer( 0 ) );
+              if ( gcp_layer_symbol_pentagon )
+              { // prepair the second QgsSymbolV2 from the first
+                QgsSimpleMarkerSymbolLayerV2 *gcp_layer_symbol_cross = static_cast<QgsSimpleMarkerSymbolLayerV2*>( gcp_layer_symbol_pentagon->clone() );
+                if ( gcp_layer_symbol_cross )
+                { // see core/symbology-ng/qgssymbolv2.h, qgsmarkersymbollayerv2.h
+                  // Pentagon
+                  gcp_layer_symbol_pentagon->setFillColor( Qt::darkGreen );
+                  gcp_layer_symbol_pentagon->setOutlineColor( Qt::black );
+                  gcp_layer_symbol_pentagon->setOutputUnit( QgsSymbolV2::MM );
+                  gcp_layer_symbol_pentagon->setSize( d_size_symbol_big );
+                  gcp_layer_symbol_pentagon->setMapUnitScale( 0 );
+                  gcp_layer_symbol_pentagon->setShape( QgsSimpleMarkerSymbolLayerBase::Pentagon );
+                  gcp_layer_symbol_pentagon->setOutlineStyle( Qt::SolidLine );
+                  gcp_layer_symbol_pentagon->setPenJoinStyle( Qt::BevelJoin );
+                  // Cross
+                  gcp_layer_symbol_cross->setFillColor( Qt::red );
+                  gcp_layer_symbol_cross->setOutlineColor( Qt::black );
+                  gcp_layer_symbol_cross->setOutputUnit( QgsSymbolV2::MM );
+                  gcp_layer_symbol_cross->setSize( d_size_symbol_small );
+                  gcp_layer_symbol_cross->setMapUnitScale( 0 );
+                  gcp_layer_symbol_cross->setShape( QgsSimpleMarkerSymbolLayerBase::CrossFill );
+                  gcp_layer_symbol_cross->setAngle( 45.0 );
+                  gcp_layer_symbol_cross->setOutlineStyle( Qt::SolidLine );
+                  gcp_layer_symbol_cross->setPenJoinStyle( Qt::BevelJoin );
+                  // Set transparity for both and add Pentagon, Cross
+                  gcp_layer_symbol_container->setAlpha( 0.4 );
+                  gcp_layer_symbol_container->appendSymbolLayer( gcp_layer_symbol_pentagon );
+                  gcp_layer_symbol_container->appendSymbolLayer( gcp_layer_symbol_cross );
+                  if (( gcp_layer_symbol_container->type() == QgsSymbolV2::Marker ) && ( gcp_layer_symbol_container->symbolLayerCount() == 2 ) )
+                  { // checking that we have what is desired
+                    isDirty = true;
+                  }
                 }
               }
-            } 
+            }
           }
-        }
-        if ( isDirty )
-        {
-          layer_gcp->setRendererV2( gcp_layer_renderer );
+          if ( isDirty )
+          {
+            layer_gcp->setRendererV2( gcp_layer_renderer );
+          }
         }
       }
     }

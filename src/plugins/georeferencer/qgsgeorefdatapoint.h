@@ -27,8 +27,8 @@ class QgsGeorefDataPoint : public QObject
   public:
     //! constructor
     QgsGeorefDataPoint( QgsMapCanvas *srcCanvas, QgsMapCanvas *dstCanvas,
-                        const QgsPoint& pixelCoords, const QgsPoint& mapCoords,
-                        bool enable );
+                        const QgsPoint& pixelCoords, const QgsPoint& mapCoords, int id_gcp,
+                        bool enable, int i_LegacyMode );
     QgsGeorefDataPoint( const QgsGeorefDataPoint &p );
     ~QgsGeorefDataPoint();
 
@@ -67,6 +67,7 @@ class QgsGeorefDataPoint : public QObject
 
     int mId;
     bool mEnabled;
+    int mLegacyMode;
     QPointF mResidual;
 };
 

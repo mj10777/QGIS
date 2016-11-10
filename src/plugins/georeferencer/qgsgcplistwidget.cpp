@@ -25,15 +25,16 @@
 #include "qgsgcplistwidget.h"
 #include "qgsgcplistmodel.h"
 
-QgsGCPListWidget::QgsGCPListWidget( QWidget *parent )
+QgsGCPListWidget::QgsGCPListWidget( QWidget *parent, int i_LegacyMode )
     : QTableView( parent )
     , mGCPList( nullptr )
-    , mGCPListModel( new QgsGCPListModel( this ) )
+    , mGCPListModel( new QgsGCPListModel( this, i_LegacyMode ) )
     , mNonEditableDelegate( new QgsNonEditableDelegate( this ) )
     , mDmsAndDdDelegate( new QgsDmsAndDdDelegate( this ) )
     , mCoordDelegate( new QgsCoordDelegate( this ) )
     , mPrevRow( 0 )
     , mPrevColumn( 0 )
+    , mLegacyMode( i_LegacyMode )
 {
   // Create a proxy model, which will handle dynamic sorting
   QSortFilterProxyModel *proxyModel = new QSortFilterProxyModel( this );
@@ -106,10 +107,18 @@ void QgsGCPListWidget::closeEditors()
 void QgsGCPListWidget::itemDoubleClicked( QModelIndex index )
 {
   index = static_cast<const QSortFilterProxyModel*>( model() )->mapToSource( index );
-  QStandardItem *item = mGCPListModel->item( index.row(), 1 );
-  bool ok;
-  int id = item->text().toInt( &ok );
-
+  bool ok=true;
+  int id =index.row();
+  switch ( mLegacyMode )
+  {
+    case 0:
+    case 2:
+    {
+      QStandardItem *item = mGCPListModel->item( index.row(), 1 );
+      id = item->text().toInt( &ok );
+     }
+      break;
+  }
   if ( ok )
   {
     emit jumpToGCP( id );

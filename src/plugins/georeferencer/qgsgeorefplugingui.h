@@ -87,7 +87,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
 
     // gcps
     void addPoint( const QgsPoint& pixelCoords, const QgsPoint& mapCoords,
-                   bool enable = true, bool refreshCanvas = true/*, bool verbose = true*/ );
+                   bool enable = true, bool refreshCanvas = true, int id_gcp = -1 );
     void deleteDataPoint( QPoint pixelCoords );
     void deleteDataPoint( int index );
     void showCoordDialog( const QgsPoint &pixelCoords );
@@ -178,6 +178,11 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     QgsGeorefTransform mTransformType;
     QString mGcpLabelExpression;
     int mGcp_label_type;
+    int mLegacyMode;
+    double fontPointSize;
+    // QgsMapTool *mAddFeature;
+    // QgsMapTool *mMoveFeature;
+    // QgsMapTool *mNodeTool;
 
     // georeference
     bool georeference();

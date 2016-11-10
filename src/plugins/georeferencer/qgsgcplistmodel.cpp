@@ -49,10 +49,11 @@ class QgsStandardItem : public QStandardItem
     }
 };
 
-QgsGCPListModel::QgsGCPListModel( QObject *parent )
+QgsGCPListModel::QgsGCPListModel( QObject *parent, int i_LegacyMode )
     : QStandardItemModel( parent )
     , mGCPList( nullptr )
     , mGeorefTransform( nullptr )
+    , mLegacyMode( i_LegacyMode )
 {
   // Use data provided by Qt::UserRole as sorting key (needed for numerical sorting).
   setSortRole( Qt::UserRole );
@@ -125,7 +126,14 @@ void QgsGCPListModel::updateModel()
     if ( !p )
       continue;
 
-    p->setId( i );
+
+    switch ( mLegacyMode )
+    {
+      case 0:
+      case 2:
+        p->setId( i );
+        break;
+    }
 
     QStandardItem *si = new QStandardItem();
     si->setTextAlignment( Qt::AlignCenter );
@@ -136,7 +144,7 @@ void QgsGCPListModel::updateModel()
       si->setCheckState( Qt::Unchecked );
 
     setItem( i, j++, si );
-    setItem( i, j++, new QgsStandardItem( i ) );
+    setItem( i, j++, new QgsStandardItem( p-> id() ) );
     setItem( i, j++, new QgsStandardItem( p->pixelCoords().x() ) );
     setItem( i, j++, new QgsStandardItem( p->pixelCoords().y() ) );
     setItem( i, j++, new QgsStandardItem( p->mapCoords().x() ) );
