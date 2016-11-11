@@ -104,6 +104,9 @@ QgsGeorefPluginGui::QgsGeorefPluginGui( QgisInterface* theQgisInterface, QWidget
   mLegacyMode = 1;
   layer_gcp_points = nullptr;
   layer_gcp_pixels = nullptr;
+  layer_cutline_points = nullptr;
+  layer_cutline_linestrings = nullptr;
+  layer_cutline_polygons = nullptr;
   /*
   mAddFeature = nullptr;
   mMoveFeature = nullptr;
@@ -120,9 +123,13 @@ QgsGeorefPluginGui::QgsGeorefPluginGui( QgisInterface* theQgisInterface, QWidget
   mRasterScale = 0;
   b_gdalscript_or_gcp_list = true; // return only gcp-list instead of gdal commands-script
   group_georeferencer = nullptr;
+  group_gcp_cutlines = nullptr;
   group_gcp_points = nullptr;
   mGcp_label_type = 1;
   mGcpLabelExpression = "id_gcp"; // "id_gcp||'['||point_x||', '||point_y||']''"
+  mCutline_points_layername = "create_cutline_points";
+  mCutline_linestrings_layername = "create_cutline_linestrings";
+  mCutline_polygons_layername = "create_cutline_polygons";
   QFont appFont = QApplication::font();
   fontPointSize = ( double )appFont.pointSize();
 
@@ -1325,10 +1332,10 @@ bool QgsGeorefPluginGui::loadGCPs( /*bool verbose*/ )
   bool b_load_points_file = false;
   if ( b_database_exists )
   {
+    // gcp-specific
     mGcp_points_layername = QString( "%1(gcp_point)" ).arg( s_gcp_points_table_name );
     QString s_gcp_points_layer = QString( "%1|layername=%2" ).arg( mGCPdatabaseFileName ).arg( mGcp_points_layername );
     layer_gcp_points = new QgsVectorLayer( s_gcp_points_layer, mGcp_points_layername,  "ogr" );
-    Q_CHECK_PTR( layer_gcp_points );
     if ( setGcpLayerSettings( layer_gcp_points ) )
     { // pointer and isValid == true ; default Label settings done
       mGcp_pixel_layername = QString( "%1(gcp_pixel)" ).arg( s_gcp_points_table_name );
@@ -1341,18 +1348,46 @@ bool QgsGeorefPluginGui::loadGCPs( /*bool verbose*/ )
         {
           case 1:
             QgsMapLayerRegistry::instance()->addMapLayers( QList<QgsMapLayer *>()  << layer_gcp_pixels, false );
-            // will be added to 'mCanvas' inin addRaster
-            // QList<QgsMapCanvasLayer> layers_pixels;
-            // layers_pixels.append( QgsMapCanvasLayer( layer_gcp_pixels ) );
-            // mIface->mapCanvas()->setLayerSet( layers_pixels );
-            // mCanvas->setLayerSet( layers_pixels );
             break;
         }
-        QgsMapLayerRegistry::instance()->addMapLayers( QList<QgsMapLayer *>() << layer_gcp_points, false );
-        QList<QgsMapCanvasLayer> layers_points;
-        layers_points.append( QgsMapCanvasLayer( layer_gcp_points ) );
-        group_georeferencer = QgsProject::instance()->layerTreeRoot()->insertGroup( 0, QString( "georeferencer" ) );
-        group_gcp_points = group_georeferencer->insertGroup( 0, mCoverage_Name );
+        if ( !layer_cutline_points )
+        {
+          // general geometry type as helpers during georeferencing, but also as cutline
+          QString s_cutline_points_layer = QString( "%1|layername=%2" ).arg( mGCPdatabaseFileName ).arg( mCutline_points_layername );
+          layer_cutline_points = new QgsVectorLayer( s_cutline_points_layer, mCutline_points_layername,  "ogr" );
+          QString s_cutline_linestrings_layer = QString( "%1|layername=%2" ).arg( mGCPdatabaseFileName ).arg( mCutline_linestrings_layername );
+          layer_cutline_linestrings = new QgsVectorLayer( s_cutline_linestrings_layer, mCutline_linestrings_layername,  "ogr" );
+          QString s_cutline_polygons_layer = QString( "%1|layername=%2" ).arg( mGCPdatabaseFileName ).arg( mCutline_polygons_layername );
+          layer_cutline_polygons = new QgsVectorLayer( s_cutline_polygons_layer, mCutline_polygons_layername,  "ogr" );
+        }
+        QList<QgsMapLayer *> layers_points_cutlines;
+        layers_points_cutlines << layer_gcp_points;
+        group_georeferencer = QgsProject::instance()->layerTreeRoot()->insertGroup( 0, QString( "Georeferencer" ) );
+        if ( setCutlineLayerSettings( layer_cutline_points ) )
+        { // Add only valid layers
+          layers_points_cutlines << layer_cutline_points;
+          if ( setCutlineLayerSettings( layer_cutline_linestrings ) )
+          { // Add only valid layers
+            layers_points_cutlines << layer_cutline_linestrings;
+            if ( setCutlineLayerSettings( layer_cutline_polygons ) )
+            { // Add only valid layers
+              layers_points_cutlines << layer_cutline_polygons;
+              group_gcp_cutlines = group_georeferencer->insertGroup( 0,  "Gcp_Cutlines" );
+            }
+          }
+        }
+        // Note: since they are being placed in our groups, 'false' must be used, avoiding the automatic inserting into the layerTreeRoot.
+        QgsMapLayerRegistry::instance()->addMapLayers( layers_points_cutlines, false );
+        if ( group_gcp_cutlines )
+        { // must be added AFTER being registered !
+          group_gcp_cutlines->insertLayer( 0, layer_cutline_points );
+          layer_cutline_points->startEditing();
+          group_gcp_cutlines->insertLayer( 1, layer_cutline_linestrings );
+          layer_cutline_linestrings->startEditing();
+          group_gcp_cutlines->insertLayer( 2, layer_cutline_polygons );
+          layer_cutline_polygons->startEditing();
+        }
+        group_gcp_points = group_georeferencer->insertGroup( 1, mCoverage_Name );
         group_gcp_points->insertLayer( 0, layer_gcp_points );
         // qDebug()<< QgsProject::instance()->layerTreeRoot()->dump();
         layer_gcp_pixels->startEditing();
@@ -2386,6 +2421,20 @@ void QgsGeorefPluginGui::clearGCPData()
   {
     if ( group_georeferencer )
     {
+      if ( group_gcp_cutlines )
+      {
+        group_gcp_cutlines->removeLayer( layer_cutline_points );
+        group_gcp_cutlines->removeLayer( layer_cutline_linestrings );
+        group_gcp_cutlines->removeLayer( layer_cutline_polygons );
+        group_georeferencer->removeChildNode(( QgsLayerTreeNode * )group_gcp_cutlines );
+        group_gcp_cutlines = nullptr;
+        QgsMapLayerRegistry::instance()->removeMapLayers(( QStringList() << layer_cutline_points->id() ) );
+        layer_cutline_points = nullptr;
+        QgsMapLayerRegistry::instance()->removeMapLayers(( QStringList() << layer_cutline_linestrings->id() ) );
+        layer_cutline_linestrings = nullptr;
+        QgsMapLayerRegistry::instance()->removeMapLayers(( QStringList() << layer_cutline_polygons->id() ) );
+        layer_cutline_polygons = nullptr;
+      }
       if ( group_gcp_points )
       {
         group_gcp_points->removeLayer( layer_gcp_points );
@@ -2399,12 +2448,12 @@ void QgsGeorefPluginGui::clearGCPData()
     {
       QgsMapLayerRegistry::instance()->removeMapLayers(( QStringList() << layer_gcp_points->id() ) );
     }
-    layer_gcp_points = NULL;
+    layer_gcp_points = nullptr;
   }
   if ( layer_gcp_pixels )
   {
     QgsMapLayerRegistry::instance()->removeMapLayers(( QStringList() << layer_gcp_pixels->id() ) );
-    layer_gcp_pixels = NULL;
+    layer_gcp_pixels = nullptr;
   }
   qDeleteAll( mPoints );
   mPoints.clear();
@@ -3382,9 +3431,9 @@ bool QgsGeorefPluginGui::setGcpLayerSettings( QgsVectorLayer *layer_gcp )
     if ( d_size_base < 10.0 )
       d_size_base = 15.0;
     double d_size_font = d_size_base * 0.8;
-    d_size_base = d_size_base / 3;
+    d_size_base = d_size_base / 3; // 6.0
     double d_size_symbol_big = d_size_base * 1.5; // 7.5
-    double d_size_symbol_small = d_size_base * 1.25;   // 6.26
+    double d_size_symbol_small = d_size_base * 0.50;   // 2.50
     // Labels:
     if (( layer_gcp->isValid() ) && ( mGcp_label_type > 0 ) )
     { // see: core/qgspallabeling.cpp/h and  app/qgslabelingwidget.cpp
@@ -3452,7 +3501,6 @@ bool QgsGeorefPluginGui::setGcpLayerSettings( QgsVectorLayer *layer_gcp )
       QgsFeatureRendererV2 *gcp_layer_renderer = layer_gcp->rendererV2();
       if ( gcp_layer_renderer )
       {
-
         QgsRenderContext gcp_layer_symbols_context;
         QgsSymbolV2List gcp_layer_symbols = gcp_layer_renderer->symbols( gcp_layer_symbols_context );
         if ( gcp_layer_symbols.count() == 1 )
@@ -3462,36 +3510,36 @@ bool QgsGeorefPluginGui::setGcpLayerSettings( QgsVectorLayer *layer_gcp )
           if ( gcp_layer_symbol_container )
           {
             if (( gcp_layer_symbol_container->type() == QgsSymbolV2::Marker ) && ( gcp_layer_symbol_container->symbolLayerCount() == 1 ) )
-            { // remove the only QgsSymbolV2 from the list [will be replaced with a big green pentagon containing a small red cross]
-              QgsSimpleMarkerSymbolLayerV2 *gcp_layer_symbol_pentagon =  static_cast<QgsSimpleMarkerSymbolLayerV2*>( gcp_layer_symbol_container->takeSymbolLayer( 0 ) );
-              if ( gcp_layer_symbol_pentagon )
+            { // remove the only QgsSymbolV2 from the list [will be replaced with a big red star containing a small red circle]
+              QgsSimpleMarkerSymbolLayerV2 *gcp_layer_symbol_star =  static_cast<QgsSimpleMarkerSymbolLayerV2*>( gcp_layer_symbol_container->takeSymbolLayer( 0 ) );
+              if ( gcp_layer_symbol_star )
               { // prepair the second QgsSymbolV2 from the first
-                QgsSimpleMarkerSymbolLayerV2 *gcp_layer_symbol_cross = static_cast<QgsSimpleMarkerSymbolLayerV2*>( gcp_layer_symbol_pentagon->clone() );
-                if ( gcp_layer_symbol_cross )
+                QgsSimpleMarkerSymbolLayerV2 *gcp_layer_symbol_circle = static_cast<QgsSimpleMarkerSymbolLayerV2*>( gcp_layer_symbol_star->clone() );
+                if ( gcp_layer_symbol_circle )
                 { // see core/symbology-ng/qgssymbolv2.h, qgsmarkersymbollayerv2.h
-                  // Pentagon
-                  gcp_layer_symbol_pentagon->setFillColor( Qt::darkGreen );
-                  gcp_layer_symbol_pentagon->setOutlineColor( Qt::black );
-                  gcp_layer_symbol_pentagon->setOutputUnit( QgsSymbolV2::MM );
-                  gcp_layer_symbol_pentagon->setSize( d_size_symbol_big );
-                  gcp_layer_symbol_pentagon->setMapUnitScale( 0 );
-                  gcp_layer_symbol_pentagon->setShape( QgsSimpleMarkerSymbolLayerBase::Pentagon );
-                  gcp_layer_symbol_pentagon->setOutlineStyle( Qt::SolidLine );
-                  gcp_layer_symbol_pentagon->setPenJoinStyle( Qt::BevelJoin );
-                  // Cross
-                  gcp_layer_symbol_cross->setFillColor( Qt::red );
-                  gcp_layer_symbol_cross->setOutlineColor( Qt::black );
-                  gcp_layer_symbol_cross->setOutputUnit( QgsSymbolV2::MM );
-                  gcp_layer_symbol_cross->setSize( d_size_symbol_small );
-                  gcp_layer_symbol_cross->setMapUnitScale( 0 );
-                  gcp_layer_symbol_cross->setShape( QgsSimpleMarkerSymbolLayerBase::CrossFill );
-                  gcp_layer_symbol_cross->setAngle( 45.0 );
-                  gcp_layer_symbol_cross->setOutlineStyle( Qt::SolidLine );
-                  gcp_layer_symbol_cross->setPenJoinStyle( Qt::BevelJoin );
-                  // Set transparity for both and add Pentagon, Cross
-                  gcp_layer_symbol_container->setAlpha( 0.4 );
-                  gcp_layer_symbol_container->appendSymbolLayer( gcp_layer_symbol_pentagon );
-                  gcp_layer_symbol_container->appendSymbolLayer( gcp_layer_symbol_cross );
+                  // Star
+                  gcp_layer_symbol_star->setFillColor( Qt::red );
+                  gcp_layer_symbol_star->setOutlineColor( Qt::black );
+                  gcp_layer_symbol_star->setOutputUnit( QgsSymbolV2::MM );
+                  gcp_layer_symbol_star->setSize( d_size_symbol_big );
+                  gcp_layer_symbol_star->setMapUnitScale( 0 );
+                  gcp_layer_symbol_star->setShape( QgsSimpleMarkerSymbolLayerBase::Star );
+                  gcp_layer_symbol_star->setOutlineStyle( Qt::DotLine );
+                  gcp_layer_symbol_star->setPenJoinStyle( Qt::BevelJoin );
+                  // Circle
+                  gcp_layer_symbol_circle->setFillColor( Qt::yellow );
+                  gcp_layer_symbol_circle->setOutlineColor( Qt::black );
+                  gcp_layer_symbol_circle->setOutputUnit( QgsSymbolV2::MM );
+                  gcp_layer_symbol_circle->setSize( d_size_symbol_small );
+                  gcp_layer_symbol_circle->setMapUnitScale( 0 );
+                  gcp_layer_symbol_circle->setShape( QgsSimpleMarkerSymbolLayerBase::Circle );
+                  gcp_layer_symbol_circle->setAngle( 0.0 );
+                  gcp_layer_symbol_circle->setOutlineStyle( Qt::DashDotLine );
+                  gcp_layer_symbol_circle->setPenJoinStyle( Qt::BevelJoin );
+                  // Set transparity for both and add Star, Circle
+                  gcp_layer_symbol_container->setAlpha( 1.0 );
+                  gcp_layer_symbol_container->appendSymbolLayer( gcp_layer_symbol_star );
+                  gcp_layer_symbol_container->appendSymbolLayer( gcp_layer_symbol_circle );
                   if (( gcp_layer_symbol_container->type() == QgsSymbolV2::Marker ) && ( gcp_layer_symbol_container->symbolLayerCount() == 2 ) )
                   { // checking that we have what is desired
                     isDirty = true;
@@ -3509,4 +3557,145 @@ bool QgsGeorefPluginGui::setGcpLayerSettings( QgsVectorLayer *layer_gcp )
     }
   }
   return layer_gcp->isValid();
+}
+bool QgsGeorefPluginGui::setCutlineLayerSettings( QgsVectorLayer *layer_cutline )
+{ // Note: these are 'Point'-Layers
+  Q_CHECK_PTR( layer_cutline );
+  if ( mLegacyMode > 0 )
+  {
+    QString s_CutlineLabelExpression = "name||' ['||id_gcp_coverage||', '||id_cutline||']'";
+    double d_size_base = fontPointSize;
+    if ( d_size_base < 10.0 )
+      d_size_base = 15.0;
+    double d_size_font = d_size_base * 0.8;
+    d_size_base = d_size_base / 3; // 6.0
+    double d_size_symbol_big = d_size_base * 1.5; // 7.5
+    double d_size_symbol_small = d_size_base * 0.50;   // 2.50
+    // Labels:
+    if ( layer_cutline->isValid() )
+    { // see: core/qgspallabeling.cpp/h and  app/qgslabelingwidget.cpp
+      // fontPointSize=15 ; _size_font=12
+      QgsPalLayerSettings cutline_layer_settings;
+      cutline_layer_settings.readFromLayer( layer_cutline );
+      cutline_layer_settings.enabled = true;
+      cutline_layer_settings.drawLabels = true;
+      cutline_layer_settings.fieldName = s_CutlineLabelExpression;
+      cutline_layer_settings.isExpression = true;
+      // Text
+      cutline_layer_settings.textColor = Qt::yellow;
+      cutline_layer_settings.fontSizeInMapUnits = false;
+      cutline_layer_settings.textFont.setPointSizeF( d_size_font );
+      // Wrap
+      cutline_layer_settings.wrapChar = QString( "[" );
+      cutline_layer_settings.multilineHeight = 1.0;
+      cutline_layer_settings.multilineAlign = QgsPalLayerSettings::MultiCenter;
+      // Background [shape]
+      cutline_layer_settings.shapeDraw = true;
+      cutline_layer_settings.shapeType = QgsPalLayerSettings::ShapeEllipse;
+      cutline_layer_settings.shapeFillColor = Qt::darkBlue;
+      cutline_layer_settings.shapeBorderColor = Qt::black;
+      cutline_layer_settings.shapeTransparency = 0;
+      cutline_layer_settings.shapeBorderWidth = 1;
+      cutline_layer_settings.shapeBorderWidthUnits = QgsPalLayerSettings::MM;
+      // Placement
+      cutline_layer_settings.placement = QgsPalLayerSettings::OrderedPositionsAroundPoint;
+      // cutline_layer_settings.placementFlags = QgsPalLayerSettings::AboveLine | QgsPalLayerSettings::MapOrientation;
+      cutline_layer_settings.placementFlags = QgsPalLayerSettings::AboveLine;
+      cutline_layer_settings.dist = 5;
+      cutline_layer_settings.distInMapUnits = false;
+      // Drop shadow
+      cutline_layer_settings.shadowDraw = true;
+      cutline_layer_settings.shadowUnder = QgsPalLayerSettings::ShadowLowest;
+      cutline_layer_settings.shadowOffsetAngle = 135;
+      cutline_layer_settings.shadowOffsetDist = 0;
+      cutline_layer_settings.shadowOffsetUnits = QgsPalLayerSettings::MM;
+      cutline_layer_settings.shadowOffsetMapUnitScale = false;
+      cutline_layer_settings.shadowOffsetGlobal = true;
+      cutline_layer_settings.shadowRadius = 1.50;
+      cutline_layer_settings.shadowRadiusUnits = QgsPalLayerSettings::MM;
+      cutline_layer_settings.shadowRadiusMapUnitScale = false;
+      cutline_layer_settings.shadowRadiusAlphaOnly = false;
+      cutline_layer_settings.shadowTransparency = 30.0;
+      cutline_layer_settings.shadowScale = 100;
+      cutline_layer_settings.shadowColor = Qt::cyan;
+      cutline_layer_settings.shadowBlendMode = QPainter::CompositionMode_Multiply;
+      // Write settings to layer
+      cutline_layer_settings.writeToLayer( layer_cutline );
+      qDebug() << QString( "QgsGeorefPluginGui::setCutlineLayerSettings -1- [%1] " ).arg( "Label" );
+    }
+    // Symbols:
+    if (( layer_cutline->isValid() ) && ( layer_cutline->rendererV2() ) )
+    {  // see: gui/symbology-ng/qgsrendererv2propertiesdialog.cpp, qgslayerpropertieswidget.cpp and  app/qgsvectorlayerproperties.cpp
+      QgsFeatureRendererV2 *cutline_layer_renderer = layer_cutline->rendererV2();
+      if ( cutline_layer_renderer )
+      {
+        QgsRenderContext cutline_layer_symbols_context;
+        QgsSymbolV2List cutline_layer_symbols = cutline_layer_renderer->symbols( cutline_layer_symbols_context );
+        if ( cutline_layer_symbols.count() == 1 )
+        { // Being a Point, there should only be 1
+          bool isDirty = false;
+          QgsSymbolV2 *cutline_layer_symbol_container = cutline_layer_symbols.at( 0 );
+          if ( cutline_layer_symbol_container )
+          {
+            // cutline_points
+            if (( cutline_layer_symbol_container->type() == QgsSymbolV2::Marker ) && ( cutline_layer_symbol_container->symbolLayerCount() == 1 ) )
+            { // remove the only QgsSymbolV2 from the list [will be replaced with a big green pentagon containing a small red cross]
+              qDebug() << QString( "QgsGeorefPluginGui::setCutlineLayerSettings -2- [%1] " ).arg( "Point/Marker" );
+              QgsSimpleMarkerSymbolLayerV2 *cutline_layer_symbol_pentagon =  static_cast<QgsSimpleMarkerSymbolLayerV2*>( cutline_layer_symbol_container->takeSymbolLayer( 0 ) );
+              if ( cutline_layer_symbol_pentagon )
+              { // prepair the second QgsSymbolV2 from the first
+                QgsSimpleMarkerSymbolLayerV2 *cutline_layer_symbol_cross = static_cast<QgsSimpleMarkerSymbolLayerV2*>( cutline_layer_symbol_pentagon->clone() );
+                if ( cutline_layer_symbol_cross )
+                { // see core/symbology-ng/qgssymbolv2.h, qgsmarkersymbollayerv2.h
+                  // Pentagon
+                  cutline_layer_symbol_pentagon->setFillColor( Qt::darkGreen );
+                  cutline_layer_symbol_pentagon->setOutlineColor( Qt::black );
+                  cutline_layer_symbol_pentagon->setOutputUnit( QgsSymbolV2::MM );
+                  cutline_layer_symbol_pentagon->setSize( d_size_symbol_big );
+                  cutline_layer_symbol_pentagon->setMapUnitScale( 0 );
+                  cutline_layer_symbol_pentagon->setShape( QgsSimpleMarkerSymbolLayerBase::Star );
+                  cutline_layer_symbol_pentagon->setOutlineStyle( Qt::DotLine );
+                  cutline_layer_symbol_pentagon->setPenJoinStyle( Qt::BevelJoin );
+                  // Cross
+                  cutline_layer_symbol_cross->setFillColor( Qt::red );
+                  cutline_layer_symbol_cross->setOutlineColor( Qt::black );
+                  cutline_layer_symbol_cross->setOutputUnit( QgsSymbolV2::MM );
+                  cutline_layer_symbol_cross->setSize( d_size_symbol_small );
+                  cutline_layer_symbol_cross->setMapUnitScale( 0 );
+                  cutline_layer_symbol_cross->setShape( QgsSimpleMarkerSymbolLayerBase::Circle );
+                  cutline_layer_symbol_cross->setAngle( 0.0 );
+                  cutline_layer_symbol_cross->setOutlineStyle( Qt::DashDotLine );
+                  cutline_layer_symbol_cross->setPenJoinStyle( Qt::BevelJoin );
+                  // Set transparity for both and add Pentagon, Cross
+                  cutline_layer_symbol_container->setAlpha( 0.0 );
+                  cutline_layer_symbol_container->appendSymbolLayer( cutline_layer_symbol_pentagon );
+                  cutline_layer_symbol_container->appendSymbolLayer( cutline_layer_symbol_cross );
+                  if (( cutline_layer_symbol_container->type() == QgsSymbolV2::Marker ) && ( cutline_layer_symbol_container->symbolLayerCount() == 2 ) )
+                  { // checking that we have what is desired
+                    isDirty = true;
+                  }
+                }
+              }
+            }
+            // cutline_linestrings
+            if (( cutline_layer_symbol_container->type() == QgsSymbolV2::Line ) && ( cutline_layer_symbol_container->symbolLayerCount() == 1 ) )
+            {
+              qDebug() << QString( "QgsGeorefPluginGui::setCutlineLayerSettings -3- [%1] " ).arg( "Linestring/Line" );
+            }
+            // cutline_polygonss
+            if (( cutline_layer_symbol_container->type() == QgsSymbolV2::Fill ) && ( cutline_layer_symbol_container->symbolLayerCount() == 1 ) )
+            {
+              qDebug() << QString( "QgsGeorefPluginGui::setCutlineLayerSettings -3- [%1] " ).arg( "Polygon/Fill" );
+            }
+          }
+          if ( isDirty )
+          {
+            layer_cutline->setRendererV2( cutline_layer_renderer );
+            qDebug() << QString( "QgsGeorefPluginGui::setCutlineLayerSettings -z- [%1] " ).arg( isDirty );
+          }
+        }
+      }
+    }
+  }
+  return layer_cutline->isValid();
 }

@@ -218,6 +218,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     void logRequaredGCPs();
     void clearGCPData();
     bool setGcpLayerSettings(QgsVectorLayer *layer_gcp);
+    bool setCutlineLayerSettings(QgsVectorLayer *layer_cutline);
 
     /**
      * Calculates root mean squared error for the currently active
@@ -271,6 +272,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     int mRasterScale;
     QgsLayerTreeGroup *group_georeferencer;
     QgsLayerTreeGroup *group_gcp_points;
+    QgsLayerTreeGroup *group_gcp_cutlines;
 
     QgsGeorefTransform::TransformParametrisation mTransformParam;
     QgsImageWarper::ResamplingMethod mResamplingMethod;
@@ -290,6 +292,12 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     QgsVectorLayer *layer_gcp_points;
     QString mGcp_pixel_layername;
     QgsVectorLayer *layer_gcp_pixels;
+    QString mCutline_points_layername;
+    QgsVectorLayer *layer_cutline_points;
+    QString mCutline_linestrings_layername;
+    QgsVectorLayer *layer_cutline_linestrings;
+    QString mCutline_polygons_layername;
+    QgsVectorLayer *layer_cutline_polygons;
 
     QgsMapTool *mToolZoomIn;
     QgsMapTool *mToolZoomOut;
