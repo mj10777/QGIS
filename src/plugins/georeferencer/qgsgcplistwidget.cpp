@@ -76,6 +76,15 @@ QgsGCPListWidget::QgsGCPListWidget( QWidget *parent, int i_LegacyMode )
            this, SLOT( updateItemCoords( QWidget* ) ) );
 }
 
+void QgsGCPListWidget::setLegacyMode( int i_LegacyMode )
+{
+  mLegacyMode = i_LegacyMode;
+  if ( mGCPListModel )
+  {
+    mGCPListModel->setLegacyMode( mLegacyMode );
+  }
+}
+
 void QgsGCPListWidget::setGCPList( QgsGCPList *theGCPList )
 {
   mGCPListModel->setGCPList( theGCPList );
@@ -107,8 +116,8 @@ void QgsGCPListWidget::closeEditors()
 void QgsGCPListWidget::itemDoubleClicked( QModelIndex index )
 {
   index = static_cast<const QSortFilterProxyModel*>( model() )->mapToSource( index );
-  bool ok=true;
-  int id =index.row();
+  bool ok = true;
+  int id = index.row();
   switch ( mLegacyMode )
   {
     case 0:
@@ -116,8 +125,8 @@ void QgsGCPListWidget::itemDoubleClicked( QModelIndex index )
     {
       QStandardItem *item = mGCPListModel->item( index.row(), 1 );
       id = item->text().toInt( &ok );
-     }
-      break;
+    }
+    break;
   }
   if ( ok )
   {

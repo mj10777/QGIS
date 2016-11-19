@@ -68,10 +68,19 @@
     <addaction name="mActionRasterProperties"/>
     <addaction name="mActionGeorefConfig"/>
    </widget>
+   <widget class="QMenu" name="menuGCPDatabase">
+    <property name="title">
+     <string>GCP-Database Settings</string>
+    </property>
+    <addaction name="mActionLegacyMode"/>
+    <addaction name="separator"/>
+    <addaction name="mActionGCPDatabase"/>
+   </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEdit"/>
    <addaction name="menuView"/>
    <addaction name="menuSettings"/>
+   <addaction name="menuGCPDatabase"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <widget class="QToolBar" name="toolBarFile">
@@ -364,6 +373,16 @@
   <action name="mActionZoomLast">
    <property name="text">
     <string>Zoom Last</string>
+   </property>
+  </action>
+  <action name="mActionLegacyMode">
+   <property name="text">
+    <string>Switch Legacy-Mode</string>
+   </property>
+  </action>
+  <action name="mActionGCPDatabase">
+   <property name="text">
+    <string>Read GCP-Database</string>
    </property>
   </action>
   <action name="mActionLocalHistogramStretch">

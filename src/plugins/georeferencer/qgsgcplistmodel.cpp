@@ -59,6 +59,11 @@ QgsGCPListModel::QgsGCPListModel( QObject *parent, int i_LegacyMode )
   setSortRole( Qt::UserRole );
 }
 
+void QgsGCPListModel::setLegacyMode( int i_LegacyMode )
+{
+  mLegacyMode = i_LegacyMode;
+}
+
 void QgsGCPListModel::setGCPList( QgsGCPList *theGCPList )
 {
   mGCPList = theGCPList;

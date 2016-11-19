@@ -74,6 +74,11 @@
 #include "qgsrendererv2.h"
 #include "qgssymbollayerv2.h"
 #include "qgsmarkersymbollayerv2.h"
+#include "qgslinesymbollayerv2.h"
+#include "qgsfillsymbollayerv2.h"
+#include "qgscategorizedsymbolrendererv2.h"
+#include "qgsvectorcolorrampv2.h"
+#include "qgslayerdefinition.h"
 #include <sqlite3.h>
 #include <spatialite.h>
 
@@ -125,6 +130,9 @@ QgsGeorefPluginGui::QgsGeorefPluginGui( QgisInterface* theQgisInterface, QWidget
   group_georeferencer = nullptr;
   group_gcp_cutlines = nullptr;
   group_gcp_points = nullptr;
+  group_gtif_raster = nullptr;
+  mLayer_gtif_raster = nullptr;
+  mLoadGTifInQgis = 1;
   mGcp_label_type = 1;
   mGcpLabelExpression = "id_gcp"; // "id_gcp||'['||point_x||', '||point_y||']''"
   mCutline_points_layername = "create_cutline_points";
@@ -399,11 +407,15 @@ void QgsGeorefPluginGui::doGeoreference()
     {
       if ( mModifiedRasterFileName.isEmpty() )
       {
-        mIface->addRasterLayer( mRasterFileName );
+        // mIface->addRasterLayer( mRasterFileName );
+        QFileInfo fileInfo( QString( "%1" ).arg( mRasterFileName ) );
+        loadGTifInQgis( fileInfo.absoluteFilePath() );
       }
       else
       {
-        mIface->addRasterLayer( mModifiedRasterFileName );
+        QFileInfo fileInfo( QString( "%1/%2" ).arg( mRasterFilePath ).arg( mModifiedRasterFileName ) );
+        loadGTifInQgis( fileInfo.absoluteFilePath() );
+        // mIface->addRasterLayer( mModifiedRasterFileName );
       }
 
       //      showMessageInLog(tr("Modified raster saved in"), mModifiedRasterFileName);
@@ -997,6 +1009,13 @@ void QgsGeorefPluginGui::createActions()
   mActionGeorefConfig->setIcon( getThemeIcon( "/mActionGeorefConfig.png" ) );
   connect( mActionGeorefConfig, SIGNAL( triggered() ), this, SLOT( showGeorefConfigDialog() ) );
 
+  // GCPDatabase
+  mActionLegacyMode->setIcon( getThemeIcon( "/mActionProjectProperties.png" ) );
+  connect( mActionLegacyMode, SIGNAL( triggered() ), this, SLOT( setLegacyMode() ) );
+
+  mActionGCPDatabase->setIcon( getThemeIcon( "/mActionTransformSettings.png" ) );
+  connect( mActionGCPDatabase, SIGNAL( triggered() ), this, SLOT( readGCBDb() ) );
+
   // Histogram stretch
   mActionLocalHistogramStretch->setIcon( getThemeIcon( "/mActionLocalHistogramStretch.svg" ) );
   connect( mActionLocalHistogramStretch, SIGNAL( triggered() ), this, SLOT( localHistogramStretch() ) );
@@ -1363,6 +1382,8 @@ bool QgsGeorefPluginGui::loadGCPs( /*bool verbose*/ )
         QList<QgsMapLayer *> layers_points_cutlines;
         layers_points_cutlines << layer_gcp_points;
         group_georeferencer = QgsProject::instance()->layerTreeRoot()->insertGroup( 0, QString( "Georeferencer" ) );
+        int i_group_position = 0;
+        group_gcp_points = group_georeferencer->insertGroup( i_group_position++, mCoverage_Name );
         if ( setCutlineLayerSettings( layer_cutline_points ) )
         { // Add only valid layers
           layers_points_cutlines << layer_cutline_points;
@@ -1372,12 +1393,13 @@ bool QgsGeorefPluginGui::loadGCPs( /*bool verbose*/ )
             if ( setCutlineLayerSettings( layer_cutline_polygons ) )
             { // Add only valid layers
               layers_points_cutlines << layer_cutline_polygons;
-              group_gcp_cutlines = group_georeferencer->insertGroup( 0,  "Gcp_Cutlines" );
+              group_gcp_cutlines = group_georeferencer->insertGroup( i_group_position++,  "Gcp_Cutlines" );
             }
           }
         }
         // Note: since they are being placed in our groups, 'false' must be used, avoiding the automatic inserting into the layerTreeRoot.
         QgsMapLayerRegistry::instance()->addMapLayers( layers_points_cutlines, false );
+        group_gcp_points->insertLayer( 0, layer_gcp_points );
         if ( group_gcp_cutlines )
         { // must be added AFTER being registered !
           group_gcp_cutlines->insertLayer( 0, layer_cutline_points );
@@ -1387,9 +1409,13 @@ bool QgsGeorefPluginGui::loadGCPs( /*bool verbose*/ )
           group_gcp_cutlines->insertLayer( 2, layer_cutline_polygons );
           layer_cutline_polygons->startEditing();
         }
-        group_gcp_points = group_georeferencer->insertGroup( 1, mCoverage_Name );
-        group_gcp_points->insertLayer( 0, layer_gcp_points );
-        // qDebug()<< QgsProject::instance()->layerTreeRoot()->dump();
+        group_gtif_rasters = group_georeferencer->insertGroup( i_group_position++,  "Gcp_GTif-Rasters" );
+        if ( group_gtif_rasters )
+        { // If configured to dos so and if file exists, will be loaded
+          QFileInfo fileInfo( QString( "%1/%2" ).arg( mRasterFilePath ).arg( mModifiedRasterFileName ) );
+          loadGTifInQgis( fileInfo.absoluteFilePath() );
+        }
+        exportLayerDefinition( group_gcp_cutlines );
         layer_gcp_pixels->startEditing();
         layer_gcp_points->startEditing();
         QgsAttributeList lst_needed_fields;
@@ -1424,10 +1450,10 @@ bool QgsGeorefPluginGui::loadGCPs( /*bool verbose*/ )
         qDebug() << QString( "QgsGeorefPluginGui::loadGCPs[2] count[%1] geom[%2]" ).arg( layer_gcp_pixels->featureCount() ).arg( mGcp_pixel_layername );
       }
       else
-        layer_gcp_points = NULL;
+        layer_gcp_points = nullptr;
     }
   }
-  if ( layer_gcp_pixels == NULL )
+  if ( layer_gcp_pixels == nullptr )
     b_load_points_file = true;
   if ( b_load_points_file )
   {
@@ -1480,9 +1506,12 @@ bool QgsGeorefPluginGui::loadGCPs( /*bool verbose*/ )
   if ( mGCPsDirty )
   {
     mGCPListWidget->setGCPList( &mPoints );
-    updateGeorefTransform();
+    //  QgsVectorLayer: Buffer with uncommitted editing operations. Only valid after editing has been turned on.
+    // QgsVectorLayerEditBuffer* editBuffer()
+    // connect( mEditBuffer, SIGNAL( geometryChanged( QgsFeatureId, QgsGeometry& ) ), this, SIGNAL( geometryChanged( QgsFeatureId, QgsGeometry& ) ) );
     mCanvas->refresh();
     mIface->mapCanvas()->refresh();
+    updateGeorefTransform();
   }
 
   return true;
@@ -2122,7 +2151,7 @@ QString QgsGeorefPluginGui::generateGDALwarpCommand( const QString& resampling, 
     // Otherwise, use thin plate spline interpolation
     gdalCommand << "-tps";
   }
-  gdalCommand << "-co COMPRESS=" + compress << ( useZeroForTrans ? "-dstalpha" : "" );
+  gdalCommand << "-co COMPREss=" + compress << ( useZeroForTrans ? "-dstalpha" : "" );
 
   if ( targetResX != 0.0 && targetResY != 0.0 )
   {
@@ -2421,6 +2450,7 @@ void QgsGeorefPluginGui::clearGCPData()
   {
     if ( group_georeferencer )
     {
+      // exportLayerDefinition(group_georeferencer);
       if ( group_gcp_cutlines )
       {
         group_gcp_cutlines->removeLayer( layer_cutline_points );
@@ -2440,6 +2470,21 @@ void QgsGeorefPluginGui::clearGCPData()
         group_gcp_points->removeLayer( layer_gcp_points );
         group_georeferencer->removeChildNode(( QgsLayerTreeNode * )group_gcp_points );
         group_gcp_points = nullptr;
+      }
+      if ( group_gtif_rasters )
+      {
+        if (( mLayer_gtif_raster ) && ( group_gtif_raster ) )
+        { // Check if layer is still contained in group
+          if ( group_gtif_rasters->findLayer( group_gtif_raster->layerId() ) )
+          { // Remove only if layer is still contained in the main-group, may have been movwd elswhere by the user
+            group_gtif_rasters->removeLayer( mLayer_gtif_raster );
+            QgsMapLayerRegistry::instance()->removeMapLayers(( QStringList() << mLayer_gtif_raster->id() ) );
+            mLayer_gtif_raster = nullptr;
+            group_gtif_raster = nullptr;
+          }
+        }
+        group_georeferencer->removeChildNode(( QgsLayerTreeNode * )group_gtif_rasters );
+        group_gtif_rasters = nullptr;
       }
       QgsProject::instance()->layerTreeRoot()->removeChildNode(( QgsLayerTreeNode * )group_georeferencer );
       group_georeferencer = nullptr;
@@ -2482,7 +2527,7 @@ QString QgsGeorefPluginGui::generateGDALgcpCommand()
 }
 bool QgsGeorefPluginGui::isGCPDb()
 {
-  if ( layer_gcp_pixels != NULL )
+  if ( layer_gcp_pixels != nullptr )
     return true;
   else
     return false;
@@ -2496,7 +2541,7 @@ bool QgsGeorefPluginGui::createGCPDb()
   // After being opened (with CREATE), the file will exist, so store if it exist now
   bool b_database_exists = QFile( mGCPdatabaseFileName ).exists();
   void *cache;
-  char *errMsg = NULL;
+  char *errMsg = nullptr;
   b_spatialite_gcp_enabled = false;
   s_gcp_points_table_name = QString( "gcp_points_%1" ).arg( mGCPbaseFileName.toLower() );
   id_gcp_coverage = -1;
@@ -2545,7 +2590,7 @@ bool QgsGeorefPluginGui::createGCPDb()
   {
     mError = QString( "Failed to open database: rc=%1 database[%2]" ).arg( ret ).arg( mGCPdatabaseFileName );
     sqlite3_close( db_handle );
-    db_handle = NULL;
+    db_handle = nullptr;
     return false;
   }
   // needed by spatialite_init_ex (multi-threading)
@@ -2600,8 +2645,8 @@ bool QgsGeorefPluginGui::createGCPDb()
       qDebug() << QString( "QgsGeorefPluginGui::createGCPDb -3- [%1] " ).arg( mError );
       sqlite3_free( errMsg );
       sqlite3_close( db_handle );
-      db_handle = NULL;
-      if ( cache != NULL )
+      db_handle = nullptr;
+      if ( cache != nullptr )
         spatialite_cleanup_ex( cache );
       spatialite_shutdown();
       return false;
@@ -2638,8 +2683,8 @@ bool QgsGeorefPluginGui::createGCPDb()
       qDebug() << QString( "QgsGeorefPluginGui::createGCPDb -4- [%1] " ).arg( mError );
       sqlite3_free( errMsg );
       sqlite3_close( db_handle );
-      db_handle = NULL;
-      if ( cache != NULL )
+      db_handle = nullptr;
+      if ( cache != nullptr )
         spatialite_cleanup_ex( cache );
       spatialite_shutdown();
       return false;
@@ -2656,8 +2701,8 @@ bool QgsGeorefPluginGui::createGCPDb()
       mError = QString( "Unable to retrieve id_gcp_covarage: rc=%1 [%2] sql[%3]\n" ).arg( ret ).arg( QString::fromUtf8( sqlite3_errmsg( db_handle ) ) ).arg( s_sql );
       qDebug() << QString( "QgsGeorefPluginGui::createGCPDb -5- [%1] " ).arg( mError );
       sqlite3_close( db_handle );
-      db_handle = NULL;
-      if ( cache != NULL )
+      db_handle = nullptr;
+      if ( cache != nullptr )
         spatialite_cleanup_ex( cache );
       spatialite_shutdown();
       return false;
@@ -2698,8 +2743,8 @@ bool QgsGeorefPluginGui::createGCPDb()
       mError = QString( "Unable to retrieve id_gcp_covarage: rc=%1 [%2] sql[%3]\n" ).arg( ret ).arg( QString::fromUtf8( sqlite3_errmsg( db_handle ) ) ).arg( s_sql );
       qDebug() << QString( "QgsGeorefPluginGui::createGCPDb -7- [%1] " ).arg( mError );
       sqlite3_close( db_handle );
-      db_handle = NULL;
-      if ( cache != NULL )
+      db_handle = nullptr;
+      if ( cache != nullptr )
         spatialite_cleanup_ex( cache );
       spatialite_shutdown();
       return false;
@@ -2747,8 +2792,8 @@ bool QgsGeorefPluginGui::createGCPDb()
       qDebug() << QString( "QgsGeorefPluginGui::createGCPDb -8- [%1] " ).arg( mError );
       sqlite3_free( errMsg );
       sqlite3_close( db_handle );
-      db_handle = NULL;
-      if ( cache != NULL )
+      db_handle = nullptr;
+      if ( cache != nullptr )
         spatialite_cleanup_ex( cache );
       spatialite_shutdown();
       return false;
@@ -2761,8 +2806,8 @@ bool QgsGeorefPluginGui::createGCPDb()
       qDebug() << QString( "QgsGeorefPluginGui::createGCPDb -9- [%1] " ).arg( mError );
       sqlite3_free( errMsg );
       sqlite3_close( db_handle );
-      db_handle = NULL;
-      if ( cache != NULL )
+      db_handle = nullptr;
+      if ( cache != nullptr )
         spatialite_cleanup_ex( cache );
       spatialite_shutdown();
       return false;
@@ -2775,8 +2820,8 @@ bool QgsGeorefPluginGui::createGCPDb()
       qDebug() << QString( "QgsGeorefPluginGui::createGCPDb -10- [%1] " ).arg( mError );
       sqlite3_free( errMsg );
       sqlite3_close( db_handle );
-      db_handle = NULL;
-      if ( cache != NULL )
+      db_handle = nullptr;
+      if ( cache != nullptr )
         spatialite_cleanup_ex( cache );
       spatialite_shutdown();
       return false;
@@ -2789,8 +2834,8 @@ bool QgsGeorefPluginGui::createGCPDb()
       qDebug() << QString( "QgsGeorefPluginGui::createGCPDb -11- [%1] " ).arg( mError );
       sqlite3_free( errMsg );
       sqlite3_close( db_handle );
-      db_handle = NULL;
-      if ( cache != NULL )
+      db_handle = nullptr;
+      if ( cache != nullptr )
         spatialite_cleanup_ex( cache );
       spatialite_shutdown();
       return false;
@@ -2803,8 +2848,8 @@ bool QgsGeorefPluginGui::createGCPDb()
       qDebug() << QString( "QgsGeorefPluginGui::createGCPDb -12- [%1] " ).arg( mError );
       sqlite3_free( errMsg );
       sqlite3_close( db_handle );
-      db_handle = NULL;
-      if ( cache != NULL )
+      db_handle = nullptr;
+      if ( cache != nullptr )
         spatialite_cleanup_ex( cache );
       spatialite_shutdown();
       return false;
@@ -2831,8 +2876,8 @@ bool QgsGeorefPluginGui::createGCPDb()
       qDebug() << QString( "QgsGeorefPluginGui::createGCPDb -13- [%1] " ).arg( mError );
       sqlite3_free( errMsg );
       sqlite3_close( db_handle );
-      db_handle = NULL;
-      if ( cache != NULL )
+      db_handle = nullptr;
+      if ( cache != nullptr )
         spatialite_cleanup_ex( cache );
       spatialite_shutdown();
       return false;
@@ -2865,8 +2910,8 @@ bool QgsGeorefPluginGui::createGCPDb()
       qDebug() << QString( "QgsGeorefPluginGui::createGCPDb -14- [%1] " ).arg( mError );
       sqlite3_free( errMsg );
       sqlite3_close( db_handle );
-      db_handle = NULL;
-      if ( cache != NULL )
+      db_handle = nullptr;
+      if ( cache != nullptr )
         spatialite_cleanup_ex( cache );
       spatialite_shutdown();
       return false;
@@ -2883,8 +2928,8 @@ bool QgsGeorefPluginGui::createGCPDb()
       qDebug() << QString( "QgsGeorefPluginGui::createGCPDb -15- [%1] " ).arg( mError );
       sqlite3_free( errMsg );
       sqlite3_close( db_handle );
-      db_handle = NULL;
-      if ( cache != NULL )
+      db_handle = nullptr;
+      if ( cache != nullptr )
         spatialite_cleanup_ex( cache );
       spatialite_shutdown();
       return false;
@@ -2901,8 +2946,8 @@ bool QgsGeorefPluginGui::createGCPDb()
       qDebug() << QString( "QgsGeorefPluginGui::createGCPDb -16- [%1] " ).arg( mError );
       sqlite3_free( errMsg );
       sqlite3_close( db_handle );
-      db_handle = NULL;
-      if ( cache != NULL )
+      db_handle = nullptr;
+      if ( cache != nullptr )
         spatialite_cleanup_ex( cache );
       spatialite_shutdown();
       return false;
@@ -2919,8 +2964,8 @@ bool QgsGeorefPluginGui::createGCPDb()
       qDebug() << QString( "QgsGeorefPluginGui::createGCPDb -17- [%1] " ).arg( mError );
       sqlite3_free( errMsg );
       sqlite3_close( db_handle );
-      db_handle = NULL;
-      if ( cache != NULL )
+      db_handle = nullptr;
+      if ( cache != nullptr )
         spatialite_cleanup_ex( cache );
       spatialite_shutdown();
       return false;
@@ -2937,8 +2982,8 @@ bool QgsGeorefPluginGui::createGCPDb()
       qDebug() << QString( "QgsGeorefPluginGui::createGCPDb -18- [%1] " ).arg( mError );
       sqlite3_free( errMsg );
       sqlite3_close( db_handle );
-      db_handle = NULL;
-      if ( cache != NULL )
+      db_handle = nullptr;
+      if ( cache != nullptr )
         spatialite_cleanup_ex( cache );
       spatialite_shutdown();
       return false;
@@ -2955,8 +3000,8 @@ bool QgsGeorefPluginGui::createGCPDb()
       qDebug() << QString( "QgsGeorefPluginGui::createGCPDb -19- [%1] " ).arg( mError );
       sqlite3_free( errMsg );
       sqlite3_close( db_handle );
-      db_handle = NULL;
-      if ( cache != NULL )
+      db_handle = nullptr;
+      if ( cache != nullptr )
         spatialite_cleanup_ex( cache );
       spatialite_shutdown();
       return false;
@@ -2973,8 +3018,8 @@ bool QgsGeorefPluginGui::createGCPDb()
       qDebug() << QString( "QgsGeorefPluginGui::createGCPDb -20- [%1] " ).arg( mError );
       sqlite3_free( errMsg );
       sqlite3_close( db_handle );
-      db_handle = NULL;
-      if ( cache != NULL )
+      db_handle = nullptr;
+      if ( cache != nullptr )
         spatialite_cleanup_ex( cache );
       spatialite_shutdown();
       return false;
@@ -2991,8 +3036,8 @@ bool QgsGeorefPluginGui::createGCPDb()
       qDebug() << QString( "QgsGeorefPluginGui::createGCPDb -21- [%1] " ).arg( mError );
       sqlite3_free( errMsg );
       sqlite3_close( db_handle );
-      db_handle = NULL;
-      if ( cache != NULL )
+      db_handle = nullptr;
+      if ( cache != nullptr )
         spatialite_cleanup_ex( cache );
       spatialite_shutdown();
       return false;
@@ -3028,8 +3073,8 @@ bool QgsGeorefPluginGui::createGCPDb()
       mError = QString( "Unable to check vector_layers_statistics, table gcp_points or geometries: gcp_pixel and gcp_point: rc=%1 [%2] sql[%3]\n" ).arg( ret ).arg( QString::fromUtf8( sqlite3_errmsg( db_handle ) ) ).arg( s_sql );
       qDebug() << QString( "QgsGeorefPluginGui::createGCPDb -22- [%1] " ).arg( mError );
       sqlite3_close( db_handle );
-      db_handle = NULL;
-      if ( cache != NULL )
+      db_handle = nullptr;
+      if ( cache != nullptr )
         spatialite_cleanup_ex( cache );
       spatialite_shutdown();
       return false;
@@ -3056,8 +3101,8 @@ bool QgsGeorefPluginGui::createGCPDb()
         qDebug() << QString( "QgsGeorefPluginGui::createGCPDb -23- [%1] " ).arg( mError );
         sqlite3_free( errMsg );
         sqlite3_close( db_handle );
-        db_handle = NULL;
-        if ( cache != NULL )
+        db_handle = nullptr;
+        if ( cache != nullptr )
           spatialite_cleanup_ex( cache );
         spatialite_shutdown();
         return false;
@@ -3073,8 +3118,8 @@ bool QgsGeorefPluginGui::createGCPDb()
         qDebug() << QString( "QgsGeorefPluginGui::createGCPDb -24- [%1] " ).arg( mError );
         sqlite3_free( errMsg );
         sqlite3_close( db_handle );
-        db_handle = NULL;
-        if ( cache != NULL )
+        db_handle = nullptr;
+        if ( cache != nullptr )
           spatialite_cleanup_ex( cache );
         spatialite_shutdown();
         return false;
@@ -3094,9 +3139,10 @@ bool QgsGeorefPluginGui::createGCPDb()
     Q_ASSERT( ret == SQLITE_OK );
     Q_UNUSED( ret );
     // --- Cutline common sql for TABLE creation
-    QString s_sql_cutline = QString( "CREATE TABLE IF NOT EXISTS 'create_cutline_%1'\n( --%2: to build %3 to assist georeferencing\n" );
+    QString s_sql_cutline = QString( "CREATE TABLE IF NOT EXISTS 'create_cutline_%1'\n( --%2: to build %3 to assist the georeferencing\n" );
     s_sql_cutline += QString( " %1 INTEGER PRIMARY KEY AUTOINCREMENT,\n" ).arg( "id_cutline" );
     s_sql_cutline += QString( " %1 INTEGER DEFAULT 0,\n" ).arg( "id_gcp_coverage" );
+    s_sql_cutline += QString( " %1 INTEGER DEFAULT 0,\n" ).arg( "cutline_type" );
     s_sql_cutline += QString( " %1 TEXT DEFAULT '',\n" ).arg( "name" );
     s_sql_cutline += QString( " %1 TEXT DEFAULT '',\n" ).arg( "notes" );
     s_sql_cutline += QString( " %1 TEXT DEFAULT '',\n" ).arg( "text" );
@@ -3113,8 +3159,8 @@ bool QgsGeorefPluginGui::createGCPDb()
       qDebug() << QString( "QgsGeorefPluginGui::createGCPDb -25- [%1] " ).arg( mError );
       sqlite3_free( errMsg );
       sqlite3_close( db_handle );
-      db_handle = NULL;
-      if ( cache != NULL )
+      db_handle = nullptr;
+      if ( cache != nullptr )
         spatialite_cleanup_ex( cache );
       spatialite_shutdown();
       return false;
@@ -3127,8 +3173,8 @@ bool QgsGeorefPluginGui::createGCPDb()
       qDebug() << QString( "QgsGeorefPluginGui::createGCPDb -26- [%1] " ).arg( mError );
       sqlite3_free( errMsg );
       sqlite3_close( db_handle );
-      db_handle = NULL;
-      if ( cache != NULL )
+      db_handle = nullptr;
+      if ( cache != nullptr )
         spatialite_cleanup_ex( cache );
       spatialite_shutdown();
       return false;
@@ -3141,8 +3187,8 @@ bool QgsGeorefPluginGui::createGCPDb()
       qDebug() << QString( "QgsGeorefPluginGui::createGCPDb -27- [%1] " ).arg( mError );
       sqlite3_free( errMsg );
       sqlite3_close( db_handle );
-      db_handle = NULL;
-      if ( cache != NULL )
+      db_handle = nullptr;
+      if ( cache != nullptr )
         spatialite_cleanup_ex( cache );
       spatialite_shutdown();
       return false;
@@ -3156,8 +3202,8 @@ bool QgsGeorefPluginGui::createGCPDb()
       qDebug() << QString( "QgsGeorefPluginGui::createGCPDb -28- [%1] " ).arg( mError );
       sqlite3_free( errMsg );
       sqlite3_close( db_handle );
-      db_handle = NULL;
-      if ( cache != NULL )
+      db_handle = nullptr;
+      if ( cache != nullptr )
         spatialite_cleanup_ex( cache );
       spatialite_shutdown();
       return false;
@@ -3170,8 +3216,8 @@ bool QgsGeorefPluginGui::createGCPDb()
       qDebug() << QString( "QgsGeorefPluginGui::createGCPDb -29- [%1] " ).arg( mError );
       sqlite3_free( errMsg );
       sqlite3_close( db_handle );
-      db_handle = NULL;
-      if ( cache != NULL )
+      db_handle = nullptr;
+      if ( cache != nullptr )
         spatialite_cleanup_ex( cache );
       spatialite_shutdown();
       return false;
@@ -3184,8 +3230,8 @@ bool QgsGeorefPluginGui::createGCPDb()
       qDebug() << QString( "QgsGeorefPluginGui::createGCPDb -30- [%1] " ).arg( mError );
       sqlite3_free( errMsg );
       sqlite3_close( db_handle );
-      db_handle = NULL;
-      if ( cache != NULL )
+      db_handle = nullptr;
+      if ( cache != nullptr )
         spatialite_cleanup_ex( cache );
       spatialite_shutdown();
       return false;
@@ -3199,8 +3245,8 @@ bool QgsGeorefPluginGui::createGCPDb()
       qDebug() << QString( "QgsGeorefPluginGui::createGCPDb -31- [%1] " ).arg( mError );
       sqlite3_free( errMsg );
       sqlite3_close( db_handle );
-      db_handle = NULL;
-      if ( cache != NULL )
+      db_handle = nullptr;
+      if ( cache != nullptr )
         spatialite_cleanup_ex( cache );
       spatialite_shutdown();
       return false;
@@ -3213,8 +3259,8 @@ bool QgsGeorefPluginGui::createGCPDb()
       qDebug() << QString( "QgsGeorefPluginGui::createGCPDb -32- [%1] " ).arg( mError );
       sqlite3_free( errMsg );
       sqlite3_close( db_handle );
-      db_handle = NULL;
-      if ( cache != NULL )
+      db_handle = nullptr;
+      if ( cache != nullptr )
         spatialite_cleanup_ex( cache );
       spatialite_shutdown();
       return false;
@@ -3227,8 +3273,8 @@ bool QgsGeorefPluginGui::createGCPDb()
       qDebug() << QString( "QgsGeorefPluginGui::createGCPDb -33- [%1] " ).arg( mError );
       sqlite3_free( errMsg );
       sqlite3_close( db_handle );
-      db_handle = NULL;
-      if ( cache != NULL )
+      db_handle = nullptr;
+      if ( cache != nullptr )
         spatialite_cleanup_ex( cache );
       spatialite_shutdown();
       return false;
@@ -3290,8 +3336,8 @@ bool QgsGeorefPluginGui::createGCPDb()
         qDebug() << QString( "QgsGeorefPluginGui::createGCPDb -35- [%1] " ).arg( mError );
         sqlite3_free( errMsg );
         sqlite3_close( db_handle );
-        db_handle = NULL;
-        if ( cache != NULL )
+        db_handle = nullptr;
+        if ( cache != nullptr )
           spatialite_cleanup_ex( cache );
         spatialite_shutdown();
         return false;
@@ -3304,8 +3350,8 @@ bool QgsGeorefPluginGui::createGCPDb()
         qDebug() << QString( "QgsGeorefPluginGui::createGCPDb -36- [%1] " ).arg( mError );
         sqlite3_free( errMsg );
         sqlite3_close( db_handle );
-        db_handle = NULL;
-        if ( cache != NULL )
+        db_handle = nullptr;
+        if ( cache != nullptr )
           spatialite_cleanup_ex( cache );
         spatialite_shutdown();
         return false;
@@ -3320,8 +3366,8 @@ bool QgsGeorefPluginGui::createGCPDb()
         qDebug() << QString( "QgsGeorefPluginGui::createGCPDb -37- [%1] " ).arg( mError );
         sqlite3_free( errMsg );
         sqlite3_close( db_handle );
-        db_handle = NULL;
-        if ( cache != NULL )
+        db_handle = nullptr;
+        if ( cache != nullptr )
           spatialite_cleanup_ex( cache );
         spatialite_shutdown();
         return false;
@@ -3334,8 +3380,8 @@ bool QgsGeorefPluginGui::createGCPDb()
         qDebug() << QString( "QgsGeorefPluginGui::createGCPDb -38- [%1] " ).arg( mError );
         sqlite3_free( errMsg );
         sqlite3_close( db_handle );
-        db_handle = NULL;
-        if ( cache != NULL )
+        db_handle = nullptr;
+        if ( cache != nullptr )
           spatialite_cleanup_ex( cache );
         spatialite_shutdown();
         return false;
@@ -3347,8 +3393,8 @@ bool QgsGeorefPluginGui::createGCPDb()
     }
   }
   sqlite3_close( db_handle );
-  db_handle = NULL;
-  if ( cache != NULL )
+  db_handle = nullptr;
+  if ( cache != nullptr )
     spatialite_cleanup_ex( cache );
   spatialite_shutdown();
   // Update extent of active raster
@@ -3362,7 +3408,7 @@ bool QgsGeorefPluginGui::updateGCPDb( QString s_coverage_name )
   if ( b_database_exists )
   {
     void *cache;
-    char *errMsg = NULL;
+    char *errMsg = nullptr;
     sqlite3* db_handle;
     // open database
     int ret = sqlite3_open_v2( mGCPdatabaseFileName.toUtf8().data(), &db_handle, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, NULL );
@@ -3370,13 +3416,14 @@ bool QgsGeorefPluginGui::updateGCPDb( QString s_coverage_name )
     {
       mError = QString( "Failed to open database: rc=%1 database[%2]" ).arg( ret ).arg( mGCPdatabaseFileName );
       sqlite3_close( db_handle );
-      db_handle = NULL;
+      db_handle = nullptr;
       return false;
     }
     // needed by spatialite_init_ex (multi-threading)
     cache = spatialite_alloc_connection();
     // load spatialite extension
     spatialite_init_ex( db_handle, cache, 0 );
+    mModifiedRasterFileName = QString( "%1.%2.map.%3" ).arg( mGCPbaseFileName ).arg( i_gcp_srid ).arg( "tif" );
     QString s_gcp_points_table_name = QString( "gcp_points_%1" ).arg( s_coverage_name.toLower() );
     QString s_sql = QString( "UPDATE \"gcp_coverages\" SET\n" );
     s_sql += QString( " srid=%1," ).arg( i_gcp_srid );
@@ -3400,8 +3447,8 @@ bool QgsGeorefPluginGui::updateGCPDb( QString s_coverage_name )
       sqlite3_free( errMsg );
     }
     sqlite3_close( db_handle );
-    db_handle = NULL;
-    if ( cache != NULL )
+    db_handle = nullptr;
+    if ( cache != nullptr )
       spatialite_cleanup_ex( cache );
     spatialite_shutdown();
   }
@@ -3516,7 +3563,7 @@ bool QgsGeorefPluginGui::setGcpLayerSettings( QgsVectorLayer *layer_gcp )
               { // prepair the second QgsSymbolV2 from the first
                 QgsSimpleMarkerSymbolLayerV2 *gcp_layer_symbol_circle = static_cast<QgsSimpleMarkerSymbolLayerV2*>( gcp_layer_symbol_star->clone() );
                 if ( gcp_layer_symbol_circle )
-                { // see core/symbology-ng/qgssymbolv2.h, qgsmarkersymbollayerv2.h
+                { // see core/symbology-ng/QgsSymbolV2.h, qgsmarkersymbollayerv2.h
                   // Star
                   gcp_layer_symbol_star->setFillColor( Qt::red );
                   gcp_layer_symbol_star->setOutlineColor( Qt::black );
@@ -3525,8 +3572,9 @@ bool QgsGeorefPluginGui::setGcpLayerSettings( QgsVectorLayer *layer_gcp )
                   gcp_layer_symbol_star->setMapUnitScale( 0 );
                   gcp_layer_symbol_star->setShape( QgsSimpleMarkerSymbolLayerBase::Star );
                   gcp_layer_symbol_star->setOutlineStyle( Qt::DotLine );
-                  gcp_layer_symbol_star->setPenJoinStyle( Qt::BevelJoin );
+                  gcp_layer_symbol_star->setPenJoinStyle( Qt::RoundJoin );
                   // Circle
+                  // gcp_layer_symbol_circle->setFillColor( Qt::transparent );
                   gcp_layer_symbol_circle->setFillColor( Qt::yellow );
                   gcp_layer_symbol_circle->setOutlineColor( Qt::black );
                   gcp_layer_symbol_circle->setOutputUnit( QgsSymbolV2::MM );
@@ -3535,8 +3583,8 @@ bool QgsGeorefPluginGui::setGcpLayerSettings( QgsVectorLayer *layer_gcp )
                   gcp_layer_symbol_circle->setShape( QgsSimpleMarkerSymbolLayerBase::Circle );
                   gcp_layer_symbol_circle->setAngle( 0.0 );
                   gcp_layer_symbol_circle->setOutlineStyle( Qt::DashDotLine );
-                  gcp_layer_symbol_circle->setPenJoinStyle( Qt::BevelJoin );
-                  // Set transparity for both and add Star, Circle
+                  gcp_layer_symbol_circle->setPenJoinStyle( Qt::RoundJoin );
+                  // Set transparency for both and add Star, Circle
                   gcp_layer_symbol_container->setAlpha( 1.0 );
                   gcp_layer_symbol_container->appendSymbolLayer( gcp_layer_symbol_star );
                   gcp_layer_symbol_container->appendSymbolLayer( gcp_layer_symbol_circle );
@@ -3621,7 +3669,6 @@ bool QgsGeorefPluginGui::setCutlineLayerSettings( QgsVectorLayer *layer_cutline 
       cutline_layer_settings.shadowBlendMode = QPainter::CompositionMode_Multiply;
       // Write settings to layer
       cutline_layer_settings.writeToLayer( layer_cutline );
-      qDebug() << QString( "QgsGeorefPluginGui::setCutlineLayerSettings -1- [%1] " ).arg( "Label" );
     }
     // Symbols:
     if (( layer_cutline->isValid() ) && ( layer_cutline->rendererV2() ) )
@@ -3632,30 +3679,30 @@ bool QgsGeorefPluginGui::setCutlineLayerSettings( QgsVectorLayer *layer_cutline 
         QgsRenderContext cutline_layer_symbols_context;
         QgsSymbolV2List cutline_layer_symbols = cutline_layer_renderer->symbols( cutline_layer_symbols_context );
         if ( cutline_layer_symbols.count() == 1 )
-        { // Being a Point, there should only be 1
+        { // For the default seetings, there should only be 1
           bool isDirty = false;
           QgsSymbolV2 *cutline_layer_symbol_container = cutline_layer_symbols.at( 0 );
           if ( cutline_layer_symbol_container )
-          {
+          { // Can be used for all types
             // cutline_points
             if (( cutline_layer_symbol_container->type() == QgsSymbolV2::Marker ) && ( cutline_layer_symbol_container->symbolLayerCount() == 1 ) )
             { // remove the only QgsSymbolV2 from the list [will be replaced with a big green pentagon containing a small red cross]
-              qDebug() << QString( "QgsGeorefPluginGui::setCutlineLayerSettings -2- [%1] " ).arg( "Point/Marker" );
               QgsSimpleMarkerSymbolLayerV2 *cutline_layer_symbol_pentagon =  static_cast<QgsSimpleMarkerSymbolLayerV2*>( cutline_layer_symbol_container->takeSymbolLayer( 0 ) );
               if ( cutline_layer_symbol_pentagon )
-              { // prepair the second QgsSymbolV2 from the first
+              { // prepair the second QgsSymbolV2 from the first, insuring that it has the correct default attributes
                 QgsSimpleMarkerSymbolLayerV2 *cutline_layer_symbol_cross = static_cast<QgsSimpleMarkerSymbolLayerV2*>( cutline_layer_symbol_pentagon->clone() );
                 if ( cutline_layer_symbol_cross )
-                { // see core/symbology-ng/qgssymbolv2.h, qgsmarkersymbollayerv2.h
-                  // Pentagon
-                  cutline_layer_symbol_pentagon->setFillColor( Qt::darkGreen );
+                { // see core/symbology-ng/QgsSymbolV2.h, qgsmarkersymbollayerv2.h
+                  // https://www.w3.org/TR/SVG/types.html#ColorKeywords
+                  // Pentagon [darkgreen #006400]
+                  cutline_layer_symbol_pentagon->setFillColor( "darkgreen" );
                   cutline_layer_symbol_pentagon->setOutlineColor( Qt::black );
                   cutline_layer_symbol_pentagon->setOutputUnit( QgsSymbolV2::MM );
                   cutline_layer_symbol_pentagon->setSize( d_size_symbol_big );
                   cutline_layer_symbol_pentagon->setMapUnitScale( 0 );
                   cutline_layer_symbol_pentagon->setShape( QgsSimpleMarkerSymbolLayerBase::Star );
                   cutline_layer_symbol_pentagon->setOutlineStyle( Qt::DotLine );
-                  cutline_layer_symbol_pentagon->setPenJoinStyle( Qt::BevelJoin );
+                  cutline_layer_symbol_pentagon->setPenJoinStyle( Qt::RoundJoin );
                   // Cross
                   cutline_layer_symbol_cross->setFillColor( Qt::red );
                   cutline_layer_symbol_cross->setOutlineColor( Qt::black );
@@ -3665,9 +3712,9 @@ bool QgsGeorefPluginGui::setCutlineLayerSettings( QgsVectorLayer *layer_cutline 
                   cutline_layer_symbol_cross->setShape( QgsSimpleMarkerSymbolLayerBase::Circle );
                   cutline_layer_symbol_cross->setAngle( 0.0 );
                   cutline_layer_symbol_cross->setOutlineStyle( Qt::DashDotLine );
-                  cutline_layer_symbol_cross->setPenJoinStyle( Qt::BevelJoin );
-                  // Set transparity for both and add Pentagon, Cross
-                  cutline_layer_symbol_container->setAlpha( 0.0 );
+                  cutline_layer_symbol_cross->setPenJoinStyle( Qt::RoundJoin );
+                  // Set transparency for both and add Pentagon, Cross
+                  cutline_layer_symbol_container->setAlpha( 1.0 );
                   cutline_layer_symbol_container->appendSymbolLayer( cutline_layer_symbol_pentagon );
                   cutline_layer_symbol_container->appendSymbolLayer( cutline_layer_symbol_cross );
                   if (( cutline_layer_symbol_container->type() == QgsSymbolV2::Marker ) && ( cutline_layer_symbol_container->symbolLayerCount() == 2 ) )
@@ -3679,19 +3726,128 @@ bool QgsGeorefPluginGui::setCutlineLayerSettings( QgsVectorLayer *layer_cutline 
             }
             // cutline_linestrings
             if (( cutline_layer_symbol_container->type() == QgsSymbolV2::Line ) && ( cutline_layer_symbol_container->symbolLayerCount() == 1 ) )
-            {
-              qDebug() << QString( "QgsGeorefPluginGui::setCutlineLayerSettings -3- [%1] " ).arg( "Linestring/Line" );
+            { // remove the only QgsSymbolV2 from the list [will be replaced with a wide dark-cyan solid line containing a slim Khaki dotted  line]
+              QgsSimpleLineSymbolLayerV2 *cutline_layer_symbol_outline =  static_cast<QgsSimpleLineSymbolLayerV2*>( cutline_layer_symbol_container->takeSymbolLayer( 0 ) );
+              if ( cutline_layer_symbol_outline )
+              { // prepair the second QgsSymbolV2 from the first, insuring that it has the correct default attributes
+                QgsSimpleLineSymbolLayerV2 *cutline_layer_symbol_innerline = static_cast<QgsSimpleLineSymbolLayerV2*>( cutline_layer_symbol_outline->clone() );
+                if ( cutline_layer_symbol_innerline )
+                { // see core/symbology-ng/QgsSymbolV2.h, qgslinesymbollayerv2.h
+                  // https://www.w3.org/TR/SVG/types.html#ColorKeywords
+                  // Outerline [darkcyan #008b8b]
+                  cutline_layer_symbol_outline->setColor( "darkcyan" );
+                  cutline_layer_symbol_outline->setOutlineColor( Qt::black );
+                  cutline_layer_symbol_outline->setOutputUnit( QgsSymbolV2::MM );
+                  cutline_layer_symbol_outline->setWidth( d_size_symbol_big );
+                  cutline_layer_symbol_outline->setMapUnitScale( 0 );
+                  cutline_layer_symbol_outline->setPenStyle( Qt::SolidLine );
+                  cutline_layer_symbol_outline->setPenJoinStyle( Qt::RoundJoin );
+                  // Innerline [khaki #f0e68c]
+                  cutline_layer_symbol_innerline->setColor( "khaki" );
+                  cutline_layer_symbol_innerline->setOutlineColor( Qt::black );
+                  cutline_layer_symbol_innerline->setOutputUnit( QgsSymbolV2::MM );
+                  cutline_layer_symbol_innerline->setWidth( d_size_symbol_small );
+                  cutline_layer_symbol_innerline->setMapUnitScale( 0 );
+                  cutline_layer_symbol_innerline->setPenStyle( Qt::DashLine );
+                  cutline_layer_symbol_innerline->setPenJoinStyle( Qt::RoundJoin );
+                  // Set transparency for both and add PInner and Outer Linestrings
+                  cutline_layer_symbol_container->setAlpha( 0.80 );
+                  cutline_layer_symbol_container->appendSymbolLayer( cutline_layer_symbol_outline );
+                  cutline_layer_symbol_container->appendSymbolLayer( cutline_layer_symbol_innerline );
+                  if (( cutline_layer_symbol_container->type() == QgsSymbolV2::Line ) && ( cutline_layer_symbol_container->symbolLayerCount() == 2 ) )
+                  { // checking that we have what is desired
+                    isDirty = true;
+                  }
+                }
+              }
             }
-            // cutline_polygonss
+            // cutline_polygons
             if (( cutline_layer_symbol_container->type() == QgsSymbolV2::Fill ) && ( cutline_layer_symbol_container->symbolLayerCount() == 1 ) )
-            {
-              qDebug() << QString( "QgsGeorefPluginGui::setCutlineLayerSettings -3- [%1] " ).arg( "Polygon/Fill" );
+            {  // remove the only QgsSymbolV2 from the list [will be replaced with a yellow background containing a red grid]
+              // QgsSimpleFillSymbolLayerV2 *cutline_layer_symbol_grid =  static_cast<QgsSimpleFillSymbolLayerV2*>( cutline_layer_symbol_container->symbolLayer( 0 )->clone() );
+              QgsSimpleFillSymbolLayerV2 *cutline_layer_symbol_grid =  static_cast<QgsSimpleFillSymbolLayerV2*>( cutline_layer_symbol_container->takeSymbolLayer( 0 ) );
+              if ( cutline_layer_symbol_grid )
+              { // Being a different type (QgsGradientFillSymbolLayerV2 instead of QgsSimpleFillSymbolLayerV2) must be created from scratch
+                QgsGradientFillSymbolLayerV2 *cutline_layer_symbol_background = new QgsGradientFillSymbolLayerV2();
+                if ( cutline_layer_symbol_background )
+                { // see core/symbology-ng/QgsSymbolV2.h, qgsfillsymbollayerv2.h
+                  // Grid
+                  // http://planet.qgis.org/planet/tag/gradient/
+                  // shapeburst fills, Using a data defined expression for random colours
+                  // https://www.w3.org/TR/SVG/types.html#ColorKeywords
+                  // orangered #ff4500 rgb(255, 69, 0)
+                  cutline_layer_symbol_grid->setFillColor( "orangered" );
+                  cutline_layer_symbol_grid->setBrushStyle( Qt::DiagCrossPattern );
+                  // crimson #dc143c rgb(220, 20, 60) ; #f40101
+                  cutline_layer_symbol_grid->setOutlineColor( "crimson" );
+                  cutline_layer_symbol_grid->setOutputUnit( QgsSymbolV2::MM );
+                  cutline_layer_symbol_grid->setBorderWidth( d_size_symbol_small );
+                  cutline_layer_symbol_grid->setMapUnitScale( 0 );
+                  cutline_layer_symbol_grid->setBorderStyle( Qt::DashDotLine );
+                  cutline_layer_symbol_grid->setPenJoinStyle( Qt::RoundJoin );
+                  // Background
+                  QgsGradientFillSymbolLayerV2::GradientColorType colorType = QgsGradientFillSymbolLayerV2::SimpleTwoColor;
+                  // palegoldenrod #eee8aa rgb(238, 232, 170) ; near // "#dce3aa" 220, 227,170
+                  QColor color_01( "palegoldenrod" );
+                  // cadetblue#5f9ea0 rgb( 95, 158, 160) ; near "#adc6cb" 173,198,203
+                  QColor color_02( "cadetblue" );
+                  QgsGradientFillSymbolLayerV2::GradientType type = QgsGradientFillSymbolLayerV2::Linear;
+                  QgsGradientFillSymbolLayerV2::GradientCoordinateMode coordinateMode = QgsGradientFillSymbolLayerV2::Feature;
+                  QgsGradientFillSymbolLayerV2::GradientSpread gradientSpread = QgsGradientFillSymbolLayerV2::Pad;
+                  QPointF point_01( 0.50, 0.00 );
+                  QPointF point_02( 0.50, 1.00 );
+                  double d_rotation = 45.0;
+                  cutline_layer_symbol_background->setGradientColorType( colorType );
+                  cutline_layer_symbol_background->setColor( color_01 );
+                  cutline_layer_symbol_background->setColor2( color_02 );
+                  cutline_layer_symbol_background->setGradientType( type );
+                  cutline_layer_symbol_background->setCoordinateMode( coordinateMode );
+                  cutline_layer_symbol_background->setGradientSpread( gradientSpread );
+                  cutline_layer_symbol_background->setReferencePoint1( point_01 );
+                  cutline_layer_symbol_background->setReferencePoint2( point_02 );
+                  cutline_layer_symbol_background->setAngle( d_rotation );
+                  // Set transparency for grid and background
+                  cutline_layer_symbol_container->setAlpha( 0.5 );
+                  cutline_layer_symbol_container->appendSymbolLayer( cutline_layer_symbol_grid );
+                  cutline_layer_symbol_container->appendSymbolLayer( cutline_layer_symbol_background );
+                  // qDebug() << QString( "QgsGeorefPluginGui::setCutlineLayerSettings -y- type[%1] " ).arg( cutline_layer_renderer->type() );
+                  if (( cutline_layer_symbol_container->type() == QgsSymbolV2::Fill ) && ( cutline_layer_symbol_container->symbolLayerCount() == 2 ) )
+                  { // checking that we have what is desired
+                    isDirty = true;
+                    QgsCategorizedSymbolRendererV2* cutline_layer_renderer_categorized = QgsCategorizedSymbolRendererV2::convertFromRenderer( cutline_layer_renderer );
+                    if ( cutline_layer_renderer_categorized )
+                    { // see core/symbology-ng/qgscategorizedsymbolrendererv2.h
+                      // Note: not using '.clone()' is a 'No,no'
+                      cutline_layer_renderer_categorized->setSourceSymbol( cutline_layer_symbol_container->clone() );
+                      if ( mSvgColors.isEmpty() )
+                      {
+                        mSvgColors = createSvgColors( 0, true, false );
+                      }
+                      cutline_layer_renderer_categorized->setClassAttribute( QString( "id_cutline \% %1" ).arg( mSvgColors.size() ) );
+                      for ( int i = 0;i < mSvgColors.size();i++ )
+                      {
+                        QVariant value( i );
+                        QgsSymbolV2* new_container = cutline_layer_symbol_container->clone();
+                        QgsGradientFillSymbolLayerV2 *new_symbol_background = static_cast<QgsGradientFillSymbolLayerV2*>( new_container->takeSymbolLayer( 1 ) );
+                        QColor color_02( mSvgColors.at( i ) );
+                        new_symbol_background->setColor2( color_02 );
+                        new_container->appendSymbolLayer( new_symbol_background );
+                        qDebug() << QString( "QgsGeorefPluginGui::setCutlineLayerSettings loop[%1,%2] -2-" ).arg( i ).arg( mSvgColors.at( i ) );
+                        QgsRendererCategoryV2 category( value, new_container, value.toString(), true );
+                        cutline_layer_renderer_categorized->addCategory( category );
+                      }
+                      isDirty = false;
+                      layer_cutline->setRendererV2( cutline_layer_renderer_categorized );
+                    }
+                  }
+                }
+              }
             }
           }
           if ( isDirty )
           {
             layer_cutline->setRendererV2( cutline_layer_renderer );
-            qDebug() << QString( "QgsGeorefPluginGui::setCutlineLayerSettings -z- [%1] " ).arg( isDirty );
+            // qDebug() << QString( "QgsGeorefPluginGui::setCutlineLayerSettings -za- [%1] " ).arg( isDirty );
           }
         }
       }
@@ -3699,3 +3855,289 @@ bool QgsGeorefPluginGui::setCutlineLayerSettings( QgsVectorLayer *layer_cutline 
   }
   return layer_cutline->isValid();
 }
+// GCPDatabase slots
+void QgsGeorefPluginGui::setLegacyMode()
+{
+  switch ( mLegacyMode )
+  {
+    case 1:
+      mLegacyMode = 0;
+      break;
+    default:
+      mLegacyMode = 1;
+      break;
+  }
+  if ( mGCPListWidget )
+  {
+    mGCPListWidget->setLegacyMode( mLegacyMode );
+  }
+}
+void QgsGeorefPluginGui::readGCBDb()
+{ // Do nothing for now
+
+}
+// Mapcanvas QGIS
+void QgsGeorefPluginGui::loadGTifInQgis( const QString& gtif_file )
+{
+  if ( mLoadGTifInQgis )
+  {
+    QFileInfo fileInfo( gtif_file );
+    if ( fileInfo.exists() )
+    {
+      mLayer_gtif_raster = new QgsRasterLayer( fileInfo.absoluteFilePath(), fileInfo.fileName() );
+      if ( mLayer_gtif_raster )
+      {
+        if ( group_gtif_rasters )
+        {  // so that layer is not added to legend
+          QgsMapLayerRegistry::instance()->addMapLayers( QList<QgsMapLayer *>() << mLayer_gtif_raster, false, false );
+          // must be added AFTER being registered !
+          group_gtif_raster = group_gtif_rasters->addLayer( mLayer_gtif_raster );
+        }
+        else
+        { // so that layer is added to legend
+          QgsMapLayerRegistry::instance()->addMapLayers( QList<QgsMapLayer *>() << mLayer_gtif_raster, true, false );
+        }
+      }
+    }
+  }
+}
+bool QgsGeorefPluginGui::exportLayerDefinition( QgsLayerTreeGroup *group_layer, QString file_path )
+{ // Note: this is intended more to help in debugging styling structures created in setCutlineLayerSettings and setGcpLayerSettings
+  bool saved = false;
+  if ( group_layer )
+  {
+    if (( file_path.isNull() ) || ( file_path.isEmpty() ) )
+    { //  General valid file, pathnames: 0-9, a-z, A-Z, '.', '_', and '-' / "[^[:alnum:]._-[:space:]]" [replace space with '_']
+      file_path = QString( "%1/%2.qlr" ).arg( mRasterFilePath ).arg( group_layer->name().replace( QRegExp( "[^[:alnum:]._-]" ), "_" ) );
+    }
+    QString errorMessage;
+    saved = QgsLayerDefinition::exportLayerDefinition( file_path, group_layer->children(), errorMessage );
+    QFile fileInfo( file_path );
+    if (( fileInfo.exists() ) && ( fileInfo.size() == 0 ) )
+    {
+      saved = false;
+    }
+    if ( !saved )
+    {
+      if ( fileInfo.exists() )
+      {
+        fileInfo.remove();
+      }
+    }
+  }
+  return saved;
+}
+QStringList QgsGeorefPluginGui::createSvgColors( int i_method, bool b_reverse, bool b_grey_black )
+{
+  Q_UNUSED( i_method );
+  QStringList list_SvgColors;
+  int i_max_colors_pink = 6;
+  int i_max_colors_red = 9;
+  int i_max_colors_orange = 5;
+  int i_max_colors_yellow = 11;
+  int i_max_colors_brown = 17;
+  int i_max_colors_green = 20;
+  int i_max_colors_cyan = 11;
+  int i_max_colors_blue = 15;
+  int i_max_colors_purple = 17; // (Purple, violet, and magenta)
+  int i_max_colors_white = 17;
+  int i_max_colors_gray_black = 10;
+  int i_max_colors = 0;
+  int i_max_groups = 9;
+  QStringList list_pink;
+  QStringList list_red;
+  QStringList list_orange;
+  QStringList list_yellow;
+  QStringList list_brown;
+  QStringList list_green;
+  QStringList list_cyan;
+  QStringList list_blue;
+  QStringList list_purple;
+  QStringList list_white;
+  QStringList list_gray_black;
+  list_pink.reserve( i_max_colors_pink );
+  list_red.reserve( i_max_colors_red );
+  list_orange.reserve( i_max_colors_orange );
+  list_yellow.reserve( i_max_colors_yellow );
+  list_brown.reserve( i_max_colors_brown );
+  list_green.reserve( i_max_colors_green );
+  list_cyan.reserve( i_max_colors_cyan );
+  list_blue.reserve( i_max_colors_blue );
+  list_purple.reserve( i_max_colors_purple );
+  if ( b_grey_black )
+  {
+    list_white.reserve( i_max_colors_white );
+    list_gray_black.reserve( i_max_colors_gray_black );
+    // ------- [light to dark]
+    list_white << "white" << "honeydew"  << "mintcream"  << "azure"  << "aliceblue" ;
+    list_white << "ghostwhite"   << "whitesmoke"   << "ivory" << "snow"  << "floralwhite"  ;
+    list_white << "seashell" << "oldlace"   << "linen"  << "lavenderblush" << "beige" ;
+    list_white << "antiquewhite"  << "mistyrose" ;
+    i_max_colors_white = list_white.size() - 1;
+    // ------- 'grey' will be used (same rgb value as 'gray')
+    list_gray_black << "gainsboro" << "lightgrey"  << "silver"  << "darkgrey"  << "lightslategrey" ;
+    list_gray_black << "slategrey"  << "grey" << "dimgrey" << " darkslategrey"  << "black" ;
+    i_max_colors_gray_black = list_gray_black.size() - 1;
+    // -------
+    if ( b_reverse )
+    { // for(int k=0, s=list_white.size(), max=(s/2); k<max; k++) list_white.swap(k,s-(1+k));
+      // std::reverse( list_white.begin(), list_white.end() );
+      // std::reverse( list_gray_black.begin(), list_gray_black.end() );
+    }
+    i_max_colors += list_white.size() + list_gray_black.size();
+    i_max_groups += 2;
+  }
+  else
+  {
+    i_max_colors_white = -1;
+    i_max_colors_gray_black = -1;
+  }
+  // -------  [light to dark]
+  list_pink << "pink" << "lightpink"  << "hotpink"  << "deeppink"  << "palevioletred"  << "mediumvioletred";
+  i_max_colors_pink = list_pink.size() - 1;
+  i_max_colors += list_pink.size();
+  // -------
+  list_red << "lightsalmon" << "salmon"  << "darksalmon"  << "lightcoral" << "indianred";
+  list_red << "red" << "crimson" << "firebrick"  << "darkred";
+  i_max_colors_red = list_red.size() - 1;
+  i_max_colors += list_red.size();
+  // -------
+  list_orange << "orange" << "darkorange"  << "coral"  << "tomato"  << "orangered";
+  i_max_colors_orange = list_orange.size() - 1;
+  i_max_colors += list_orange.size();
+  // -------
+  list_yellow << "lightyellow" << "lemonchiffon"  << "lightgoldenrodyellow"  << "papayawhip"  << "moccasin"  << "peachpuff";
+  list_yellow << "palegoldenrod" << "khaki"  << "yellow"  << "gold"  << "darkkhaki";
+  i_max_colors_yellow = list_yellow.size() - 1;
+  i_max_colors += list_yellow.size();
+  // -------
+  list_brown << "cornsilk" << "blanchedalmond"  << "bisque"  << "navajowhite"  << "wheat"  << "burlywood";
+  list_brown << "tan" << "rosybrown"  << "sandybrown"  << "goldenrod"  << "darkgoldenrod"  << "peru";
+  list_brown << "chocolate" << "saddlebrown"  << "sienna"  << "brown"  << "maroon";
+  i_max_colors_brown = list_brown.size() - 1;
+  i_max_colors += list_brown.size();
+  // -------
+  list_green << "lightgreen" << "palegreen"  << "greenyellow"  << "chartreuse"  << "lawngreen";
+  list_green << "lime" << "springgreen"  << "mediumspringgreen"  << "yellowgreen"  << "limegreen";
+  list_green << "darkseagreen" << "mediumaquamarine"  << "mediumseagreen"  << "olivedrab"  << "olive";
+  list_green << "seagreen" << "forestgreen"  << "green"  << "darkolivegreen"  << "darkgreen";
+  i_max_colors_green = list_green.size() - 1;
+  i_max_colors += list_green.size();
+  // ------- agua has the same rgb value as cyan
+  list_cyan << "lightcyan" << "paleturquoise"  << "aquamarine"  << "cyan"  << "turquoise" << "mediumturquoise";
+  list_cyan << "darkturquoise"  << "lightseagreen"  << "cadetblue"  << "darkcyan" << "teal";
+  i_max_colors_cyan = list_cyan.size() - 1;
+  i_max_colors += list_cyan.size();
+  // -------
+  list_blue << "powderblue" << "lightblue"  << "lightsteelblue"  << "skyblue"  << "lightskyblue";
+  list_blue << "deepskyblue" << "cornflowerblue"  << "steelblue"  << "dodgerblue"  << "royalblue";
+  list_blue << "blue" << "mediumblue"  << "darkblue"  << "navy"  << "midnightblue";
+  i_max_colors_blue = list_blue.size() - 1;
+  i_max_colors += list_blue.size();
+  // ------- Purple, violet, and magenta colors [magenta has the same rgb value as fuchsia]
+  list_purple << "lavender" << "thistle"  << "plum"  << "violet"  << "orchid"  << "magenta";
+  list_purple << "mediumorchid" << "mediumpurple"   << "darkslateblue"  << "slateblue" << "blueviolet"  << "darkviolet";
+  list_purple  << "darkorchid"  << "darkmagenta" << "purple" << "indigo"   << "mediumslateblue";
+  i_max_colors_purple = list_purple.size() - 1;
+  i_max_colors += list_purple.size();
+  // -------
+  //SvgColors[138,11] or SvgColors[111,9]
+  list_SvgColors.reserve( i_max_colors );
+  // -------
+  int i_entry_addition = -1;
+  if ( !b_reverse )
+  {
+    i_entry_addition = 1;
+    i_max_colors_pink = 0;
+    i_max_colors_red = 0;
+    i_max_colors_orange = 0;
+    i_max_colors_yellow = 0;
+    i_max_colors_brown = 0;
+    i_max_colors_green = 0;
+    i_max_colors_cyan = 0;
+    i_max_colors_blue = 0;
+    i_max_colors_purple = 0;
+    if ( b_grey_black )
+    {
+      i_max_colors_white = 0;
+      i_max_colors_gray_black = 0;
+    }
+  }
+  for ( int i = 0,  loop = 0;i < i_max_colors;loop++ )
+  {
+    if ( loop >  i_max_colors )
+    { // should never happen, but just in case ...
+      break;
+    }
+    if (( i_max_colors_pink >= 0 ) && ( i_max_colors_pink < list_pink.size() ) )
+    {
+      // qDebug() << QString( "SvgColors[%1,%4] pink[%2,%5] [%3] " ).arg( i ).arg( i_max_colors_pink ).arg( list_pink.at( i_max_colors_pink ) ).arg( i_max_colors ).arg( list_pink.size() - 1 );
+      list_SvgColors.append( list_pink.at( i_max_colors_pink ) );
+      i_max_colors_pink += i_entry_addition;
+      i++;
+    }
+    if (( i_max_colors_red >= 0 ) && ( i_max_colors_red < list_red.size() ) )
+    {
+      list_SvgColors.append( list_red.at( i_max_colors_red ) );
+      i_max_colors_red += i_entry_addition;
+      i++;
+    }
+    if (( i_max_colors_orange >= 0 ) && ( i_max_colors_orange < list_orange.size() ) )
+    {
+      list_SvgColors.append( list_orange.at( i_max_colors_orange ) );
+      i_max_colors_orange += i_entry_addition;
+      i++;
+    }
+    if (( i_max_colors_yellow >= 0 ) && ( i_max_colors_yellow < list_yellow.size() ) )
+    {
+      list_SvgColors.append( list_yellow.at( i_max_colors_yellow ) );
+      i_max_colors_yellow += i_entry_addition;
+      i++;
+    }
+    if (( i_max_colors_brown >= 0 ) && ( i_max_colors_brown < list_brown.size() ) )
+    {
+      list_SvgColors.append( list_brown.at( i_max_colors_brown ) );
+      i_max_colors_brown += i_entry_addition;
+      i++;
+    }
+    if (( i_max_colors_green >= 0 ) && ( i_max_colors_green < list_green.size() ) )
+    {
+      list_SvgColors.append( list_green.at( i_max_colors_green ) );
+      i_max_colors_green += i_entry_addition;
+      i++;
+    }
+    if (( i_max_colors_cyan >= 0 ) && ( i_max_colors_cyan < list_cyan.size() ) )
+    {
+      list_SvgColors.append( list_cyan.at( i_max_colors_cyan ) );
+      i_max_colors_cyan += i_entry_addition;
+      i++;
+    }
+    if (( i_max_colors_blue >= 0 ) && ( i_max_colors_blue < list_blue.size() ) )
+    {
+      list_SvgColors.append( list_blue.at( i_max_colors_blue ) );
+      i_max_colors_blue += i_entry_addition;
+      i++;
+    }
+    if (( i_max_colors_purple >= 0 ) && ( i_max_colors_purple < list_purple.size() ) )
+    {
+      list_SvgColors.append( list_purple.at( i_max_colors_purple ) );
+      i_max_colors_purple += i_entry_addition;
+      i++;
+    }
+    if (( i_max_colors_white >= 0 ) && ( i_max_colors_white < list_white.size() ) )
+    {
+      list_SvgColors.append( list_white.at( i_max_colors_white ) );
+      i_max_colors_white += i_entry_addition;
+      i++;
+    }
+    if (( i_max_colors_gray_black >= 0 ) && ( i_max_colors_gray_black < list_gray_black.size() ) )
+    {
+      list_SvgColors.append( list_gray_black.at( i_max_colors_gray_black ) );
+      i_max_colors_gray_black += i_entry_addition;
+      i++;
+    }
+  }
+  // -------
+  return list_SvgColors;
+}
+

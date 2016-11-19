@@ -21,6 +21,7 @@
 #include "qgsimagewarper.h"
 #include "qgscoordinatereferencesystem.h"
 #include "layertree/qgslayertreegroup.h"
+#include "layertree/qgslayertreelayer.h"
 
 #include <QPointer>
 
@@ -43,6 +44,7 @@ class QgsMessageBar;
 // mj10777
 class QgsVectorLayer;
 class QgsLayerTreeGroup;
+class QgsLayerTreeLayer;
 
 class QgsGeorefDockWidget : public QgsDockWidget
 {
@@ -103,6 +105,10 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     void showRasterPropertiesDialog();
     void showGeorefConfigDialog();
 
+    // GCPDatabase
+    void setLegacyMode();
+    void readGCBDb();
+
     // plugin info
     void contextHelp();
 
@@ -150,6 +156,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
 
     // Mapcanvas Plugin
     void addRaster( const QString& file );
+    void loadGTifInQgis( const QString& gtif_file );
 
     // settings
     void readSettings();
@@ -180,6 +187,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     int mGcp_label_type;
     int mLegacyMode;
     double fontPointSize;
+    bool exportLayerDefinition(QgsLayerTreeGroup *group_layer, QString file_path = QString::null);
     // QgsMapTool *mAddFeature;
     // QgsMapTool *mMoveFeature;
     // QgsMapTool *mNodeTool;
@@ -219,6 +227,27 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     void clearGCPData();
     bool setGcpLayerSettings(QgsVectorLayer *layer_gcp);
     bool setCutlineLayerSettings(QgsVectorLayer *layer_cutline);
+    /**
+     * createSvgColors
+     * @param i_method  filling logic to use
+     * @param b_reverse  use Dark to Light instead of Light to Dark
+     * @param b_grey_black  include Color-Groups White, Grey and Black 
+     * @returns  list_SvgColors QStringList list containing distinct list of svg color names for use with QColor
+     * @note
+     *
+     *  SVG color keyword names, of which there are 146 (138 unique colors)
+     * <a href="https://www.w3.org/TR/SVG/types.html#ColorKeywords </a>
+     *
+     * X11 color names, listed by color groups, of which there are 11
+     * <a href="https://en.wikipedia.org/wiki/Web_colors#Css_colors">Colors listed by Color-Groups </a>
+     * @note
+     * Gray/Grey are interchnagable (7 colors) 'grey' will be used
+     * Alternative names: 2 colors) 'aqua / cyan' and 'magenta / fuchsia',   cyan and magenta will be used
+     *
+     * Used to create QgsCategorizedSymbolRendererV2 Symbols for Polygons
+    * @see setCutlineLayerSettings
+     */
+    QStringList createSvgColors(int i_method=0,bool b_reverse=false,bool b_grey_black=false);
 
     /**
      * Calculates root mean squared error for the currently active
@@ -273,6 +302,10 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     QgsLayerTreeGroup *group_georeferencer;
     QgsLayerTreeGroup *group_gcp_points;
     QgsLayerTreeGroup *group_gcp_cutlines;
+    QgsLayerTreeGroup *group_gtif_rasters;
+    QgsLayerTreeLayer *group_gtif_raster;
+    QgsRasterLayer *mLayer_gtif_raster;
+    int mLoadGTifInQgis;
 
     QgsGeorefTransform::TransformParametrisation mTransformParam;
     QgsImageWarper::ResamplingMethod mResamplingMethod;
@@ -298,6 +331,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     QgsVectorLayer *layer_cutline_linestrings;
     QString mCutline_polygons_layername;
     QgsVectorLayer *layer_cutline_polygons;
+    QStringList mSvgColors;
 
     QgsMapTool *mToolZoomIn;
     QgsMapTool *mToolZoomOut;

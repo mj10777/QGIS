@@ -34,6 +34,7 @@ class QgsGCPListWidget : public QTableView
   public:
     explicit QgsGCPListWidget( QWidget *parent = nullptr, int i_LegacyMode=1 );
 
+    void setLegacyMode( int i_LegacyMode );
     void setGCPList( QgsGCPList *theGCPList );
     void setGeorefTransform( QgsGeorefTransform *theGeorefTransform );
     QgsGCPList *gcpList() { return mGCPList; }
