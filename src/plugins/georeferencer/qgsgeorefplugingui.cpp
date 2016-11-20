@@ -357,11 +357,11 @@ void QgsGeorefPluginGui::openRaster()
   QString s_srid = "-1";
   if ( sa_authid.length() == 2 )
     s_srid = sa_authid[1];
-  i_gcp_srid = s_srid.toInt();
+  mGcp_srid = s_srid.toInt();
   // destinationCrs: authid[EPSG:3068]  srsid[1031]  description[DHDN / Soldner Berlin]
-  // s_srid=QString("destinationCrs[%1]: authid[%2]  srsid[%3]  description[%4] ").arg(i_gcp_srid).arg(s_gcp_authid).arg(mIface->mapCanvas()->mapRenderer()->destinationCrs().srsid()).arg(s_gcp_description);
+  // s_srid=QString("destinationCrs[%1]: authid[%2]  srsid[%3]  description[%4] ").arg(mGcp_srid).arg(s_gcp_authid).arg(mIface->mapCanvas()->mapRenderer()->destinationCrs().srsid()).arg(s_gcp_description);
   // qDebug()<<s_srid;
-  if ( i_gcp_srid > 0 )
+  if ( mGcp_srid > 0 )
   { // with srid (of project), activate the buttons and set set output-filename
     // give this a default name
     mModifiedRasterFileName = QString( "%1.%2.map.%3" ).arg( mGCPbaseFileName ).arg( s_srid ).arg( fileInfo.suffix() );
@@ -381,7 +381,7 @@ void QgsGeorefPluginGui::openRaster()
   mCanvas->refresh();
   mIface->mapCanvas()->refresh();
   // mj10777
-  if ( i_gcp_srid > 0 )
+  if ( mGcp_srid > 0 )
   { // with srid (of project), activate the buttons and set set output-filename
     mActionLinkGeorefToQGis->setChecked( false );
     mActionLinkQGisToGeoref->setChecked( false );
@@ -466,7 +466,6 @@ bool QgsGeorefPluginGui::getTransformSettings()
   updateTransformParamLabel();
   return true;
 }
-
 void QgsGeorefPluginGui::generateGDALScript()
 {
   if ( !checkReadyGeoref() )
@@ -1285,6 +1284,10 @@ void QgsGeorefPluginGui::addRaster( const QString& file )
         }
         break;
     }
+    if ( isGcpEnabled() )
+    { // mLayer width and height are needed
+      updateGcpCompute( mGcp_coverage_name );
+    }
   }
   layers.append( QgsMapCanvasLayer( mLayer ) );
   mCanvas->setLayerSet( layers );
@@ -1352,12 +1355,12 @@ bool QgsGeorefPluginGui::loadGCPs( /*bool verbose*/ )
   if ( b_database_exists )
   {
     // gcp-specific
-    mGcp_points_layername = QString( "%1(gcp_point)" ).arg( s_gcp_points_table_name );
+    mGcp_points_layername = QString( "%1(gcp_point)" ).arg( mGcp_points_table_name );
     QString s_gcp_points_layer = QString( "%1|layername=%2" ).arg( mGCPdatabaseFileName ).arg( mGcp_points_layername );
     layer_gcp_points = new QgsVectorLayer( s_gcp_points_layer, mGcp_points_layername,  "ogr" );
     if ( setGcpLayerSettings( layer_gcp_points ) )
     { // pointer and isValid == true ; default Label settings done
-      mGcp_pixel_layername = QString( "%1(gcp_pixel)" ).arg( s_gcp_points_table_name );
+      mGcp_pixel_layername = QString( "%1(gcp_pixel)" ).arg( mGcp_points_table_name );
       QString s_gcp_pixel_layer = QString( "%1|layername=%2" ).arg( mGCPdatabaseFileName ).arg( mGcp_pixel_layername );
       layer_gcp_pixels = new QgsVectorLayer( s_gcp_pixel_layer, mGcp_pixel_layername, "ogr" );
       if ( setGcpLayerSettings( layer_gcp_pixels ) )
@@ -1383,7 +1386,7 @@ bool QgsGeorefPluginGui::loadGCPs( /*bool verbose*/ )
         layers_points_cutlines << layer_gcp_points;
         group_georeferencer = QgsProject::instance()->layerTreeRoot()->insertGroup( 0, QString( "Georeferencer" ) );
         int i_group_position = 0;
-        group_gcp_points = group_georeferencer->insertGroup( i_group_position++, mCoverage_Name );
+        group_gcp_points = group_georeferencer->insertGroup( i_group_position++, mGcp_coverage_name );
         if ( setCutlineLayerSettings( layer_cutline_points ) )
         { // Add only valid layers
           layers_points_cutlines << layer_cutline_points;
@@ -1521,7 +1524,11 @@ void QgsGeorefPluginGui::saveGCPs()
 {
   if ( isGCPDb() )
   {
-    updateGCPDb( mGCPbaseFileName.toLower() );
+    updateGCPDb( mGcp_coverage_name );
+    if ( isGcpEnabled() )
+    { // mLayer width and height are needed
+      updateGcpCompute( mGcp_coverage_name );
+    }
   }
   if ( bGCPFileName )
   {
@@ -2532,6 +2539,10 @@ bool QgsGeorefPluginGui::isGCPDb()
   else
     return false;
 }
+bool QgsGeorefPluginGui::isGcpEnabled()
+{
+  return mSpatialite_gcp_enabled;
+}
 bool QgsGeorefPluginGui::createGCPDb()
 {
   if ( mLegacyMode == 0 )
@@ -2542,20 +2553,22 @@ bool QgsGeorefPluginGui::createGCPDb()
   bool b_database_exists = QFile( mGCPdatabaseFileName ).exists();
   void *cache;
   char *errMsg = nullptr;
-  b_spatialite_gcp_enabled = false;
-  s_gcp_points_table_name = QString( "gcp_points_%1" ).arg( mGCPbaseFileName.toLower() );
+  mSpatialite_gcp_enabled = false;
+  mGcp_coverage_name = QString( "%1" ).arg( mGCPbaseFileName.toLower() );
+  mGcp_points_table_name = QString( "gcp_points_%1" ).arg( mGcp_coverage_name );
   id_gcp_coverage = -1;
   bool b_cutline_geometries_create = false;
   bool b_spatial_ref_sys_create = false;
   bool b_gcp_coverage = false;
+  bool b_gcp_compute = false;
   bool b_gcp_coverage_create = false;
   bool b_import_points = false;
   QFileInfo fileInfo( mRasterFileName );
   mRasterFilePath = fileInfo.canonicalPath(); // Path to the file, without file-name
   QString s_RasterFileName = fileInfo.fileName(); // file-name without path
-  mCoverage_Name = mGCPbaseFileName.toLower();
-  mCoverage_Name_Base = mGCPbaseFileName;
-  QStringList sa_list_id_fields = mCoverage_Name_Base.split( "." );
+  mGcp_coverage_name = mGCPbaseFileName.toLower();
+  mGcp_coverage_name_base = mGCPbaseFileName;
+  QStringList sa_list_id_fields = mGcp_coverage_name_base.split( "." );
   if ( sa_list_id_fields.size() > 2 )
   { // Possilbly a format is being used: 'year.name.scale.*': 1986.n-33-123-b-c-2_30.5000
     QString s_year = sa_list_id_fields[0];
@@ -2569,11 +2582,11 @@ bool QgsGeorefPluginGui::createGCPDb()
       {
         mRasterScale = i_scale;
         mRasterYear = i_year;
-        mCoverage_Name_Base = sa_list_id_fields[1];
-        QString s_build = QString( "%1.%2.%3" ).arg( QString( "%1" ).arg( mRasterYear, 4, 10, QChar( '0' ) ) ).arg( mCoverage_Name_Base ).arg( mRasterScale );
-        if ( i_gcp_srid > 0 )
+        mGcp_coverage_name_base = sa_list_id_fields[1];
+        QString s_build = QString( "%1.%2.%3" ).arg( QString( "%1" ).arg( mRasterYear, 4, 10, QChar( '0' ) ) ).arg( mGcp_coverage_name_base ).arg( mRasterScale );
+        if ( mGcp_srid > 0 )
         { // give this a default name
-          mModifiedRasterFileName = QString( "%1.%2.map.%3" ).arg( s_build ).arg( i_gcp_srid ).arg( fileInfo.suffix() );
+          mModifiedRasterFileName = QString( "%1.%2.map.%3" ).arg( s_build ).arg( mGcp_srid ).arg( fileInfo.suffix() );
         }
         else
         {
@@ -2604,6 +2617,7 @@ bool QgsGeorefPluginGui::createGCPDb()
   Q_UNUSED( ret );
   // SELECT HasGCP(), (SELECT count(name) FROM sqlite_master WHERE ((type='table') AND (name='gcp_coverages'))) AS has_gcp_coverages;
   QString s_sql = QString( "SELECT HasGCP(), (SELECT count(name) FROM sqlite_master WHERE ((type='table') AND (name='gcp_coverages'))) AS has_gcp_coverages," );
+  s_sql += QString( " (SELECT count(name) FROM sqlite_master WHERE ((type='table') AND (name='gcp_compute'))) AS has_gcp_compute," );
   s_sql += QString( " (SELECT count(name) FROM sqlite_master WHERE ((type='table') AND (name='create_cutline_polygons'))) AS has_cutline_geometries," );
   s_sql += QString( " (SELECT count(name) FROM sqlite_master WHERE ((type='table') AND (name='spatial_ref_sys'))) AS has_spatial_ref_sys" );
   ret = sqlite3_prepare_v2( db_handle, s_sql.toUtf8().constData(), -1, &stmt, NULL );
@@ -2617,20 +2631,24 @@ bool QgsGeorefPluginGui::createGCPDb()
   }
   int i_spatialite_gcp_enabled = 0;
   int i_gcp_coverage = -1;
+  int i_gcp_compute = -1;
   int i_cutline_geometries = -1;
   int i_spatial_ref_sys_create = -1;
   while ( sqlite3_step( stmt ) == SQLITE_ROW )
   {
     i_spatialite_gcp_enabled = sqlite3_column_int( stmt, 0 );
     i_gcp_coverage = sqlite3_column_int( stmt, 1 );
-    i_cutline_geometries = sqlite3_column_int( stmt, 2 );
-    i_spatial_ref_sys_create = sqlite3_column_int( stmt, 3 );
+    i_gcp_compute = sqlite3_column_int( stmt, 2 );
+    i_cutline_geometries = sqlite3_column_int( stmt, 3 );
+    i_spatial_ref_sys_create = sqlite3_column_int( stmt, 4 );
   }
   sqlite3_finalize( stmt );
   if ( i_spatialite_gcp_enabled > 0 )
-    b_spatialite_gcp_enabled = true;
+    mSpatialite_gcp_enabled = true;
   if ( i_gcp_coverage > 0 )
     b_gcp_coverage = true;
+  if ( i_gcp_compute > 0 )
+    b_gcp_compute = true;
   if ( i_cutline_geometries > 0 )
     b_cutline_geometries_create = true;
   if ( i_spatial_ref_sys_create > 0 )
@@ -2666,7 +2684,7 @@ bool QgsGeorefPluginGui::createGCPDb()
     s_sql_gcp += QString( " %1 TEXT DEFAULT '',\n" ).arg( "abstract" );
     s_sql_gcp += QString( " %1 TEXT DEFAULT '',\n" ).arg( "copyright" );
     s_sql_gcp += QString( " %1 INTEGER DEFAULT 0,\n" ).arg( "scale" );
-    s_sql_gcp += QString( " %1 INTEGER DEFAULT %2,\n" ).arg( "srid" ).arg( i_gcp_srid );
+    s_sql_gcp += QString( " %1 INTEGER DEFAULT %2,\n" ).arg( "srid" ).arg( mGcp_srid );
     s_sql_gcp += QString( " %1 INTEGER DEFAULT 0,\n" ).arg( "gcp_count" );
     s_sql_gcp += QString( " %1 INTEGER DEFAULT 2, -- QgsGeorefTransform::PolynomialOrder1\n" ).arg( "transformtype" );
     s_sql_gcp += QString( " %1 INTEGER DEFAULT 4, -- GRA_Lanczos\n" ).arg( "resampling" );
@@ -2680,7 +2698,7 @@ bool QgsGeorefPluginGui::createGCPDb()
     if ( ret != SQLITE_OK )
     {
       mError = QString( "Unable to CREATE gcp_coverages: rc=%1 [%2] sql[%3]\n" ).arg( ret ).arg( QString::fromUtf8( errMsg ) ).arg( s_sql_gcp );
-      qDebug() << QString( "QgsGeorefPluginGui::createGCPDb -4- [%1] " ).arg( mError );
+      qDebug() << QString( "QgsGeorefPluginGui::createGCPDb -4a- [%1] " ).arg( mError );
       sqlite3_free( errMsg );
       sqlite3_close( db_handle );
       db_handle = nullptr;
@@ -2691,10 +2709,40 @@ bool QgsGeorefPluginGui::createGCPDb()
     }
     else
       b_gcp_coverage = true;
+    if ( mSpatialite_gcp_enabled )
+    {
+      QString s_sql_gcp = QString( "CREATE TABLE IF NOT EXISTS gcp_compute\n( -- Spatialite GCP module\n" );
+      s_sql_gcp += QString( " %1 INTEGER PRIMARY KEY AUTOINCREMENT,\n" ).arg( "id_gcp_compute" );
+      s_sql_gcp += QString( " %1 INTEGER  DEFAULT 0,\n" ).arg( "id_gcp_coverage" );
+      s_sql_gcp += QString( " %1 TEXT DEFAULT '',\n -- Compute 'Pixel-Point to Map-Point - srid=-1' or\n -- 'Map-Point to Pixel-Point'  - srid<>-1\n" ).arg( "coverage_name" );
+      s_sql_gcp += QString( " %1 TEXT DEFAULT 'Pixel-Point to Map-Point',\n -- id_order (0-3) used with GCP_Compute\n" ).arg( "notes" );
+      s_sql_gcp += QString( " %1 INTEGER DEFAULT 0,\n -- srid (-1=pixel or srid of Map-Point)\n" ).arg( "id_order" );
+      s_sql_gcp += QString( " %1 INTEGER DEFAULT 0,\n -- Image Size X/Width\n" ).arg( "srid" ).arg( -1 );
+      s_sql_gcp += QString( " %1 INTEGER DEFAULT 0,\n -- Image Size Y/Height\n" ).arg( "image_max_x" );
+      s_sql_gcp += QString( " %1 INTEGER DEFAULT 0,\n -- GCP_Compute result from 'gcp_points'\n" ).arg( "image_max_y" );
+      s_sql_gcp += QString( " %1 BLOB\n)\n" ).arg( "gcp_compute" );
+      ret = sqlite3_exec( db_handle, s_sql_gcp.toUtf8().constData(), NULL, NULL, &errMsg );
+      if ( ret != SQLITE_OK )
+      {
+        mError = QString( "Unable to CREATE gcp_coverages: rc=%1 [%2] sql[%3]\n" ).arg( ret ).arg( QString::fromUtf8( errMsg ) ).arg( s_sql_gcp );
+        qDebug() << QString( "QgsGeorefPluginGui::createGCPDb -4b- [%1] " ).arg( mError );
+        sqlite3_free( errMsg );
+        sqlite3_close( db_handle );
+        db_handle = nullptr;
+        if ( cache != nullptr )
+          spatialite_cleanup_ex( cache );
+        spatialite_shutdown();
+        return false;
+      }
+    }
   }
   else
-  { // gcp_coverages exists, check for for raster entry
-    s_sql = QString( "SELECT id_gcp_coverage,transformtype,resampling, compression FROM gcp_coverages WHERE coverage_name='%1'" ).arg( mCoverage_Name );
+  { // gcp_coverages exists, check for for raster entry [gcp_compute should exist]
+    if (( mSpatialite_gcp_enabled ) && ( !b_gcp_compute ) )
+    { // Database was created without gcp_compute, turn off support
+      mSpatialite_gcp_enabled = false;
+    }
+    s_sql = QString( "SELECT id_gcp_coverage,transformtype,resampling, compression FROM gcp_coverages WHERE coverage_name='%1'" ).arg( mGcp_coverage_name );
     ret = sqlite3_prepare_v2( db_handle, s_sql.toUtf8().constData(), -1, &stmt, NULL );
     if ( ret != SQLITE_OK )
     { //  rc=1 [no such table: vector_layers_statistics or gcp_points, 'no such column' for gcp_pixel and gcp_ppoint] is an error
@@ -2716,13 +2764,13 @@ bool QgsGeorefPluginGui::createGCPDb()
     }
     sqlite3_finalize( stmt );
   }
-  // qDebug() << QString( "-I-> QgsGeorefPluginGui::createGCPDb -01- gcp_points_table_name[%1] id_gcp_coverage[%2] b_gcp_coverage_create[%3]" ).arg( s_gcp_points_table_name ).arg( id_gcp_coverage ).arg( b_gcp_coverage_create );
+  // qDebug() << QString( "-I-> QgsGeorefPluginGui::createGCPDb -01- gcp_points_table_name[%1] id_gcp_coverage[%2] b_gcp_coverage_create[%3]" ).arg( mGcp_points_table_name ).arg( id_gcp_coverage ).arg( b_gcp_coverage_create );
   if ( id_gcp_coverage < 0 )
   { // INSERT raster entry
     b_import_points = true; // import of .points file only when first created
     s_sql = QString( "INSERT INTO gcp_coverages (coverage_name,srid, transformtype, resampling, compression,raster_file, raster_path,raster_gtif)\n" );
-    s_sql += QString( "SELECT '%1' AS coverage_name," ).arg( mCoverage_Name );
-    s_sql += QString( "%1 AS srid," ).arg( i_gcp_srid );
+    s_sql += QString( "SELECT '%1' AS coverage_name," ).arg( mGcp_coverage_name );
+    s_sql += QString( "%1 AS srid," ).arg( mGcp_srid );
     s_sql += QString( "%1 AS transformtype," ).arg(( int )mTransformParam );
     s_sql += QString( "%1 AS resampling," ).arg(( int )mResamplingMethod );
     s_sql += QString( "'%1' AS compression," ).arg( mCompressionMethod );
@@ -2736,7 +2784,7 @@ bool QgsGeorefPluginGui::createGCPDb()
       qDebug() << QString( "QgsGeorefPluginGui::createGCPDb -6- [%1] " ).arg( mError );
       sqlite3_free( errMsg );
     }
-    s_sql = QString( "SELECT id_gcp_coverage FROM gcp_coverages WHERE coverage_name='%1'" ).arg( mCoverage_Name );
+    s_sql = QString( "SELECT id_gcp_coverage FROM gcp_coverages WHERE coverage_name='%1'" ).arg( mGcp_coverage_name );
     ret = sqlite3_prepare_v2( db_handle, s_sql.toUtf8().constData(), -1, &stmt, NULL );
     if ( ret != SQLITE_OK )
     { //  rc=1 [no such table: vector_layers_statistics or gcp_points, 'no such column' for gcp_pixel and gcp_ppoint] is an error
@@ -2760,22 +2808,22 @@ bool QgsGeorefPluginGui::createGCPDb()
   ret = sqlite3_exec( db_handle, "COMMIT", NULL, NULL, 0 );
   Q_ASSERT( ret == SQLITE_OK );
   Q_UNUSED( ret );
-  // qDebug() << QString( "-I-> QgsGeorefPluginGui::createGCPDb -02- gcp_points_table_name[%1] id_gcp_coverage[%2] b_gcp_coverage_create[%3]" ).arg( s_gcp_points_table_name ).arg( id_gcp_coverage ).arg( b_gcp_coverage_create );
+  // qDebug() << QString( "-I-> QgsGeorefPluginGui::createGCPDb -02- gcp_points_table_name[%1] id_gcp_coverage[%2] b_gcp_coverage_create[%3]" ).arg( mGcp_points_table_name ).arg( id_gcp_coverage ).arg( b_gcp_coverage_create );
   if (( b_gcp_coverage_create ) && ( id_gcp_coverage > 0 ) )
   { // raster entry has been added to gcp_covarage, create corresponding tables
-    // qDebug() << QString( "-I-> QgsGeorefPluginGui::createGCPDb creating gcp tables and views for[%1] " ).arg( s_gcp_points_table_name );
+    // qDebug() << QString( "-I-> QgsGeorefPluginGui::createGCPDb creating gcp tables and views for[%1] " ).arg( mGcp_points_table_name );
     // Start TRANSACTION
     ret = sqlite3_exec( db_handle, "BEGIN", NULL, NULL, 0 );
     Q_ASSERT( ret == SQLITE_OK );
     Q_UNUSED( ret );
-    s_sql = QString( "CREATE TABLE IF NOT EXISTS '%1'\n(\n" ).arg( s_gcp_points_table_name );
+    s_sql = QString( "CREATE TABLE IF NOT EXISTS '%1'\n(\n" ).arg( mGcp_points_table_name );
     s_sql += QString( " %1 INTEGER PRIMARY KEY AUTOINCREMENT,\n" ).arg( "id_gcp" );
     s_sql += QString( " %1 INTEGER DEFAULT 0,\n" ).arg( "id_gcp_coverage" );
     s_sql += QString( " %1 TEXT DEFAULT '',\n" ).arg( "name" );
     s_sql += QString( " %1 TEXT DEFAULT '',\n" ).arg( "notes" );
     s_sql += QString( " %1 DOUBLE DEFAULT 0,\n" ).arg( "pixel_x" );
     s_sql += QString( " %1 DOUBLE DEFAULT 0,\n" ).arg( "pixel_y" );
-    s_sql += QString( " %1 INTEGER DEFAULT %2,\n" ).arg( "srid" ).arg( i_gcp_srid );
+    s_sql += QString( " %1 INTEGER DEFAULT %2,\n" ).arg( "srid" ).arg( mGcp_srid );
     s_sql += QString( " %1 DOUBLE DEFAULT 0,\n" ).arg( "point_x" );
     s_sql += QString( " %1 DOUBLE DEFAULT 0,\n" ).arg( "point_y" );
     s_sql += QString( " -- 0=tpc (Thin Plate Spline)\n" );
@@ -2798,7 +2846,7 @@ bool QgsGeorefPluginGui::createGCPDb()
       spatialite_shutdown();
       return false;
     }
-    s_sql = QString( "SELECT AddGeometryColumn('%1','gcp_pixel',-1,'POINT','XY')" ).arg( s_gcp_points_table_name );
+    s_sql = QString( "SELECT AddGeometryColumn('%1','gcp_pixel',-1,'POINT','XY')" ).arg( mGcp_points_table_name );
     ret = sqlite3_exec( db_handle, s_sql.toUtf8().constData(), NULL, NULL, &errMsg );
     if ( ret != SQLITE_OK )
     {
@@ -2812,7 +2860,7 @@ bool QgsGeorefPluginGui::createGCPDb()
       spatialite_shutdown();
       return false;
     }
-    s_sql = QString( "SELECT CreateSpatialIndex('%1','gcp_pixel')" ).arg( s_gcp_points_table_name );
+    s_sql = QString( "SELECT CreateSpatialIndex('%1','gcp_pixel')" ).arg( mGcp_points_table_name );
     ret = sqlite3_exec( db_handle, s_sql.toUtf8().constData(), NULL, NULL, &errMsg );
     if ( ret != SQLITE_OK )
     {
@@ -2826,7 +2874,7 @@ bool QgsGeorefPluginGui::createGCPDb()
       spatialite_shutdown();
       return false;
     }
-    s_sql = QString( "SELECT AddGeometryColumn('%1','gcp_point',%2,'POINT','XY')" ).arg( s_gcp_points_table_name ).arg( i_gcp_srid );
+    s_sql = QString( "SELECT AddGeometryColumn('%1','gcp_point',%2,'POINT','XY')" ).arg( mGcp_points_table_name ).arg( mGcp_srid );
     ret = sqlite3_exec( db_handle, s_sql.toUtf8().constData(), NULL, NULL, &errMsg );
     if ( ret != SQLITE_OK )
     {
@@ -2840,7 +2888,7 @@ bool QgsGeorefPluginGui::createGCPDb()
       spatialite_shutdown();
       return false;
     }
-    s_sql = QString( "SELECT CreateSpatialIndex('%1','gcp_point')" ).arg( s_gcp_points_table_name );
+    s_sql = QString( "SELECT CreateSpatialIndex('%1','gcp_point')" ).arg( mGcp_points_table_name );
     ret = sqlite3_exec( db_handle, s_sql.toUtf8().constData(), NULL, NULL, &errMsg );
     if ( ret != SQLITE_OK )
     {
@@ -2855,9 +2903,9 @@ bool QgsGeorefPluginGui::createGCPDb()
       return false;
     }
     // If while INSERTING, no geometries are supplied (only valid pixel/point x+y values), the geometries will be created
-    s_sql = QString( "CREATE TRIGGER IF NOT EXISTS 'tb_ins_%1'\n" ).arg( s_gcp_points_table_name );
-    s_sql += QString( " AFTER INSERT ON  \"%1\"\nBEGIN\n" ).arg( s_gcp_points_table_name );
-    s_sql += QString( " UPDATE \"%1\" \n" ).arg( s_gcp_points_table_name );
+    s_sql = QString( "CREATE TRIGGER IF NOT EXISTS 'tb_ins_%1'\n" ).arg( mGcp_points_table_name );
+    s_sql += QString( " AFTER INSERT ON  \"%1\"\nBEGIN\n" ).arg( mGcp_points_table_name );
+    s_sql += QString( " UPDATE \"%1\" \n" ).arg( mGcp_points_table_name );
     s_sql += QString( " -- general checking for and setting of NULL values done in 'tb_upd_gcp_points'\n SET\n" );
     s_sql += QString( "  name =  NEW.name, notes = NEW.notes,\n" );
     s_sql += QString( "  pixel_x = NEW.pixel_x, pixel_y = NEW.pixel_y,\n" );
@@ -2872,7 +2920,7 @@ bool QgsGeorefPluginGui::createGCPDb()
     ret = sqlite3_exec( db_handle, s_sql.toUtf8().constData(), NULL, NULL, &errMsg );
     if ( ret != SQLITE_OK )
     {
-      mError = QString( "Unable to create AFTER INSERT TRIGGER for %1: rc=%2 [%3] sql[%4]\n" ).arg( s_gcp_points_table_name ).arg( ret ).arg( QString::fromUtf8( errMsg ) ).arg( s_sql );
+      mError = QString( "Unable to create AFTER INSERT TRIGGER for %1: rc=%2 [%3] sql[%4]\n" ).arg( mGcp_points_table_name ).arg( ret ).arg( QString::fromUtf8( errMsg ) ).arg( s_sql );
       qDebug() << QString( "QgsGeorefPluginGui::createGCPDb -13- [%1] " ).arg( mError );
       sqlite3_free( errMsg );
       sqlite3_close( db_handle );
@@ -2883,11 +2931,11 @@ bool QgsGeorefPluginGui::createGCPDb()
       return false;
     }
     // AFTER (not BEFORE) an UPDATE of the geometries,  the pixel/point x+y values will be updated
-    s_sql = QString( "CREATE TRIGGER IF NOT EXISTS 'tb_upd_%1'\n" ).arg( s_gcp_points_table_name );
+    s_sql = QString( "CREATE TRIGGER IF NOT EXISTS 'tb_upd_%1'\n" ).arg( mGcp_points_table_name );
     s_sql += QString( " AFTER UPDATE OF\n" );
     s_sql += QString( "  id_gcp,name,notes,pixel_x,pixel_y,srid,point_x,point_y,order_selected,gcp_enable,gcp_text,gcp_pixel,gcp_point\n" );
-    s_sql += QString( " ON \"%1\" \nBEGIN\n" ).arg( s_gcp_points_table_name );
-    s_sql += QString( " UPDATE \"%1\" \n" ).arg( s_gcp_points_table_name );
+    s_sql += QString( " ON \"%1\" \nBEGIN\n" ).arg( mGcp_points_table_name );
+    s_sql += QString( " UPDATE \"%1\" \n" ).arg( mGcp_points_table_name );
     s_sql += QString( " -- general checking for and setting of NULL values\n SET\n" );
     s_sql += QString( "  name =  CASE WHEN NEW.name IS NULL THEN '' ELSE NEW.name END,\n" );
     s_sql += QString( "  notes = CASE WHEN NEW.notes IS NULL THEN '' ELSE NEW.notes END,\n" );
@@ -2906,7 +2954,7 @@ bool QgsGeorefPluginGui::createGCPDb()
     ret = sqlite3_exec( db_handle, s_sql.toUtf8().constData(), NULL, NULL, &errMsg );
     if ( ret != SQLITE_OK )
     {
-      mError = QString( "Unable to create BEFORE UPDATE TRIGGER for %1: rc=%2 [%3] sql[%4]\n" ).arg( s_gcp_points_table_name ).arg( ret ).arg( QString::fromUtf8( errMsg ) ).arg( s_sql );
+      mError = QString( "Unable to create BEFORE UPDATE TRIGGER for %1: rc=%2 [%3] sql[%4]\n" ).arg( mGcp_points_table_name ).arg( ret ).arg( QString::fromUtf8( errMsg ) ).arg( s_sql );
       qDebug() << QString( "QgsGeorefPluginGui::createGCPDb -14- [%1] " ).arg( mError );
       sqlite3_free( errMsg );
       sqlite3_close( db_handle );
@@ -2920,7 +2968,7 @@ bool QgsGeorefPluginGui::createGCPDb()
     s_sql += QString( " SELECT id_gcp,\n  " );
     s_sql += QString( "  '-gcp '||pixel_x||' '||-(pixel_y)||' '||point_x||' '||point_y AS gcp_gdal,\n" );
     s_sql += QString( "  point_x||','||point_y||','||pixel_x||','||pixel_y||','||gcp_enable AS point_qgis\n" );
-    s_sql += QString( " FROM \"%1\"\n ORDER BY point_x,point_y;\n" ).arg( s_gcp_points_table_name );
+    s_sql += QString( " FROM \"%1\"\n ORDER BY point_x,point_y;\n" ).arg( mGcp_points_table_name );
     ret = sqlite3_exec( db_handle, s_sql.toUtf8().constData(), NULL, NULL, &errMsg );
     if ( ret != SQLITE_OK )
     {
@@ -2938,7 +2986,7 @@ bool QgsGeorefPluginGui::createGCPDb()
     s_sql += QString( " SELECT id_gcp,\n  " );
     s_sql += QString( "  '-gcp '||pixel_x||' '||-(pixel_y)||' '||point_x||' '||point_y AS gcp_gdal,\n" );
     s_sql += QString( "  point_x||','||point_y||','||pixel_x||','||pixel_y||','||gcp_enable AS point_qgis\n" );
-    s_sql += QString( " FROM \"%1\"\n %2\n ORDER BY point_x,point_y;\n" ).arg( s_gcp_points_table_name ).arg( "WHERE (gcp_enable=0)" );
+    s_sql += QString( " FROM \"%1\"\n %2\n ORDER BY point_x,point_y;\n" ).arg( mGcp_points_table_name ).arg( "WHERE (gcp_enable=0)" );
     ret = sqlite3_exec( db_handle, s_sql.toUtf8().constData(), NULL, NULL, &errMsg );
     if ( ret != SQLITE_OK )
     {
@@ -2956,7 +3004,7 @@ bool QgsGeorefPluginGui::createGCPDb()
     s_sql += QString( " SELECT id_gcp,\n  " );
     s_sql += QString( "  '-gcp '||pixel_x||' '||-(pixel_y)||' '||point_x||' '||point_y AS gcp_gdal,\n" );
     s_sql += QString( "  point_x||','||point_y||','||pixel_x||','||pixel_y||','||gcp_enable AS point_qgis\n" );
-    s_sql += QString( " FROM \"%1\"\n %2\n ORDER BY point_x,point_y;\n" ).arg( s_gcp_points_table_name ).arg( "WHERE (gcp_enable=1)" );
+    s_sql += QString( " FROM \"%1\"\n %2\n ORDER BY point_x,point_y;\n" ).arg( mGcp_points_table_name ).arg( "WHERE (gcp_enable=1)" );
     ret = sqlite3_exec( db_handle, s_sql.toUtf8().constData(), NULL, NULL, &errMsg );
     if ( ret != SQLITE_OK )
     {
@@ -2974,7 +3022,7 @@ bool QgsGeorefPluginGui::createGCPDb()
     s_sql += QString( " -- 0=tpc (Thin Plate Spline)\n SELECT\n" );
     s_sql += QString( "  id_gcp,'-gcp '||pixel_x||' '||-(pixel_y)||' '||point_x||' '||point_y AS gcp_gdal,\n" );
     s_sql += QString( "  point_x||','||point_y||','||pixel_x||','||pixel_y||','||gcp_enable AS point_qgis\n" );
-    s_sql += QString( " FROM \"%1\"\n %2\n ORDER BY point_x,point_y;\n" ).arg( s_gcp_points_table_name ).arg( "WHERE ((gcp_enable=1) AND (order_selected=0))" );
+    s_sql += QString( " FROM \"%1\"\n %2\n ORDER BY point_x,point_y;\n" ).arg( mGcp_points_table_name ).arg( "WHERE ((gcp_enable=1) AND (order_selected=0))" );
     ret = sqlite3_exec( db_handle, s_sql.toUtf8().constData(), NULL, NULL, &errMsg );
     if ( ret != SQLITE_OK )
     {
@@ -2992,7 +3040,7 @@ bool QgsGeorefPluginGui::createGCPDb()
     s_sql += QString( " -- 1=1st order(affine) [precise]\n SELECT id_gcp,\n  " );
     s_sql += QString( "  '-gcp '||pixel_x||' '||-(pixel_y)||' '||point_x||' '||point_y AS gcp_gdal,\n" );
     s_sql += QString( "  point_x||','||point_y||','||pixel_x||','||pixel_y||','||gcp_enable AS point_qgis\n" );
-    s_sql += QString( " FROM \"%1\"\n %3\n ORDER BY point_x,point_y;\n" ).arg( s_gcp_points_table_name ).arg( "WHERE ((gcp_enable=1) AND (order_selected=1))" );
+    s_sql += QString( " FROM \"%1\"\n %3\n ORDER BY point_x,point_y;\n" ).arg( mGcp_points_table_name ).arg( "WHERE ((gcp_enable=1) AND (order_selected=1))" );
     ret = sqlite3_exec( db_handle, s_sql.toUtf8().constData(), NULL, NULL, &errMsg );
     if ( ret != SQLITE_OK )
     {
@@ -3010,7 +3058,7 @@ bool QgsGeorefPluginGui::createGCPDb()
     s_sql += QString( " -- 2=2nd order [less exact]\n SELECT id_gcp,\n  " );
     s_sql += QString( "  '-gcp '||pixel_x||' '||-(pixel_y)||' '||point_x||' '||point_y AS gcp_gdal,\n" );
     s_sql += QString( "  point_x||','||point_y||','||pixel_x||','||pixel_y||','||gcp_enable AS point_qgis\n" );
-    s_sql += QString( " FROM \"%1\"\n %2\n ORDER BY point_x,point_y;\n" ).arg( s_gcp_points_table_name ).arg( "WHERE ((gcp_enable=1) AND (order_selected=2))" );
+    s_sql += QString( " FROM \"%1\"\n %2\n ORDER BY point_x,point_y;\n" ).arg( mGcp_points_table_name ).arg( "WHERE ((gcp_enable=1) AND (order_selected=2))" );
     ret = sqlite3_exec( db_handle, s_sql.toUtf8().constData(), NULL, NULL, &errMsg );
     if ( ret != SQLITE_OK )
     {
@@ -3028,7 +3076,7 @@ bool QgsGeorefPluginGui::createGCPDb()
     s_sql += QString( " -- 3=3rd order [poor]\n SELECT id_gcp,\n  " );
     s_sql += QString( "  '-gcp '||pixel_x||' '||-(pixel_y)||' '||point_x||' '||point_y AS gcp_gdal,\n" );
     s_sql += QString( "  point_x||','||point_y||','||pixel_x||','||pixel_y||','||gcp_enable AS point_qgis\n" );
-    s_sql += QString( " FROM \"%1\"\n %2\n ORDER BY point_x,point_y;\n" ).arg( s_gcp_points_table_name ).arg( "WHERE ((gcp_enable=1) AND (order_selected=3))" );
+    s_sql += QString( " FROM \"%1\"\n %2\n ORDER BY point_x,point_y;\n" ).arg( mGcp_points_table_name ).arg( "WHERE ((gcp_enable=1) AND (order_selected=3))" );
     ret = sqlite3_exec( db_handle, s_sql.toUtf8().constData(), NULL, NULL, &errMsg );
     if ( ret != SQLITE_OK )
     {
@@ -3060,12 +3108,12 @@ bool QgsGeorefPluginGui::createGCPDb()
     // SELECT count((SELECT extent_min_x FROM vector_layers_statistics WHERE ((extent_min_x IS NOT NULL) AND (table_name='gcp_points')  AND (geometry_column='gcp_pixel')))) AS pixel_statistics,count((SELECT extent_min_x FROM vector_layers_statistics WHERE ((extent_min_x IS NOT NULL) AND (table_name='gcp_points')  AND (geometry_column='gcp_point')))) AS points_statistics, (SELECT count(id_gcp) FROM 'gcp_points') AS points_geometries, (SELECT count(gcp_pixel) FROM 'gcp_points' WHERE gcp_pixel IS NOT NULL) AS count_pixel, (SELECT count(gcp_point) FROM 'gcp_points' WHERE gcp_point IS NOT NULL) AS count_point
     s_sql = QString( "SELECT " );
     s_sql += QString( "count((SELECT extent_min_x FROM vector_layers_statistics WHERE ((extent_min_x IS NOT NULL) AND " );
-    s_sql += QString( "(table_name='%1') AND (geometry_column='%2')))) AS pixel_statistics," ).arg( s_gcp_points_table_name ).arg( "gcp_pixel" );
+    s_sql += QString( "(table_name='%1') AND (geometry_column='%2')))) AS pixel_statistics," ).arg( mGcp_points_table_name ).arg( "gcp_pixel" );
     s_sql += QString( "count((SELECT extent_min_x FROM vector_layers_statistics WHERE ((extent_min_x IS NOT NULL) AND " );
-    s_sql += QString( "(table_name='%1') AND (geometry_column='%2')))) AS points_statistics," ).arg( s_gcp_points_table_name ).arg( "gcp_point" );
-    // s_sql += QString("(SELECT count(id_gcp) FROM '%1') AS points_table,").arg(s_gcp_points_table_name);
-    // s_sql += QString("(SELECT count(gcp_pixel) FROM '%1' WHERE gcp_pixel IS NOT NULL) AS count_pixel,").arg(s_gcp_points_table_name);
-    // s_sql += QString("(SELECT count(gcp_point) FROM '%1' WHERE gcp_point IS NOT NULL) AS count_point").arg(s_gcp_points_table_name);
+    s_sql += QString( "(table_name='%1') AND (geometry_column='%2')))) AS points_statistics," ).arg( mGcp_points_table_name ).arg( "gcp_point" );
+    // s_sql += QString("(SELECT count(id_gcp) FROM '%1') AS points_table,").arg(mGcp_points_table_name);
+    // s_sql += QString("(SELECT count(gcp_pixel) FROM '%1' WHERE gcp_pixel IS NOT NULL) AS count_pixel,").arg(mGcp_points_table_name);
+    // s_sql += QString("(SELECT count(gcp_point) FROM '%1' WHERE gcp_point IS NOT NULL) AS count_point").arg(mGcp_points_table_name);
     s_sql += QString( "(SELECT count(id_gcp_coverage) FROM '%1' WHERE gcp_count > 0) AS count_gcp" ).arg( "gcp_coverages" );
     ret = sqlite3_prepare_v2( db_handle, s_sql.toUtf8().constData(), -1, &stmt, NULL );
     if ( ret != SQLITE_OK )
@@ -3093,11 +3141,11 @@ bool QgsGeorefPluginGui::createGCPDb()
     }
     if ( i_pixel_statistics == 0 )
     { // should be 1, if not empty
-      s_sql = QString( "SELECT UpdateLayerStatistics('%1','gcp_pixel')" ).arg( s_gcp_points_table_name );
+      s_sql = QString( "SELECT UpdateLayerStatistics('%1','gcp_pixel')" ).arg( mGcp_points_table_name );
       ret = sqlite3_exec( db_handle, s_sql.toUtf8().constData(), NULL, NULL, &errMsg );
       if ( ret != SQLITE_OK )
       {
-        mError = QString( "Unable to execute UpdateLayerStatistics('%1','gcp_pixel'): rc=%2 [%3] sql[%4]\n" ).arg( s_gcp_points_table_name ).arg( ret ).arg( QString::fromUtf8( errMsg ) ).arg( s_sql );
+        mError = QString( "Unable to execute UpdateLayerStatistics('%1','gcp_pixel'): rc=%2 [%3] sql[%4]\n" ).arg( mGcp_points_table_name ).arg( ret ).arg( QString::fromUtf8( errMsg ) ).arg( s_sql );
         qDebug() << QString( "QgsGeorefPluginGui::createGCPDb -23- [%1] " ).arg( mError );
         sqlite3_free( errMsg );
         sqlite3_close( db_handle );
@@ -3110,11 +3158,11 @@ bool QgsGeorefPluginGui::createGCPDb()
     }
     if ( i_point_statistics == 0 )
     {  // should be 1, if not empty
-      s_sql = QString( "SELECT UpdateLayerStatistics('%1','gcp_point')" ).arg( s_gcp_points_table_name );
+      s_sql = QString( "SELECT UpdateLayerStatistics('%1','gcp_point')" ).arg( mGcp_points_table_name );
       ret = sqlite3_exec( db_handle, s_sql.toUtf8().constData(), NULL, NULL, &errMsg );
       if ( ret != SQLITE_OK )
       {
-        mError = QString( "Unable to execute UpdateLayerStatistics('%1','gcp_point'): rc=%2 [%3] sql[%4]\n" ).arg( s_gcp_points_table_name ).arg( ret ).arg( QString::fromUtf8( errMsg ) ).arg( s_sql );
+        mError = QString( "Unable to execute UpdateLayerStatistics('%1','gcp_point'): rc=%2 [%3] sql[%4]\n" ).arg( mGcp_points_table_name ).arg( ret ).arg( QString::fromUtf8( errMsg ) ).arg( s_sql );
         qDebug() << QString( "QgsGeorefPluginGui::createGCPDb -24- [%1] " ).arg( mError );
         sqlite3_free( errMsg );
         sqlite3_close( db_handle );
@@ -3165,7 +3213,7 @@ bool QgsGeorefPluginGui::createGCPDb()
       spatialite_shutdown();
       return false;
     }
-    s_sql = QString( "SELECT AddGeometryColumn('create_cutline_points','cutline_point',%1,'POINT','XY')" ).arg( i_gcp_srid );
+    s_sql = QString( "SELECT AddGeometryColumn('create_cutline_points','cutline_point',%1,'POINT','XY')" ).arg( mGcp_srid );
     ret = sqlite3_exec( db_handle, s_sql.toUtf8().constData(), NULL, NULL, &errMsg );
     if ( ret != SQLITE_OK )
     {
@@ -3208,7 +3256,7 @@ bool QgsGeorefPluginGui::createGCPDb()
       spatialite_shutdown();
       return false;
     }
-    s_sql = QString( "SELECT AddGeometryColumn('create_cutline_linestrings','cutline_linestring',%1,'LINESTRING','XY')" ).arg( i_gcp_srid );
+    s_sql = QString( "SELECT AddGeometryColumn('create_cutline_linestrings','cutline_linestring',%1,'LINESTRING','XY')" ).arg( mGcp_srid );
     ret = sqlite3_exec( db_handle, s_sql.toUtf8().constData(), NULL, NULL, &errMsg );
     if ( ret != SQLITE_OK )
     {
@@ -3251,7 +3299,7 @@ bool QgsGeorefPluginGui::createGCPDb()
       spatialite_shutdown();
       return false;
     }
-    s_sql = QString( "SELECT AddGeometryColumn('create_cutline_polygons','cutline_polygon',%1,'POLYGON','XY')" ).arg( i_gcp_srid );
+    s_sql = QString( "SELECT AddGeometryColumn('create_cutline_polygons','cutline_polygon',%1,'POLYGON','XY')" ).arg( mGcp_srid );
     ret = sqlite3_exec( db_handle, s_sql.toUtf8().constData(), NULL, NULL, &errMsg );
     if ( ret != SQLITE_OK )
     {
@@ -3309,10 +3357,10 @@ bool QgsGeorefPluginGui::createGCPDb()
         }
         // QgsPoint mapCoords( ls.at( 0 ).toDouble(), ls.at( 1 ).toDouble() ); // map x,y
         // QgsPoint pixelCoords( ls.at( 2 ).toDouble(), ls.at( 3 ).toDouble() ); // pixel x,y
-        s_sql = QString( "INSERT INTO \"%1\" (name,id_gcp_coverage,srid,pixel_x,pixel_y,point_x,point_y,gcp_enable)\n" ).arg( s_gcp_points_table_name );
+        s_sql = QString( "INSERT INTO \"%1\" (name,id_gcp_coverage,srid,pixel_x,pixel_y,point_x,point_y,gcp_enable)\n" ).arg( mGcp_points_table_name );
         s_sql += QString( "SELECT '%1' AS name," ).arg( mGCPbaseFileName );
         s_sql += QString( "%1 AS id_gcp_coverage," ).arg( id_gcp_coverage );
-        s_sql += QString( "%1 AS srid," ).arg( i_gcp_srid );
+        s_sql += QString( "%1 AS srid," ).arg( mGcp_srid );
         s_sql += QString( "%1 AS pixel_x," ).arg( ls.at( 2 ).simplified() );
         s_sql += QString( "%1 AS pixel_y," ).arg( ls.at( 3 ).simplified() );
         s_sql += QString( "%1 AS point_x," ).arg( ls.at( 0 ).simplified() );
@@ -3321,18 +3369,18 @@ bool QgsGeorefPluginGui::createGCPDb()
         ret = sqlite3_exec( db_handle, s_sql.toUtf8().constData(), NULL, NULL, &errMsg );
         if ( ret != SQLITE_OK )
         {
-          mError = QString( "Unable to INSERT INTO '%1': rc=%2 [%3] sql[%4]\n" ).arg( s_gcp_points_table_name ).arg( ret ).arg( QString::fromUtf8( errMsg ) ).arg( s_sql );
+          mError = QString( "Unable to INSERT INTO '%1': rc=%2 [%3] sql[%4]\n" ).arg( mGcp_points_table_name ).arg( ret ).arg( QString::fromUtf8( errMsg ) ).arg( s_sql );
           qDebug() << QString( "QgsGeorefPluginGui::createGCPDb -34- [%1] " ).arg( mError );
           sqlite3_free( errMsg );
         }
       }
       // Note: since we are not inserting the geometry directly [is created with the TRIGGER], CheckSpatialIndex will return 0
       // - RecoverSpatialIndex is needed to build the index properly, otherwise OGR will not read the records properly
-      s_sql = QString( "SELECT RecoverSpatialIndex('%1','gcp_pixel')" ).arg( s_gcp_points_table_name );
+      s_sql = QString( "SELECT RecoverSpatialIndex('%1','gcp_pixel')" ).arg( mGcp_points_table_name );
       ret = sqlite3_exec( db_handle, s_sql.toUtf8().constData(), NULL, NULL, &errMsg );
       if ( ret != SQLITE_OK )
       {
-        mError = QString( "Unable to execute RecoverSpatialIndex('%1','gcp_pixel'): rc=%2 [%3] sql[%4]\n" ).arg( s_gcp_points_table_name ).arg( ret ).arg( QString::fromUtf8( errMsg ) ).arg( s_sql );
+        mError = QString( "Unable to execute RecoverSpatialIndex('%1','gcp_pixel'): rc=%2 [%3] sql[%4]\n" ).arg( mGcp_points_table_name ).arg( ret ).arg( QString::fromUtf8( errMsg ) ).arg( s_sql );
         qDebug() << QString( "QgsGeorefPluginGui::createGCPDb -35- [%1] " ).arg( mError );
         sqlite3_free( errMsg );
         sqlite3_close( db_handle );
@@ -3342,11 +3390,11 @@ bool QgsGeorefPluginGui::createGCPDb()
         spatialite_shutdown();
         return false;
       }
-      s_sql = QString( "SELECT UpdateLayerStatistics('%1','gcp_pixel')" ).arg( s_gcp_points_table_name );
+      s_sql = QString( "SELECT UpdateLayerStatistics('%1','gcp_pixel')" ).arg( mGcp_points_table_name );
       ret = sqlite3_exec( db_handle, s_sql.toUtf8().constData(), NULL, NULL, &errMsg );
       if ( ret != SQLITE_OK )
       {
-        mError = QString( "Unable to execute UpdateLayerStatistics('%1','gcp_pixel'): rc=%2 [%3] sql[%4]\n" ).arg( s_gcp_points_table_name ).arg( ret ).arg( QString::fromUtf8( errMsg ) ).arg( s_sql );
+        mError = QString( "Unable to execute UpdateLayerStatistics('%1','gcp_pixel'): rc=%2 [%3] sql[%4]\n" ).arg( mGcp_points_table_name ).arg( ret ).arg( QString::fromUtf8( errMsg ) ).arg( s_sql );
         qDebug() << QString( "QgsGeorefPluginGui::createGCPDb -36- [%1] " ).arg( mError );
         sqlite3_free( errMsg );
         sqlite3_close( db_handle );
@@ -3358,11 +3406,11 @@ bool QgsGeorefPluginGui::createGCPDb()
       }
       // Note: since we are not inserting the geometry directly [is created with the TRIGGER], CheckSpatialIndex will return 0
       // - RecoverSpatialIndex is needed to build the index properly, otherwise OGR will not read the records properly
-      s_sql = QString( "SELECT RecoverSpatialIndex('%1','gcp_point')" ).arg( s_gcp_points_table_name );
+      s_sql = QString( "SELECT RecoverSpatialIndex('%1','gcp_point')" ).arg( mGcp_points_table_name );
       ret = sqlite3_exec( db_handle, s_sql.toUtf8().constData(), NULL, NULL, &errMsg );
       if ( ret != SQLITE_OK )
       {
-        mError = QString( "Unable to execute RecoverSpatialIndex('%1','gcp_point'): rc=%2 [%3] sql[%4]\n" ).arg( s_gcp_points_table_name ).arg( ret ).arg( QString::fromUtf8( errMsg ) ).arg( s_sql );
+        mError = QString( "Unable to execute RecoverSpatialIndex('%1','gcp_point'): rc=%2 [%3] sql[%4]\n" ).arg( mGcp_points_table_name ).arg( ret ).arg( QString::fromUtf8( errMsg ) ).arg( s_sql );
         qDebug() << QString( "QgsGeorefPluginGui::createGCPDb -37- [%1] " ).arg( mError );
         sqlite3_free( errMsg );
         sqlite3_close( db_handle );
@@ -3372,11 +3420,11 @@ bool QgsGeorefPluginGui::createGCPDb()
         spatialite_shutdown();
         return false;
       }
-      s_sql = QString( "SELECT UpdateLayerStatistics('%1','gcp_point')" ).arg( s_gcp_points_table_name );
+      s_sql = QString( "SELECT UpdateLayerStatistics('%1','gcp_point')" ).arg( mGcp_points_table_name );
       ret = sqlite3_exec( db_handle, s_sql.toUtf8().constData(), NULL, NULL, &errMsg );
       if ( ret != SQLITE_OK )
       {
-        mError = QString( "Unable to execute UpdateLayerStatistics('%1','gcp_point'): rc=%2 [%3] sql[%4]\n" ).arg( s_gcp_points_table_name ).arg( ret ).arg( QString::fromUtf8( errMsg ) ).arg( s_sql );
+        mError = QString( "Unable to execute UpdateLayerStatistics('%1','gcp_point'): rc=%2 [%3] sql[%4]\n" ).arg( mGcp_points_table_name ).arg( ret ).arg( QString::fromUtf8( errMsg ) ).arg( s_sql );
         qDebug() << QString( "QgsGeorefPluginGui::createGCPDb -38- [%1] " ).arg( mError );
         sqlite3_free( errMsg );
         sqlite3_close( db_handle );
@@ -3398,7 +3446,7 @@ bool QgsGeorefPluginGui::createGCPDb()
     spatialite_cleanup_ex( cache );
   spatialite_shutdown();
   // Update extent of active raster
-  return updateGCPDb( mCoverage_Name );
+  return updateGCPDb( mGcp_coverage_name );
 }
 bool QgsGeorefPluginGui::updateGCPDb( QString s_coverage_name )
 {
@@ -3407,6 +3455,8 @@ bool QgsGeorefPluginGui::updateGCPDb( QString s_coverage_name )
   bool b_database_exists = QFile( mGCPdatabaseFileName ).exists();
   if ( b_database_exists )
   {
+    s_coverage_name = s_coverage_name.toLower();
+    QString s_gcp_points_table_name = QString( "gcp_points_%1" ).arg( s_coverage_name );
     void *cache;
     char *errMsg = nullptr;
     sqlite3* db_handle;
@@ -3423,10 +3473,9 @@ bool QgsGeorefPluginGui::updateGCPDb( QString s_coverage_name )
     cache = spatialite_alloc_connection();
     // load spatialite extension
     spatialite_init_ex( db_handle, cache, 0 );
-    mModifiedRasterFileName = QString( "%1.%2.map.%3" ).arg( mGCPbaseFileName ).arg( i_gcp_srid ).arg( "tif" );
-    QString s_gcp_points_table_name = QString( "gcp_points_%1" ).arg( s_coverage_name.toLower() );
-    QString s_sql = QString( "UPDATE \"gcp_coverages\" SET\n" );
-    s_sql += QString( " srid=%1," ).arg( i_gcp_srid );
+    mModifiedRasterFileName = QString( "%1.%2.map.%3" ).arg( mGCPbaseFileName ).arg( mGcp_srid ).arg( "tif" );
+    QString s_sql = QString( "UPDATE \"%1\" SET\n" ).arg( "gcp_compute" );
+    s_sql += QString( " srid=%1," ).arg( mGcp_srid );
     s_sql += QString( " transformtype=%1," ).arg(( int )mTransformParam );
     s_sql += QString( " resampling=%1," ).arg(( int )mResamplingMethod );
     s_sql += QString( " compression='%1'," ).arg( mCompressionMethod );
@@ -3438,7 +3487,7 @@ bool QgsGeorefPluginGui::updateGCPDb( QString s_coverage_name )
     s_sql += QString( " extent_miny=(SELECT min(ST_Y(gcp_point)) FROM \"%1\" WHERE ((gcp_point IS NOT NULL) AND (gcp_enable <> 0)))," ).arg( s_gcp_points_table_name );
     s_sql += QString( " extent_maxx=(SELECT max(ST_X(gcp_point)) FROM \"%1\" WHERE ((gcp_point IS NOT NULL) AND (gcp_enable <> 0)))," ).arg( s_gcp_points_table_name );
     s_sql += QString( " extent_maxy=(SELECT max(ST_Y(gcp_point)) FROM \"%1\" WHERE ((gcp_point IS NOT NULL) AND (gcp_enable <> 0)))" ).arg( s_gcp_points_table_name );
-    s_sql += QString( " WHERE (coverage_name='%1')" ).arg( s_coverage_name.toLower() );
+    s_sql += QString( " WHERE (coverage_name='%1')" ).arg( s_coverage_name );
     ret = sqlite3_exec( db_handle, s_sql.toUtf8().constData(), NULL, NULL, &errMsg );
     if ( ret != SQLITE_OK )
     {
@@ -3453,6 +3502,452 @@ bool QgsGeorefPluginGui::updateGCPDb( QString s_coverage_name )
     spatialite_shutdown();
   }
   return b_database_exists;
+}
+bool QgsGeorefPluginGui::updateGcpCompute( QString s_coverage_name )
+{
+  if ( mLegacyMode == 0 )
+    return false;
+  if ( ! isGcpEnabled() )
+    return false;
+  if ( ! mLayer )
+    return false;
+  bool b_database_exists = QFile( mGCPdatabaseFileName ).exists();
+  s_coverage_name = s_coverage_name.toLower();
+  QString s_gcp_points_table_name = QString( "gcp_points_%1" ).arg( s_coverage_name );
+  QString s_pixel_point_to_map_point = "Pixel-Point to Map-Point";
+  QString s_map_point_to_pixel_point = "Map-Point to Pixel-Point";
+  if ( b_database_exists )
+  {
+    void *cache;
+    char *errMsg = nullptr;
+    sqlite3* db_handle;
+    sqlite3_stmt* stmt;
+    // open database
+    int ret = sqlite3_open_v2( mGCPdatabaseFileName.toUtf8().data(), &db_handle, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, NULL );
+    if ( ret != SQLITE_OK )
+    {
+      mError = QString( "Failed to open database: rc=%1 database[%2]" ).arg( ret ).arg( mGCPdatabaseFileName );
+      sqlite3_close( db_handle );
+      db_handle = nullptr;
+      return false;
+    }
+    // needed by spatialite_init_ex (multi-threading)
+    cache = spatialite_alloc_connection();
+    // load spatialite extension
+    spatialite_init_ex( db_handle, cache, 0 );
+    // check if gcp_compute contains entries for this coverage
+    QString s_sql = QString( "SELECT (SELECT count(coverage_name) FROM gcp_compute WHERE (coverage_name='%1')) AS has_gcp_compute," ).arg( s_coverage_name );
+    s_sql += QString( " (SELECT count(coverage_name) FROM gcp_coverages WHERE (coverage_name='%1')) AS has_gcp_coverage," ).arg( s_coverage_name );
+    s_sql += QString( " (SELECT id_gcp_coverage FROM gcp_coverages WHERE (coverage_name='%1')) AS id_gcp_coverage," ).arg( s_coverage_name );
+    s_sql += QString( " (SELECT srid FROM gcp_coverages WHERE (coverage_name='%1')) AS id_coverage_srid" ).arg( s_coverage_name );
+    ret = sqlite3_prepare_v2( db_handle, s_sql.toUtf8().constData(), -1, &stmt, NULL );
+    if ( ret != SQLITE_OK )
+    { //  rc=1 [no such function: HasGCP] is not an error [older spatialite version]
+      mError = QString( "Unable to execute reading of gcp_coverages for '%1': rc=%2 [%3] sql[%4]\n" ).arg( s_coverage_name ).arg( ret ).arg( QString::fromUtf8( errMsg ) ).arg( s_sql );
+      qDebug() << QString( "QgsGeorefPluginGui::updateGcpCompute -metadata- [%1] " ).arg( mError );
+    }
+    int i_gcp_compute = -1;
+    int i_gcp_coverage = -1;
+    int i_gcp_coverage_id = -1;
+    int i_gcp_coverage_srid = -1;
+    while ( sqlite3_step( stmt ) == SQLITE_ROW )
+    {
+      i_gcp_compute = sqlite3_column_int( stmt, 0 );
+      i_gcp_coverage = sqlite3_column_int( stmt, 1 );
+      i_gcp_coverage_id = sqlite3_column_int( stmt, 2 );
+      i_gcp_coverage_srid = sqlite3_column_int( stmt, 3 );
+    }
+    sqlite3_finalize( stmt );
+    if (( i_gcp_compute < 1 ) && ( i_gcp_coverage > 0 ) )
+    {
+      QString s_sql_base = QString( "INSERT INTO \"%1\" (coverage_name,id_gcp_coverage, image_max_x, image_max_y, notes, srid, id_order)\n" ).arg( "gcp_compute" );
+      s_sql_base += QString( "SELECT '%1' AS coverage_name," ).arg( s_coverage_name );
+      s_sql_base += QString( "%1 AS id_gcp_coverage," ).arg( i_gcp_coverage_id );
+      s_sql_base += QString( "%1 AS image_max_x," ).arg( mLayer->width() );
+      s_sql_base += QString( "%1 AS image_max_y," ).arg( mLayer->height() );
+      // Order 0 - Map-Point to Pixel-Point
+      s_sql = QString( "%1" ).arg( s_sql_base );
+      s_sql += QString( "'%1' AS notes," ).arg( "Map-Point to Pixel-Point" );
+      s_sql += QString( "%1 AS srid," ).arg( i_gcp_coverage_srid );
+      s_sql += QString( "%1 AS id_order" ).arg( 0 );
+      ret = sqlite3_exec( db_handle, s_sql.toUtf8().constData(), NULL, NULL, &errMsg );
+      if ( ret != SQLITE_OK )
+      {
+        mError = QString( "Unable to INSERT INTO '%1': rc=%2 [%3] sql[%4]\n" ).arg( "gcp_compute" ).arg( ret ).arg( QString::fromUtf8( errMsg ) ).arg( s_sql );
+        qDebug() << QString( "QgsGeorefPluginGui::updateGcpCompute - Order 0 - %1 - [%2] " ).arg( s_map_point_to_pixel_point ).arg( mError );
+        sqlite3_free( errMsg );
+      }
+      // Order 0 -  Pixel-Point to Map-Point
+      s_sql = QString( "%1" ).arg( s_sql_base );
+      s_sql += QString( "'%1' AS notes," ).arg( s_pixel_point_to_map_point );
+      s_sql += QString( "%1 AS srid," ).arg( -1 );
+      s_sql += QString( "%1 AS id_order" ).arg( 0 );
+      ret = sqlite3_exec( db_handle, s_sql.toUtf8().constData(), NULL, NULL, &errMsg );
+      if ( ret != SQLITE_OK )
+      {
+        mError = QString( "Unable to INSERT INTO '%1': rc=%2 [%3] sql[%4]\n" ).arg( "gcp_compute" ).arg( ret ).arg( QString::fromUtf8( errMsg ) ).arg( s_sql );
+        qDebug() << QString( "QgsGeorefPluginGui::updateGcpCompute - Order 0 - %1 - [%2] " ).arg( s_pixel_point_to_map_point ).arg( mError );
+        sqlite3_free( errMsg );
+      }
+      // Order 1 - Map-Point to Pixel-Point
+      s_sql = QString( "%1" ).arg( s_sql_base );
+      s_sql += QString( "'%1' AS notes," ).arg( "Map-Point to Pixel-Point" );
+      s_sql += QString( "%1 AS srid," ).arg( i_gcp_coverage_srid );
+      s_sql += QString( "%1 AS id_order" ).arg( 1 );
+      ret = sqlite3_exec( db_handle, s_sql.toUtf8().constData(), NULL, NULL, &errMsg );
+      if ( ret != SQLITE_OK )
+      {
+        mError = QString( "Unable to INSERT INTO '%1': rc=%2 [%3] sql[%4]\n" ).arg( "gcp_compute" ).arg( ret ).arg( QString::fromUtf8( errMsg ) ).arg( s_sql );
+        qDebug() << QString( "QgsGeorefPluginGui::updateGcpCompute - Order 1 - %1 - [%2] " ).arg( s_map_point_to_pixel_point ).arg( mError );
+        sqlite3_free( errMsg );
+      }
+      // Order 1 -  Pixel-Point to Map-Point
+      s_sql = QString( "%1" ).arg( s_sql_base );
+      s_sql += QString( "'%1' AS notes," ).arg( s_pixel_point_to_map_point );
+      s_sql += QString( "%1 AS srid," ).arg( -1 );
+      s_sql += QString( "%1 AS id_order" ).arg( 1 );
+      ret = sqlite3_exec( db_handle, s_sql.toUtf8().constData(), NULL, NULL, &errMsg );
+      if ( ret != SQLITE_OK )
+      {
+        mError = QString( "Unable to INSERT INTO '%1': rc=%2 [%3] sql[%4]\n" ).arg( "gcp_compute" ).arg( ret ).arg( QString::fromUtf8( errMsg ) ).arg( s_sql );
+        qDebug() << QString( "QgsGeorefPluginGui::updateGcpCompute - Order 1 - %1 - [%2] " ).arg( s_pixel_point_to_map_point ).arg( mError );
+        sqlite3_free( errMsg );
+      }
+      // Order 2 - Map-Point to Pixel-Point
+      s_sql = QString( "%1" ).arg( s_sql_base );
+      s_sql += QString( "'%1' AS notes," ).arg( "Map-Point to Pixel-Point" );
+      s_sql += QString( "%1 AS srid," ).arg( i_gcp_coverage_srid );
+      s_sql += QString( "%1 AS id_order" ).arg( 2 );
+      ret = sqlite3_exec( db_handle, s_sql.toUtf8().constData(), NULL, NULL, &errMsg );
+      if ( ret != SQLITE_OK )
+      {
+        mError = QString( "Unable to INSERT INTO '%1': rc=%2 [%3] sql[%4]\n" ).arg( "gcp_compute" ).arg( ret ).arg( QString::fromUtf8( errMsg ) ).arg( s_sql );
+        qDebug() << QString( "QgsGeorefPluginGui::updateGcpCompute - Order 2 - %1 - [%2] " ).arg( s_map_point_to_pixel_point ).arg( mError );
+        sqlite3_free( errMsg );
+      }
+      // Order 2 -  Pixel-Point to Map-Point
+      s_sql = QString( "%1" ).arg( s_sql_base );
+      s_sql += QString( "'%1' AS notes," ).arg( s_pixel_point_to_map_point );
+      s_sql += QString( "%1 AS srid," ).arg( -1 );
+      s_sql += QString( "%1 AS id_order" ).arg( 2 );
+      ret = sqlite3_exec( db_handle, s_sql.toUtf8().constData(), NULL, NULL, &errMsg );
+      if ( ret != SQLITE_OK )
+      {
+        mError = QString( "Unable to INSERT INTO '%1': rc=%2 [%3] sql[%4]\n" ).arg( "gcp_compute" ).arg( ret ).arg( QString::fromUtf8( errMsg ) ).arg( s_sql );
+        qDebug() << QString( "QgsGeorefPluginGui::updateGcpCompute - Order 2 - %1 - [%2] " ).arg( s_pixel_point_to_map_point ).arg( mError );
+        sqlite3_free( errMsg );
+      }
+      // Order 3 - Map-Point to Pixel-Point
+      s_sql = QString( "%1" ).arg( s_sql_base );
+      s_sql += QString( "'%1' AS notes," ).arg( "Map-Point to Pixel-Point" );
+      s_sql += QString( "%1 AS srid," ).arg( i_gcp_coverage_srid );
+      s_sql += QString( "%1 AS id_order" ).arg( 3 );
+      ret = sqlite3_exec( db_handle, s_sql.toUtf8().constData(), NULL, NULL, &errMsg );
+      if ( ret != SQLITE_OK )
+      {
+        mError = QString( "Unable to INSERT INTO '%1': rc=%2 [%3] sql[%4]\n" ).arg( "gcp_compute" ).arg( ret ).arg( QString::fromUtf8( errMsg ) ).arg( s_sql );
+        qDebug() << QString( "QgsGeorefPluginGui::updateGcpCompute - Order 3 - %1 - [%2] " ).arg( s_map_point_to_pixel_point ).arg( mError );
+        sqlite3_free( errMsg );
+      }
+      // Order 3 -  Pixel-Point to Map-Point
+      s_sql = QString( "%1" ).arg( s_sql_base );
+      s_sql += QString( "'%1' AS notes," ).arg( s_pixel_point_to_map_point );
+      s_sql += QString( "%1 AS srid," ).arg( -1 );
+      s_sql += QString( "%1 AS id_order" ).arg( 3 );
+      ret = sqlite3_exec( db_handle, s_sql.toUtf8().constData(), NULL, NULL, &errMsg );
+      if ( ret != SQLITE_OK )
+      {
+        mError = QString( "Unable to INSERT INTO '%1': rc=%2 [%3] sql[%4]\n" ).arg( "gcp_compute" ).arg( ret ).arg( QString::fromUtf8( errMsg ) ).arg( s_sql );
+        qDebug() << QString( "QgsGeorefPluginGui::updateGcpCompute - Order 3 - %1 - [%2] " ).arg( s_pixel_point_to_map_point ).arg( mError );
+        sqlite3_free( errMsg );
+      }
+    }
+    // Order 0 -  Pixel-Point to Map-Point
+    s_sql = QString( "UPDATE \"%1\" SET gcp_compute=\n" ).arg( "gcp_compute" );
+    s_sql += QString( " (SELECT GCP_Compute( gcp_point, gcp_pixel, %1 ) FROM \"%2\" WHERE ((gcp_point IS NOT NULL) AND (gcp_enable <> 0) AND (order_selected=%1)))" ).arg( 0 ).arg( s_gcp_points_table_name );
+    s_sql += QString( " WHERE ((coverage_name='%1') AND (id_order=%2) AND (notes='%3'))" ).arg( s_coverage_name ).arg( 0 ).arg( s_map_point_to_pixel_point );
+    ret = sqlite3_exec( db_handle, s_sql.toUtf8().constData(), NULL, NULL, &errMsg );
+    if ( ret != SQLITE_OK )
+    {
+      mError = QString( "Unable to execute Update of gcp_compute for '%1': rc=%2 [%3] sql[%4]\n" ).arg( s_gcp_points_table_name ).arg( ret ).arg( QString::fromUtf8( errMsg ) ).arg( s_sql );
+      qDebug() << QString( "QgsGeorefPluginGui::updateGcpCompute - Order 0 -  %1 - [%2] " ).arg( s_map_point_to_pixel_point ).arg( mError );
+      sqlite3_free( errMsg );
+    }
+    // Order 0 -  Pixel-Point to Map-Point
+    s_sql = QString( "UPDATE \"%1\" SET gcp_compute=\n" ).arg( "gcp_compute" );
+    s_sql += QString( " (SELECT GCP_Compute( gcp_pixel, gcp_point, %1 ) FROM \"%2\" WHERE ((gcp_point IS NOT NULL) AND (gcp_enable <> 0) AND (order_selected=%1)))" ).arg( 0 ).arg( s_gcp_points_table_name );
+    s_sql += QString( " WHERE ((coverage_name='%1') AND (id_order=%2) AND (notes='%3'))" ).arg( s_coverage_name ).arg( 0 ).arg( s_pixel_point_to_map_point );
+    ret = sqlite3_exec( db_handle, s_sql.toUtf8().constData(), NULL, NULL, &errMsg );
+    if ( ret != SQLITE_OK )
+    {
+      mError = QString( "Unable to execute Update of gcp_compute for '%1': rc=%2 [%3] sql[%4]\n" ).arg( s_gcp_points_table_name ).arg( ret ).arg( QString::fromUtf8( errMsg ) ).arg( s_sql );
+      qDebug() << QString( "QgsGeorefPluginGui::updateGcpCompute -Order 0 -  %1 - [%2] " ).arg( s_pixel_point_to_map_point ).arg( mError );
+      sqlite3_free( errMsg );
+    }
+    // Order 1 -  Pixel-Point to Map-Point
+    s_sql = QString( "UPDATE \"%1\" SET gcp_compute=\n" ).arg( "gcp_compute" );
+    s_sql += QString( " (SELECT GCP_Compute( gcp_point, gcp_pixel, %1 ) FROM \"%2\" WHERE ((gcp_point IS NOT NULL) AND (gcp_enable <> 0) AND (order_selected=%1)))" ).arg( 1 ).arg( s_gcp_points_table_name );
+    s_sql += QString( " WHERE ((coverage_name='%1') AND (id_order=%2) AND (notes='%3'))" ).arg( s_coverage_name ).arg( 1 ).arg( s_map_point_to_pixel_point );
+    ret = sqlite3_exec( db_handle, s_sql.toUtf8().constData(), NULL, NULL, &errMsg );
+    if ( ret != SQLITE_OK )
+    {
+      mError = QString( "Unable to execute Update of gcp_compute for '%1': rc=%2 [%3] sql[%4]\n" ).arg( s_gcp_points_table_name ).arg( ret ).arg( QString::fromUtf8( errMsg ) ).arg( s_sql );
+      qDebug() << QString( "QgsGeorefPluginGui::updateGcpCompute - Order 1 -  %1 - [%2] " ).arg( s_map_point_to_pixel_point ).arg( mError );
+      sqlite3_free( errMsg );
+    }
+    // Order 1 -  Pixel-Point to Map-Point
+    s_sql = QString( "UPDATE \"%1\" SET gcp_compute=\n" ).arg( "gcp_compute" );
+    s_sql += QString( " (SELECT GCP_Compute( gcp_pixel, gcp_point, %1 ) FROM \"%2\" WHERE ((gcp_point IS NOT NULL) AND (gcp_enable <> 0) AND (order_selected=%1)))" ).arg( 1 ).arg( s_gcp_points_table_name );
+    s_sql += QString( " WHERE ((coverage_name='%1') AND (id_order=%2) AND (notes='%3'))" ).arg( s_coverage_name ).arg( 1 ).arg( s_pixel_point_to_map_point );
+    ret = sqlite3_exec( db_handle, s_sql.toUtf8().constData(), NULL, NULL, &errMsg );
+    if ( ret != SQLITE_OK )
+    {
+      mError = QString( "Unable to execute Update of gcp_compute for '%1': rc=%2 [%3] sql[%4]\n" ).arg( s_gcp_points_table_name ).arg( ret ).arg( QString::fromUtf8( errMsg ) ).arg( s_sql );
+      qDebug() << QString( "QgsGeorefPluginGui::updateGcpCompute - Order 0 -  %1 - [%2] " ).arg( s_pixel_point_to_map_point ).arg( mError );
+      sqlite3_free( errMsg );
+    }
+    // Order 2 -  Pixel-Point to Map-Point
+    s_sql = QString( "UPDATE \"%1\" SET gcp_compute=\n" ).arg( "gcp_compute" );
+    s_sql += QString( " (SELECT GCP_Compute( gcp_point, gcp_pixel, %1 ) FROM \"%2\" WHERE ((gcp_point IS NOT NULL) AND (gcp_enable <> 0) AND (order_selected=%1)))" ).arg( 2 ).arg( s_gcp_points_table_name );
+    s_sql += QString( " WHERE ((coverage_name='%1') AND (id_order=%2) AND (notes='%3'))" ).arg( s_coverage_name ).arg( 2 ).arg( s_map_point_to_pixel_point );
+    ret = sqlite3_exec( db_handle, s_sql.toUtf8().constData(), NULL, NULL, &errMsg );
+    if ( ret != SQLITE_OK )
+    {
+      mError = QString( "Unable to execute Update of gcp_compute for '%1': rc=%2 [%3] sql[%4]\n" ).arg( s_gcp_points_table_name ).arg( ret ).arg( QString::fromUtf8( errMsg ) ).arg( s_sql );
+      qDebug() << QString( "QgsGeorefPluginGui::updateGcpCompute - Order 2 -  %1 - [%2] " ).arg( s_map_point_to_pixel_point ).arg( mError );
+      sqlite3_free( errMsg );
+    }
+    // Order 2 -  Pixel-Point to Map-Point
+    s_sql = QString( "UPDATE \"%1\" SET gcp_compute=\n" ).arg( "gcp_compute" );
+    s_sql += QString( " (SELECT GCP_Compute( gcp_pixel, gcp_point, %1 ) FROM \"%2\" WHERE ((gcp_point IS NOT NULL) AND (gcp_enable <> 0) AND (order_selected=%1)))" ).arg( 2 ).arg( s_gcp_points_table_name );
+    s_sql += QString( " WHERE ((coverage_name='%1') AND (id_order=%2) AND (notes='%3'))" ).arg( s_coverage_name ).arg( 2 ).arg( s_pixel_point_to_map_point );
+    ret = sqlite3_exec( db_handle, s_sql.toUtf8().constData(), NULL, NULL, &errMsg );
+    if ( ret != SQLITE_OK )
+    {
+      mError = QString( "Unable to execute Update of gcp_compute for '%1': rc=%2 [%3] sql[%4]\n" ).arg( s_gcp_points_table_name ).arg( ret ).arg( QString::fromUtf8( errMsg ) ).arg( s_sql );
+      qDebug() << QString( "QgsGeorefPluginGui::updateGcpCompute - Order 2 -  %1 - [%2] " ).arg( s_pixel_point_to_map_point ).arg( mError );
+      sqlite3_free( errMsg );
+    }
+    // Order 3 -  Pixel-Point to Map-Point
+    s_sql = QString( "UPDATE \"%1\" SET gcp_compute=\n" ).arg( "gcp_compute" );
+    s_sql += QString( " (SELECT GCP_Compute( gcp_point, gcp_pixel, %1 ) FROM \"%2\" WHERE ((gcp_point IS NOT NULL) AND (gcp_enable <> 0) AND (order_selected=%1)))" ).arg( 3 ).arg( s_gcp_points_table_name );
+    s_sql += QString( " WHERE ((coverage_name='%1') AND (id_order=%2) AND (notes='%3'))" ).arg( s_coverage_name ).arg( 3 ).arg( s_map_point_to_pixel_point );
+    ret = sqlite3_exec( db_handle, s_sql.toUtf8().constData(), NULL, NULL, &errMsg );
+    if ( ret != SQLITE_OK )
+    {
+      mError = QString( "Unable to execute Update of gcp_compute for '%1': rc=%2 [%3] sql[%4]\n" ).arg( s_gcp_points_table_name ).arg( ret ).arg( QString::fromUtf8( errMsg ) ).arg( s_sql );
+      qDebug() << QString( "QgsGeorefPluginGui::updateGcpCompute - Order 3 -  %1 - [%2] " ).arg( s_map_point_to_pixel_point ).arg( mError );
+      sqlite3_free( errMsg );
+    }
+    // Order 3 -  Pixel-Point to Map-Point
+    s_sql = QString( "UPDATE \"%1\" SET gcp_compute=\n" ).arg( "gcp_compute" );
+    s_sql += QString( " (SELECT GCP_Compute( gcp_pixel, gcp_point, %1 ) FROM \"%2\" WHERE ((gcp_point IS NOT NULL) AND (gcp_enable <> 0) AND (order_selected=%1)))" ).arg( 3 ).arg( s_gcp_points_table_name );
+    s_sql += QString( " WHERE ((coverage_name='%1') AND (id_order=%2) AND (notes='%3'))" ).arg( s_coverage_name ).arg( 3 ).arg( s_pixel_point_to_map_point );
+    ret = sqlite3_exec( db_handle, s_sql.toUtf8().constData(), NULL, NULL, &errMsg );
+    if ( ret != SQLITE_OK )
+    {
+      mError = QString( "Unable to execute Update of gcp_compute for '%1': rc=%2 [%3] sql[%4]\n" ).arg( s_gcp_points_table_name ).arg( ret ).arg( QString::fromUtf8( errMsg ) ).arg( s_sql );
+      qDebug() << QString( "QgsGeorefPluginGui::updateGcpCompute - Order 3 -  %1 - [%2] " ).arg( s_pixel_point_to_map_point ).arg( mError );
+      sqlite3_free( errMsg );
+    }
+    //----------------
+    sqlite3_close( db_handle );
+    db_handle = nullptr;
+    if ( cache != nullptr )
+      spatialite_cleanup_ex( cache );
+    spatialite_shutdown();
+  }
+  return b_database_exists;
+}
+int  QgsGeorefPluginGui::getGcpTransformParam( QgsGeorefTransform::TransformParametrisation i_TransformParam )
+{ // Use when calling QgsGeorefPluginGui::getGcpConvert
+  int i_GpsTransformParam = 0;
+  switch ( i_TransformParam )
+  { // The Spatialite GCP_Transform/Compute uses a different numbering than QgsGeorefTransform::TransformParametrisation
+    case QgsGeorefTransform::PolynomialOrder1:
+      i_GpsTransformParam = 1;
+      break;
+    case QgsGeorefTransform::PolynomialOrder2:
+      i_GpsTransformParam = 2;
+      break;
+    case QgsGeorefTransform::PolynomialOrder3:
+      i_GpsTransformParam = 3;
+      break;
+    case QgsGeorefTransform::ThinPlateSpline:
+    default:
+      i_GpsTransformParam = 0;
+      break;
+  }
+  return i_GpsTransformParam;
+}
+QgsPoint QgsGeorefPluginGui::getGcpConvert( QString s_coverage_name, QgsPoint input_point, bool b_toPixel, int i_order, bool b_reCompute, int id_gcp )
+{
+  double point_x = 0;
+  double point_y = 0;
+  QgsPoint convert_point( point_x, point_y );
+  if (( mLegacyMode == 0 ) || ( ! isGcpEnabled() ) )
+    return convert_point;
+  bool b_database_exists = QFile( mGCPdatabaseFileName ).exists();
+  s_coverage_name = s_coverage_name.toLower();
+  QString s_gcp_points_table_name = QString( "gcp_points_%1" ).arg( s_coverage_name );
+  QString s_pixel_point_to_map_point = "Pixel-Point to Map-Point";
+  QString s_map_point_to_pixel_point = "Map-Point to Pixel-Point";
+  if ( b_database_exists )
+  {
+    void *cache;
+    char *errMsg = nullptr;
+    sqlite3* db_handle;
+    sqlite3_stmt* stmt;
+    // open database
+    int ret = sqlite3_open_v2( mGCPdatabaseFileName.toUtf8().data(), &db_handle, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, NULL );
+    if ( ret != SQLITE_OK )
+    {
+      mError = QString( "Failed to open database: rc=%1 database[%2]" ).arg( ret ).arg( mGCPdatabaseFileName );
+      sqlite3_close( db_handle );
+      db_handle = nullptr;
+      return convert_point;
+    }
+    // needed by spatialite_init_ex (multi-threading)
+    cache = spatialite_alloc_connection();
+    // load spatialite extension
+    spatialite_init_ex( db_handle, cache, 0 );
+    QString s_srid_request = QString( "srid=-1" );
+    if ( b_toPixel )
+    { // QgsPoint contains no srid information
+      s_srid_request = QString( "srid<>-1" );
+    }
+    if (( i_order < 0 ) || ( i_order > 3 ) )
+    {
+      i_order = 0;
+    }
+    // check if gcp_compute contains entries for this coverage
+    QString s_sql = QString( "SELECT HasGCP(), (SELECT count(coverage_name) FROM gcp_compute WHERE ((coverage_name='%1') AND (id_order=%2) AND (%3))) AS has_gcp_compute," ).arg( s_coverage_name ).arg( i_order ).arg( s_srid_request );
+    s_sql += QString( " (SELECT count(coverage_name) FROM gcp_coverages WHERE (coverage_name='%1')) AS has_gcp_coverags," ).arg( s_coverage_name );
+    s_sql += QString( " (SELECT id_gcp_coverage FROM gcp_coverages WHERE (coverage_name='%1')) AS id_gcp_coverage," ).arg( s_coverage_name );
+    s_sql += QString( " (SELECT srid FROM gcp_coverages WHERE (coverage_name='%1')) AS srid_gcp_coverage," ).arg( s_coverage_name );
+    s_sql += QString( " (SELECT count(id_gcp) FROM \"%1\" WHERE (gcp_enable=1)) AS count_gcp" ).arg( s_gcp_points_table_name ).arg( s_coverage_name );
+    ret = sqlite3_prepare_v2( db_handle, s_sql.toUtf8().constData(), -1, &stmt, NULL );
+    if ( ret != SQLITE_OK )
+    { //  rc=1 [no such function: HasGCP] is not an error [older spatialite version]
+      mError = QString( "Unable to execute reading of gcp_coverages for '%1': rc=%2 [%3] sql[%4]\n" ).arg( s_coverage_name ).arg( ret ).arg( QString::fromUtf8( errMsg ) ).arg( s_sql );
+      qDebug() << QString( "QgsGeorefPluginGui::getGcpConvert -metadata- [%1] " ).arg( mError );
+    }
+    int i_spatialite_gcp_enabled = 0;
+    int i_gcp_compute = -1;
+    int i_gcp_coverage = -1;
+    int i_gcp_coverage_id = -1;
+    int i_gcp_coverage_srid = -1;
+    int i_gcp_count = -1;
+    while ( sqlite3_step( stmt ) == SQLITE_ROW )
+    {
+      i_spatialite_gcp_enabled = sqlite3_column_int( stmt, 0 );
+      if ( sqlite3_column_type( stmt, 1 ) != SQLITE_NULL )
+        i_gcp_compute = sqlite3_column_int( stmt, 1 );
+      if ( sqlite3_column_type( stmt, 2 ) != SQLITE_NULL )
+        i_gcp_coverage = sqlite3_column_int( stmt, 2 );
+      if ( sqlite3_column_type( stmt, 3 ) != SQLITE_NULL )
+        i_gcp_coverage_id = sqlite3_column_int( stmt, 3 );
+      if ( sqlite3_column_type( stmt, 4 ) != SQLITE_NULL )
+        i_gcp_coverage_srid = sqlite3_column_int( stmt, 4 );
+      i_gcp_count = sqlite3_column_int( stmt, 5 );
+    }
+    sqlite3_finalize( stmt );
+    if ( i_spatialite_gcp_enabled == 1 )
+    { // https://www.gaia-gis.it/fossil/libspatialite/wiki?name=Ground+Control+Points
+      // 0: the GCP problem will be solved by applying the Thin Plate Spline (aka TPS) method.
+      // 1: (default) the GCP problem will be solved by applying the RMSE regression method and will return a set of polynomial coefficients of the 1st order.
+      // 2: the GCP problem will be solved by applying the RMSE regression method and will return a set of polynomial coefficients of the 2nd order.
+      // 3: the GCP problem will be solved by applying the RMSE regression method and will return a set of polynomial coefficients of the 3rd order.
+      bool b_valid = true;
+      if (( i_gcp_count < 4 ) || ( i_gcp_coverage <= 0 ) || ( i_gcp_coverage_id <= 0 ) )
+      {
+        b_valid = false;
+      }
+      if ( b_valid )
+      {
+        if ( i_gcp_compute != 1 )
+        { // Either: no gcp_convert TABLE was found OR no row for this map with srid and order was found [TABLE cannot be queried]
+          b_reCompute = true;
+        }
+        QString s_pixel_point_to_map_point = "Pixel-Point to Map-Point";
+        QString s_map_point_to_pixel_point = "Map-Point to Pixel-Point";
+        QString s_transform_type = QString( "Order %1 - " ).arg( i_order );
+        // A postion is being requested (not yet in the gcp-list) ['id_gcp' is ignored]
+        QString s_sql_base = QString( "SELECT \n TRANSFORM\nFROM\n COMPUTE\nLIMIT 1;" );
+        if ( id_gcp >= 0 )
+        { // A specific gcp is being requested ['input_point' is ignored]
+          s_sql_base = QString( "SELECT \n TRANSFORM\nFROM\n \"%1\" AS gcp, \n COMPUTE\nWHERE (id_gcp=%2);" ).arg( s_gcp_points_table_name ).arg( id_gcp );
+        }
+        QString s_sql_transform = "";
+        QString s_sql_compute = "";
+        if ( b_toPixel )
+        { // Map-Point to Pixel-Point
+          s_transform_type += s_map_point_to_pixel_point;
+          if ( id_gcp >= 0 )
+          { // A specific gcp is being requested ['input_point' is ignored]
+            s_sql_transform = QString( "ST_X(GCP_Transform(gcp.gcp_point , g_pixel.matrix,-1)) AS gcp_pixel_x,\n" );
+            s_sql_transform += QString( "ST_Y(GCP_Transform(gcp.gcp_point , g_pixel.matrix,-1)) AS gcp_pixel_y\n" );
+          }
+          else
+          { // A postion is being requested (not yet in the gcp-list) ['id_gcp' is ignored]
+            s_sql_transform = QString( "ST_X(GCP_Transform(MakePoint(%1,%2,%3) , g_pixel.matrix,-1)) AS gcp_pixel_x,\n" ).arg( input_point.x() ).arg( input_point.y() ).arg( i_gcp_coverage_srid );
+            s_sql_transform += QString( "ST_Y(GCP_Transform(MakePoint(%1,%2,%3) , g_pixel.matrix,-1)) AS gcp_pixel_y\n" ).arg( input_point.x() ).arg( input_point.y() ).arg( i_gcp_coverage_srid );
+          }
+          if ( b_reCompute )
+          { // If there is no TABLE 'gcp_compute' OR requested directly, then calculate directly from the POINTs
+            s_sql_compute = QString( "(SELECT GCP_Compute(gcp_point,gcp_pixel,%1) AS matrix FROM  \"%2\"  WHERE (gcp_enable=1)) AS g_point LIMIT 1" ).arg( i_order ).arg( s_gcp_points_table_name );
+          }
+          else
+          { // The stored 'Affine Transformation Matrix' in TABLE 'gcp_compute' will be read [should be swifter than recalulating]
+            s_sql_compute = QString( "(SELECT gcp_compute AS matrix FROM \"%1\"  WHERE ((coverage_name='%1') AND (srid=%3) AND (id_order=%4))) AS g_pixel" ).arg( "gcp_compute" ).arg( s_coverage_name ).arg( -1 ).arg( i_order ).arg( s_gcp_points_table_name );
+          }
+        }
+        else
+        { // Pixel-Point to Map-Point
+          s_transform_type += s_pixel_point_to_map_point;
+          if ( id_gcp >= 0 )
+          { // A specific gcp is being requested ['input_point' is ignored]
+            s_sql_transform = QString( "ST_X(GCP_Transform(gcp.gcp_pixel , g_point.matrix,-1)) AS gcp_map_x,\n" );
+            s_sql_transform += QString( "ST_Y(GCP_Transform(gcp.gcp_pixel , g_point.matrix,-1)) AS gcp_map_y\n" );
+          }
+          else
+          { // A postion is being requested (not yet in the gcp-list) ['id_gcp' is ignored]
+            s_sql_transform = QString( "ST_X(GCP_Transform(MakePoint(%1,%2,-1) , g_point.matrix,%3)) AS gcp_map_x,\n" ).arg( input_point.x() ).arg( input_point.y() ).arg( i_gcp_coverage_srid );
+            s_sql_transform += QString( "ST_Y(GCP_Transform(MakePoint(%1,%2,-1) , g_point.matrix,%3)) AS gcp_map_y\n" ).arg( input_point.x() ).arg( input_point.y() ).arg( i_gcp_coverage_srid );
+          }
+          if ( b_reCompute )
+          { // If there is no TABLE 'gcp_compute' OR requested directly, then calculate directly from the POINTs
+            s_sql_compute = QString( "(SELECT GCP_Compute(gcp_pixel,gcp_point,%1) AS matrix FROM  \"%2\"  WHERE (gcp_enable=1)) AS g_point LIMIT 1" ).arg( i_order ).arg( s_gcp_points_table_name );
+          }
+          else
+          { // The stored 'Affine Transformation Matrix' in TABLE 'gcp_compute' will be read [should be swifter than recalulating]
+            s_sql_compute = QString( "(SELECT gcp_compute AS matrix FROM \"%1\"  WHERE ((coverage_name='%1') AND (srid=%3) AND (id_order=%4))) AS g_point" ).arg( "gcp_compute" ).arg( s_coverage_name ).arg( i_gcp_coverage_srid ).arg( i_order ).arg( s_gcp_points_table_name );
+          }
+        }
+        s_sql = QString( s_sql_base ).replace( "TRANSFORM", s_sql_transform ).replace( "COMPUTE", s_sql_compute );
+        ret = sqlite3_prepare_v2( db_handle, s_sql.toUtf8().constData(), -1, &stmt, NULL );
+        if ( ret != SQLITE_OK )
+        { //  typically: too few GCP pairs were passed, or the GCP pairs are of a so poor quality that finding any valid solution was impossible
+          mError = QString( "Unable to execute %1 for '%2': rc=%3 [%4] sql[%5]\n" ).arg( s_transform_type ).arg( s_gcp_points_table_name ).arg( ret ).arg( QString::fromUtf8( errMsg ) ).arg( s_sql );
+          qDebug() << QString( "QgsGeorefPluginGui::getGcpConvert - GCP_Transform/Compute - [%1] " ).arg( mError );
+        }
+        while ( sqlite3_step( stmt ) == SQLITE_ROW )
+        {
+          point_x = sqlite3_column_double( stmt, 0 );
+          point_y = sqlite3_column_double( stmt, 1 );
+        }
+        convert_point.setX( point_x );
+        convert_point.setY( point_y );
+      }
+    }
+    //----------------
+    sqlite3_close( db_handle );
+    db_handle = nullptr;
+    if ( cache != nullptr )
+      spatialite_cleanup_ex( cache );
+    spatialite_shutdown();
+  }
+  return convert_point;
 }
 bool QgsGeorefPluginGui::setGcpLayerSettings( QgsVectorLayer *layer_gcp )
 { // Note: these are 'Point'-Layers

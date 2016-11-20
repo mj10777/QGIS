@@ -168,15 +168,73 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     QgsGeorefPluginGui::SaveGCPs checkNeedGCPSave();
 
     // mj10777
-    int i_gcp_srid;
+    int mGcp_srid;
     QString s_gcp_authid;
     QString s_gcp_description;
-    QString s_gcp_points_table_name;
+    QString mGcp_coverage_name;
+    QString mGcp_coverage_name_base;
+    QString mGcp_points_table_name;
     int id_gcp_coverage;
     bool isGCPDb();
+    /**
+     * Creates a Spatialite-Database storing the Gcp-Points
+     *  A 'gcp_convert' TABLE can also be created to use the Spatialite GCP_Transform/Compute logic
+     * \note the Spatialite running must be compiled with './configure --enable-gcp=yes'
+     *  QGIS can be compiled without this setting since only SQL-Queries are being used
+     *  The Tables will only be created/updated after checking that 'SELECT HasGCP()' returns true
+     * <a href="https://www.gaia-gis.it/fossil/libspatialite/wiki?name=Ground+Control+Points </a>
+     * \note only when 'gcp_enable' is true, will the POINT be used
+     *  Based on the value of id_order, only those points will be used
+     * @see getGcpConvert
+     * @param s_coverage_name name of map to use
+     * @return true if database exists
+     */
     bool createGCPDb();
     bool updateGCPDb( QString s_coverage_name );
-    bool b_spatialite_gcp_enabled;
+    /**
+     * Stores the Thin Plate Spline/Polynomial Coefficients of the Gcp-Points
+     *  using Spatialite GCP_Transform/Compute
+     * \note the Spatialite running must be compiled with './configure --enable-gcp=yes'
+     *  QGIS can be compiled without this setting since only SQL-Queries are being used
+     *  The Tables will only be created/updated after checking that 'SELECT HasGCP()' returns true
+     * <a href="https://www.gaia-gis.it/fossil/libspatialite/wiki?name=Ground+Control+Points </a>
+     * \note only when 'gcp_enable' is true, will the POINT be used
+     *  Based on the value of id_order, only those points will be used
+     * @see getGcpConvert
+     * @param s_coverage_name name of map to use
+     * @return true if database exists
+     */
+    bool updateGcpCompute( QString s_coverage_name );
+    /**
+     * Convert Pixel/Map value to Map/Pixel value
+     *  using Spatialite GCP_Transform/Compute
+     * \note the Spatialite running must be compiled with './configure --enable-gcp=yes'
+     *  QGIS can be compiled without this setting since only SQL-Queries are being used
+     *  The SQL-Queries will only be called after checking that 'SELECT HasGCP()' returns true
+     * <a href="https://www.gaia-gis.it/fossil/libspatialite/wiki?name=Ground+Control+Points </a>
+     * \note only PolynomialOrder1, PolynomialOrder2, PolynomialOrder3 and ThinPlateSpline aresupported
+     * @see getGcpTransformParam
+     * @see updateGcpCompute
+     * @param s_coverage_name name of map to search for
+     * @param input_point point to convert [not used when id_gcp > 0]
+     * @param b_toPixel true=convert Map-Point to Pixel Point ; false: Convert Pixel-Point to Map-Point
+     * @param i_order 0-3 [ThinPlateSpline, PolynomialOrder1, PolynomialOrder2, PolynomialOrder3]
+     * @param b_reCompute re-calculate value by reading al enable points, othewise read stored values in gcp_convert.
+     * @param id_gcp read value from specfic gcp point [input_point will be ignored]
+     * @return QgsPoint of result (0,0 when invalid)
+     */
+    QgsPoint getGcpConvert( QString s_coverage_name, QgsPoint input_point, bool b_toPixel = false, int i_order = 0, bool b_reCompute = true, int id_gcp = -1 );
+    /**
+     * Translate QgsGeorefTransform::TransformParametrisation numbering to Spatialite numbering
+     * use when calling getGcpConvert
+     * @see getGcpConvert
+     * Note only ThinPlateSpline, PolynomialOrder1, PolynomialOrder2, PolynomialOrder3 and  are supported
+     * @param mTransformParam: as used in project
+     * @return 0-3, otherwise 0 for ThinPlateSpline
+     */
+    int getGcpTransformParam( QgsGeorefTransform::TransformParametrisation i_TransformParam );
+    bool mSpatialite_gcp_enabled;
+    bool isGcpEnabled();
     // mj10777: add gui logic for this and store in setting
     bool b_gdalscript_or_gcp_list;
     // mj10777: add gui logic for this and store in setting
@@ -187,7 +245,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     int mGcp_label_type;
     int mLegacyMode;
     double fontPointSize;
-    bool exportLayerDefinition(QgsLayerTreeGroup *group_layer, QString file_path = QString::null);
+    bool exportLayerDefinition( QgsLayerTreeGroup *group_layer, QString file_path = QString::null );
     // QgsMapTool *mAddFeature;
     // QgsMapTool *mMoveFeature;
     // QgsMapTool *mNodeTool;
@@ -225,13 +283,13 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     void logTransformOptions();
     void logRequaredGCPs();
     void clearGCPData();
-    bool setGcpLayerSettings(QgsVectorLayer *layer_gcp);
-    bool setCutlineLayerSettings(QgsVectorLayer *layer_cutline);
+    bool setGcpLayerSettings( QgsVectorLayer *layer_gcp );
+    bool setCutlineLayerSettings( QgsVectorLayer *layer_cutline );
     /**
      * createSvgColors
      * @param i_method  filling logic to use
      * @param b_reverse  use Dark to Light instead of Light to Dark
-     * @param b_grey_black  include Color-Groups White, Grey and Black 
+     * @param b_grey_black  include Color-Groups White, Grey and Black
      * @returns  list_SvgColors QStringList list containing distinct list of svg color names for use with QColor
      * @note
      *
@@ -247,7 +305,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
      * Used to create QgsCategorizedSymbolRendererV2 Symbols for Polygons
     * @see setCutlineLayerSettings
      */
-    QStringList createSvgColors(int i_method=0,bool b_reverse=false,bool b_grey_black=false);
+    QStringList createSvgColors( int i_method = 0, bool b_reverse = false, bool b_grey_black = false );
 
     /**
      * Calculates root mean squared error for the currently active
@@ -295,8 +353,6 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     QString mGCPFileName;
     QString mGCPdatabaseFileName;
     QString mGCPbaseFileName;
-    QString mCoverage_Name;
-    QString mCoverage_Name_Base;
     int mRasterYear;
     int mRasterScale;
     QgsLayerTreeGroup *group_georeferencer;
