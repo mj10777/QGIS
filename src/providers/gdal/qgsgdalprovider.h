@@ -301,6 +301,8 @@ class QgsGdalProvider : public QgsRasterDataProvider, QgsGdalProviderBase
 
     /** \brief sublayers list saved for subsequent access */
     QStringList mSubLayers;
+    void read_tifftags();
+    QMap<QString, QString> mTifftags;
 };
 
 #endif

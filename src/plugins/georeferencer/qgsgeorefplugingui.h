@@ -61,6 +61,8 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     QgsGeorefPluginGui( QgisInterface* theQgisInterface, QWidget* parent = nullptr, Qt::WindowFlags fl = nullptr );
     ~QgsGeorefPluginGui();
 
+    static QMap<QString, QString> read_tifftags( QgsRasterLayer *raster_layer, bool b_SetTags = false );
+
   protected:
     void closeEvent( QCloseEvent * ) override;
 
@@ -362,6 +364,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     QgsLayerTreeLayer *group_gtif_raster;
     QgsRasterLayer *mLayer_gtif_raster;
     int mLoadGTifInQgis;
+    QMap<QString, QString> mTifftags;
 
     QgsGeorefTransform::TransformParametrisation mTransformParam;
     QgsImageWarper::ResamplingMethod mResamplingMethod;

@@ -181,6 +181,7 @@ QgsGdalProvider::QgsGdalProvider( const QString &uri, bool update )
 
   QgsDebugMsg( "GdalDataset opened" );
   initBaseDataset();
+  read_tifftags();
 }
 
 QgsGdalProvider* QgsGdalProvider::clone() const
@@ -2757,6 +2758,34 @@ void QgsGdalProvider::initBaseDataset()
   }
 
   mValid = true;
+}
+
+void QgsGdalProvider::read_tifftags()
+{
+  if ( !mValid )
+  {
+    return;
+  }
+  char ** GDALmetadata = GDALGetMetadata( mGdalBaseDataset, nullptr );
+  if ( GDALmetadata )
+  {
+    QStringList metadata = cStringList2Q_( GDALmetadata );
+    if ( metadata.length() > 0)   
+    {
+     QStringList tifftags=metadata.filter( QRegExp( QString( "^%1_" ).arg( "TIFFTAG" ), Qt::CaseInsensitive ) );
+     for (int i=0;i<tifftags.length();i++)
+     {
+       QStringList tifftag=tifftags[i].split( "=" );
+       if (tifftag.length() > 0)
+       { // tifftag[TIFFTAG_SOFTWARE=SELECT GeomFromEWKT("SRID=187900;POLYGON((0.0 1200.0,1600.0 1200.0,1600.0 0.0, 0.0 0.0,0.0 1200.0))");]
+        // qDebug() << QString( "QgsGdalProvider::metadata(%1) -1- tifftag[%2] tifftag_length[%3]  tifftag_name[%4] tifftag_value[%5]" ).arg( i ).arg(tifftags[i]).arg(tifftag.length()).arg(s_tifftag_parm).arg(s_tifftag_value);
+        mTifftags.insert(tifftags[i].section('=', 0, 0),tifftags[i].section('=', 1));
+       }
+     }
+     // QgsGdalProvider::metadata -6- TIFFTAG_SOFTWARE[SELECT GeomFromEWKT("SRID=187900;POLYGON((0.0 1200.0,1600.0 1200.0,1600.0 0.0, 0.0 0.0,0.0 1200.0))");]
+     // qDebug() << QString( "QgsGdalProvider::metadata -6- TIFFTAG_SOFTWARE[%1] " ).arg( mTifftags.value( "TIFFTAG_SOFTWARE" ));
+    }
+  }
 }
 
 char** papszFromStringList( const QStringList& list )

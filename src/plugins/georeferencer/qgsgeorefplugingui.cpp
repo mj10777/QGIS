@@ -373,8 +373,6 @@ void QgsGeorefPluginGui::openRaster()
   qDebug() << "QgsGeorefPluginGui::openRaster[1] - addRaster";
   // load previously added points
   mGCPpointsFileName = mRasterFileName + ".points";
-  ( void )loadGCPs();
-  // Add raster [after loadGCPs]
   addRaster( mRasterFileName );
   qDebug() << "QgsGeorefPluginGui::openRaster[2] - setExtent";
   mCanvas->setExtent( mLayer->extent() );
@@ -1265,8 +1263,9 @@ void QgsGeorefPluginGui::updateIconTheme( const QString& theme )
 // Mapcanvas Plugin
 void QgsGeorefPluginGui::addRaster( const QString& file )
 {
-  mLayer = new QgsRasterLayer( file, "Raster" );
-
+  mLayer = new QgsRasterLayer( file, mGCPbaseFileName );
+  // the Layer should be loaded just before loadGCPs is called - will read metadata from file and set layer
+  ( void )loadGCPs();
   // so layer is not added to legend
   QgsMapLayerRegistry::instance()->addMapLayers(
     QList<QgsMapLayer *>() << mLayer, false, false );
@@ -1347,6 +1346,18 @@ bool QgsGeorefPluginGui::loadGCPs( /*bool verbose*/ )
 {
   clearGCPData();
   QFile pointFile( mGCPpointsFileName );
+  if ( mLayer )
+  { // the Layer should be loaded just before this function is called - will read metadata from file and set layer
+    mTifftags = QgsGeorefPluginGui::read_tifftags( mLayer, true );
+    if ( mLayer->name().isEmpty() )
+    {
+      mLayer->setName( mGCPdatabaseFileName );
+    }
+    if ( mLayer->shortName().isEmpty() )
+    {
+      mLayer->setShortName( mGCPbaseFileName );
+    }
+  }
   // will create needed gcp_database, if it does not exist
   // - also import an existing '.point' file
   // check if the used spatialite has GCP-enabled
@@ -1354,6 +1365,8 @@ bool QgsGeorefPluginGui::loadGCPs( /*bool verbose*/ )
   bool b_load_points_file = false;
   if ( b_database_exists )
   {
+
+    // qDebug() << QString( "QgsGeorefPluginGui::addRaster[QgsMapLayer] -7- metadata[%1] " ).arg( mLayer->dataProvider()->metadata() );
     // gcp-specific
     mGcp_points_layername = QString( "%1(gcp_point)" ).arg( mGcp_points_table_name );
     QString s_gcp_points_layer = QString( "%1|layername=%2" ).arg( mGCPdatabaseFileName ).arg( mGcp_points_layername );
@@ -2563,6 +2576,19 @@ bool QgsGeorefPluginGui::createGCPDb()
   bool b_gcp_compute = false;
   bool b_gcp_coverage_create = false;
   bool b_import_points = false;
+  QString s_coverage_title = "";
+  QString s_coverage_abstract = "";
+  QString s_coverage_copyright = "";
+  int i_image_max_x = 0;
+  int i_image_max_y = 0;
+  if ( mLayer )
+  {
+    i_image_max_x = mLayer->width();
+    i_image_max_y = mLayer->height();
+    s_coverage_title = mLayer->title();
+    s_coverage_abstract = mLayer->abstract();
+    s_coverage_copyright = mLayer->keywordList();
+  }
   QFileInfo fileInfo( mRasterFileName );
   mRasterFilePath = fileInfo.canonicalPath(); // Path to the file, without file-name
   QString s_RasterFileName = fileInfo.fileName(); // file-name without path
@@ -2626,7 +2652,7 @@ bool QgsGeorefPluginGui::createGCPDb()
     if ( QString( "no such function: HasGCP" ).compare( QString( "%1" ).arg( sqlite3_errmsg( db_handle ) ) ) != 0 )
     {
       mError = QString( "Unable to SELECT HasGCP(): rc=%1 [%2] sql[%3]\n" ).arg( ret ).arg( QString::fromUtf8( sqlite3_errmsg( db_handle ) ) ).arg( s_sql );
-      qDebug() << QString( "QgsGeorefPluginGui::createGCPDb -2- [%1] " ).arg( mError );
+      qDebug() << QString( "QgsGeorefPluginGui::createGCPDb -1- [%1] " ).arg( mError );
     }
   }
   int i_spatialite_gcp_enabled = 0;
@@ -2660,7 +2686,7 @@ bool QgsGeorefPluginGui::createGCPDb()
     if ( ret != SQLITE_OK )
     {
       mError = QString( "Unable to InitSpatialMetadata: rc=%1 [%2] sql[%3]\n" ).arg( ret ).arg( QString::fromUtf8( errMsg ) ).arg( s_sql );
-      qDebug() << QString( "QgsGeorefPluginGui::createGCPDb -3- [%1] " ).arg( mError );
+      qDebug() << QString( "QgsGeorefPluginGui::createGCPDb -2- [%1] " ).arg( mError );
       sqlite3_free( errMsg );
       sqlite3_close( db_handle );
       db_handle = nullptr;
@@ -2688,7 +2714,9 @@ bool QgsGeorefPluginGui::createGCPDb()
     s_sql_gcp += QString( " %1 INTEGER DEFAULT 0,\n" ).arg( "gcp_count" );
     s_sql_gcp += QString( " %1 INTEGER DEFAULT 2, -- QgsGeorefTransform::PolynomialOrder1\n" ).arg( "transformtype" );
     s_sql_gcp += QString( " %1 INTEGER DEFAULT 4, -- GRA_Lanczos\n" ).arg( "resampling" );
-    s_sql_gcp += QString( " %1 TEXT DEFAULT 'DEFLATE',\n" ).arg( "compression" );
+    s_sql_gcp += QString( " %1 TEXT DEFAULT 'DEFLATE',\n-- Image Size X/Width\n" ).arg( "compression" );
+    s_sql_gcp += QString( " %1 INTEGER DEFAULT 0,\n -- Image Size Y/Height\n" ).arg( "image_max_x" );
+    s_sql_gcp += QString( " %1 INTEGER DEFAULT 0,\n" ).arg( "image_max_y" );
     s_sql_gcp += QString( " %1 DOUBLE DEFAULT 0.0,\n" ).arg( "extent_minx" );
     s_sql_gcp += QString( " %1 DOUBLE DEFAULT 0.0,\n" ).arg( "extent_miny" );
     s_sql_gcp += QString( " %1 DOUBLE DEFAULT 0.0,\n" ).arg( "extent_maxx" );
@@ -2698,7 +2726,7 @@ bool QgsGeorefPluginGui::createGCPDb()
     if ( ret != SQLITE_OK )
     {
       mError = QString( "Unable to CREATE gcp_coverages: rc=%1 [%2] sql[%3]\n" ).arg( ret ).arg( QString::fromUtf8( errMsg ) ).arg( s_sql_gcp );
-      qDebug() << QString( "QgsGeorefPluginGui::createGCPDb -4a- [%1] " ).arg( mError );
+      qDebug() << QString( "QgsGeorefPluginGui::createGCPDb -3- [%1] " ).arg( mError );
       sqlite3_free( errMsg );
       sqlite3_close( db_handle );
       db_handle = nullptr;
@@ -2714,10 +2742,10 @@ bool QgsGeorefPluginGui::createGCPDb()
       QString s_sql_gcp = QString( "CREATE TABLE IF NOT EXISTS gcp_compute\n( -- Spatialite GCP module\n" );
       s_sql_gcp += QString( " %1 INTEGER PRIMARY KEY AUTOINCREMENT,\n" ).arg( "id_gcp_compute" );
       s_sql_gcp += QString( " %1 INTEGER  DEFAULT 0,\n" ).arg( "id_gcp_coverage" );
-      s_sql_gcp += QString( " %1 TEXT DEFAULT '',\n -- Compute 'Pixel-Point to Map-Point - srid=-1' or\n -- 'Map-Point to Pixel-Point'  - srid<>-1\n" ).arg( "coverage_name" );
+      s_sql_gcp += QString( " %1 TEXT DEFAULT '',\n -- 'Pixel-Point to Map-Point - srid=-1' or\n -- 'Map-Point to Pixel-Point'  - srid<>-1\n" ).arg( "coverage_name" );
       s_sql_gcp += QString( " %1 TEXT DEFAULT 'Pixel-Point to Map-Point',\n -- id_order (0-3) used with GCP_Compute\n" ).arg( "notes" );
       s_sql_gcp += QString( " %1 INTEGER DEFAULT 0,\n -- srid (-1=pixel or srid of Map-Point)\n" ).arg( "id_order" );
-      s_sql_gcp += QString( " %1 INTEGER DEFAULT 0,\n -- Image Size X/Width\n" ).arg( "srid" ).arg( -1 );
+      s_sql_gcp += QString( " %1 INTEGER DEFAULT %2,\n -- Image Size X/Width\n" ).arg( "srid" ).arg( -1 );
       s_sql_gcp += QString( " %1 INTEGER DEFAULT 0,\n -- Image Size Y/Height\n" ).arg( "image_max_x" );
       s_sql_gcp += QString( " %1 INTEGER DEFAULT 0,\n -- GCP_Compute result from 'gcp_points'\n" ).arg( "image_max_y" );
       s_sql_gcp += QString( " %1 BLOB\n)\n" ).arg( "gcp_compute" );
@@ -2725,7 +2753,7 @@ bool QgsGeorefPluginGui::createGCPDb()
       if ( ret != SQLITE_OK )
       {
         mError = QString( "Unable to CREATE gcp_coverages: rc=%1 [%2] sql[%3]\n" ).arg( ret ).arg( QString::fromUtf8( errMsg ) ).arg( s_sql_gcp );
-        qDebug() << QString( "QgsGeorefPluginGui::createGCPDb -4b- [%1] " ).arg( mError );
+        qDebug() << QString( "QgsGeorefPluginGui::createGCPDb -4- [%1] " ).arg( mError );
         sqlite3_free( errMsg );
         sqlite3_close( db_handle );
         db_handle = nullptr;
@@ -2766,9 +2794,9 @@ bool QgsGeorefPluginGui::createGCPDb()
   }
   // qDebug() << QString( "-I-> QgsGeorefPluginGui::createGCPDb -01- gcp_points_table_name[%1] id_gcp_coverage[%2] b_gcp_coverage_create[%3]" ).arg( mGcp_points_table_name ).arg( id_gcp_coverage ).arg( b_gcp_coverage_create );
   if ( id_gcp_coverage < 0 )
-  { // INSERT raster entry
+  { // INSERT raster entry [title, abstract and copyright are taken from the TIFFTAGS (if they exist)]
     b_import_points = true; // import of .points file only when first created
-    s_sql = QString( "INSERT INTO gcp_coverages (coverage_name,srid, transformtype, resampling, compression,raster_file, raster_path,raster_gtif)\n" );
+    s_sql = QString( "INSERT INTO gcp_coverages (coverage_name,srid, transformtype, resampling, compression,raster_file, raster_path,raster_gtif,title,abstract,copyright,image_max_x,image_max_y)\n" );
     s_sql += QString( "SELECT '%1' AS coverage_name," ).arg( mGcp_coverage_name );
     s_sql += QString( "%1 AS srid," ).arg( mGcp_srid );
     s_sql += QString( "%1 AS transformtype," ).arg(( int )mTransformParam );
@@ -2776,7 +2804,12 @@ bool QgsGeorefPluginGui::createGCPDb()
     s_sql += QString( "'%1' AS compression," ).arg( mCompressionMethod );
     s_sql += QString( "'%1' AS raster_file," ).arg( s_RasterFileName );
     s_sql += QString( "'%1' AS raster_path," ).arg( mRasterFilePath );
-    s_sql += QString( "'%1' AS raster_gtif" ).arg( mModifiedRasterFileName );
+    s_sql += QString( "'%1' AS raster_gtif," ).arg( mModifiedRasterFileName );
+    s_sql += QString( "'%1' AS title," ).arg( s_coverage_title );
+    s_sql += QString( "'%1' AS abstract," ).arg( s_coverage_abstract );
+    s_sql += QString( "'%1' AS copyright," ).arg( s_coverage_copyright );
+    s_sql += QString( "%1 AS image_max_x," ).arg( i_image_max_x );
+    s_sql += QString( "%1 AS image_max_y" ).arg( i_image_max_y );
     ret = sqlite3_exec( db_handle, s_sql.toUtf8().constData(), NULL, NULL, &errMsg );
     if ( ret != SQLITE_OK )
     {
@@ -2784,12 +2817,12 @@ bool QgsGeorefPluginGui::createGCPDb()
       qDebug() << QString( "QgsGeorefPluginGui::createGCPDb -6- [%1] " ).arg( mError );
       sqlite3_free( errMsg );
     }
-    s_sql = QString( "SELECT id_gcp_coverage FROM gcp_coverages WHERE coverage_name='%1'" ).arg( mGcp_coverage_name );
+    s_sql = QString( "SELECT id_gcp_coverage FROM gcp_coverages WHERE (coverage_name='%1')" ).arg( mGcp_coverage_name );
     ret = sqlite3_prepare_v2( db_handle, s_sql.toUtf8().constData(), -1, &stmt, NULL );
     if ( ret != SQLITE_OK )
     { //  rc=1 [no such table: vector_layers_statistics or gcp_points, 'no such column' for gcp_pixel and gcp_ppoint] is an error
       mError = QString( "Unable to retrieve id_gcp_covarage: rc=%1 [%2] sql[%3]\n" ).arg( ret ).arg( QString::fromUtf8( sqlite3_errmsg( db_handle ) ) ).arg( s_sql );
-      qDebug() << QString( "QgsGeorefPluginGui::createGCPDb -7- [%1] " ).arg( mError );
+      qDebug() << QString( "QgsGeorefPluginGui::createGCPDb -7a- [%1] " ).arg( mError );
       sqlite3_close( db_handle );
       db_handle = nullptr;
       if ( cache != nullptr )
@@ -2803,6 +2836,36 @@ bool QgsGeorefPluginGui::createGCPDb()
       b_gcp_coverage_create = true; // create needed tables, views
     }
     sqlite3_finalize( stmt );
+  }
+  else
+  { // the gcp_coverages exists, retrieve metadata and update the layer.
+    s_sql = QString( "SELECT id_gcp_coverage, title, abstract, copywrite FROM gcp_coverages WHERE (coverage_name='%1')" ).arg( mGcp_coverage_name );
+    ret = sqlite3_prepare_v2( db_handle, s_sql.toUtf8().constData(), -1, &stmt, NULL );
+    if ( ret != SQLITE_OK )
+    { //  rc=1 [no such table: vector_layers_statistics or gcp_points, 'no such column' for gcp_pixel and gcp_ppoint] is an error
+      mError = QString( "Unable to retrieve id_gcp_covarage: rc=%1 [%2] sql[%3]\n" ).arg( ret ).arg( QString::fromUtf8( sqlite3_errmsg( db_handle ) ) ).arg( s_sql );
+      qDebug() << QString( "QgsGeorefPluginGui::createGCPDb -7b- [%1] " ).arg( mError );
+      sqlite3_close( db_handle );
+      db_handle = nullptr;
+      if ( cache != nullptr )
+        spatialite_cleanup_ex( cache );
+      spatialite_shutdown();
+      return false;
+    }
+    while ( sqlite3_step( stmt ) == SQLITE_ROW )
+    {
+      id_gcp_coverage = sqlite3_column_int( stmt, 0 );
+      s_coverage_title = QString::fromUtf8(( const char * ) sqlite3_column_text( stmt, 1 ) );
+      s_coverage_abstract = QString::fromUtf8(( const char * ) sqlite3_column_text( stmt, 2 ) );
+      s_coverage_copyright = QString::fromUtf8(( const char * ) sqlite3_column_text( stmt, 3 ) );
+    }
+    sqlite3_finalize( stmt );
+    if ( mLayer )
+    {
+      mLayer->setTitle( s_coverage_title );
+      mLayer->setAbstract( s_coverage_abstract );
+      mLayer->setKeywordList( s_coverage_copyright );
+    }
   }
   // End TRANSACTION
   ret = sqlite3_exec( db_handle, "COMMIT", NULL, NULL, 0 );
@@ -3474,7 +3537,7 @@ bool QgsGeorefPluginGui::updateGCPDb( QString s_coverage_name )
     // load spatialite extension
     spatialite_init_ex( db_handle, cache, 0 );
     mModifiedRasterFileName = QString( "%1.%2.map.%3" ).arg( mGCPbaseFileName ).arg( mGcp_srid ).arg( "tif" );
-    QString s_sql = QString( "UPDATE \"%1\" SET\n" ).arg( "gcp_compute" );
+    QString s_sql = QString( "UPDATE \"%1\" SET\n" ).arg( "gcp_coverages" );
     s_sql += QString( " srid=%1," ).arg( mGcp_srid );
     s_sql += QString( " transformtype=%1," ).arg(( int )mTransformParam );
     s_sql += QString( " resampling=%1," ).arg(( int )mResamplingMethod );
@@ -3482,6 +3545,23 @@ bool QgsGeorefPluginGui::updateGCPDb( QString s_coverage_name )
     s_sql += QString( " raster_gtif='%1'," ).arg( mModifiedRasterFileName );
     s_sql += QString( " year='%1'," ).arg( QString( "%1-01-01" ).arg( mRasterYear, 4, 10, QChar( '0' ) ) );
     s_sql += QString( " scale=%1," ).arg( mRasterScale );
+    if ( mLayer )
+    {
+      s_sql += QString( "image_max_x=%1," ).arg( mLayer->width() );
+      s_sql += QString( "image_max_y=%1," ).arg( mLayer->height() );
+      if ( ! mLayer->title().isEmpty() )
+      {
+        s_sql += QString( "title='%1'," ).arg( mLayer->title() );
+      }
+      if ( ! mLayer->abstract().isEmpty() )
+      {
+        s_sql += QString( "abstract='%1'," ).arg( mLayer->abstract() );
+      }
+      if ( ! mLayer->keywordList().isEmpty() )
+      {
+        s_sql += QString( "copyright='%1'," ).arg( mLayer->keywordList() );
+      }
+    }
     s_sql += QString( " gcp_count=(SELECT count(id_gcp) FROM \"%1\" WHERE ((gcp_point IS NOT NULL) AND (gcp_enable <> 0)))," ).arg( s_gcp_points_table_name );
     s_sql += QString( " extent_minx=(SELECT min(ST_X(gcp_point)) FROM \"%1\" WHERE ((gcp_point IS NOT NULL) AND (gcp_enable <> 0)))," ).arg( s_gcp_points_table_name );
     s_sql += QString( " extent_miny=(SELECT min(ST_Y(gcp_point)) FROM \"%1\" WHERE ((gcp_point IS NOT NULL) AND (gcp_enable <> 0)))," ).arg( s_gcp_points_table_name );
@@ -3492,7 +3572,7 @@ bool QgsGeorefPluginGui::updateGCPDb( QString s_coverage_name )
     if ( ret != SQLITE_OK )
     {
       mError = QString( "Unable to execute Update of gcp_coverages for '%1': rc=%2 [%3] sql[%4]\n" ).arg( s_gcp_points_table_name ).arg( ret ).arg( QString::fromUtf8( errMsg ) ).arg( s_sql );
-      qDebug() << QString( "QgsGeorefPluginGui::createGCPDb -37- [%1] " ).arg( mError );
+      qDebug() << QString( "QgsGeorefPluginGui::updateGCPDb -01- [%1] " ).arg( mError );
       sqlite3_free( errMsg );
     }
     sqlite3_close( db_handle );
@@ -4327,7 +4407,7 @@ bool QgsGeorefPluginGui::setCutlineLayerSettings( QgsVectorLayer *layer_cutline 
                         QColor color_02( mSvgColors.at( i ) );
                         new_symbol_background->setColor2( color_02 );
                         new_container->appendSymbolLayer( new_symbol_background );
-                        qDebug() << QString( "QgsGeorefPluginGui::setCutlineLayerSettings loop[%1,%2] -2-" ).arg( i ).arg( mSvgColors.at( i ) );
+                        // qDebug() << QString( "QgsGeorefPluginGui::setCutlineLayerSettings loop[%1,%2] -2-" ).arg( i ).arg( mSvgColors.at( i ) );
                         QgsRendererCategoryV2 category( value, new_container, value.toString(), true );
                         cutline_layer_renderer_categorized->addCategory( category );
                       }
@@ -4379,9 +4459,18 @@ void QgsGeorefPluginGui::loadGTifInQgis( const QString& gtif_file )
     QFileInfo fileInfo( gtif_file );
     if ( fileInfo.exists() )
     {
-      mLayer_gtif_raster = new QgsRasterLayer( fileInfo.absoluteFilePath(), fileInfo.fileName() );
+      mLayer_gtif_raster = new QgsRasterLayer( fileInfo.absoluteFilePath(), fileInfo.completeBaseName() );
       if ( mLayer_gtif_raster )
       {
+        QgsGeorefPluginGui::read_tifftags( mLayer_gtif_raster, true );
+        if ( mLayer_gtif_raster->name().isEmpty() )
+        {
+          mLayer_gtif_raster->setName( fileInfo.fileName() );
+        }
+        if ( mLayer_gtif_raster->shortName().isEmpty() )
+        {
+          mLayer_gtif_raster->setShortName( fileInfo.completeBaseName() );
+        }
         if ( group_gtif_rasters )
         {  // so that layer is not added to legend
           QgsMapLayerRegistry::instance()->addMapLayers( QList<QgsMapLayer *>() << mLayer_gtif_raster, false, false );
@@ -4634,5 +4723,52 @@ QStringList QgsGeorefPluginGui::createSvgColors( int i_method, bool b_reverse, b
   }
   // -------
   return list_SvgColors;
+}
+QMap<QString, QString> QgsGeorefPluginGui::read_tifftags( QgsRasterLayer *raster_layer, bool b_SetTags )
+{
+  QMap<QString, QString> map_tifftags;
+  if (( !raster_layer ) || ( !raster_layer->isValid() ) )
+  {
+    return map_tifftags;
+  }
+  // Remove all the paragraphs inside the TIFFTAG area
+  QString raster_layer_metadata = raster_layer->dataProvider()->metadata().replace( "<p>", "" ).replace( "</p>", "" );
+  // Remove everything before the TIFFTAG area
+  QStringList raster_layer_metadata_split_1 = raster_layer_metadata.split( "<tr>" );
+  // Remove everything afterthe TIFFTAG area
+  QStringList raster_layer_metadata_split_2 = raster_layer_metadata_split_1[1].split( "</tr>" );
+  // Split the TIFTAG area at new-lines
+  QStringList metadata = raster_layer_metadata_split_2[0].split( "\n" );
+  if ( metadata.length() > 0 )
+  { // filter out everything that startes with ''TIFFTAG_'
+    QStringList tifftags = metadata.filter( QRegExp( QString( "^%1_" ).arg( "TIFFTAG" ), Qt::CaseInsensitive ) );
+    for ( int i = 0;i < tifftags.length();i++ )
+    { // Split in TIFFTAG-Parm and TIFFTAG-Value
+      QStringList tifftag = tifftags[i].split( "=" );
+      if ( tifftag.length() > 0 )
+      { // tifftag[TIFFTAG_SOFTWARE=SELECT GeomFromEWKT("SRID=187900;POLYGON((0.0 1200.0,1600.0 1200.0,1600.0 0.0, 0.0 0.0,0.0 1200.0))");]
+        // qDebug() << QString( "QgsGeorefPluginGui::read_tifftags(%1) -1- tifftag[%2] tifftag_length[%3]  tifftag_name[%4] tifftag_value[%5]" ).arg( i ).arg(tifftags[i]).arg(tifftag.length()).arg(tifftags[i].section('=', 0, 0)).arg(tifftags[i].section('=', 1));
+        map_tifftags.insert( tifftags[i].section( '=', 0, 0 ), tifftags[i].section( '=', 1 ) );
+      }
+    }
+    // QgsGdalProvider::metadata -6- TIFFTAG_SOFTWARE[SELECT GeomFromEWKT("SRID=187900;POLYGON((0.0 1200.0,1600.0 1200.0,1600.0 0.0, 0.0 0.0,0.0 1200.0))");]
+    // qDebug() << QString( "QgsGeorefPluginGui::read_tifftags-6- TIFFTAG_SOFTWARE[%1] " ).arg( map_tifftags.value( "TIFFTAG_SOFTWARE" ));
+  }
+  if ( b_SetTags )
+  {
+    if ( !map_tifftags.value( "TIFFTAG_DOCUMENTNAME" ).isEmpty() )
+    {
+      raster_layer->setTitle( map_tifftags.value( "TIFFTAG_DOCUMENTNAME" ) );
+    }
+    if ( !map_tifftags.value( "TIFFTAG_IMAGEDESCRIPTION" ).isEmpty() )
+    {
+      raster_layer->setAbstract( map_tifftags.value( "TIFFTAG_IMAGEDESCRIPTION" ) );
+    }
+    if ( !map_tifftags.value( "TIFFTAG_COPYRIGHT" ).isEmpty() )
+    {
+      raster_layer->setKeywordList( map_tifftags.value( "TIFFTAG_COPYRIGHT" ) );
+    }
+  }
+  return map_tifftags;
 }
 
