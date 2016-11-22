@@ -348,6 +348,20 @@ class CORE_EXPORT QgsRasterLayer : public QgsMapLayer
     /** Time stamp of data source in the moment when data/metadata were loaded by provider */
     virtual QDateTime timestamp() const override { return mDataProvider->timestamp() ; }
 
+    /**
+     * Retrieve TIFFTAG Information from a tiff file and can store the result
+     *  TIFFTAG_DOCUMENTNAME, IMAGEDESCRIPTION and COPYWRITE
+     *  - can be used to set Title, Abstract and KeywordsList
+     * \note will only be called when provider == "gdal"
+     * \note a 'copywrite' should be added to store the value of TIFFTAG_COPYWRITE
+     *  - which is often a requirement of OpenData sources
+     * @see setDataProvider
+     * @param raster_layerbeing created
+     * @param b_SetTags when true: will set Title, Abstract and KeywordsList from TIFFTAG_DOCUMENTNAME, IMAGEDESCRIPTION and COPYWRITE if found
+     * @return QMap<QString, QString> TIFFTAG-Parm, TIFFTAG-Value
+     */
+    static QMap<QString, QString> read_tifftags( QgsRasterLayer *raster_layer, bool b_SetTags = false );
+
   public slots:
     void showStatusMessage( const QString & theMessage );
 

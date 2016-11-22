@@ -43,6 +43,7 @@ class QgsRectangle;
 class QgsMessageBar;
 // mj10777
 class QgsVectorLayer;
+class QgsVectorLayerEditBuffer;
 class QgsLayerTreeGroup;
 class QgsLayerTreeLayer;
 
@@ -60,8 +61,6 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
   public:
     QgsGeorefPluginGui( QgisInterface* theQgisInterface, QWidget* parent = nullptr, Qt::WindowFlags fl = nullptr );
     ~QgsGeorefPluginGui();
-
-    static QMap<QString, QString> read_tifftags( QgsRasterLayer *raster_layer, bool b_SetTags = false );
 
   protected:
     void closeEvent( QCloseEvent * ) override;
@@ -99,6 +98,12 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     void selectPoint( QPoint );
     void movePoint( QPoint );
     void releasePoint( QPoint );
+    void featureAdded_points( QgsFeatureId fid );
+    void featureDeleted_points( QgsFeatureId fid );
+    void geometryChanged_points( QgsFeatureId fid, QgsGeometry& changed_geometry );
+    void featureAdded_pixels( QgsFeatureId fid );
+    void featureDeleted_pixels( QgsFeatureId fid );
+    void geometryChanged_pixels( QgsFeatureId fid, QgsGeometry& changed_geometry );
 
     void loadGCPsDialog();
     void saveGCPsDialog();
@@ -226,6 +231,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
      * @return QgsPoint of result (0,0 when invalid)
      */
     QgsPoint getGcpConvert( QString s_coverage_name, QgsPoint input_point, bool b_toPixel = false, int i_order = 0, bool b_reCompute = true, int id_gcp = -1 );
+    void jumpToGcpConvert( QgsPoint input_point, bool b_toPixel = false );
     /**
      * Translate QgsGeorefTransform::TransformParametrisation numbering to Spatialite numbering
      * use when calling getGcpConvert
@@ -364,7 +370,6 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     QgsLayerTreeLayer *group_gtif_raster;
     QgsRasterLayer *mLayer_gtif_raster;
     int mLoadGTifInQgis;
-    QMap<QString, QString> mTifftags;
 
     QgsGeorefTransform::TransformParametrisation mTransformParam;
     QgsImageWarper::ResamplingMethod mResamplingMethod;
@@ -382,8 +387,13 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     // mj10777
     QString mGcp_points_layername;
     QgsVectorLayer *layer_gcp_points;
+    //! stores information about uncommitted changes to layer
+    QgsVectorLayerEditBuffer* layer_gcp_points_edit_buffer;
+     int i_add_point_status;
     QString mGcp_pixel_layername;
     QgsVectorLayer *layer_gcp_pixels;
+    //! stores information about uncommitted changes to layer
+    QgsVectorLayerEditBuffer* layer_gcp_pixels_edit_buffer;
     QString mCutline_points_layername;
     QgsVectorLayer *layer_cutline_points;
     QString mCutline_linestrings_layername;

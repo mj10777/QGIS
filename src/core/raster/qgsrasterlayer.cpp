@@ -840,9 +840,74 @@ void QgsRasterLayer::setDataProvider( QString const & provider )
 
   //mark the layer as valid
   mValid = true;
-
+  if ( provider == "gdal" )
+  {
+    // Will set the Title, Abstract and KeywordsList
+    // (from TIFFTAG_DOCUMENTNAME, IMAGEDESCRIPTION and COPYWRITE if found)
+    QgsRasterLayer::read_tifftags( this, true );
+  }
   QgsDebugMsgLevel( "exiting.", 4 );
 } // QgsRasterLayer::setDataProvider
+
+QMap<QString, QString> QgsRasterLayer::read_tifftags( QgsRasterLayer *raster_layer, bool b_SetTags )
+{
+  QMap<QString, QString> map_tifftags;
+  if (( !raster_layer ) || ( !raster_layer->isValid() ) )
+  {
+    return map_tifftags;
+  }
+  // Remove all the paragraphs inside the TIFFTAG area
+  QString raster_layer_metadata = raster_layer->dataProvider()->metadata().replace( "<p>", "" ).replace( "</p>", "" );
+  // Remove everything before the TIFFTAG area
+  QStringList raster_layer_metadata_split_1 = raster_layer_metadata.split( "<tr>" );
+  // Remove everything afterthe TIFFTAG area
+  QStringList raster_layer_metadata_split_2 = raster_layer_metadata_split_1[1].split( "</tr>" );
+  // Split the TIFTAG area at new-lines
+  QStringList metadata = raster_layer_metadata_split_2[0].split( "\n" );
+  if ( metadata.length() > 0 )
+  { // filter out everything that startes with ''TIFFTAG_'
+    QStringList tifftags = metadata.filter( QRegExp( QString( "^%1_" ).arg( "TIFFTAG" ), Qt::CaseInsensitive ) );
+    for ( int i = 0;i < tifftags.length();i++ )
+    { // Split in TIFFTAG-Parm and TIFFTAG-Value
+      QStringList tifftag = tifftags[i].split( "=" );
+      if ( tifftag.length() > 0 )
+      { // tifftag[TIFFTAG_SOFTWARE=SELECT GeomFromEWKT("SRID=187900;POLYGON((0.0 1200.0,1600.0 1200.0,1600.0 0.0, 0.0 0.0,0.0 1200.0))");]
+        // qDebug() << QString( "QgsRasterLayer::read_tifftags(%1) -1- tifftag[%2] tifftag_length[%3]  tifftag_name[%4] tifftag_value[%5]" ).arg( i ).arg(tifftags[i]).arg(tifftag.length()).arg(tifftags[i].section('=', 0, 0)).arg(tifftags[i].section('=', 1));
+        map_tifftags.insert( tifftags[i].section( '=', 0, 0 ), tifftags[i].section( '=', 1 ) );
+      }
+    }
+    // QgsRasterLayer::metadata -6- TIFFTAG_SOFTWARE[SELECT GeomFromEWKT("SRID=187900;POLYGON((0.0 1200.0,1600.0 1200.0,1600.0 0.0, 0.0 0.0,0.0 1200.0))");]
+    // qDebug() << QString( "QgsGeorefPluginGui::read_tifftags-6- TIFFTAG_SOFTWARE[%1] " ).arg( map_tifftags.value( "TIFFTAG_SOFTWARE" ));
+  }
+  if ( b_SetTags )
+  {
+    if ( !map_tifftags.value( "TIFFTAG_DOCUMENTNAME" ).isEmpty() )
+    {
+      raster_layer->setTitle( map_tifftags.value( "TIFFTAG_DOCUMENTNAME" ) );
+    }
+    if ( !map_tifftags.value( "TIFFTAG_IMAGEDESCRIPTION" ).isEmpty() )
+    {
+      raster_layer->setAbstract( map_tifftags.value( "TIFFTAG_IMAGEDESCRIPTION" ) );
+    }
+    if ( !map_tifftags.value( "TIFFTAG_COPYRIGHT" ).isEmpty() )
+    {
+      raster_layer->setKeywordList( map_tifftags.value( "TIFFTAG_COPYRIGHT" ) );
+    }
+    QFileInfo fileInfo( raster_layer->dataProvider()->dataSourceUri() );
+    if ( fileInfo.isFile() )
+    {
+      if ( raster_layer->name().isEmpty() )
+      { // Set a, non-empty, default name
+        raster_layer->setName( fileInfo.fileName() );
+      }
+      if ( raster_layer->shortName().isEmpty() )
+      { // Set a, non-empty, default name
+        raster_layer->setShortName( fileInfo.completeBaseName() );
+      }
+    }
+  }
+  return map_tifftags;
+}
 
 void QgsRasterLayer::closeDataProvider()
 {

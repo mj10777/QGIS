@@ -109,6 +109,7 @@ QgsGeorefPluginGui::QgsGeorefPluginGui( QgisInterface* theQgisInterface, QWidget
   mLegacyMode = 1;
   layer_gcp_points = nullptr;
   layer_gcp_pixels = nullptr;
+  i_add_point_status = 0;
   layer_cutline_points = nullptr;
   layer_cutline_linestrings = nullptr;
   layer_cutline_polygons = nullptr;
@@ -688,8 +689,7 @@ void QgsGeorefPluginGui::showCoordDialog( const QgsPoint &pixelCoords )
   if ( mLayer && !mMapCoordsDialog )
   {
     mMapCoordsDialog = new QgsMapCoordsDialog( mIface->mapCanvas(), pixelCoords, this );
-    connect( mMapCoordsDialog, SIGNAL( pointAdded( const QgsPoint &, const QgsPoint & ) ),
-             this, SLOT( addPoint( const QgsPoint &, const QgsPoint & ) ) );
+    connect( mMapCoordsDialog, SIGNAL( pointAdded( const QgsPoint &, const QgsPoint & ) ), this, SLOT( addPoint( const QgsPoint &, const QgsPoint & ) ) );
     mMapCoordsDialog->show();
   }
 }
@@ -1346,18 +1346,6 @@ bool QgsGeorefPluginGui::loadGCPs( /*bool verbose*/ )
 {
   clearGCPData();
   QFile pointFile( mGCPpointsFileName );
-  if ( mLayer )
-  { // the Layer should be loaded just before this function is called - will read metadata from file and set layer
-    mTifftags = QgsGeorefPluginGui::read_tifftags( mLayer, true );
-    if ( mLayer->name().isEmpty() )
-    {
-      mLayer->setName( mGCPdatabaseFileName );
-    }
-    if ( mLayer->shortName().isEmpty() )
-    {
-      mLayer->setShortName( mGCPbaseFileName );
-    }
-  }
   // will create needed gcp_database, if it does not exist
   // - also import an existing '.point' file
   // check if the used spatialite has GCP-enabled
@@ -1365,8 +1353,6 @@ bool QgsGeorefPluginGui::loadGCPs( /*bool verbose*/ )
   bool b_load_points_file = false;
   if ( b_database_exists )
   {
-
-    // qDebug() << QString( "QgsGeorefPluginGui::addRaster[QgsMapLayer] -7- metadata[%1] " ).arg( mLayer->dataProvider()->metadata() );
     // gcp-specific
     mGcp_points_layername = QString( "%1(gcp_point)" ).arg( mGcp_points_table_name );
     QString s_gcp_points_layer = QString( "%1|layername=%2" ).arg( mGCPdatabaseFileName ).arg( mGcp_points_layername );
@@ -1433,7 +1419,17 @@ bool QgsGeorefPluginGui::loadGCPs( /*bool verbose*/ )
         }
         exportLayerDefinition( group_gcp_cutlines );
         layer_gcp_pixels->startEditing();
+        // Belongs to the QgsVectorLayer
+        layer_gcp_pixels_edit_buffer = layer_gcp_pixels->editBuffer();
+        connect( layer_gcp_pixels, SIGNAL( featureAdded( QgsFeatureId ) ), this, SLOT( featureAdded_pixels( QgsFeatureId ) ) );
+        connect( layer_gcp_pixels, SIGNAL( featureDeleted( QgsFeatureId ) ), this, SLOT( featureDeleted_pixels( QgsFeatureId ) ) );
+        connect( layer_gcp_pixels, SIGNAL( geometryChanged( QgsFeatureId, QgsGeometry& ) ), this, SLOT( geometryChanged_pixels( QgsFeatureId, QgsGeometry& ) ) );
         layer_gcp_points->startEditing();
+        // Belongs to the QgsVectorLayer
+        layer_gcp_points_edit_buffer = layer_gcp_points->editBuffer();
+        connect( layer_gcp_points, SIGNAL( featureAdded( QgsFeatureId ) ), this, SLOT( featureAdded_points( QgsFeatureId ) ) );
+        connect( layer_gcp_points, SIGNAL( featureDeleted( QgsFeatureId ) ), this, SLOT( featureDeleted_points( QgsFeatureId ) ) );
+        connect( layer_gcp_points, SIGNAL( geometryChanged( QgsFeatureId, QgsGeometry& ) ), this, SLOT( geometryChanged_points( QgsFeatureId, QgsGeometry& ) ) );
         QgsAttributeList lst_needed_fields;
         lst_needed_fields.append( 0 ); // id_gcp
         lst_needed_fields.append( 10 ); // gcp_enable
@@ -1454,6 +1450,9 @@ bool QgsGeorefPluginGui::loadGCPs( /*bool verbose*/ )
               QgsPoint pt_pixel = fet_pixel.geometry()->vertexAt( 0 );
               QgsPoint pt_point = fet_point.geometry()->vertexAt( 0 );
               i_count++;
+              // id_gcp=fet_point.id();
+              if ( fet_pixel.id() != fet_point.id() )
+                qDebug() << QString( "QgsGeorefPluginGui::loadGCPs[%1] pixel.id[%2] fet_point.id[%3]" ).arg( id_gcp ).arg( fet_pixel.id() ).arg( fet_point.id() );
               QgsGeorefDataPoint* pnt = new QgsGeorefDataPoint( mCanvas, mIface->mapCanvas(), pt_pixel, pt_point, id_gcp, enable, mLegacyMode );
               mPoints.append( pnt );
               connect( mCanvas, SIGNAL( extentsChanged() ), pnt, SLOT( updateCoords() ) );
@@ -2513,11 +2512,19 @@ void QgsGeorefPluginGui::clearGCPData()
     {
       QgsMapLayerRegistry::instance()->removeMapLayers(( QStringList() << layer_gcp_points->id() ) );
     }
+    disconnect( layer_gcp_points, SIGNAL( featureAdded( QgsFeatureId ) ), this, SLOT( featureAdded_points( QgsFeatureId ) ) );
+    disconnect( layer_gcp_points, SIGNAL( featureDeleted( QgsFeatureId ) ), this, SLOT( featureDeleted_points( QgsFeatureId ) ) );
+    disconnect( layer_gcp_points, SIGNAL( geometryChanged( QgsFeatureId, QgsGeometry& ) ), this, SLOT( geometryChanged_points( QgsFeatureId, QgsGeometry& ) ) );
+    layer_gcp_points_edit_buffer = nullptr;
     layer_gcp_points = nullptr;
   }
   if ( layer_gcp_pixels )
   {
+    disconnect( layer_gcp_pixels, SIGNAL( featureAdded( QgsFeatureId ) ), this, SLOT( featureAdded_pixels( QgsFeatureId ) ) );
+    disconnect( layer_gcp_pixels, SIGNAL( featureDeleted( QgsFeatureId ) ), this, SLOT( featureDeleted_pixels( QgsFeatureId ) ) );
+    disconnect( layer_gcp_pixels, SIGNAL( geometryChanged( QgsFeatureId, QgsGeometry& ) ), this, SLOT( geometryChanged_pixels( QgsFeatureId, QgsGeometry& ) ) );
     QgsMapLayerRegistry::instance()->removeMapLayers(( QStringList() << layer_gcp_pixels->id() ) );
+    layer_gcp_pixels_edit_buffer = nullptr;
     layer_gcp_pixels = nullptr;
   }
   qDeleteAll( mPoints );
@@ -2839,7 +2846,7 @@ bool QgsGeorefPluginGui::createGCPDb()
   }
   else
   { // the gcp_coverages exists, retrieve metadata and update the layer.
-    s_sql = QString( "SELECT id_gcp_coverage, title, abstract, copywrite FROM gcp_coverages WHERE (coverage_name='%1')" ).arg( mGcp_coverage_name );
+    s_sql = QString( "SELECT id_gcp_coverage, title, abstract, copyright FROM gcp_coverages WHERE (coverage_name='%1')" ).arg( mGcp_coverage_name );
     ret = sqlite3_prepare_v2( db_handle, s_sql.toUtf8().constData(), -1, &stmt, NULL );
     if ( ret != SQLITE_OK )
     { //  rc=1 [no such table: vector_layers_statistics or gcp_points, 'no such column' for gcp_pixel and gcp_ppoint] is an error
@@ -3397,7 +3404,7 @@ bool QgsGeorefPluginGui::createGCPDb()
   }
   if (( b_import_points ) && ( pointFile.exists() ) )
   {
-    qDebug() << QString( "-I-> QgsGeorefPluginGui::createGCPDb mGCPpointsFileName[%1] " ).arg( mGCPpointsFileName );
+    // qDebug() << QString( "-I-> QgsGeorefPluginGui::createGCPDb mGCPpointsFileName[%1] " ).arg( mGCPpointsFileName );
     if ( pointFile.open( QIODevice::ReadOnly ) )
     {
       // Start TRANSACTION
@@ -3905,7 +3912,7 @@ QgsPoint QgsGeorefPluginGui::getGcpConvert( QString s_coverage_name, QgsPoint in
     s_sql += QString( " (SELECT count(coverage_name) FROM gcp_coverages WHERE (coverage_name='%1')) AS has_gcp_coverags," ).arg( s_coverage_name );
     s_sql += QString( " (SELECT id_gcp_coverage FROM gcp_coverages WHERE (coverage_name='%1')) AS id_gcp_coverage," ).arg( s_coverage_name );
     s_sql += QString( " (SELECT srid FROM gcp_coverages WHERE (coverage_name='%1')) AS srid_gcp_coverage," ).arg( s_coverage_name );
-    s_sql += QString( " (SELECT count(id_gcp) FROM \"%1\" WHERE (gcp_enable=1)) AS count_gcp" ).arg( s_gcp_points_table_name ).arg( s_coverage_name );
+    s_sql += QString( " (SELECT count(id_gcp) FROM \"%1\" WHERE (gcp_enable=1)) AS count_gcp" ).arg( s_gcp_points_table_name );
     ret = sqlite3_prepare_v2( db_handle, s_sql.toUtf8().constData(), -1, &stmt, NULL );
     if ( ret != SQLITE_OK )
     { //  rc=1 [no such function: HasGCP] is not an error [older spatialite version]
@@ -3965,17 +3972,17 @@ QgsPoint QgsGeorefPluginGui::getGcpConvert( QString s_coverage_name, QgsPoint in
           s_transform_type += s_map_point_to_pixel_point;
           if ( id_gcp >= 0 )
           { // A specific gcp is being requested ['input_point' is ignored]
-            s_sql_transform = QString( "ST_X(GCP_Transform(gcp.gcp_point , g_pixel.matrix,-1)) AS gcp_pixel_x,\n" );
+            s_sql_transform   = QString( "ST_X(GCP_Transform(gcp.gcp_point , g_pixel.matrix,-1)) AS gcp_pixel_x,\n " );
             s_sql_transform += QString( "ST_Y(GCP_Transform(gcp.gcp_point , g_pixel.matrix,-1)) AS gcp_pixel_y\n" );
           }
           else
           { // A postion is being requested (not yet in the gcp-list) ['id_gcp' is ignored]
-            s_sql_transform = QString( "ST_X(GCP_Transform(MakePoint(%1,%2,%3) , g_pixel.matrix,-1)) AS gcp_pixel_x,\n" ).arg( input_point.x() ).arg( input_point.y() ).arg( i_gcp_coverage_srid );
+            s_sql_transform  = QString( "ST_X(GCP_Transform(MakePoint(%1,%2,%3) , g_pixel.matrix,-1)) AS gcp_pixel_x,\n " ).arg( input_point.x() ).arg( input_point.y() ).arg( i_gcp_coverage_srid );
             s_sql_transform += QString( "ST_Y(GCP_Transform(MakePoint(%1,%2,%3) , g_pixel.matrix,-1)) AS gcp_pixel_y\n" ).arg( input_point.x() ).arg( input_point.y() ).arg( i_gcp_coverage_srid );
           }
           if ( b_reCompute )
           { // If there is no TABLE 'gcp_compute' OR requested directly, then calculate directly from the POINTs
-            s_sql_compute = QString( "(SELECT GCP_Compute(gcp_point,gcp_pixel,%1) AS matrix FROM  \"%2\"  WHERE (gcp_enable=1)) AS g_point LIMIT 1" ).arg( i_order ).arg( s_gcp_points_table_name );
+            s_sql_compute = QString( "(SELECT GCP_Compute(gcp_point,gcp_pixel,%1) AS matrix FROM  \"%2\"  WHERE (gcp_enable=1)) AS g_pixel" ).arg( i_order ).arg( s_gcp_points_table_name );
           }
           else
           { // The stored 'Affine Transformation Matrix' in TABLE 'gcp_compute' will be read [should be swifter than recalulating]
@@ -3987,17 +3994,17 @@ QgsPoint QgsGeorefPluginGui::getGcpConvert( QString s_coverage_name, QgsPoint in
           s_transform_type += s_pixel_point_to_map_point;
           if ( id_gcp >= 0 )
           { // A specific gcp is being requested ['input_point' is ignored]
-            s_sql_transform = QString( "ST_X(GCP_Transform(gcp.gcp_pixel , g_point.matrix,-1)) AS gcp_map_x,\n" );
+            s_sql_transform  = QString( "ST_X(GCP_Transform(gcp.gcp_pixel , g_point.matrix,-1)) AS gcp_map_x,\n " );
             s_sql_transform += QString( "ST_Y(GCP_Transform(gcp.gcp_pixel , g_point.matrix,-1)) AS gcp_map_y\n" );
           }
           else
           { // A postion is being requested (not yet in the gcp-list) ['id_gcp' is ignored]
             s_sql_transform = QString( "ST_X(GCP_Transform(MakePoint(%1,%2,-1) , g_point.matrix,%3)) AS gcp_map_x,\n" ).arg( input_point.x() ).arg( input_point.y() ).arg( i_gcp_coverage_srid );
-            s_sql_transform += QString( "ST_Y(GCP_Transform(MakePoint(%1,%2,-1) , g_point.matrix,%3)) AS gcp_map_y\n" ).arg( input_point.x() ).arg( input_point.y() ).arg( i_gcp_coverage_srid );
+            s_sql_transform += QString( " ST_Y(GCP_Transform(MakePoint(%1,%2,-1) , g_point.matrix,%3)) AS gcp_map_y\n" ).arg( input_point.x() ).arg( input_point.y() ).arg( i_gcp_coverage_srid );
           }
           if ( b_reCompute )
           { // If there is no TABLE 'gcp_compute' OR requested directly, then calculate directly from the POINTs
-            s_sql_compute = QString( "(SELECT GCP_Compute(gcp_pixel,gcp_point,%1) AS matrix FROM  \"%2\"  WHERE (gcp_enable=1)) AS g_point LIMIT 1" ).arg( i_order ).arg( s_gcp_points_table_name );
+            s_sql_compute = QString( "(SELECT GCP_Compute(gcp_pixel,gcp_point,%1) AS matrix FROM  \"%2\"  WHERE (gcp_enable=1)) AS g_point" ).arg( i_order ).arg( s_gcp_points_table_name );
           }
           else
           { // The stored 'Affine Transformation Matrix' in TABLE 'gcp_compute' will be read [should be swifter than recalulating]
@@ -4116,6 +4123,10 @@ bool QgsGeorefPluginGui::setGcpLayerSettings( QgsVectorLayer *layer_gcp )
       gcp_layer_settings.shadowBlendMode = QPainter::CompositionMode_Multiply;
       // Write settings to layer
       gcp_layer_settings.writeToLayer( layer_gcp );
+    }
+    if (( layer_gcp->isValid() ) && ( layer_gcp->editFormConfig()->suppress() !=  QgsEditFormConfig::SuppressOn ) )
+    { // Turn off 'Feature Attibutes' Form - QgsAttributeDialog
+      layer_gcp->editFormConfig()->setSuppress( QgsEditFormConfig::SuppressOn );
     }
     // Symbols:
     if (( layer_gcp->isValid() ) && ( layer_gcp->rendererV2() ) )
@@ -4462,15 +4473,6 @@ void QgsGeorefPluginGui::loadGTifInQgis( const QString& gtif_file )
       mLayer_gtif_raster = new QgsRasterLayer( fileInfo.absoluteFilePath(), fileInfo.completeBaseName() );
       if ( mLayer_gtif_raster )
       {
-        QgsGeorefPluginGui::read_tifftags( mLayer_gtif_raster, true );
-        if ( mLayer_gtif_raster->name().isEmpty() )
-        {
-          mLayer_gtif_raster->setName( fileInfo.fileName() );
-        }
-        if ( mLayer_gtif_raster->shortName().isEmpty() )
-        {
-          mLayer_gtif_raster->setShortName( fileInfo.completeBaseName() );
-        }
         if ( group_gtif_rasters )
         {  // so that layer is not added to legend
           QgsMapLayerRegistry::instance()->addMapLayers( QList<QgsMapLayer *>() << mLayer_gtif_raster, false, false );
@@ -4724,51 +4726,170 @@ QStringList QgsGeorefPluginGui::createSvgColors( int i_method, bool b_reverse, b
   // -------
   return list_SvgColors;
 }
-QMap<QString, QString> QgsGeorefPluginGui::read_tifftags( QgsRasterLayer *raster_layer, bool b_SetTags )
+void QgsGeorefPluginGui::jumpToGcpConvert( QgsPoint input_point, bool b_toPixel )
 {
-  QMap<QString, QString> map_tifftags;
-  if (( !raster_layer ) || ( !raster_layer->isValid() ) )
+  QgsRectangle canvas_extent;
+  if ( b_toPixel )
   {
-    return map_tifftags;
+    canvas_extent = mCanvas->extent();
   }
-  // Remove all the paragraphs inside the TIFFTAG area
-  QString raster_layer_metadata = raster_layer->dataProvider()->metadata().replace( "<p>", "" ).replace( "</p>", "" );
-  // Remove everything before the TIFFTAG area
-  QStringList raster_layer_metadata_split_1 = raster_layer_metadata.split( "<tr>" );
-  // Remove everything afterthe TIFFTAG area
-  QStringList raster_layer_metadata_split_2 = raster_layer_metadata_split_1[1].split( "</tr>" );
-  // Split the TIFTAG area at new-lines
-  QStringList metadata = raster_layer_metadata_split_2[0].split( "\n" );
-  if ( metadata.length() > 0 )
-  { // filter out everything that startes with ''TIFFTAG_'
-    QStringList tifftags = metadata.filter( QRegExp( QString( "^%1_" ).arg( "TIFFTAG" ), Qt::CaseInsensitive ) );
-    for ( int i = 0;i < tifftags.length();i++ )
-    { // Split in TIFFTAG-Parm and TIFFTAG-Value
-      QStringList tifftag = tifftags[i].split( "=" );
-      if ( tifftag.length() > 0 )
-      { // tifftag[TIFFTAG_SOFTWARE=SELECT GeomFromEWKT("SRID=187900;POLYGON((0.0 1200.0,1600.0 1200.0,1600.0 0.0, 0.0 0.0,0.0 1200.0))");]
-        // qDebug() << QString( "QgsGeorefPluginGui::read_tifftags(%1) -1- tifftag[%2] tifftag_length[%3]  tifftag_name[%4] tifftag_value[%5]" ).arg( i ).arg(tifftags[i]).arg(tifftag.length()).arg(tifftags[i].section('=', 0, 0)).arg(tifftags[i].section('=', 1));
-        map_tifftags.insert( tifftags[i].section( '=', 0, 0 ), tifftags[i].section( '=', 1 ) );
+  else
+  {
+    canvas_extent = mIface->mapCanvas()->extent();
+  }
+  QgsPoint canvas_center = canvas_extent.center();
+  QgsPoint canvas_diff( input_point.x() - canvas_center.x(), input_point.y() - canvas_center.y() );
+  QgsRectangle canvas_extent_new( canvas_extent.xMinimum() + canvas_diff.x(), canvas_extent.yMinimum() + canvas_diff.y(),
+                                  canvas_extent.xMaximum() + canvas_diff.x(), canvas_extent.yMaximum() + canvas_diff.y() );
+  if ( b_toPixel )
+  {
+    mCanvas->setExtent( canvas_extent_new );
+    mCanvas->refresh();
+  }
+  else
+  {
+    mIface->mapCanvas()->setExtent( canvas_extent_new );
+    mIface->mapCanvas()->refresh();
+  }
+}
+void QgsGeorefPluginGui::featureAdded_points( QgsFeatureId fid )
+{
+  if ( i_add_point_status != 0 )
+    return;
+  if (( layer_gcp_points ) && ( layer_gcp_points_edit_buffer ) )
+  {
+    QgsAttributeList lst_needed_fields;
+    lst_needed_fields.append( 0 ); // id_gcp
+    QgsFeature fet_point;
+    if ( layer_gcp_points->getFeatures( QgsFeatureRequest( fid ).setSubsetOfAttributes( lst_needed_fields ) ).nextFeature( fet_point ) )
+    {
+      if ( !fet_point.constGeometry() )
+        return;
+      bool b_toPixel = true;
+      QgsPoint added_point = fet_point.geometry()->asPoint();
+      int id_gcp = fet_point.attribute( QString( "id_gcp" ) ).toInt();
+      i_add_point_status = 2;
+      QgsPoint added_pixel = getGcpConvert( mGcp_coverage_name, added_point, b_toPixel, getGcpTransformParam( mTransformParam ) );
+      QgsGeometry* geometry_pixel = QgsGeometry::fromPoint( added_pixel );
+      fet_point.setGeometry( geometry_pixel );
+      if ( layer_gcp_pixels->addFeature( fet_point, true ) )
+      {
+        qDebug() << QString( "QgsGeorefPluginGui::featureAdded_points[%1,%2]- added_point[%3] added_pixel[%4]" ).arg( fet_point.id() ).arg( id_gcp ).arg( added_point.wellKnownText() ).arg( added_pixel.wellKnownText() );
+        jumpToGcpConvert( added_pixel, b_toPixel );
+      }
+      i_add_point_status = 0;
+    }
+  }
+}
+void QgsGeorefPluginGui::featureDeleted_points( QgsFeatureId fid )
+{
+  if (( layer_gcp_points ) && ( layer_gcp_points_edit_buffer ) )
+  {
+    qDebug() << QString( "QgsGeorefPluginGui::featureDeleted_points[%1]] " ).arg( fid );
+    QgsAttributeList lst_needed_fields;
+    lst_needed_fields.append( 0 ); // id_gcp
+    QgsFeature fet_point;
+    if ( layer_gcp_points->getFeatures( QgsFeatureRequest( fid ).setSubsetOfAttributes( lst_needed_fields ) ).nextFeature( fet_point ) )
+    {
+      if ( !fet_point.constGeometry() )
+        return;
+      QgsPoint deleted_point = fet_point.geometry()->asPoint();
+      int id_gcp = fet_point.attribute( QString( "id_gcp" ) ).toInt();
+      qDebug() << QString( "QgsGeorefPluginGui::featureDeleted_points[%1,%2]- deleted_point[%3] " ).arg( fet_point.id() ).arg( id_gcp ).arg( deleted_point.wellKnownText() );
+    }
+  }
+}
+void QgsGeorefPluginGui::geometryChanged_points( QgsFeatureId fid, QgsGeometry& changed_geometry )
+{
+  if (( layer_gcp_points ) && ( layer_gcp_points_edit_buffer ) )
+  {
+    if ( changed_geometry.type() == QGis::Point )
+    {
+      QgsPoint changed_point = changed_geometry.asPoint(); // wellKnownText()
+      QgsAttributeList lst_needed_fields;
+      lst_needed_fields.append( 0 ); // id_gcp
+      QgsFeatureIterator fit_points = layer_gcp_points->getFeatures( QgsFeatureRequest( fid ).setSubsetOfAttributes( lst_needed_fields ) );
+      QgsFeature fet_point;
+      // if ( layer_gcp_points->getFeatures( QgsFeatureRequest( fid ).setSubsetOfAttributes( lst_needed_fields ) ).nextFeature( fet_point ) )
+      while ( fit_points.nextFeature( fet_point ) )
+      {
+        if ( !fet_point.constGeometry() )
+          return;
+        // bool b_toPixel=true;
+        QgsPoint original_point = fet_point.geometry()->asPoint();
+        int id_gcp = fet_point.attribute( QString( "id_gcp" ) ).toInt();
+        qDebug() << QString( "QgsGeorefPluginGui::geometryChanged_points[%1,%2] - original_point[%3] changed_point[%4] " ).arg( fet_point.id() ).arg( id_gcp ).arg( changed_point.wellKnownText() ).arg( original_point.wellKnownText() );
       }
     }
-    // QgsGdalProvider::metadata -6- TIFFTAG_SOFTWARE[SELECT GeomFromEWKT("SRID=187900;POLYGON((0.0 1200.0,1600.0 1200.0,1600.0 0.0, 0.0 0.0,0.0 1200.0))");]
-    // qDebug() << QString( "QgsGeorefPluginGui::read_tifftags-6- TIFFTAG_SOFTWARE[%1] " ).arg( map_tifftags.value( "TIFFTAG_SOFTWARE" ));
   }
-  if ( b_SetTags )
+}
+void QgsGeorefPluginGui::featureAdded_pixels( QgsFeatureId fid )
+{
+  qDebug() << QString( "QgsGeorefPluginGui::featureAdded_pixels[%1]] " ).arg( fid );
+  if ( i_add_point_status != 0 )
+    return;
+  if (( layer_gcp_pixels ) && ( layer_gcp_pixels_edit_buffer ) )
   {
-    if ( !map_tifftags.value( "TIFFTAG_DOCUMENTNAME" ).isEmpty() )
+    QgsAttributeList lst_needed_fields;
+    lst_needed_fields.append( 0 ); // id_gcp
+    QgsFeature fet_pixel;
+    if ( layer_gcp_pixels->getFeatures( QgsFeatureRequest( fid ).setSubsetOfAttributes( lst_needed_fields ) ).nextFeature( fet_pixel ) )
     {
-      raster_layer->setTitle( map_tifftags.value( "TIFFTAG_DOCUMENTNAME" ) );
-    }
-    if ( !map_tifftags.value( "TIFFTAG_IMAGEDESCRIPTION" ).isEmpty() )
-    {
-      raster_layer->setAbstract( map_tifftags.value( "TIFFTAG_IMAGEDESCRIPTION" ) );
-    }
-    if ( !map_tifftags.value( "TIFFTAG_COPYRIGHT" ).isEmpty() )
-    {
-      raster_layer->setKeywordList( map_tifftags.value( "TIFFTAG_COPYRIGHT" ) );
+      if ( !fet_pixel.constGeometry() )
+        return;
+      bool b_toPixel = false;
+      QgsPoint added_pixel = fet_pixel.geometry()->asPoint();
+      int id_gcp = fet_pixel.attribute( QString( "id_gcp" ) ).toInt();
+      i_add_point_status = 1;
+      QgsPoint added_point = getGcpConvert( mGcp_coverage_name, added_pixel, b_toPixel, getGcpTransformParam( mTransformParam ) );
+      QgsGeometry* geometry_point = QgsGeometry::fromPoint( added_point );
+      fet_pixel.setGeometry( geometry_point );
+      if ( layer_gcp_points->addFeature( fet_pixel, true ) )
+      {
+        qDebug() << QString( "QgsGeorefPluginGui::featureAdded_pixels[%1,%2]- added_pixel[%3] added_point[%4] " ).arg( fet_pixel.id() ).arg( id_gcp ).arg( added_pixel.wellKnownText() ).arg( added_point.wellKnownText() );
+        jumpToGcpConvert( added_point, b_toPixel );
+      }
+      i_add_point_status = 0;
     }
   }
-  return map_tifftags;
+}
+void QgsGeorefPluginGui::featureDeleted_pixels( QgsFeatureId fid )
+{
+  if (( layer_gcp_pixels ) && ( layer_gcp_pixels_edit_buffer ) )
+  {
+    QgsAttributeList lst_needed_fields;
+    lst_needed_fields.append( 0 ); // id_gcp
+    QgsFeature fet_pixel;
+    if ( layer_gcp_pixels->getFeatures( QgsFeatureRequest( fid ).setSubsetOfAttributes( lst_needed_fields ) ).nextFeature( fet_pixel ) )
+    {
+      if ( !fet_pixel.constGeometry() )
+        return;
+      QgsPoint deleted_pixel = fet_pixel.geometry()->asPoint();
+      int id_gcp = fet_pixel.attribute( QString( "id_gcp" ) ).toInt();
+      qDebug() << QString( "QgsGeorefPluginGui::featureDeleted_pixels[%1,%2] - deleted_point[%3] " ).arg( fet_pixel.id() ).arg( id_gcp ).arg( deleted_pixel.wellKnownText() );
+    }
+  }
+}
+void QgsGeorefPluginGui::geometryChanged_pixels( QgsFeatureId fid, QgsGeometry& changed_geometry )
+{
+  if (( layer_gcp_pixels ) && ( layer_gcp_pixels_edit_buffer ) )
+  {
+    if ( changed_geometry.type()  == QGis::Point )
+    {
+      QgsPoint changed_pixel = changed_geometry.asPoint();
+      QgsAttributeList lst_needed_fields;
+      lst_needed_fields.append( 0 ); // id_gcp
+      QgsFeature fet_pixel;
+      if ( layer_gcp_pixels->getFeatures( QgsFeatureRequest( fid ).setSubsetOfAttributes( lst_needed_fields ) ).nextFeature( fet_pixel ) )
+      {
+        if ( !fet_pixel.constGeometry() )
+          return;
+        // bool b_toPixel=false;
+        QgsPoint original_pixel = fet_pixel.geometry()->asPoint();
+        int id_gcp = fet_pixel.attribute( QString( "id_gcp" ) ).toInt();
+        qDebug() << QString( "QgsGeorefPluginGui::eometryChanged_pixels[%1,%2] - changed_point[%3] changed_point[%4] " ).arg( fet_pixel.id() ).arg( id_gcp ).arg( changed_pixel.wellKnownText() ).arg( original_pixel.wellKnownText() );
+      }
+    }
+  }
 }
 

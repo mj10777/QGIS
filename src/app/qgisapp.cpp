@@ -7024,7 +7024,7 @@ void QgisApp::modifyAttributesOfSelectedFeatures()
   QgsFeature f;
   QgsAttributeEditorContext context;
   context.setAllowCustomUi( false );
-
+  qDebug() << QString("-I-> QgisApp::modifyAttributesOfSelectedFeatures(%1)").arg(vl->name());
   QgsAttributeDialog* dialog = new QgsAttributeDialog( vl, &f, false, this, true, context );
   dialog->setMode( QgsAttributeForm::MultiEditMode );
   dialog->exec();
