@@ -56,7 +56,7 @@ SET (GEOREF_MOC_HDRS
      qgsresidualplotitem.h
      qgstransformsettingsdialog.h
      qgsvalidateddoublespinbox.h
-     
+    
      qgsgcplistmodel.h
      qgsgcplistwidget.h
 )
@@ -93,6 +93,7 @@ INCLUDE_DIRECTORIES(SYSTEM
 )
 
 TARGET_LINK_LIBRARIES(georefplugin
+  qgis_app
   qgis_core
   qgis_gui
   ${GSL_LIBRARIES}

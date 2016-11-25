@@ -22,6 +22,8 @@
 #include "qgscoordinatereferencesystem.h"
 #include "layertree/qgslayertreegroup.h"
 #include "layertree/qgslayertreelayer.h"
+#include "layertree/qgslayertreeview.h"
+#include "qgsvectorlayereditbuffer.h"
 
 #include <QPointer>
 
@@ -46,6 +48,7 @@ class QgsVectorLayer;
 class QgsVectorLayerEditBuffer;
 class QgsLayerTreeGroup;
 class QgsLayerTreeLayer;
+class QgsLayerTreeView;
 
 class QgsGeorefDockWidget : public QgsDockWidget
 {
@@ -98,12 +101,44 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     void selectPoint( QPoint );
     void movePoint( QPoint );
     void releasePoint( QPoint );
-    void featureAdded_points( QgsFeatureId fid );
-    void featureDeleted_points( QgsFeatureId fid );
-    void geometryChanged_points( QgsFeatureId fid, QgsGeometry& changed_geometry );
-    void featureAdded_pixels( QgsFeatureId fid );
-    void featureDeleted_pixels( QgsFeatureId fid );
-    void geometryChanged_pixels( QgsFeatureId fid, QgsGeometry& changed_geometry );
+    /**
+     * Reacts to a Spatialite-Database storing the Gcp-Points [gcp_point, gcp_pixel]
+     *  - the TRIGGER will create an empty POINT (0,0) if not set
+     *  -- which is what happens here
+     * \note both geometries are in one TABLE
+     *  an INSERT can therefor only be done once, the other must be UPDATEd if 'SELECT HasGCP()' returns true
+     *  and enough gcp-points exist to make a calculation
+     *  For this the primary key is needed for the INSERTed record, so that the POINT in the other Layer can be retrieved and UPDATEd
+     * - this causes the Event to called during 'commitChanges' (the used 'fid' will be stored in 'mEvent_gcp_status')
+     *  -- after 'commitChanges' has compleated, the value in 'mEvent_gcp_status' will be used to retrive the inserted primary-key
+     * -- the record from the other gcp-layer will be retrieved with the primary-key and UPDATEd
+     * \note 'mEvent_point_status' will be set to 1 (for 'Map-Point to Pixel-Point') and 2  (for 'Pixel-Point to Map-Point')
+     * - this value will be read in the featureDeleted_gcp and geometryChanged_gcp and will return if > 0
+     * \note the added geometry is added immediately to the Database
+     * - which will also save any new position that were not commited after 'geometryChanged_gcp'
+     * @see getGcpConvert
+     * @see jumpToGcpConvert
+     * @param fis (a minus number when inserting to the database, a positive number when adding to a layer)
+     */
+    void featureAdded_gcp( QgsFeatureId fid );
+    /**
+     * Reacts to a Spatialite-Database storing the Gcp-Points [gcp_point, gcp_pixel]
+     *  - when  1 row is deleted in a gcp-layer, it will also be removed in the other
+     *  -- any activity should then only be done once
+     * \note all 'fid' < 0 will be ignored
+     * @param fis (a minus number when inserting to the database, a positive number when adding to a layer)
+     */
+    void featureDeleted_gcp( QgsFeatureId fid );
+    /**
+     * Reacts to a Spatialite-Database storing the Gcp-Points [gcp_point, gcp_pixel]
+     *  - any change in the position will only effect the calling gcp-layer
+     *  -- any activity should then only be done once
+     * \note all 'fid' < 0 will be ignored
+     *  - the changed position in NOT saved to the database
+     * @param fis (a minus number when inserting to the database, a positive number when adding to a layer)
+     * @param changed_geometry the changed geometry value must be updated in the gcp-list
+     */
+    void geometryChanged_gcp( QgsFeatureId fid, QgsGeometry& changed_geometry );
 
     void loadGCPsDialog();
     void saveGCPsDialog();
@@ -181,7 +216,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     QString mGcp_coverage_name;
     QString mGcp_coverage_name_base;
     QString mGcp_points_table_name;
-    int id_gcp_coverage;
+    int mId_gcp_coverage;
     bool isGCPDb();
     /**
      * Creates a Spatialite-Database storing the Gcp-Points
@@ -389,7 +424,10 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     QgsVectorLayer *layer_gcp_points;
     //! stores information about uncommitted changes to layer
     QgsVectorLayerEditBuffer* layer_gcp_points_edit_buffer;
-     int i_add_point_status;
+    QStringList mCommitErrors;
+    int mEvent_gcp_status;
+    int mEvent_point_status;
+    int mEvent_pixel_status;
     QString mGcp_pixel_layername;
     QgsVectorLayer *layer_gcp_pixels;
     //! stores information about uncommitted changes to layer

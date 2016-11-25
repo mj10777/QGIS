@@ -30,6 +30,9 @@ class QgsGCPList : public QList<QgsGeorefDataPoint *>
     QgsGCPList( const QgsGCPList &list );
 
     void createGCPVectors( QVector<QgsPoint> &mapCoords, QVector<QgsPoint> &pixelCoords );
+    QgsGeorefDataPoint* getPoint( int id );
+    bool updatePoint( int id, bool b_point_map, QgsPoint update_point );
+    bool removePoint( int id );
     int size() const;
     int sizeAll() const;
 
