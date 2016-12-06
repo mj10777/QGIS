@@ -5984,7 +5984,6 @@ void QgisApp::attributeTable()
   {
     return;
   }
-
   QgsAttributeTableDialog *mDialog = new QgsAttributeTableDialog( myLayer );
   mDialog->show();
   // the dialog will be deleted by itself on close
@@ -7024,7 +7023,6 @@ void QgisApp::modifyAttributesOfSelectedFeatures()
   QgsFeature f;
   QgsAttributeEditorContext context;
   context.setAllowCustomUi( false );
-  qDebug() << QString("-I-> QgisApp::modifyAttributesOfSelectedFeatures(%1)").arg(vl->name());
   QgsAttributeDialog* dialog = new QgsAttributeDialog( vl, &f, false, this, true, context );
   dialog->setMode( QgsAttributeForm::MultiEditMode );
   dialog->exec();

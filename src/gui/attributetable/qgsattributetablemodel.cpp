@@ -811,7 +811,6 @@ void QgsAttributeTableModel::prefetchSortData( const QString& expressionString )
                               .setFlags( QgsFeatureRequest::NoGeometry )
                               .setSubsetOfAttributes( mSortCacheAttributes );
   QgsFeatureIterator it = mLayerCache->getFeatures( request );
-
   QgsFeature f;
   while ( it.nextFeature( f ) )
   {
@@ -825,6 +824,7 @@ void QgsAttributeTableModel::prefetchSortData( const QString& expressionString )
       QVariant sortValue = widgetFactory->sortValue( layer(), mSortFieldIndex, widgetConfig, widgetCache, f.attribute( mSortFieldIndex ) );
       mSortCache.insert( f.id(), sortValue );
     }
+
   }
 }
 

@@ -27,7 +27,7 @@ class QgsSelectedFeature;
 class QgsNodeEditor;
 
 /** A maptool to move/deletes/adds vertices of line or polygon features*/
-class QgsMapToolNodeTool: public QgsMapToolEdit
+class APP_EXPORT QgsMapToolNodeTool: public QgsMapToolEdit
 {
     Q_OBJECT
   public:

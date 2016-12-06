@@ -57,6 +57,154 @@ class QgsGeorefDockWidget : public QgsDockWidget
     QgsGeorefDockWidget( const QString & title, QWidget * parent = nullptr, Qt::WindowFlags flags = nullptr );
 };
 
+class QgsSpatiaLiteProviderUtils
+{
+  public:
+    struct GcpDbData
+    {
+      GcpDbData( QString s_database_filename, QString s_coverage_name="gcp_cutline", int i_srid=3068)
+          : mGCPdatabaseFileName( s_database_filename )
+          , mGcp_coverage_name( s_coverage_name )
+          , mGcp_srid(  i_srid )
+          , mGcp_points_table_name( "" )
+          , mLayer( nullptr )
+          , mGcp_enabled( false )
+          , mInputPoint( QgsPoint(0.0, 0.0) )
+          , mToPixel( false )
+          , mOrder( 0 )
+          , mReCompute( true )
+          , mIdGcp( -1 )
+          , mId_gcp_coverage(-1 )
+          , mTransformParam( -1 )
+          , mResamplingMethod( "Lanczos" )
+          , mRasterYear( 0 )
+          , mRasterScale( 0 )
+          , mCompressionMethod( "DEFLATE" )
+          , mGCPpointsFileName( "" )
+          , mGCPbaseFileName( "" )
+          , mRasterFilePath( "" )
+          , mRasterFileName( "" )
+          , mModifiedRasterFileName( "" )
+          , mGcp_coverage_name_base( "" )
+          , mError( "" )
+          , mSqlDump( false )
+      {}
+      GcpDbData( QString s_database_filename, QString s_coverage_name, int i_srid, QString s_points_table_name,  QgsRasterLayer *raster_layer, bool b_Gcp_enabled=false)
+          : mGCPdatabaseFileName( s_database_filename )
+          , mGcp_coverage_name( s_coverage_name )
+          , mGcp_srid(  i_srid )
+          , mGcp_points_table_name( s_points_table_name )
+          , mLayer( raster_layer )
+          , mGcp_enabled( b_Gcp_enabled )
+          , mInputPoint( QgsPoint(0.0, 0.0) )
+          , mToPixel( false )
+          , mOrder( 0 )
+          , mReCompute( true )
+          , mIdGcp( -1 )
+          , mId_gcp_coverage(-1 )
+          , mTransformParam( -1 )
+          , mResamplingMethod( "Lanczos" )
+          , mRasterYear( 0 )
+          , mRasterScale( 0 )
+          , mCompressionMethod( "DEFLATE" )
+          , mGCPpointsFileName( "" )
+          , mGCPbaseFileName( "" )
+          , mRasterFilePath( "" )
+          , mRasterFileName( "" )
+          , mModifiedRasterFileName( "" )
+          , mGcp_coverage_name_base( "" )
+          , mError( "" )
+          , mSqlDump( false )
+      {}
+
+      QString mGCPdatabaseFileName;
+      QString mGcp_coverage_name; // file without extention Lower-Case
+      int mGcp_srid;
+      QString mGcp_points_table_name;
+      QgsRasterLayer *mLayer;
+      bool mGcp_enabled;
+      QgsPoint mInputPoint;
+      bool mToPixel;
+      int mOrder;
+      bool mReCompute;
+      int mIdGcp;
+      int mId_gcp_coverage;
+      int mTransformParam;
+      QString mResamplingMethod;
+      int mRasterYear;
+      int mRasterScale;
+      QString mCompressionMethod;
+      QString mGCPpointsFileName;
+      QString mGCPbaseFileName;
+      QString mRasterFilePath; // Path to the file, without file-name
+      QString mRasterFileName; // file-name without path
+      QString mModifiedRasterFileName; // Georeferenced File-Name
+      QString mGcp_coverage_name_base; // Original Spelling of mGcp_coverage_name
+      QString mError;
+      bool mSqlDump;
+    };
+    /**
+     * Creates a Spatialite-Database storing the Gcp-Points
+     *  A 'gcp_convert' TABLE can also be created to use the Spatialite GCP_Transform/Compute logic
+     * \note the Spatialite running must be compiled with './configure --enable-gcp=yes'
+     *  QGIS can be compiled without this setting since only SQL-Queries are being used
+     *  The Tables will only be created/updated after checking that 'SELECT HasGCP()' returns true
+     * <a href="https://www.gaia-gis.it/fossil/libspatialite/wiki?name=Ground+Control+Points </a>
+     * \note only when 'gcp_enable' is true, will the POINT be used
+     *  Based on the value of id_order, only those points will be used
+     * @see getGcpConvert
+     * @param s_coverage_name name of map to use
+     * @return true if database exists
+     */
+    static bool createGcpDb(GcpDbData* parms_GcpDbData);
+    static bool updateGcpDb( GcpDbData* parms_GcpDbData );
+    /**
+     * Stores the Thin Plate Spline/Polynomial Coefficients of the Gcp-Points
+     *  using Spatialite GCP_Transform/Compute
+     * \note the Spatialite running must be compiled with './configure --enable-gcp=yes'
+     *  QGIS can be compiled without this setting since only SQL-Queries are being used
+     *  The Tables will only be created/updated after checking that 'SELECT HasGCP()' returns true
+     * <a href="https://www.gaia-gis.it/fossil/libspatialite/wiki?name=Ground+Control+Points </a>
+     * \note only when 'gcp_enable' is true, will the POINT be used
+     *  Based on the value of id_order, only those points will be used
+     * @see getGcpConvert
+     * @param s_coverage_name name of map to use
+     * @return true if database exists
+     */
+    static bool updateGcpCompute( GcpDbData* parms_GcpDbData );
+    /**
+     * Convert Pixel/Map value to Map/Pixel value
+     *  using Spatialite GCP_Transform/Compute
+     * \note the Spatialite running must be compiled with './configure --enable-gcp=yes'
+     *  QGIS can be compiled without this setting since only SQL-Queries are being used
+     *  The SQL-Queries will only be called after checking that 'SELECT HasGCP()' returns true
+     * <a href="https://www.gaia-gis.it/fossil/libspatialite/wiki?name=Ground+Control+Points </a>
+     * \note only PolynomialOrder1, PolynomialOrder2, PolynomialOrder3 and ThinPlateSpline aresupported
+     * @see getGcpTransformParam
+     * @see updateGcpCompute
+     * @param s_coverage_name name of map to search for
+     * @param input_point point to convert [not used when id_gcp > 0]
+     * @param b_toPixel true=convert Map-Point to Pixel Point ; false: Convert Pixel-Point to Map-Point
+     * @param i_order 0-3 [ThinPlateSpline, PolynomialOrder1, PolynomialOrder2, PolynomialOrder3]
+     * @param b_reCompute re-calculate value by reading al enable points, othewise read stored values in gcp_convert.
+     * @param id_gcp read value from specfic gcp point [input_point will be ignored]
+     * @return QgsPoint of result (0,0 when invalid)
+     */
+    static QgsPoint getGcpConvert( GcpDbData* parms_GcpDbData );
+    /**
+     * Creates a Spatialite-Database storing the Gcp-Mater-Points
+     *  A 'gcp_master' TABLE will be created based on the current srid being used
+     *  - this will only contain Map-Points
+     * \note a list of known position can be stored in the database
+     *  - goal is to make it possible to import these known points into the 'gcp_points' TABLE
+     *  When using the Spatialite GCP_Transform/Compute logic is being used
+     *  - the Map-Points can be converted to Pixel-Points
+     * @param parms_GcpDbData  with full path the the file to be created and srid to use
+     * @return true if database exists
+     */
+    static bool createGcpMasterDb(GcpDbData* parms_GcpDbData);
+};
+
 class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBase
 {
     Q_OBJECT
@@ -92,8 +240,8 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     void linkQGisToGeoref( bool link );
 
     // gcps
-    void addPoint( const QgsPoint& pixelCoords, const QgsPoint& mapCoords,
-                   bool enable = true, bool refreshCanvas = true, int id_gcp = -1 );
+    void addPoint( const QgsPoint& pixelCoords, const QgsPoint& mapCoords, int id_gcp = -1, bool b_PixelMap=true,
+                   bool enable = true, bool refreshCanvas = true );
     void deleteDataPoint( QPoint pixelCoords );
     void deleteDataPoint( int index );
     void showCoordDialog( const QgsPoint &pixelCoords );
@@ -121,14 +269,6 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
      * @param fis (a minus number when inserting to the database, a positive number when adding to a layer)
      */
     void featureAdded_gcp( QgsFeatureId fid );
-    /**
-     * Reacts to a Spatialite-Database storing the Gcp-Points [gcp_point, gcp_pixel]
-     *  - when  1 row is deleted in a gcp-layer, it will also be removed in the other
-     *  -- any activity should then only be done once
-     * \note all 'fid' < 0 will be ignored
-     * @param fis (a minus number when inserting to the database, a positive number when adding to a layer)
-     */
-    void featureDeleted_gcp( QgsFeatureId fid );
     /**
      * Reacts to a Spatialite-Database storing the Gcp-Points [gcp_point, gcp_pixel]
      *  - any change in the position will only effect the calling gcp-layer
@@ -217,55 +357,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     QString mGcp_coverage_name_base;
     QString mGcp_points_table_name;
     int mId_gcp_coverage;
-    bool isGCPDb();
-    /**
-     * Creates a Spatialite-Database storing the Gcp-Points
-     *  A 'gcp_convert' TABLE can also be created to use the Spatialite GCP_Transform/Compute logic
-     * \note the Spatialite running must be compiled with './configure --enable-gcp=yes'
-     *  QGIS can be compiled without this setting since only SQL-Queries are being used
-     *  The Tables will only be created/updated after checking that 'SELECT HasGCP()' returns true
-     * <a href="https://www.gaia-gis.it/fossil/libspatialite/wiki?name=Ground+Control+Points </a>
-     * \note only when 'gcp_enable' is true, will the POINT be used
-     *  Based on the value of id_order, only those points will be used
-     * @see getGcpConvert
-     * @param s_coverage_name name of map to use
-     * @return true if database exists
-     */
-    bool createGCPDb();
-    bool updateGCPDb( QString s_coverage_name );
-    /**
-     * Stores the Thin Plate Spline/Polynomial Coefficients of the Gcp-Points
-     *  using Spatialite GCP_Transform/Compute
-     * \note the Spatialite running must be compiled with './configure --enable-gcp=yes'
-     *  QGIS can be compiled without this setting since only SQL-Queries are being used
-     *  The Tables will only be created/updated after checking that 'SELECT HasGCP()' returns true
-     * <a href="https://www.gaia-gis.it/fossil/libspatialite/wiki?name=Ground+Control+Points </a>
-     * \note only when 'gcp_enable' is true, will the POINT be used
-     *  Based on the value of id_order, only those points will be used
-     * @see getGcpConvert
-     * @param s_coverage_name name of map to use
-     * @return true if database exists
-     */
-    bool updateGcpCompute( QString s_coverage_name );
-    /**
-     * Convert Pixel/Map value to Map/Pixel value
-     *  using Spatialite GCP_Transform/Compute
-     * \note the Spatialite running must be compiled with './configure --enable-gcp=yes'
-     *  QGIS can be compiled without this setting since only SQL-Queries are being used
-     *  The SQL-Queries will only be called after checking that 'SELECT HasGCP()' returns true
-     * <a href="https://www.gaia-gis.it/fossil/libspatialite/wiki?name=Ground+Control+Points </a>
-     * \note only PolynomialOrder1, PolynomialOrder2, PolynomialOrder3 and ThinPlateSpline aresupported
-     * @see getGcpTransformParam
-     * @see updateGcpCompute
-     * @param s_coverage_name name of map to search for
-     * @param input_point point to convert [not used when id_gcp > 0]
-     * @param b_toPixel true=convert Map-Point to Pixel Point ; false: Convert Pixel-Point to Map-Point
-     * @param i_order 0-3 [ThinPlateSpline, PolynomialOrder1, PolynomialOrder2, PolynomialOrder3]
-     * @param b_reCompute re-calculate value by reading al enable points, othewise read stored values in gcp_convert.
-     * @param id_gcp read value from specfic gcp point [input_point will be ignored]
-     * @return QgsPoint of result (0,0 when invalid)
-     */
-    QgsPoint getGcpConvert( QString s_coverage_name, QgsPoint input_point, bool b_toPixel = false, int i_order = 0, bool b_reCompute = true, int id_gcp = -1 );
+
     void jumpToGcpConvert( QgsPoint input_point, bool b_toPixel = false );
     /**
      * Translate QgsGeorefTransform::TransformParametrisation numbering to Spatialite numbering
@@ -276,6 +368,31 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
      * @return 0-3, otherwise 0 for ThinPlateSpline
      */
     int getGcpTransformParam( QgsGeorefTransform::TransformParametrisation i_TransformParam );
+    /**
+     * Translate QgsGeorefTransform::TransformParametrisation numbering to Spatialite numbering
+     * use when calling getGcpConvert
+     * @see getGcpConvert
+     * Note only ThinPlateSpline, PolynomialOrder1, PolynomialOrder2, PolynomialOrder3 and  are supported
+     * @param mTransformParam: as used in project
+     * @return 0-3, otherwise 0 for ThinPlateSpline
+     */
+     QgsGeorefTransform::TransformParametrisation setGcpTransformParam( int i_TransformParam );
+    /**
+     * Translate to and from a readable form for the gcp_points Database
+     * - GRA_NearestNeighbour, GRA_Bilinear, GRA_Cubic, GRA_CubicSpline and GRA_Lanczos are supported
+     * @see getGcpConvert
+     * Note only ThinPlateSpline, PolynomialOrder1, PolynomialOrder2, PolynomialOrder3 and  are supported
+     * @param mResamplingMethod: as used in project
+     * @return  above, otherwise 'Lanczos' for GRA_Lanczos
+     */
+    QString getGcpResamplingMethod( QgsImageWarper::ResamplingMethod i_ResamplingMethod );
+    /**
+     * Translate to and from a readable form for the gcp_points Database
+     * - GRA_NearestNeighbour, GRA_Bilinear, GRA_Cubic, GRA_CubicSpline and GRA_Lanczos are supported
+     * @param s_ResamplingMethod: as used in project
+     * @return above, otherwise 'Lanczos' for GRA_Lanczos
+     */
+     QgsImageWarper::ResamplingMethod setGcpResamplingMethod( QString s_ResamplingMethod );
     bool mSpatialite_gcp_enabled;
     bool isGcpEnabled();
     // mj10777: add gui logic for this and store in setting
@@ -422,16 +539,20 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     // mj10777
     QString mGcp_points_layername;
     QgsVectorLayer *layer_gcp_points;
-    //! stores information about uncommitted changes to layer
-    QgsVectorLayerEditBuffer* layer_gcp_points_edit_buffer;
-    QStringList mCommitErrors;
     int mEvent_gcp_status;
     int mEvent_point_status;
     int mEvent_pixel_status;
     QString mGcp_pixel_layername;
     QgsVectorLayer *layer_gcp_pixels;
-    //! stores information about uncommitted changes to layer
-    QgsVectorLayerEditBuffer* layer_gcp_pixels_edit_buffer;
+    /**
+     * Simplify the commit of the gcp-layers, with checking and commiting as needed
+     * @note
+     * used during events and Gcp-Layer unloading in clearGCPData()
+     * @param gcp_layer either gcp_points or gcp_pixels
+     * @param leaveEditable to call startEditing() and set set proper QgsVectorLayerEditBuffer member
+     * @return true in case of success of commitChanges()
+     */
+    bool saveEditsGcp( QgsVectorLayer *gcp_layer, bool leaveEditable );
     QString mCutline_points_layername;
     QgsVectorLayer *layer_cutline_points;
     QString mCutline_linestrings_layername;
@@ -459,6 +580,13 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
 
     QgsDockWidget* mDock;
     int messageTimeout();
+    QgsSpatiaLiteProviderUtils::GcpDbData* mGcpDbData;
+    bool isGcpDb();
+    bool createGcpDb();
+    bool updateGcpDb( QString s_coverage_name );
+    bool updateGcpCompute( QString s_coverage_name );
+    QgsPoint getGcpConvert( QString s_coverage_name, QgsPoint input_point, bool b_toPixel = false, int i_order = 0, bool b_reCompute = true, int id_gcp = -1 );
+    bool createGcpMasterDb(QString  s_database_filename, QString  s_gcp_master_tablename="gcp_master", int i_srid=3068);
 };
 
 #endif

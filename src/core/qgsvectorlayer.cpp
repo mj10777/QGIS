@@ -1105,7 +1105,6 @@ QgsFeatureIterator QgsVectorLayer::getFeatures( const QgsFeatureRequest& request
 {
   if ( !mValid || !mDataProvider )
     return QgsFeatureIterator();
-
   return QgsFeatureIterator( new QgsVectorLayerFeatureIterator( new QgsVectorLayerFeatureSource( this ), true, request ) );
 }
 

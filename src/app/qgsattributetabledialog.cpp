@@ -470,7 +470,6 @@ void QgsAttributeTableDialog::runFieldCalculation( QgsVectorLayer* layer, const 
     {
       continue;
     }
-
     context.setFeature( feature );
     context.lastScope()->setVariable( QString( "row_number" ), rownum );
 
@@ -664,6 +663,7 @@ void QgsAttributeTableDialog::on_mActionAddFeature_triggered()
 
   QgsFeature f;
   QgsFeatureAction action( tr( "Geometryless feature added" ), f, mLayer, -1, -1, this );
+
   if ( action.addFeature() )
   {
     masterModel->reload( masterModel->index( 0, 0 ), masterModel->index( masterModel->rowCount() - 1, masterModel->columnCount() - 1 ) );

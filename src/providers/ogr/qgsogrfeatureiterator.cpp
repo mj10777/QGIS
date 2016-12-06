@@ -172,8 +172,8 @@ bool QgsOgrFeatureIterator::fetchFeatureWithId( QgsFeatureId id, QgsFeature& fea
 
   if ( readFeature( fet, feature ) )
     OGR_F_Destroy( fet );
-
   feature.setValid( true );
+  // qDebug() << QString( "QgsOgrFeatureIterator::fetchFeatureWithId[%1,%2]  returning name[%3] - size=%4 value[%5] " ).arg( id ).arg( feature.isValid() ).arg(mSource->mLayerName).arg(feature.attributes().size()).arg( feature.attribute(0).toString() );
   return true;
 }
 
@@ -183,11 +183,12 @@ bool QgsOgrFeatureIterator::fetchFeature( QgsFeature& feature )
 
   if ( mClosed || !ogrLayer )
     return false;
-
+  // qDebug() << QString( "QgsOgrFeatureIterator::fetchFeature[%1] FilterType[%2,%3] " ).arg( feature.id() ).arg(mRequest.filterType()).arg(mRequest.filterFid());
   if ( mRequest.filterType() == QgsFeatureRequest::FilterFid )
   {
     bool result = fetchFeatureWithId( mRequest.filterFid(), feature );
     close(); // the feature has been read or was not found: we have finished here
+    // qDebug() << QString( "QgsOgrFeatureIterator::fetchFeature[%1,%2]  -1- name[%3] size=%4 value[%5] " ).arg( feature.id() ).arg( feature.isValid() ).arg(mSource->mLayerName).arg(feature.attributes().size()).arg( feature.attribute(0).toString() );
     return result;
   }
   else if ( mRequest.filterType() == QgsFeatureRequest::FilterFids )
@@ -196,7 +197,6 @@ bool QgsOgrFeatureIterator::fetchFeature( QgsFeature& feature )
     {
       QgsFeatureId nextId = *mFilterFidsIt;
       mFilterFidsIt++;
-
       if ( fetchFeatureWithId( nextId, feature ) )
         return true;
     }
@@ -205,7 +205,6 @@ bool QgsOgrFeatureIterator::fetchFeature( QgsFeature& feature )
   }
 
   OGRFeatureH fet;
-
   while (( fet = OGR_L_GetNextFeature( ogrLayer ) ) )
   {
     if ( !readFeature( fet, feature ) )
@@ -218,6 +217,7 @@ bool QgsOgrFeatureIterator::fetchFeature( QgsFeature& feature )
 
     // we have a feature, end this cycle
     feature.setValid( true );
+    // qDebug() << QString( "QgsOgrFeatureIterator::fetchFeature[%1,%2]  -3- name[%3] size=%4 value[%5] " ).arg( feature.id() ).arg( feature.isValid() ).arg(mSource->mLayerName).arg(feature.attributes().size()).arg( feature.attribute(0).toString() );
     return true;
 
   } // while
@@ -274,25 +274,25 @@ void QgsOgrFeatureIterator::getFeatureAttribute( OGRFeatureH ogrFet, QgsFeature 
   if ( mSource->mFirstFieldIsFid && attindex == 0 )
   {
     f.setAttribute( 0, static_cast<qint64>( OGR_F_GetFID( ogrFet ) ) );
+    // qDebug() << QString( "QgsOgrFeatureIterator::getFeatureAttribute[%1,%2] -1- mFirstFieldIsFid=%3 value[%4] " ).arg( attindex ).arg(mSource->mLayerName).arg(mSource->mFirstFieldIsFid).arg( f.attribute(0).toString() );
     return;
   }
 
   int attindexWithoutFid = ( mSource->mFirstFieldIsFid ) ? attindex - 1 : attindex;
   bool ok = false;
   QVariant value = QgsOgrUtils::getOgrFeatureAttribute( ogrFet, mSource->mFieldsWithoutFid, attindexWithoutFid, mSource->mEncoding, &ok );
+  // qDebug() << QString( "QgsOgrFeatureIterator::getFeatureAttribute[%1,%2] -2- rc=%3 value[%4] " ).arg( attindex ).arg(mSource->mLayerName).arg(ok).arg( value.toString() );
   if ( !ok )
     return;
 
   f.setAttribute( attindex, value );
 }
 
-
 bool QgsOgrFeatureIterator::readFeature( OGRFeatureH fet, QgsFeature& feature ) const
 {
   feature.setFeatureId( OGR_F_GetFID( fet ) );
   feature.initAttributes( mSource->mFields.count() );
   feature.setFields( mSource->mFields ); // allow name-based attribute lookups
-
   bool useIntersect = mRequest.flags() & QgsFeatureRequest::ExactIntersect;
   bool geometryTypeFilter = mSource->mOgrGeometryTypeFilter != wkbUnknown;
   if ( mFetchGeometry || useIntersect || geometryTypeFilter )
@@ -302,6 +302,7 @@ bool QgsOgrFeatureIterator::readFeature( OGRFeatureH fet, QgsFeature& feature ) 
     if ( geom )
     {
       feature.setGeometry( QgsOgrUtils::ogrGeometryToQgsGeometry( geom ) );
+      // qDebug() << QString( "QgsOgrFeatureIterator::readFeature[%1,%2] -1a- AttributeList.size=%3  " ).arg( feature.id() ).arg(mSource->mLayerName).arg(mRequest.subsetOfAttributes().size());
     }
     else
       feature.setGeometry( nullptr );
@@ -310,10 +311,40 @@ bool QgsOgrFeatureIterator::readFeature( OGRFeatureH fet, QgsFeature& feature ) 
          geom && wkbFlatten( OGR_G_GetGeometryType( geom ) ) == wkbGeometryCollection )
     {
       // OK
+      // qDebug() << QString( "QgsOgrFeatureIterator::readFeature[%1,%2] -1b- AttributeList.size=%3  " ).arg( feature.id() ).arg(mSource->mLayerName).arg(mRequest.subsetOfAttributes().size());
     }
     else if (( useIntersect && ( !feature.constGeometry() || !feature.constGeometry()->intersects( mRequest.filterRect() ) ) )
              || ( geometryTypeFilter && ( !feature.constGeometry() || QgsOgrProviderUtils::wkbSingleFlattenWrapper(( OGRwkbGeometryType )feature.constGeometry()->wkbType() ) != mSource->mOgrGeometryTypeFilter ) ) )
     {
+      bool b_condition_00=false;
+      bool b_condition_001=false;
+      bool b_condition_002=false;
+      bool b_condition_01=false;
+      bool b_condition_02=false;
+      bool b_condition_021=false;
+      bool b_condition_022=false;
+      if ( !mRequest.filterRect().isNull() )
+       b_condition_001=true;
+      if ( !( mRequest.flags() & QgsFeatureRequest::NoGeometry ) )
+       b_condition_002=true;
+      QString s_condition_error_00(QString("-W-> condition_00[%1] condition_001[%2] condition_002[%3]").arg(mFetchGeometry).arg(b_condition_001).arg(b_condition_002));
+      // qDebug() << QString( "QgsOgrFeatureIterator::readFeature[%1,%2] -E-> -1ca- Geometry_conditions=[%3]" ).arg( feature.id() ).arg(mSource->mLayerName).arg(s_condition_error_00);
+      if ( useIntersect && ( !feature.constGeometry() || !feature.constGeometry()->intersects( mRequest.filterRect() ) ) )
+       b_condition_01=true;
+      if ( geometryTypeFilter && ( !feature.constGeometry() || QgsOgrProviderUtils::wkbSingleFlattenWrapper(( OGRwkbGeometryType )feature.constGeometry()->wkbType() ) != mSource->mOgrGeometryTypeFilter ) )
+       b_condition_02=true;
+      if (b_condition_02)
+      {
+       if ( !feature.constGeometry())
+        b_condition_021=true;
+       if (!b_condition_021)
+       {
+         if ( QgsOgrProviderUtils::wkbSingleFlattenWrapper(( OGRwkbGeometryType )feature.constGeometry()->wkbType() ) != mSource->mOgrGeometryTypeFilter)
+          b_condition_022=true;
+       }
+      }
+      QString s_condition_error(QString("-W-> condition_01[%1,%2] condition_02[%3,%4] condition_021+2[%5,%6]").arg(b_condition_01).arg(useIntersect).arg(b_condition_02).arg(geometryTypeFilter).arg( b_condition_021).arg(b_condition_022));
+      // qDebug() << QString( "QgsOgrFeatureIterator::readFeature[%1,%2] -E-> -1c- AttributeList.size=%3  " ).arg( feature.id() ).arg(mSource->mLayerName).arg(s_condition_error);
       OGR_F_Destroy( fet );
       return false;
     }
@@ -323,11 +354,12 @@ bool QgsOgrFeatureIterator::readFeature( OGRFeatureH fet, QgsFeature& feature ) 
   {
     feature.setGeometry( nullptr );
   }
-
+  // qDebug() << QString( "QgsOgrFeatureIterator::readFeature[%1,%2] -1d- AttributeList.size=%3  " ).arg( feature.id() ).arg(mSource->mLayerName).arg(mRequest.subsetOfAttributes().size());
   // fetch attributes
   if ( mRequest.flags() & QgsFeatureRequest::SubsetOfAttributes )
-  {
+  { // with the new QgsOgrProvider attrs.size() is sometimes 0
     QgsAttributeList attrs = mRequest.subsetOfAttributes();
+    // qDebug() << QString( "QgsOgrFeatureIterator::readFeature[%1,%2] -2- AttributeList.size=%3  " ).arg( feature.id() ).arg(mSource->mLayerName).arg(mRequest.subsetOfAttributes().size());
     for ( QgsAttributeList::const_iterator it = attrs.begin(); it != attrs.end(); ++it )
     {
       getFeatureAttribute( fet, feature, *it );
@@ -336,6 +368,7 @@ bool QgsOgrFeatureIterator::readFeature( OGRFeatureH fet, QgsFeature& feature ) 
   else
   {
     // all attributes
+    // qDebug() << QString( "QgsOgrFeatureIterator::readFeature[%1,%2] -3- size=%3  " ).arg( feature.id() ).arg(mSource->mLayerName).arg(feature.attributes().size());
     for ( int idx = 0; idx < mSource->mFields.count(); ++idx )
     {
       getFeatureAttribute( fet, feature, idx );
