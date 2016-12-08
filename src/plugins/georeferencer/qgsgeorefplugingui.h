@@ -57,7 +57,7 @@ class QgsGeorefDockWidget : public QgsDockWidget
     QgsGeorefDockWidget( const QString & title, QWidget * parent = nullptr, Qt::WindowFlags flags = nullptr );
 };
 
-class QgsSpatiaLiteProviderUtils
+class QgsSpatiaLiteProviderGcpUtils
 {
   public:
     struct GcpDbData
@@ -88,6 +88,8 @@ class QgsSpatiaLiteProviderUtils
           , mGcp_coverage_name_base( "" )
           , mError( "" )
           , mSqlDump( false )
+          , mDatabaseDump( false )
+          , mParseString( ";#;#" )
       {}
       GcpDbData( QString s_database_filename, QString s_coverage_name, int i_srid, QString s_points_table_name,  QgsRasterLayer *raster_layer, bool b_Gcp_enabled=false)
           : mGCPdatabaseFileName( s_database_filename )
@@ -115,6 +117,8 @@ class QgsSpatiaLiteProviderUtils
           , mGcp_coverage_name_base( "" )
           , mError( "" )
           , mSqlDump( false )
+          , mDatabaseDump( false )
+          , mParseString( ";#;#" )
       {}
 
       QString mGCPdatabaseFileName;
@@ -142,6 +146,9 @@ class QgsSpatiaLiteProviderUtils
       QString mGcp_coverage_name_base; // Original Spelling of mGcp_coverage_name
       QString mError;
       bool mSqlDump;
+      bool mDatabaseDump;
+      QString mParseString;
+      QMap<int, QString> gcp_coverages;
     };
     /**
      * Creates a Spatialite-Database storing the Gcp-Points
@@ -203,6 +210,9 @@ class QgsSpatiaLiteProviderUtils
      * @return true if database exists
      */
     static bool createGcpMasterDb(GcpDbData* parms_GcpDbData);
+  private:
+    static QStringList createGcpSqlPointsCommands(GcpDbData* parms_GcpDbData, QStringList sa_tables);
+    static QStringList createGcpSqlCoveragesCommands(GcpDbData* parms_GcpDbData, QStringList sa_tables);
 };
 
 class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBase
@@ -522,6 +532,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     QgsLayerTreeLayer *group_gtif_raster;
     QgsRasterLayer *mLayer_gtif_raster;
     int mLoadGTifInQgis;
+    QMap<int, QString> mGcp_coverages;
 
     QgsGeorefTransform::TransformParametrisation mTransformParam;
     QgsImageWarper::ResamplingMethod mResamplingMethod;
@@ -580,9 +591,9 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
 
     QgsDockWidget* mDock;
     int messageTimeout();
-    QgsSpatiaLiteProviderUtils::GcpDbData* mGcpDbData;
+    QgsSpatiaLiteProviderGcpUtils::GcpDbData* mGcpDbData;
     bool isGcpDb();
-    bool createGcpDb();
+    bool createGcpDb(bool b_DatabaseDump=false);
     bool updateGcpDb( QString s_coverage_name );
     bool updateGcpCompute( QString s_coverage_name );
     QgsPoint getGcpConvert( QString s_coverage_name, QgsPoint input_point, bool b_toPixel = false, int i_order = 0, bool b_reCompute = true, int id_gcp = -1 );
