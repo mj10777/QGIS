@@ -75,10 +75,12 @@ class QgsSpatiaLiteProviderGcpUtils
           , mReCompute( true )
           , mIdGcp( -1 )
           , mId_gcp_coverage(-1 )
+          , mId_gcp_cutline(-1 )
           , mTransformParam( -1 )
           , mResamplingMethod( "Lanczos" )
           , mRasterYear( 0 )
           , mRasterScale( 0 )
+          , mRasterNodata( -1 )
           , mCompressionMethod( "DEFLATE" )
           , mGCPpointsFileName( "" )
           , mGCPbaseFileName( "" )
@@ -90,6 +92,10 @@ class QgsSpatiaLiteProviderGcpUtils
           , mSqlDump( false )
           , mDatabaseDump( false )
           , mParseString( ";#;#" )
+          , spatialite_cache(nullptr)
+          , db_handle(nullptr)
+          , mUsed_database_filename(QString::null)
+          , mUsed_database_filename_count(0)
       {}
       GcpDbData( QString s_database_filename, QString s_coverage_name, int i_srid, QString s_points_table_name,  QgsRasterLayer *raster_layer, bool b_Gcp_enabled=false)
           : mGCPdatabaseFileName( s_database_filename )
@@ -104,10 +110,12 @@ class QgsSpatiaLiteProviderGcpUtils
           , mReCompute( true )
           , mIdGcp( -1 )
           , mId_gcp_coverage(-1 )
+          , mId_gcp_cutline(-1 )
           , mTransformParam( -1 )
           , mResamplingMethod( "Lanczos" )
           , mRasterYear( 0 )
           , mRasterScale( 0 )
+          , mRasterNodata( -1 )
           , mCompressionMethod( "DEFLATE" )
           , mGCPpointsFileName( "" )
           , mGCPbaseFileName( "" )
@@ -119,6 +127,10 @@ class QgsSpatiaLiteProviderGcpUtils
           , mSqlDump( false )
           , mDatabaseDump( false )
           , mParseString( ";#;#" )
+          , spatialite_cache(nullptr)
+          , db_handle(nullptr)
+          , mUsed_database_filename(QString::null)
+          , mUsed_database_filename_count(0)
       {}
 
       QString mGCPdatabaseFileName;
@@ -133,10 +145,12 @@ class QgsSpatiaLiteProviderGcpUtils
       bool mReCompute;
       int mIdGcp;
       int mId_gcp_coverage;
+      int mId_gcp_cutline;
       int mTransformParam;
       QString mResamplingMethod;
       int mRasterYear;
       int mRasterScale;
+      int mRasterNodata;
       QString mCompressionMethod;
       QString mGCPpointsFileName;
       QString mGCPbaseFileName;
@@ -149,6 +163,10 @@ class QgsSpatiaLiteProviderGcpUtils
       bool mDatabaseDump;
       QString mParseString;
       QMap<int, QString> gcp_coverages;
+      void *spatialite_cache;
+      sqlite3* db_handle;
+      QString mUsed_database_filename;
+      int mUsed_database_filename_count;
     };
     /**
      * Creates a Spatialite-Database storing the Gcp-Points
@@ -213,6 +231,8 @@ class QgsSpatiaLiteProviderGcpUtils
   private:
     static QStringList createGcpSqlPointsCommands(GcpDbData* parms_GcpDbData, QStringList sa_tables);
     static QStringList createGcpSqlCoveragesCommands(GcpDbData* parms_GcpDbData, QStringList sa_tables);
+    static int spatialiteInitEx(GcpDbData* parms_GcpDbData, QString s_database_filename);
+    static bool spatialiteShutdown(GcpDbData* parms_GcpDbData);
 };
 
 class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBase
@@ -367,6 +387,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     QString mGcp_coverage_name_base;
     QString mGcp_points_table_name;
     int mId_gcp_coverage;
+    int mId_gcp_cutline;
 
     void jumpToGcpConvert( QgsPoint input_point, bool b_toPixel = false );
     /**
@@ -525,6 +546,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     QString mGCPbaseFileName;
     int mRasterYear;
     int mRasterScale;
+    int mRasterNodata;
     QgsLayerTreeGroup *group_georeferencer;
     QgsLayerTreeGroup *group_gcp_points;
     QgsLayerTreeGroup *group_gcp_cutlines;
@@ -570,6 +592,8 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     QgsVectorLayer *layer_cutline_linestrings;
     QString mCutline_polygons_layername;
     QgsVectorLayer *layer_cutline_polygons;
+    QString mMercator_polygons_layername;
+    QgsVectorLayer *layer_mercator_polygons;
     QStringList mSvgColors;
 
     QgsMapTool *mToolZoomIn;
@@ -594,6 +618,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     QgsSpatiaLiteProviderGcpUtils::GcpDbData* mGcpDbData;
     bool isGcpDb();
     bool createGcpDb(bool b_DatabaseDump=false);
+    bool readGcpDb(QString  s_database_filename,bool b_DatabaseDump=false);
     bool updateGcpDb( QString s_coverage_name );
     bool updateGcpCompute( QString s_coverage_name );
     QgsPoint getGcpConvert( QString s_coverage_name, QgsPoint input_point, bool b_toPixel = false, int i_order = 0, bool b_reCompute = true, int id_gcp = -1 );
