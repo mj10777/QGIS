@@ -235,6 +235,7 @@ class QgsGdalProvider : public QgsRasterDataProvider, QgsGdalProviderBase
     void emitProgressUpdate( int theProgress );
 
     static QMap<QString, QString> supportedMimes();
+    QMap<QString, QString> getProviderTags();
 
     /** Writes into the provider datasource*/
     bool write( void* data, int band, int width, int height, int xOffset, int yOffset ) override;
@@ -301,8 +302,8 @@ class QgsGdalProvider : public QgsRasterDataProvider, QgsGdalProviderBase
 
     /** \brief sublayers list saved for subsequent access */
     QStringList mSubLayers;
-    void read_tifftags();
-    QMap<QString, QString> mTifftags;
+    void read_providertags();
+    QMap<QString, QString> mProviderTags;
 };
 
 #endif

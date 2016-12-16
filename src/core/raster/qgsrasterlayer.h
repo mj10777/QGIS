@@ -360,7 +360,7 @@ class CORE_EXPORT QgsRasterLayer : public QgsMapLayer
      * @param b_SetTags when true: will set Title, Abstract and KeywordsList from TIFFTAG_DOCUMENTNAME, IMAGEDESCRIPTION and COPYWRITE if found
      * @return QMap<QString, QString> TIFFTAG-Parm, TIFFTAG-Value
      */
-    static QMap<QString, QString> read_tifftags( QgsRasterLayer *raster_layer, bool b_SetTags = false );
+    static QMap<QString, QString> read_providertags( QgsRasterLayer *raster_layer, bool b_SetTags = false );
 
   public slots:
     void showStatusMessage( const QString & theMessage );

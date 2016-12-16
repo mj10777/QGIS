@@ -28,7 +28,7 @@
      <string>File</string>
     </property>
     <addaction name="mActionReset"/>
-    <addaction name="mActionOpenRaster"/>
+    <addaction name="menuLoadingRasters"/>
     <addaction name="separator"/>
     <addaction name="mActionStartGeoref"/>
     <addaction name="mActionGDALScript"/>
@@ -68,19 +68,39 @@
     <addaction name="mActionRasterProperties"/>
     <addaction name="mActionGeorefConfig"/>
    </widget>
-   <widget class="QMenu" name="menuGCPDatabase">
-    <property name="title">
-     <string>GCP-Database Settings</string>
-    </property>
-    <addaction name="mActionLegacyMode"/>
+   <widget class="QMenu" name="menuLoadingRasters">
+     <property name="title">
+      <string>Loading Rasters ...</string>
+     </property>
+     <property name="toolTip">
+      <string>Open Raster directly or through Gcp-Database</string>
+     </property>
+    <addaction name="mListGcpCoverages"/>
     <addaction name="separator"/>
-    <addaction name="mActionGCPDatabase"/>
+    <addaction name="mActionOpenRaster"/>
+    <addaction name="separator"/>
+    <addaction name="mOpenGcpDatabase"/>
+   </widget>
+   <widget class="QMenu" name="menuGcpDatabase">
+    <property name="title">
+     <string>GCP-Database</string>
+    </property>
+     <widget class="QMenu" name="menuGcpDatabaseSetting">
+     <property name="title">
+      <string>Settings</string>
+     </property>
+     <addaction name="mActionLegacyMode"/>
+     <addaction name="separator"/>
+     <addaction name="mActionPointsPolygon"/>
+    </widget>
+    <addaction name="menuGcpDatabaseSetting"/>
+    <addaction name="separator"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEdit"/>
    <addaction name="menuView"/>
    <addaction name="menuSettings"/>
-   <addaction name="menuGCPDatabase"/>
+   <addaction name="menuGcpDatabase"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <widget class="QToolBar" name="toolBarFile">
@@ -185,17 +205,6 @@
    <addaction name="mActionFullHistogramStretch"/>
    <addaction name="mActionLocalHistogramStretch"/>
   </widget>
-  <action name="mActionOpenRaster">
-   <property name="text">
-    <string>Open Raster...</string>
-   </property>
-   <property name="statusTip">
-    <string>Open raster</string>
-   </property>
-   <property name="shortcut">
-    <string>Ctrl+O</string>
-   </property>
-  </action>
   <action name="mActionZoomIn">
    <property name="text">
     <string>Zoom In</string>
@@ -380,9 +389,39 @@
     <string>Switch Legacy-Mode</string>
    </property>
   </action>
-  <action name="mActionGCPDatabase">
+  <action name="mActionPointsPolygon">
    <property name="text">
-    <string>Read GCP-Database</string>
+    <string>Switch between Gcp-Points and Cutline Polygons</string>
+   </property>
+  </action>
+  <action name="mActionOpenRaster">
+   <property name="text">
+    <string>Open Raster...</string>
+   </property>
+   <property name="toolTip">
+    <string>Open raster, adding to Gcp-Databasea - the Gcp-Database will be opened or created when not previously opened</string>
+   </property>
+    <property name="statusTip">
+     <string>Open Raster, adding to Gcp-Database</string>
+    </property>
+   <property name="shortcut">
+    <string>Ctrl+O</string>
+   </property>
+  </action>
+  <action name="mListGcpCoverages">
+   <property name="text">
+    <string>List Gcp-Coverages of Gcp-Database</string>
+   </property>
+  </action>
+  <action name="mOpenGcpDatabase">
+   <property name="text">
+    <string>Open Gcp-Database</string>
+   </property>
+    <property name="statusTip">
+     <string>Open Gcp-Database and list Gcp-Coverages</string>
+    </property>
+   <property name="toolTip">
+    <string>Open Gcp-Database and list Gcp-Coverages\nuse 'Open Raster' to create a new Gcp-Database</string>
    </property>
   </action>
   <action name="mActionLocalHistogramStretch">

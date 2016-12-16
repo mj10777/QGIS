@@ -24,6 +24,8 @@
 #include "layertree/qgslayertreelayer.h"
 #include "layertree/qgslayertreeview.h"
 #include "qgsvectorlayereditbuffer.h"
+#include "qgsspatialiteprovidergcputils.h"
+#include "qgsgcpcoverages.h"
 
 #include <QPointer>
 
@@ -49,190 +51,13 @@ class QgsVectorLayerEditBuffer;
 class QgsLayerTreeGroup;
 class QgsLayerTreeLayer;
 class QgsLayerTreeView;
+class QgsSpatiaLiteProviderGcpUtils;
 
 class QgsGeorefDockWidget : public QgsDockWidget
 {
     Q_OBJECT
   public:
     QgsGeorefDockWidget( const QString & title, QWidget * parent = nullptr, Qt::WindowFlags flags = nullptr );
-};
-
-class QgsSpatiaLiteProviderGcpUtils
-{
-  public:
-    struct GcpDbData
-    {
-      GcpDbData( QString s_database_filename, QString s_coverage_name="gcp_cutline", int i_srid=3068)
-          : mGCPdatabaseFileName( s_database_filename )
-          , mGcp_coverage_name( s_coverage_name )
-          , mGcp_srid(  i_srid )
-          , mGcp_points_table_name( "" )
-          , mLayer( nullptr )
-          , mGcp_enabled( false )
-          , mInputPoint( QgsPoint(0.0, 0.0) )
-          , mToPixel( false )
-          , mOrder( 0 )
-          , mReCompute( true )
-          , mIdGcp( -1 )
-          , mId_gcp_coverage(-1 )
-          , mId_gcp_cutline(-1 )
-          , mTransformParam( -1 )
-          , mResamplingMethod( "Lanczos" )
-          , mRasterYear( 0 )
-          , mRasterScale( 0 )
-          , mRasterNodata( -1 )
-          , mCompressionMethod( "DEFLATE" )
-          , mGCPpointsFileName( "" )
-          , mGCPbaseFileName( "" )
-          , mRasterFilePath( "" )
-          , mRasterFileName( "" )
-          , mModifiedRasterFileName( "" )
-          , mGcp_coverage_name_base( "" )
-          , mError( "" )
-          , mSqlDump( false )
-          , mDatabaseDump( false )
-          , mParseString( ";#;#" )
-          , spatialite_cache(nullptr)
-          , db_handle(nullptr)
-          , mUsed_database_filename(QString::null)
-          , mUsed_database_filename_count(0)
-      {}
-      GcpDbData( QString s_database_filename, QString s_coverage_name, int i_srid, QString s_points_table_name,  QgsRasterLayer *raster_layer, bool b_Gcp_enabled=false)
-          : mGCPdatabaseFileName( s_database_filename )
-          , mGcp_coverage_name( s_coverage_name )
-          , mGcp_srid(  i_srid )
-          , mGcp_points_table_name( s_points_table_name )
-          , mLayer( raster_layer )
-          , mGcp_enabled( b_Gcp_enabled )
-          , mInputPoint( QgsPoint(0.0, 0.0) )
-          , mToPixel( false )
-          , mOrder( 0 )
-          , mReCompute( true )
-          , mIdGcp( -1 )
-          , mId_gcp_coverage(-1 )
-          , mId_gcp_cutline(-1 )
-          , mTransformParam( -1 )
-          , mResamplingMethod( "Lanczos" )
-          , mRasterYear( 0 )
-          , mRasterScale( 0 )
-          , mRasterNodata( -1 )
-          , mCompressionMethod( "DEFLATE" )
-          , mGCPpointsFileName( "" )
-          , mGCPbaseFileName( "" )
-          , mRasterFilePath( "" )
-          , mRasterFileName( "" )
-          , mModifiedRasterFileName( "" )
-          , mGcp_coverage_name_base( "" )
-          , mError( "" )
-          , mSqlDump( false )
-          , mDatabaseDump( false )
-          , mParseString( ";#;#" )
-          , spatialite_cache(nullptr)
-          , db_handle(nullptr)
-          , mUsed_database_filename(QString::null)
-          , mUsed_database_filename_count(0)
-      {}
-
-      QString mGCPdatabaseFileName;
-      QString mGcp_coverage_name; // file without extention Lower-Case
-      int mGcp_srid;
-      QString mGcp_points_table_name;
-      QgsRasterLayer *mLayer;
-      bool mGcp_enabled;
-      QgsPoint mInputPoint;
-      bool mToPixel;
-      int mOrder;
-      bool mReCompute;
-      int mIdGcp;
-      int mId_gcp_coverage;
-      int mId_gcp_cutline;
-      int mTransformParam;
-      QString mResamplingMethod;
-      int mRasterYear;
-      int mRasterScale;
-      int mRasterNodata;
-      QString mCompressionMethod;
-      QString mGCPpointsFileName;
-      QString mGCPbaseFileName;
-      QString mRasterFilePath; // Path to the file, without file-name
-      QString mRasterFileName; // file-name without path
-      QString mModifiedRasterFileName; // Georeferenced File-Name
-      QString mGcp_coverage_name_base; // Original Spelling of mGcp_coverage_name
-      QString mError;
-      bool mSqlDump;
-      bool mDatabaseDump;
-      QString mParseString;
-      QMap<int, QString> gcp_coverages;
-      void *spatialite_cache;
-      sqlite3* db_handle;
-      QString mUsed_database_filename;
-      int mUsed_database_filename_count;
-    };
-    /**
-     * Creates a Spatialite-Database storing the Gcp-Points
-     *  A 'gcp_convert' TABLE can also be created to use the Spatialite GCP_Transform/Compute logic
-     * \note the Spatialite running must be compiled with './configure --enable-gcp=yes'
-     *  QGIS can be compiled without this setting since only SQL-Queries are being used
-     *  The Tables will only be created/updated after checking that 'SELECT HasGCP()' returns true
-     * <a href="https://www.gaia-gis.it/fossil/libspatialite/wiki?name=Ground+Control+Points </a>
-     * \note only when 'gcp_enable' is true, will the POINT be used
-     *  Based on the value of id_order, only those points will be used
-     * @see getGcpConvert
-     * @param s_coverage_name name of map to use
-     * @return true if database exists
-     */
-    static bool createGcpDb(GcpDbData* parms_GcpDbData);
-    static bool updateGcpDb( GcpDbData* parms_GcpDbData );
-    /**
-     * Stores the Thin Plate Spline/Polynomial Coefficients of the Gcp-Points
-     *  using Spatialite GCP_Transform/Compute
-     * \note the Spatialite running must be compiled with './configure --enable-gcp=yes'
-     *  QGIS can be compiled without this setting since only SQL-Queries are being used
-     *  The Tables will only be created/updated after checking that 'SELECT HasGCP()' returns true
-     * <a href="https://www.gaia-gis.it/fossil/libspatialite/wiki?name=Ground+Control+Points </a>
-     * \note only when 'gcp_enable' is true, will the POINT be used
-     *  Based on the value of id_order, only those points will be used
-     * @see getGcpConvert
-     * @param s_coverage_name name of map to use
-     * @return true if database exists
-     */
-    static bool updateGcpCompute( GcpDbData* parms_GcpDbData );
-    /**
-     * Convert Pixel/Map value to Map/Pixel value
-     *  using Spatialite GCP_Transform/Compute
-     * \note the Spatialite running must be compiled with './configure --enable-gcp=yes'
-     *  QGIS can be compiled without this setting since only SQL-Queries are being used
-     *  The SQL-Queries will only be called after checking that 'SELECT HasGCP()' returns true
-     * <a href="https://www.gaia-gis.it/fossil/libspatialite/wiki?name=Ground+Control+Points </a>
-     * \note only PolynomialOrder1, PolynomialOrder2, PolynomialOrder3 and ThinPlateSpline aresupported
-     * @see getGcpTransformParam
-     * @see updateGcpCompute
-     * @param s_coverage_name name of map to search for
-     * @param input_point point to convert [not used when id_gcp > 0]
-     * @param b_toPixel true=convert Map-Point to Pixel Point ; false: Convert Pixel-Point to Map-Point
-     * @param i_order 0-3 [ThinPlateSpline, PolynomialOrder1, PolynomialOrder2, PolynomialOrder3]
-     * @param b_reCompute re-calculate value by reading al enable points, othewise read stored values in gcp_convert.
-     * @param id_gcp read value from specfic gcp point [input_point will be ignored]
-     * @return QgsPoint of result (0,0 when invalid)
-     */
-    static QgsPoint getGcpConvert( GcpDbData* parms_GcpDbData );
-    /**
-     * Creates a Spatialite-Database storing the Gcp-Mater-Points
-     *  A 'gcp_master' TABLE will be created based on the current srid being used
-     *  - this will only contain Map-Points
-     * \note a list of known position can be stored in the database
-     *  - goal is to make it possible to import these known points into the 'gcp_points' TABLE
-     *  When using the Spatialite GCP_Transform/Compute logic is being used
-     *  - the Map-Points can be converted to Pixel-Points
-     * @param parms_GcpDbData  with full path the the file to be created and srid to use
-     * @return true if database exists
-     */
-    static bool createGcpMasterDb(GcpDbData* parms_GcpDbData);
-  private:
-    static QStringList createGcpSqlPointsCommands(GcpDbData* parms_GcpDbData, QStringList sa_tables);
-    static QStringList createGcpSqlCoveragesCommands(GcpDbData* parms_GcpDbData, QStringList sa_tables);
-    static int spatialiteInitEx(GcpDbData* parms_GcpDbData, QString s_database_filename);
-    static bool spatialiteShutdown(GcpDbData* parms_GcpDbData);
 };
 
 class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBase
@@ -249,7 +74,15 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
   private slots:
     // file
     void reset();
-    void openRaster();
+    /**
+     * Reacts to mActionOpenRaster
+     *  - portion of former 'openRaster'
+     *  - reads settings for last raster Directory and file filter
+     *  - calls QFileDialog::getOpenFileName
+     *  -> calls 'openRaster' with QFileInfo raster_file
+     * @see openRaster
+     */
+    void openRasterDialog();
     void doGeoreference();
     void generateGDALScript();
     bool getTransformSettings();
@@ -296,7 +129,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
      * - which will also save any new position that were not commited after 'geometryChanged_gcp'
      * @see getGcpConvert
      * @see jumpToGcpConvert
-     * @param fis (a minus number when inserting to the database, a positive number when adding to a layer)
+     * @param fid (a minus number when inserting to the database, a positive number when adding to a layer)
      */
     void featureAdded_gcp( QgsFeatureId fid );
     /**
@@ -305,10 +138,30 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
      *  -- any activity should then only be done once
      * \note all 'fid' < 0 will be ignored
      *  - the changed position in NOT saved to the database
-     * @param fis (a minus number when inserting to the database, a positive number when adding to a layer)
+     * @param fid (a minus number when inserting to the database, a positive number when adding to a layer)
      * @param changed_geometry the changed geometry value must be updated in the gcp-list
      */
     void geometryChanged_gcp( QgsFeatureId fid, QgsGeometry& changed_geometry );
+    /**
+     * Reacts to a Spatialite-Database storing a cutline [cutline_points, linestrings, polygons and mecator_polygons]
+     *  - save edit after each change
+     *  -- so that the geometries can bee seen in the Canvos while moving around
+     * \note some default values will be stored
+     *  - id_gcp_coverage of the active coverage in georeferencer
+     *  - belongs_to_01 the name of the active coverage in georeferencer
+     *  - belongs_to_02 the raster_name of the active coverage in georeferencer
+     * @param fid (a minus number when inserting to the database, a positive number when adding to a layer)
+     */
+    void featureAdded_cutline( QgsFeatureId fid );
+    /**
+     * Reacts to a Spatialite-Database storing a cutline [cutline_points, linestrings, polygons and mecator_polygons]
+     *  - save edit after each change
+     *  -- so that the geometries can bee seen in the Canvos while moving around
+     * @param fis (a minus number when inserting to the database, a positive number when adding to a layer)
+     * @param changed_geometry the changed geometry value must be updated in the gcp-list
+     */
+    void geometryChanged_cutline( QgsFeatureId fid, QgsGeometry& changed_geometry );
+
 
     void loadGCPsDialog();
     void saveGCPsDialog();
@@ -317,9 +170,37 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     void showRasterPropertiesDialog();
     void showGeorefConfigDialog();
 
-    // GCPDatabase
+    // GcpDatabase
     void setLegacyMode();
-    void readGCBDb();
+    void setPointsPolygon();
+    void listGcpCoverages();
+      // Load selected coverage, when not alread loaded
+    /**
+     * Result of QgsGcpCoveragesDialog
+     *  - selection of Gcp-Coverage
+     *  -> calls 'openRaster' with QFileInfo raster_file
+     * @see openRaster
+     * @param id_selected_coverage id of coverage from GcpDb
+     */
+    void loadGcpCoverage(int id_selected_coverage);
+    /**
+     * Reaction to result of 'loadGcpCoverage' or 'openRasterdialog'
+     *  - major portion of former 'openRaster' (without OpenFile-Dialog)
+     *  - save GCP when needed
+     *  - calls QgsRasterLayer::isValidRasterFileName
+     *  - stores in Settings: raster_file path and used filter
+     *  - sets GeorefTransform settings
+     *  - clears GCP when needed
+     *  - remove old Layer when needed
+     *  - prepairs auxiliary file names (.point etc)
+     *  - calls addRaster
+     *  - set Canvas extents and QgsMapTool settings
+     * @see openRasterDialog
+     * @see loadGcpCoverage
+     * @see addRaster
+     */
+    void openRaster(QFileInfo raster_file);
+    void openGcpDb();
 
     // plugin info
     void contextHelp();
@@ -367,6 +248,16 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     void removeOldLayer();
 
     // Mapcanvas Plugin
+    /**
+     * Adding of selected Raster to Georeference Canvas
+     *  - creates QgsRasterLayer
+     *  -> calls 'loadGCPs' with QFileInfo raster_file
+     *  - adds created QgsRasterLayer to Canvas
+     * @see openRaster
+     * @see extentsChanged
+     * @see loadGCPs
+     * @param file name as string 
+     */
     void addRaster( const QString& file );
     void loadGTifInQgis( const QString& gtif_file );
 
@@ -375,6 +266,26 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     void writeSettings();
 
     // gcp points
+    /**
+     * Loading of Gcp-Points
+     * - clears Gcp-Points when needed
+     * - calls createGcpDb
+     * -> will return false when 'mLegacyMode == 0'
+     * @note
+     *  - LegacyMode
+     *  -> when a Gcp-Database has been read (createGcpDb returns true)
+     *  --> Gcp-Points will read from the OGR-Datasource
+     *  -> when no Gcp-Database was found
+     *  --> Gcp-Points will read from the '.points' file
+     * - both methods will:
+     * -> add the QgsGeorefDataPoint
+     * - calls 'setGCPList' AFTER all points have been added
+     * @see openRaster
+     * @see extentsChanged
+     * @see createGcpDb
+     * @see QgsGCPListWidget::setGCPList
+     * @param file name as string 
+     */
     bool loadGCPs( /*bool verbose = true*/ );
     void saveGCPs();
     QgsGeorefPluginGui::SaveGCPs checkNeedGCPSave();
@@ -423,7 +334,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
      * @param s_ResamplingMethod: as used in project
      * @return above, otherwise 'Lanczos' for GRA_Lanczos
      */
-     QgsImageWarper::ResamplingMethod setGcpResamplingMethod( QString s_ResamplingMethod );
+    QgsImageWarper::ResamplingMethod setGcpResamplingMethod( QString s_ResamplingMethod );
     bool mSpatialite_gcp_enabled;
     bool isGcpEnabled();
     // mj10777: add gui logic for this and store in setting
@@ -435,6 +346,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     QString mGcpLabelExpression;
     int mGcp_label_type;
     int mLegacyMode;
+    int mPointsPolygon;
     double fontPointSize;
     bool exportLayerDefinition( QgsLayerTreeGroup *group_layer, QString file_path = QString::null );
     // QgsMapTool *mAddFeature;
@@ -555,6 +467,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     QgsRasterLayer *mLayer_gtif_raster;
     int mLoadGTifInQgis;
     QMap<int, QString> mGcp_coverages;
+    QMap<QString, QString> map_providertags;
 
     QgsGeorefTransform::TransformParametrisation mTransformParam;
     QgsImageWarper::ResamplingMethod mResamplingMethod;

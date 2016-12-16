@@ -29,6 +29,8 @@ SET (GEOREF_SRCS
      qgsgcplistwidget.cpp
 
      qgsrasterchangecoords.cpp
+     qgsspatialiteprovidergcputils.cpp
+     qgsgcpcoverages.cpp
 )
 
 SET (GEOREF_UIS
@@ -39,6 +41,7 @@ SET (GEOREF_UIS
      qgstransformsettingsdialogbase.ui
      ../../ui/qgsprojectionselectorbase.ui
      ../../ui/qgsrasterlayerpropertiesbase.ui
+     qgsgcpcoveragesdialogbase.ui
 )
 
 SET (GEOREF_MOC_HDRS
@@ -59,6 +62,8 @@ SET (GEOREF_MOC_HDRS
     
      qgsgcplistmodel.h
      qgsgcplistwidget.h
+     qgsspatialiteprovidergcputils.h
+     qgsgcpcoverages.h
 )
 SET (GEOREF_RCCS  georeferencer.qrc)
 
