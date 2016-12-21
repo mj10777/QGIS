@@ -18,6 +18,9 @@
 
 #include <QList>
 #include <QVector>
+#include "qgspoint.h"
+#include "qgsgeorefdatapoint.h"
+#include "qgsspatialiteprovidergcputils.h"
 
 class QgsGeorefDataPoint;
 class QgsPoint;
@@ -28,15 +31,92 @@ class QgsGCPList : public QList<QgsGeorefDataPoint *>
   public:
     QgsGCPList();
     QgsGCPList( const QgsGCPList &list );
-
-    void createGCPVectors( QVector<QgsPoint> &mapCoords, QVector<QgsPoint> &pixelCoords );
-    QgsGeorefDataPoint* getPoint( int id );
-    bool updatePoint( int id, bool b_point_map, QgsPoint update_point );
-    bool removePoint( int id );
+    /**
+     * Returns amount of Data-Point pairs that are enabled
+     * @return amount of Data-Point pairs that are enabled
+     */
     int size() const;
+    /**
+     * Returns total count of Data-Point pairs (enabled and disabled)
+     * @return count of Data-Point pairs  (enabled and disabled)
+     */
     int sizeAll() const;
 
     QgsGCPList &operator =( const QgsGCPList &list );
+   protected:
+    /**
+     * Builds List of Map/Pixel Point in List that are enabled
+     * @param mapCoords to store the Map-points
+     * @param pixelCoords to store the Pixel-points
+     * @return nullptr if the id was not found, otherwise Point of the fiven id
+     */
+    void createGCPVectors( QVector<QgsPoint> &mapCoords, QVector<QgsPoint> &pixelCoords );
+    /**
+     * Retrieve Data-Point pair in List
+     *  - added to insure that a specific Point can be retrieved
+     * @param id (either id_gcp of the database OR a count whlie loading .points file) to search for and update
+     * @return nullptr if the id was not found, otherwise Point of the fiven id
+     */
+    QgsGeorefDataPoint* getDataPoint( int id );
+    /**
+     * Add a Data-Point pair to the List
+     * @param data_point 
+     * @return truealways
+     */
+    bool addDataPoint(QgsGeorefDataPoint* data_point );
+    /**
+     * Update Point in List
+     *  - added to avoid reloading all the points again
+     * @param id (either id_gcp of the database OR a count whlie loading .points file) to search for and update
+     * @param b_point_map (either pixel.point [false] of map.point [true]) to update at give id
+     * @param update_point the point to use
+     * @return true if the id was found, otherwise false
+     */
+    bool updateDataPoint( int id, bool b_point_map, QgsPoint update_point );
+    /**
+     * Remove Point in List
+     *  - added to avoid reloading all the points again
+     * @param id (either id_gcp of the database OR a count whlie loading .points file) to search for and update
+     * @return true if the id was found, otherwise false
+     */
+    bool removeDataPoint( int id );
+    /**
+     * Informs QgsGCPList that any Updating has been done
+     *  - until next Update, Adding or Delete: isDirty() = false
+     */
+    void setClean() { mIsDirty=false; };
+    /**
+     * Informs the caller if any Update, Adding or Delete have been made since the last Update.
+     * @return true or false (value of mIsDirty)
+     */
+    bool isDirty() { return mIsDirty; }
+    /**
+     * Informs the caller if any changes have been made since the Initial loading of Point-Pairs.
+     * @return true or false (value of mHasChanged)
+     */
+    bool hasChanged() { return mHasChanged; }
+    /**
+     * Informs QgsGCPList (when true) that the Initial loading of Point-Pairs has been compleated
+     * @param true or false
+     */
+    void setChanged(bool b_changed) { mHasChanged=b_changed; };
+    /**
+     * Set mGcpDbData for Spatialite Gcp-Support
+     * @param parms_GcpDbData which contains all needed information to use Spatialite Gcp-Support
+     * @param b_clear clear the list
+     */
+    void setGcpDbData(QgsSpatiaLiteProviderGcpUtils::GcpDbData* parms_GcpDbData, bool b_clear) { mGcpDbData=parms_GcpDbData; if (b_clear) clear(); };
+    /**
+     * Return mGcpDbData for Spatialite Gcp-Support
+     * @return mGcpDbDatawhich contains all needed information to use Spatialite Gcp-Support
+     */
+    QgsSpatiaLiteProviderGcpUtils::GcpDbData* getGcpDbData() { return mGcpDbData; }
+  private:
+    bool mIsDirty;
+    bool mHasChanged;
+    bool setDirty() { mIsDirty=true; mHasChanged=true ; return mIsDirty; }
+    QgsSpatiaLiteProviderGcpUtils::GcpDbData* mGcpDbData;
+    friend class QgsGCPListModel; // in order to access createGCPVectors, getPoint, updatePoint and removePoint
 };
 
 #endif

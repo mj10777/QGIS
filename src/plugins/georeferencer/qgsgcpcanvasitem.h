@@ -24,7 +24,7 @@ class QgsGeorefDataPoint;
 class QgsGCPCanvasItem : public QgsMapCanvasItem
 {
   public:
-    QgsGCPCanvasItem( QgsMapCanvas* mapCanvas, const QgsGeorefDataPoint* dataPoint, bool isGCPSource/* = true*/ );
+    QgsGCPCanvasItem( QgsMapCanvas* mapCanvas, const QgsGeorefDataPoint* dataPoint, bool isGCPSource/* = true*/, int i_LegacyMode );
 
     //! draws point information
     void paint( QPainter* p ) override;
@@ -56,6 +56,7 @@ class QgsGCPCanvasItem : public QgsMapCanvasItem
     double residualToScreenFactor() const;
     /** Calculates pixel size for a font point size*/
     double fontSizePainterUnits( double points, const QgsRenderContext& c );
+    int mLegacyMode;
 };
 
 #endif // QGSGCPCANVASITEM_H

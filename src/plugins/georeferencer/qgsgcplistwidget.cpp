@@ -27,7 +27,6 @@
 
 QgsGCPListWidget::QgsGCPListWidget( QWidget *parent, int i_LegacyMode )
     : QTableView( parent )
-    , mGCPList( nullptr )
     , mGCPListModel( new QgsGCPListModel( this, i_LegacyMode ) )
     , mNonEditableDelegate( new QgsNonEditableDelegate( this ) )
     , mDmsAndDdDelegate( new QgsDmsAndDdDelegate( this ) )
@@ -59,6 +58,12 @@ QgsGCPListWidget::QgsGCPListWidget( QWidget *parent, int i_LegacyMode )
   setItemDelegateForColumn( 6, mNonEditableDelegate ); // dX
   setItemDelegateForColumn( 7, mNonEditableDelegate ); // dY
   setItemDelegateForColumn( 8, mNonEditableDelegate ); // residual
+  setItemDelegateForColumn( 9, mNonEditableDelegate ); // pixel distance
+  setItemDelegateForColumn( 10, mNonEditableDelegate ); // pixel azimuth
+  setItemDelegateForColumn( 11, mNonEditableDelegate ); // pixel WKT
+  setItemDelegateForColumn( 12, mNonEditableDelegate ); // map distance
+  setItemDelegateForColumn( 13, mNonEditableDelegate ); // map azimuth
+  setItemDelegateForColumn( 14, mNonEditableDelegate ); // map WKT
 
   connect( this, SIGNAL( doubleClicked( QModelIndex ) ),
            this, SLOT( itemDoubleClicked( QModelIndex ) ) );
@@ -88,8 +93,6 @@ void QgsGCPListWidget::setLegacyMode( int i_LegacyMode )
 void QgsGCPListWidget::setGCPList( QgsGCPList *theGCPList )
 {
   mGCPListModel->setGCPList( theGCPList );
-  mGCPList = theGCPList;
-
   adjustTableContent();
 }
 
@@ -101,8 +104,11 @@ void QgsGCPListWidget::setGeorefTransform( QgsGeorefTransform *theGeorefTransfor
 
 void QgsGCPListWidget::updateGCPList()
 {
-  mGCPListModel->updateModel();
-  adjustTableContent();
+  if (isDirty())
+  {
+   mGCPListModel->updateModel();
+   adjustTableContent();
+  }
 }
 
 void QgsGCPListWidget::closeEditors()
@@ -140,18 +146,18 @@ void QgsGCPListWidget::itemClicked( QModelIndex index )
   QStandardItem *item = mGCPListModel->item( index.row(), index.column() );
   if ( item->isCheckable() )
   {
-    QgsGeorefDataPoint *p = mGCPList->at( index.row() );
+    QgsGeorefDataPoint *data_point = getGCPList()->at( index.row() );
     if ( item->checkState() == Qt::Checked )
     {
-      p->setEnabled( true );
+      data_point->setEnabled( true );
     }
     else // Qt::Unchecked
     {
-      p->setEnabled( false );
+      data_point->setEnabled( false );
     }
 
     mGCPListModel->updateModel();
-    emit pointEnabled( p, index.row() );
+    emit pointEnabled( data_point, index.row() );
     adjustTableContent();
   }
 
@@ -162,12 +168,12 @@ void QgsGCPListWidget::itemClicked( QModelIndex index )
 void QgsGCPListWidget::updateItemCoords( QWidget *editor )
 {
   QLineEdit *lineEdit = qobject_cast<QLineEdit *>( editor );
-  QgsGeorefDataPoint *dataPoint = mGCPList->at( mPrevRow );
+  QgsGeorefDataPoint *data_point = getGCPList()->at( mPrevRow );
   if ( lineEdit )
   {
     double value = lineEdit->text().toDouble();
-    QgsPoint newMapCoords( dataPoint->mapCoords() );
-    QgsPoint newPixelCoords( dataPoint->pixelCoords() );
+    QgsPoint newMapCoords( data_point->mapCoords() );
+    QgsPoint newPixelCoords( data_point->pixelCoords() );
     if ( mPrevColumn == 2 ) // srcX
     {
       newPixelCoords.setX( value );
@@ -189,17 +195,17 @@ void QgsGCPListWidget::updateItemCoords( QWidget *editor )
       return;
     }
 
-    dataPoint->setPixelCoords( newPixelCoords );
-    dataPoint->setMapCoords( newMapCoords );
+    data_point->setPixelCoords( newPixelCoords );
+    data_point->setMapCoords( newMapCoords );
   }
 
-  dataPoint->updateCoords();
+  data_point->updateCoords();
   updateGCPList();
 }
 
 void QgsGCPListWidget::showContextMenu( QPoint p )
 {
-  if ( !mGCPList || 0 == mGCPList->count() )
+  if ( !getGCPList() || 0 == getGCPList()->count() )
     return;
 
   QMenu m;// = new QMenu(this);

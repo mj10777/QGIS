@@ -19,12 +19,13 @@
 #include "qgsmaprenderer.h"
 #include "qgsrasterlayer.h"
 
-QgsGCPCanvasItem::QgsGCPCanvasItem( QgsMapCanvas* mapCanvas, const QgsGeorefDataPoint* dataPoint, bool isGCPSource )
+QgsGCPCanvasItem::QgsGCPCanvasItem( QgsMapCanvas* mapCanvas, const QgsGeorefDataPoint* dataPoint, bool isGCPSource, int i_LegacyMode )
     : QgsMapCanvasItem( mapCanvas )
     , mDataPoint( dataPoint )
     , mPointBrush( Qt::red )
     , mLabelBrush( Qt::yellow )
     , mIsGCPSource( isGCPSource )
+    , mLegacyMode( i_LegacyMode )
 {
   setFlags( QGraphicsItem::ItemIsMovable );
   mResidualPen.setColor( QColor( 255, 0, 0 ) );
@@ -53,45 +54,50 @@ void QgsGCPCanvasItem::paint( QPainter* p )
     worldCoords = mDataPoint->mapCoords();
     id = mDataPoint->id();
   }
-
-  p->setOpacity( enabled ? 1.0 : 0.3 );
-
-  // draw the point
-  p->setPen( Qt::black );
-  p->setBrush( mPointBrush );
-  p->drawEllipse( -2, -2, 5, 5 );
-
-  QSettings s;
-  bool showIDs = s.value( "/Plugin-GeoReferencer/Config/ShowId" ).toBool();
-  bool showCoords = s.value( "/Plugin-GeoReferencer/Config/ShowCoords" ).toBool();
-
-  QString msg;
-  if ( showIDs && showCoords )
+  switch ( mLegacyMode )
   {
-    msg = QString( "%1\nX %2\nY %3" ).arg( QString::number( id ), QString::number( worldCoords.x(), 'f' ), QString::number( worldCoords.y(), 'f' ) );
-  }
-  else if ( showIDs )
-  {
-    msg = msg = QString::number( id );
-  }
-  else if ( showCoords )
-  {
-    msg = QString( "X %1\nY %2" ).arg( QString::number( worldCoords.x(), 'f' ), QString::number( worldCoords.y(), 'f' ) );
-  }
+    case 0:
+    {
+      p->setOpacity( enabled ? 1.0 : 0.3 );
 
-  if ( !msg.isEmpty() )
-  {
-    p->setBrush( mLabelBrush );
-    QFont textFont( "helvetica" );
-    textFont.setPixelSize( fontSizePainterUnits( 12, context ) );
-    p->setFont( textFont );
-    QRectF textBounds = p->boundingRect( 3 * context.scaleFactor(), 3 * context.scaleFactor(), 5 * context.scaleFactor(), 5 * context.scaleFactor(), Qt::AlignLeft, msg );
-    mTextBoxRect = QRectF( textBounds.x() - context.scaleFactor() * 1, textBounds.y() - context.scaleFactor() * 1,
-                           textBounds.width() + 2 * context.scaleFactor(), textBounds.height() + 2 * context.scaleFactor() );
-    p->drawRect( mTextBoxRect );
-    p->drawText( textBounds, Qt::AlignLeft, msg );
-  }
+      // draw the point
+      p->setPen( Qt::black );
+      p->setBrush( mPointBrush );
+      p->drawEllipse( -2, -2, 5, 5 );
 
+      QSettings s;
+      bool showIDs = s.value( "/Plugin-GeoReferencer/Config/ShowId" ).toBool();
+      bool showCoords = s.value( "/Plugin-GeoReferencer/Config/ShowCoords" ).toBool();
+
+      QString msg;
+      if ( showIDs && showCoords )
+      {
+        msg = QString( "%1\nX %2\nY %3" ).arg( QString::number( id ), QString::number( worldCoords.x(), 'f' ), QString::number( worldCoords.y(), 'f' ) );
+      }
+      else if ( showIDs )
+      {
+        msg = msg = QString::number( id );
+      }
+      else if ( showCoords )
+      {
+        msg = QString( "X %1\nY %2" ).arg( QString::number( worldCoords.x(), 'f' ), QString::number( worldCoords.y(), 'f' ) );
+      }
+
+      if ( !msg.isEmpty() )
+      {
+        p->setBrush( mLabelBrush );
+        QFont textFont( "helvetica" );
+        textFont.setPixelSize( fontSizePainterUnits( 12, context ) );
+        p->setFont( textFont );
+        QRectF textBounds = p->boundingRect( 3 * context.scaleFactor(), 3 * context.scaleFactor(), 5 * context.scaleFactor(), 5 * context.scaleFactor(), Qt::AlignLeft, msg );
+        mTextBoxRect = QRectF( textBounds.x() - context.scaleFactor() * 1, textBounds.y() - context.scaleFactor() * 1,
+                               textBounds.width() + 2 * context.scaleFactor(), textBounds.height() + 2 * context.scaleFactor() );
+        p->drawRect( mTextBoxRect );
+        p->drawText( textBounds, Qt::AlignLeft, msg );
+      }
+    }
+    break;
+  }
   if ( data( 1 ) != "composer" ) //draw residuals only on screen
   {
     drawResidualArrow( p, context );
@@ -189,8 +195,8 @@ double QgsGCPCanvasItem::residualToScreenFactor() const
 
   QStringList canvasLayers = mMapCanvas->mapSettings().layers();
   if ( !canvasLayers.isEmpty() )
-  {
-    QString layerId = canvasLayers.at( 0 );
+  { // Map-Layer is the last [there may be other layers such as gcp_points]
+    QString layerId = canvasLayers.at( canvasLayers.size()-1 );
     QgsMapLayer* mapLayer = QgsMapLayerRegistry::instance()->mapLayer( layerId );
     if ( mapLayer )
     {

@@ -32,6 +32,7 @@ class QString;
 class QWidget;
 class QTreeWidgetItem;
 class QgsSpatiaLiteProviderGcpUtils;
+class QgsGcpCoverages;
 
 class QgsGcpCoveragesDialog : public QMainWindow, private Ui::QgsGcpCoveragesDialogBase
 {
@@ -39,10 +40,8 @@ class QgsGcpCoveragesDialog : public QMainWindow, private Ui::QgsGcpCoveragesDia
   public:
     QgsGcpCoveragesDialog( QWidget *parent,  QgsSpatiaLiteProviderGcpUtils::GcpDbData* parms_GcpDbData );
     ~QgsGcpCoveragesDialog();
-
   signals:
     void selectedRasterCoverage( int id_selected_coverage );
-
   private slots:
     // When Coverage has been selected
     void tree_coverage_clicked( QTreeWidgetItem *item, int column );
@@ -54,11 +53,15 @@ class QgsGcpCoveragesDialog : public QMainWindow, private Ui::QgsGcpCoveragesDia
     void on_actionExpandAll_triggered( bool checked );
     // Display only Coverage Name, Title and Abstract
     void on_actionCollapseAll_triggered( bool checked );
-
+  protected:
+    // Create all Coverages
+    QTreeWidgetItem * createTreeItemCoverages(QgsSpatiaLiteProviderGcpUtils::GcpDbData* parms_GcpDbData);
   private:
     void init();
-    // Create all Coverages
-    QTreeWidgetItem * createTreeItemCoverages();
+    // Create all Gcp-Coverage [root]
+    QTreeWidgetItem * createTreeItemGcpCoverage();
+    // Formatting Tree after adding or rebuilding Coverages
+    void init_TreeWidget();
     // Fill specfic Coverage, parsing Information of column-Data
     QTreeWidgetItem * createTreeItemCoverage( int id_gcp_coverage, QStringList sa_fields );
     // Coverage-Information sent by caller
@@ -68,19 +71,16 @@ class QgsGcpCoveragesDialog : public QMainWindow, private Ui::QgsGcpCoveragesDia
     QTreeWidgetItem *item_selected_gcp_coverage;
     QString  s_selected_gcp_coverage_text;
     QString mLastDirSettingsName;
+    friend class QgsGcpCoverages; // in order to access call TreeItemCoverages
 };
 
 class QgsGcpCoverages : public QObject
 {
     Q_OBJECT
-
   public:
-
     //! Returns the instance pointer, creating the object on the first call
     static QgsGcpCoverages* instance();
-
     void openDialog( QWidget *parent,  QgsSpatiaLiteProviderGcpUtils::GcpDbData* parms_GcpDbData );
-
   public slots:
     // Load selected coverage, when not alread loaded
     void load_selected_coverage( int id_selected_coverage );
@@ -92,13 +92,9 @@ class QgsGcpCoverages : public QObject
     QgsGcpCoveragesDialog *pDialog;
     int id_gcp_coverage;
     QgsSpatiaLiteProviderGcpUtils::GcpDbData* mGcpDbData;
-    friend class QgsGcpCoveragesDialog; // in order to access mMainWindowItems
-
   private slots:
-
   private:
     static QgsGcpCoverages* pinstance;
-
 };
 #endif // QGSGCPCOVERAGES_H
 

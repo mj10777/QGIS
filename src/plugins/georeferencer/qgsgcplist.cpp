@@ -13,25 +13,28 @@
  *                                                                         *
  ***************************************************************************/
 
-#include "qgspoint.h"
-#include "qgsgeorefdatapoint.h"
-
 #include "qgsgcplist.h"
 
 QgsGCPList::QgsGCPList()
     : QList<QgsGeorefDataPoint *>()
+    , mIsDirty( true )
+    , mHasChanged( false )
+    , mGcpDbData( nullptr )
 {
 }
 
 QgsGCPList::QgsGCPList( const QgsGCPList &list )
     : QList<QgsGeorefDataPoint *>()
+    , mIsDirty( true )
+    , mHasChanged( false )
+    , mGcpDbData( nullptr )
 {
   clear();
   QgsGCPList::const_iterator it = list.constBegin();
   for ( ; it != list.constEnd(); ++it )
   {
-    QgsGeorefDataPoint *pt = new QgsGeorefDataPoint( **it );
-    append( pt );
+    QgsGeorefDataPoint *data_point = new QgsGeorefDataPoint( **it );
+    append( data_point );
   }
 }
 
@@ -41,35 +44,40 @@ void QgsGCPList::createGCPVectors( QVector<QgsPoint> &mapCoords, QVector<QgsPoin
   pixelCoords = QVector<QgsPoint>( size() );
   for ( int i = 0, j = 0; i < sizeAll(); i++ )
   {
-    QgsGeorefDataPoint *pt = at( i );
-    if ( pt->isEnabled() )
+    QgsGeorefDataPoint *data_point = at( i );
+    if ( data_point->isEnabled() )
     {
-      mapCoords[j] = pt->mapCoords();
-      pixelCoords[j] = pt->pixelCoords();
+      mapCoords[j] = data_point->mapCoords();
+      pixelCoords[j] = data_point->pixelCoords();
       j++;
     }
   }
 }
-QgsGeorefDataPoint* QgsGCPList::getPoint( int id )
+QgsGeorefDataPoint* QgsGCPList::getDataPoint( int id )
 {
   for ( int i = 0; i < sizeAll(); i++ )
   {
-    QgsGeorefDataPoint *pt = at( i );
-    if ( pt->id() == id )
+    QgsGeorefDataPoint *data_point = at( i );
+    if ( data_point->id() == id )
     {
-      return pt;
+      return data_point;
     }
   }
   return nullptr;
 }
-bool QgsGCPList::removePoint( int id )
+bool QgsGCPList::addDataPoint( QgsGeorefDataPoint* data_point )
+{
+  append(data_point);
+  return setDirty();
+}
+bool QgsGCPList::removeDataPoint( int id )
 {
   int i_position_at = -1;
   bool b_hit = false;
   for ( int i = 0; i < sizeAll(); i++ )
   {
-    QgsGeorefDataPoint *pt = at( i );
-    if ( pt->id() == id )
+    QgsGeorefDataPoint *data_point = at( i );
+    if ( data_point->id() == id )
     {
       i_position_at = i;
       break;
@@ -79,13 +87,14 @@ bool QgsGCPList::removePoint( int id )
   {
     removeAt( i_position_at );
     b_hit = true;
+    setDirty();
   }
   return b_hit;
 }
-bool QgsGCPList::updatePoint( int id, bool b_point_map, QgsPoint update_point )
+bool QgsGCPList::updateDataPoint( int id, bool b_point_map, QgsPoint update_point )
 { // i_point_type0=pixel ; 1 = map
   bool b_hit = false;
-  QgsGeorefDataPoint *update_data_point = getPoint( id );
+  QgsGeorefDataPoint *update_data_point = getDataPoint( id );
   if ( update_data_point )
   {
     if ( b_point_map )
@@ -97,6 +106,7 @@ bool QgsGCPList::updatePoint( int id, bool b_point_map, QgsPoint update_point )
       update_data_point->setPixelCoords( update_point );
     }
     b_hit = true;
+    setDirty();
   }
   return b_hit;
 }
@@ -128,8 +138,8 @@ QgsGCPList &QgsGCPList::operator =( const QgsGCPList & list )
   QgsGCPList::const_iterator it = list.constBegin();
   for ( ; it != list.constEnd(); ++it )
   {
-    QgsGeorefDataPoint *pt = new QgsGeorefDataPoint( **it );
-    append( pt );
+    QgsGeorefDataPoint *data_point = new QgsGeorefDataPoint( **it );
+    append( data_point );
   }
   return *this;
 }

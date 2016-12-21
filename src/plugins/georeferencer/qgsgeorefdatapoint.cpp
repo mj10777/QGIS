@@ -26,6 +26,8 @@ QgsGeorefDataPoint::QgsGeorefDataPoint( QgsMapCanvas* srcCanvas, QgsMapCanvas *d
     , mDstCanvas( dstCanvas )
     , mPixelCoords( pixelCoords )
     , mMapCoords( mapCoords )
+    , mPixelCoords_reverse( QgsPoint(0.0, 0.0) )
+    , mMapCoords_reverse( QgsPoint(0.0, 0.0) )
     , mId( id_gcp )
     , mEnabled( enable )
     , mLegacyMode( i_LegacyMode )
@@ -35,34 +37,40 @@ QgsGeorefDataPoint::QgsGeorefDataPoint( QgsMapCanvas* srcCanvas, QgsMapCanvas *d
   switch ( mLegacyMode )
   {
     case 0:
-    case 2:
-      mGCPSourceItem = new QgsGCPCanvasItem( srcCanvas, this, true );
-      mGCPDestinationItem = new QgsGCPCanvasItem( dstCanvas, this, false );
+      mGCPSourceItem = new QgsGCPCanvasItem( srcCanvas, this, true, mLegacyMode );
+      mGCPDestinationItem = new QgsGCPCanvasItem( dstCanvas, this, false, mLegacyMode );
       mGCPSourceItem->setEnabled( enable );
       mGCPDestinationItem->setEnabled( enable );
       mGCPSourceItem->show();
       mGCPDestinationItem->show();
       break;
+    case 1:
+      mGCPSourceItem = new QgsGCPCanvasItem( srcCanvas, this, true, mLegacyMode );
+      mGCPSourceItem->setEnabled( enable );
+      mGCPSourceItem->show();
+      break;
   }
 
 }
 
-QgsGeorefDataPoint::QgsGeorefDataPoint( const QgsGeorefDataPoint &p )
+QgsGeorefDataPoint::QgsGeorefDataPoint( const QgsGeorefDataPoint &data_point )
     : QObject()
     , mSrcCanvas( nullptr )
     , mDstCanvas( nullptr )
     , mGCPSourceItem( nullptr )
     , mGCPDestinationItem( nullptr )
 {
-  Q_UNUSED( p );
+  Q_UNUSED( data_point );
   // we share item representation on canvas between all points
 //  mGCPSourceItem = new QgsGCPCanvasItem(p.srcCanvas(), p.pixelCoords(), p.mapCoords(), p.isEnabled());
 //  mGCPDestinationItem = new QgsGCPCanvasItem(p.dstCanvas(), p.pixelCoords(), p.mapCoords(), p.isEnabled());
-  mPixelCoords = p.pixelCoords();
-  mMapCoords = p.mapCoords();
-  mEnabled = p.isEnabled();
-  mResidual = p.residual();
-  mId = p.id();
+  mPixelCoords = data_point.pixelCoords();
+  mPixelCoords_reverse = data_point.pixelCoordsReverse();
+  mMapCoords = data_point.mapCoords();
+  mMapCoords_reverse = data_point.mapCoordsReverse();
+  mEnabled = data_point.isEnabled();
+  mResidual = data_point.residual();
+  mId = data_point.id();
 }
 
 QgsGeorefDataPoint::~QgsGeorefDataPoint()
@@ -71,9 +79,9 @@ QgsGeorefDataPoint::~QgsGeorefDataPoint()
   delete mGCPDestinationItem;
 }
 
-void QgsGeorefDataPoint::setPixelCoords( const QgsPoint &p )
+void QgsGeorefDataPoint::setPixelCoords( const QgsPoint &pixel_point )
 {
-  mPixelCoords = p;
+  mPixelCoords = pixel_point;
   if ( mGCPSourceItem )
   {
     mGCPSourceItem->update();
@@ -84,9 +92,9 @@ void QgsGeorefDataPoint::setPixelCoords( const QgsPoint &p )
   }
 }
 
-void QgsGeorefDataPoint::setMapCoords( const QgsPoint &p )
+void QgsGeorefDataPoint::setMapCoords( const QgsPoint &map_point )
 {
-  mMapCoords = p;
+  mMapCoords = map_point;
   if ( mGCPSourceItem )
   {
     mGCPSourceItem->update();
@@ -142,18 +150,18 @@ void QgsGeorefDataPoint::updateCoords()
   }
 }
 
-bool QgsGeorefDataPoint::contains( QPoint p, bool isMapPlugin )
+bool QgsGeorefDataPoint::contains( QPoint search_point, bool isMapPlugin )
 {
   if ( ! mGCPSourceItem )
     return false;
   if ( isMapPlugin )
   {
-    QPointF pnt = mGCPSourceItem->mapFromScene( p );
+    QPointF pnt = mGCPSourceItem->mapFromScene( search_point );
     return mGCPSourceItem->shape().contains( pnt );
   }
   else
   {
-    QPointF pnt = mGCPDestinationItem->mapFromScene( p );
+    QPointF pnt = mGCPDestinationItem->mapFromScene( search_point );
     return mGCPDestinationItem->shape().contains( pnt );
   }
 }

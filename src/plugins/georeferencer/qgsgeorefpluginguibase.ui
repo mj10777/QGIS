@@ -91,10 +91,20 @@
      </property>
      <addaction name="mActionLegacyMode"/>
      <addaction name="separator"/>
+    <addaction name="mActionOpenGcpMaster"/>
+    </widget>
+     <widget class="QMenu" name="menuGcpMercatorPolygons">
+     <property name="title">
+      <string>Mercator Polygons</string>
+     </property>
+     <addaction name="mActionMercatorPolygonProperties"/>
+     <addaction name="mActionMercatorPolygonExtent"/>
+     <addaction name="separator"/>
      <addaction name="mActionPointsPolygon"/>
     </widget>
     <addaction name="menuGcpDatabaseSetting"/>
     <addaction name="separator"/>
+    <addaction name="menuGcpMercatorPolygons"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEdit"/>
@@ -365,6 +375,13 @@
    <property name="text">
     <string>Raster Properties...</string>
    </property>
+   <property name="statusTip">
+    <string>View Raster Properties</string>
+   </property>
+   <property name="icon">
+    <iconset resource="../../../images/images.qrc">
+     <normaloff>:/images/themes/default/mActionPropertyItem.svg</normaloff>:/images/themes/default/mActionPropertyItem.svg</iconset>
+   </property>
   </action>
   <action name="mActionMoveGCPPoint">
    <property name="text">
@@ -388,6 +405,10 @@
    <property name="text">
     <string>Switch Legacy-Mode</string>
    </property>
+   <property name="icon">
+    <iconset resource="../../../images/images.qrc">
+     <normaloff>:/images/themes/default/mActionRotatePointSymbols.svg</normaloff>:/images/themes/default/mActionRotatePointSymbols.svg</iconset>
+   </property>
   </action>
   <action name="mActionPointsPolygon">
    <property name="text">
@@ -399,13 +420,52 @@
     <string>Open Raster...</string>
    </property>
    <property name="toolTip">
-    <string>Open raster, adding to Gcp-Databasea - the Gcp-Database will be opened or created when not previously opened</string>
+    <string>Open raster, adding to Gcp-Database - the Gcp-Database will be opened or created when not previously opened</string>
    </property>
     <property name="statusTip">
      <string>Open Raster, adding to Gcp-Database</string>
     </property>
    <property name="shortcut">
     <string>Ctrl+O</string>
+   </property>
+  </action>
+  <action name="mActionMercatorPolygonProperties">
+   <property name="text">
+    <string>MercatorPolygon Properties...</string>
+   </property>
+   <property name="statusTip">
+    <string>View MercatorPolygon Properties</string>
+   </property>
+   <property name="icon">
+    <iconset resource="../../../images/images.qrc">
+     <normaloff>:/images/themes/default/mActionPropertyItem.svg</normaloff>:/images/themes/default/mActionPropertyItem.svg</iconset>
+   </property>
+  </action>
+  <action name="mActionMercatorPolygonExtent">
+   <property name="text">
+    <string>Zoom to MercatorPolygon Extent</string>
+   </property>
+   <property name="statusTip">
+    <string>Zoom to MercatorPolygon Extent</string>
+   </property>
+   <property name="icon">
+    <iconset resource="../../../images/images.qrc">
+     <normaloff>:/images/themes/default/mActionZoomToLayer.svg</normaloff>:/images/themes/default/mActionZoomToLayer.svg</iconset>
+   </property>
+  </action>
+  <action name="mActionOpenGcpMaster">
+   <property name="text">
+    <string>Open Gcp_Master Database...</string>
+   </property>
+   <property name="toolTip">
+    <string>Open Gcp_Master Database</string>
+   </property>
+    <property name="statusTip">
+     <string>Open Gcp_Master Database</string>
+    </property>
+   <property name="icon">
+    <iconset resource="../../../images/images.qrc">
+     <normaloff>:/images/themes/default/mActionAddOgrLayer.svg</normaloff>:/images/themes/default/mActionAddOgrLayer.svg</iconset>
    </property>
   </action>
   <action name="mListGcpCoverages">
@@ -422,6 +482,10 @@
     </property>
    <property name="toolTip">
     <string>Open Gcp-Database and list Gcp-Coverages\nuse 'Open Raster' to create a new Gcp-Database</string>
+   </property>
+   <property name="icon">
+    <iconset resource="../../../images/images.qrc">
+     <normaloff>:/images/themes/default/mActionAddOgrLayer.svg</normaloff>:/images/themes/default/mActionAddOgrLayer.svg</iconset>
    </property>
   </action>
   <action name="mActionLocalHistogramStretch">

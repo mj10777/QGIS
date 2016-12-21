@@ -14,6 +14,7 @@
 #define QGSSPATIALITEPROVIDERGCPUTILS_H
 
 #include <QString>
+#include <QDir>
 #include <QFileInfo>
 #include <QTextStream>
 
@@ -63,10 +64,11 @@ class QgsSpatiaLiteProviderGcpUtils
     struct GcpDbData
     {
       GcpDbData( QString s_database_filename, QString s_coverage_name="gcp_cutline", int i_srid=3068)
-          : mGCPdatabaseFileName( s_database_filename )
+          : mGcpDatabaseFileName( s_database_filename )
+          , mGcpMasterDatabaseFileName( QString::null )
           , mGcp_coverage_name( s_coverage_name )
           , mGcp_srid(  i_srid )
-          , mGcp_points_table_name( "" )
+          , mGcp_points_table_name( QString::null )
           , mLayer( nullptr )
           , mGcp_enabled( false )
           , mInputPoint( QgsPoint(0.0, 0.0) )
@@ -82,13 +84,13 @@ class QgsSpatiaLiteProviderGcpUtils
           , mRasterScale( 0 )
           , mRasterNodata( -1 )
           , mCompressionMethod( "DEFLATE" )
-          , mGCPpointsFileName( "" )
-          , mGCPbaseFileName( "" )
-          , mRasterFilePath( "" )
-          , mRasterFileName( "" )
-          , mModifiedRasterFileName( "" )
-          , mGcp_coverage_name_base( "" )
-          , mError( "" )
+          , mGcpPointsFileName( QString::null )
+          , mGcpBaseFileName( QString::null )
+          , mRasterFilePath( QString::null )
+          , mRasterFileName( QString::null )
+          , mModifiedRasterFileName( QString::null )
+          , mGcp_coverage_name_base( QString::null )
+          , mError( QString::null )
           , mSqlDump( false )
           , mDatabaseDump( false )
           , mParseString( ";#;#" )
@@ -98,7 +100,8 @@ class QgsSpatiaLiteProviderGcpUtils
           , mUsed_database_filename_count(0)
       {}
       GcpDbData( QString s_database_filename, QString s_coverage_name, int i_srid, QString s_points_table_name,  QgsRasterLayer *raster_layer, bool b_Gcp_enabled=false)
-          : mGCPdatabaseFileName( s_database_filename )
+          : mGcpDatabaseFileName( s_database_filename )
+          , mGcpMasterDatabaseFileName( QString::null )
           , mGcp_coverage_name( s_coverage_name )
           , mGcp_srid(  i_srid )
           , mGcp_points_table_name( s_points_table_name )
@@ -117,13 +120,13 @@ class QgsSpatiaLiteProviderGcpUtils
           , mRasterScale( 0 )
           , mRasterNodata( -1 )
           , mCompressionMethod( "DEFLATE" )
-          , mGCPpointsFileName( "" )
-          , mGCPbaseFileName( "" )
-          , mRasterFilePath( "" )
-          , mRasterFileName( "" )
-          , mModifiedRasterFileName( "" )
-          , mGcp_coverage_name_base( "" )
-          , mError( "" )
+          , mGcpPointsFileName( QString::null )
+          , mGcpBaseFileName( QString::null )
+          , mRasterFilePath( QString::null )
+          , mRasterFileName( QString::null )
+          , mModifiedRasterFileName( QString::null )
+          , mGcp_coverage_name_base( QString::null )
+          , mError( QString::null )
           , mSqlDump( false )
           , mDatabaseDump( false )
           , mParseString( ";#;#" )
@@ -133,7 +136,8 @@ class QgsSpatiaLiteProviderGcpUtils
           , mUsed_database_filename_count(0)
       {}
 
-      QString mGCPdatabaseFileName;
+      QString mGcpDatabaseFileName;
+      QString mGcpMasterDatabaseFileName;
       QString mGcp_coverage_name; // file without extention Lower-Case
       int mGcp_srid;
       QString mGcp_points_table_name;
@@ -152,8 +156,8 @@ class QgsSpatiaLiteProviderGcpUtils
       int mRasterScale;
       int mRasterNodata;
       QString mCompressionMethod;
-      QString mGCPpointsFileName;
-      QString mGCPbaseFileName;
+      QString mGcpPointsFileName;
+      QString mGcpBaseFileName;
       QString mRasterFilePath; // Path to the file, without file-name
       QString mRasterFileName; // file-name without path
       QString mModifiedRasterFileName; // Georeferenced File-Name

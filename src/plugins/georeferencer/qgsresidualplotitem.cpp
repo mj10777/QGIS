@@ -34,7 +34,7 @@ void QgsResidualPlotItem::paint( QPainter* painter, const QStyleOptionGraphicsIt
 {
   Q_UNUSED( itemStyle );
   Q_UNUSED( pWidget );
-  if ( mGCPList.size() < 1 || !painter )
+  if ( mGCPList->size() < 1 || !painter )
   {
     return;
   }
@@ -53,14 +53,14 @@ void QgsResidualPlotItem::paint( QPainter* painter, const QStyleOptionGraphicsIt
 
   painter->setRenderHint( QPainter::Antialiasing, true );
 
-  QgsGCPList::const_iterator gcpIt = mGCPList.constBegin();
-  for ( ; gcpIt != mGCPList.constEnd(); ++gcpIt )
+  for ( int i = 0; i < mGCPList->sizeAll(); ++i )
   {
-    QgsPoint gcpCoords = ( *gcpIt )->pixelCoords();
+    QgsGeorefDataPoint *data_point = mGCPList->at( i );
+    QgsPoint gcpCoords = data_point->pixelCoords();
     double gcpItemMMX = ( gcpCoords.x() - mExtent.xMinimum() ) / mExtent.width() * widthMM;
     double gcpItemMMY = ( 1 - ( gcpCoords.y() - mExtent.yMinimum() ) / mExtent.height() ) * heightMM;
 
-    if (( *gcpIt )->isEnabled() )
+    if (data_point->isEnabled() )
     {
       painter->setPen( enabledPen );
       painter->setBrush( enabledBrush );
@@ -71,9 +71,9 @@ void QgsResidualPlotItem::paint( QPainter* painter, const QStyleOptionGraphicsIt
       painter->setBrush( disabledBrush );
     }
     painter->drawRect( QRectF( gcpItemMMX - 0.5, gcpItemMMY - 0.5, 1, 1 ) );
-    QgsComposerUtils::drawText( painter, QPointF( gcpItemMMX + 2, gcpItemMMY + 2 ), QString::number(( *gcpIt )->id() ), QFont() );
+    QgsComposerUtils::drawText( painter, QPointF( gcpItemMMX + 2, gcpItemMMY + 2 ), QString::number(data_point->id() ), QFont() );
 
-    mmPixelRatio = maxMMToPixelRatioForGCP( *gcpIt, gcpItemMMX, gcpItemMMY );
+    mmPixelRatio = maxMMToPixelRatioForGCP( data_point, gcpItemMMX, gcpItemMMY );
     if ( mmPixelRatio < minMMPixelRatio )
     {
       minMMPixelRatio = mmPixelRatio;
@@ -81,13 +81,13 @@ void QgsResidualPlotItem::paint( QPainter* painter, const QStyleOptionGraphicsIt
   }
 
   //draw residual arrows
-  gcpIt = mGCPList.constBegin();
-  for ( ; gcpIt != mGCPList.constEnd(); ++gcpIt )
+  for ( int i = 0; i < mGCPList->sizeAll(); ++i )
   {
-    QgsPoint gcpCoords = ( *gcpIt )->pixelCoords();
+    QgsGeorefDataPoint *data_point = mGCPList->at( i );
+    QgsPoint gcpCoords = data_point->pixelCoords();
     double gcpItemMMX = ( gcpCoords.x() - mExtent.xMinimum() ) / mExtent.width() * widthMM;
     double gcpItemMMY = ( 1 - ( gcpCoords.y() - mExtent.yMinimum() ) / mExtent.height() ) * heightMM;
-    if (( *gcpIt )->isEnabled() )
+    if (data_point->isEnabled() )
     {
       painter->setPen( enabledPen );
     }
@@ -97,7 +97,7 @@ void QgsResidualPlotItem::paint( QPainter* painter, const QStyleOptionGraphicsIt
     }
 
     QPointF p1( gcpItemMMX, gcpItemMMY );
-    QPointF p2( gcpItemMMX + ( *gcpIt )->residual().x() * minMMPixelRatio, gcpItemMMY + ( *gcpIt )->residual().y() * minMMPixelRatio );
+    QPointF p2( gcpItemMMX + data_point->residual().x() * minMMPixelRatio, gcpItemMMY + data_point->residual().y() * minMMPixelRatio );
     painter->drawLine( p1, p2 );
     painter->setBrush( QBrush( painter->pen().color() ) );
     QgsComposerUtils::drawArrowHead( painter, p2.x(), p2.y(), QgsComposerUtils::angle( p1, p2 ), 1 );
@@ -149,9 +149,9 @@ void QgsResidualPlotItem::paint( QPainter* painter, const QStyleOptionGraphicsIt
   }
 }
 
-double QgsResidualPlotItem::maxMMToPixelRatioForGCP( const QgsGeorefDataPoint* p, double pixelXMM, double pixelYMM )
+double QgsResidualPlotItem::maxMMToPixelRatioForGCP( const QgsGeorefDataPoint* data_point, double pixelXMM, double pixelYMM )
 {
-  if ( !p )
+  if ( !data_point )
   {
     return 0;
   }
@@ -160,7 +160,7 @@ double QgsResidualPlotItem::maxMMToPixelRatioForGCP( const QgsGeorefDataPoint* p
   double upDownDist = DBL_MAX; //distance to frame intersection with lower or upper frame
   double leftRightDist = DBL_MAX; //distance to frame intersection with left or right frame
 
-  QPointF residual = p->residual();
+  QPointF residual = data_point->residual();
   QLineF residualLine( pixelXMM, pixelYMM, pixelXMM + residual.x(), pixelYMM + residual.y() );
   QPointF intersectionPoint;
 
