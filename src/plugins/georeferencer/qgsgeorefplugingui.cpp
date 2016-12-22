@@ -1736,6 +1736,9 @@ bool QgsGeorefPluginGui::loadGCPs( /*bool verbose*/ )
         layer_gcp_pixels->startEditing();
         // Belongs to the QgsVectorLayer
         connect( layer_gcp_pixels, SIGNAL( featureAdded( QgsFeatureId ) ), ( QgsGeorefPluginGui* )this, SLOT( featureAdded_gcp( QgsFeatureId ) ) );
+        // connect( mEditBuffer, SIGNAL( featureAdded( QgsFeatureId ) ), SLOT( onFeatureAdded( QgsFeatureId ) ) );
+        // connect( mEditBuffer, SIGNAL( featureDeleted( QgsFeatureId ) ), SLOT( onFeatureDeleted( QgsFeatureId ) ) );
+        // connect( mEditBuffer, SIGNAL( geometryChanged( QgsFeatureId, QgsGeometry & ) ), SLOT( onGeometryChanged( QgsFeatureId, QgsGeometry & ) ) );
         connect( layer_gcp_pixels, SIGNAL( geometryChanged( QgsFeatureId, QgsGeometry& ) ), this, SLOT( geometryChanged_gcp( QgsFeatureId, QgsGeometry& ) ) );
         layer_gcp_points->startEditing();
         // disconnect original event sample   disconnect( mLayer->map(), SIGNAL( dataChanged() ), this, SLOT( onDataChanged() ) );
@@ -3851,17 +3854,26 @@ bool QgsGeorefPluginGui::saveEditsGcp( QgsVectorLayer *gcp_layer, bool leaveEdit
   }
 #endif
   if (( gcp_layer ) && ( gcp_layer->isValid() && gcp_layer->isEditable() && gcp_layer->isModified() ) )
-  {
-    b_rc = gcp_layer->commitChanges();
+  { //  [When used with 'gcp_layer->commitChanges' instead of 'editBuffer()->commitChanges', caused crashes] Warning: QUndoStack::endMacro(): no matching beginMacro()
+    QStringList sa_errors;
+    b_rc = gcp_layer->editBuffer()->commitChanges(sa_errors);
     if ( b_rc )
-    { // without 'triggerRepaint' crashes occur
-      if ( leaveEditable )
+    { 
+      if ( !leaveEditable )
       {
-        gcp_layer->startEditing();
+        gcp_layer->endEditCommand();
       }
+      // without 'triggerRepaint' crashes occur
       gcp_layer->triggerRepaint();
     }
-    qDebug() << QString( "-I-> QgsGeorefPluginGui::saveEditsGcp[%3,%4]: layer_name[%1] error[%2]" ).arg( gcp_layer->name() ).arg( gcp_layer->error().message( QgsErrorMessage::Text ) ).arg( b_rc ).arg( leaveEditable );
+    else
+    {
+      for (int i=0;i<sa_errors.size();i++)
+      {
+       qDebug() << QString( "-E-> saveEditsGcp[%1] error[%2]" ).arg( gcp_layer->name() ).arg( sa_errors.at(i) );
+      }
+    }
+    // qDebug() << QString( "-I-> QgsGeorefPluginGui::saveEditsGcp[%3,%4]: layer_name[%1] error[%2]" ).arg( gcp_layer->name() ).arg( gcp_layer->error().message( QgsErrorMessage::Text ) ).arg( b_rc ).arg( leaveEditable );
   }
   return b_rc;
 }
@@ -4060,10 +4072,10 @@ void QgsGeorefPluginGui::geometryChanged_gcp( QgsFeatureId fid, QgsGeometry& cha
             }
             if ( i_updateGCPList > 0 )
             { // Common task for both update and delete
-#if 0
+#if 1
               // TODO: 20161220: still causes crashes
               if ( saveEditsGcp( layer_gcp_event, true ) )
-              { // the changed position has been saved in the database
+              { // Commited and continue editing, with triggerRepaint()
                 saveEditsGcp( layer_gcp_update, true ); // will save only isModified
               }
               else
@@ -4160,7 +4172,7 @@ void QgsGeorefPluginGui::featureAdded_cutline( QgsFeatureId fid )
     addedFeatures[fid].setAttribute( "belongs_to_01",  mGcpBaseFileName );
     addedFeatures[fid].setAttribute( "belongs_to_02", mRasterFileName );
     if ( saveEditsGcp( layer_cutline_event, true ) )
-    { // Saved and start editing again
+    { // Commited and continue editing, with triggerRepaint()
       qDebug() << QString( "QgsGeorefPluginGui::featureAdded_cutline[%1]  featureAdded[%3]" ).arg( fid ).arg( mGcpBaseFileName );
     }
   }
@@ -4187,14 +4199,15 @@ void QgsGeorefPluginGui::geometryChanged_cutline( QgsFeatureId fid, QgsGeometry&
     layer_cutline_event = layer_mercator_polygons;
   }
   if ( layer_cutline_event )
-  {
-    /*
+  { // To delete a point must be selected
     if ( saveEditsGcp( layer_cutline_event, true ) )
-    { // Saved and start editing again
-     // qDebug() << QString( "QgsGeorefPluginGui::geometryChanged_cutline[%1]  changed_geometry[%2]" ).arg( fid ).arg( changed_geometry.exportToWkt() );
+    { // Commited and continue editing, with triggerRepaint()
+      // qDebug() << QString( "QgsGeorefPluginGui::geometryChanged_cutline[%1]  changed_geometry[%2]" ).arg( fid ).arg( changed_geometry.exportToWkt() );
     }
-    */
-    layer_cutline_event->triggerRepaint();
+  }
+  else
+  {
+    qDebug() << QString( "QgsGeorefPluginGui::geometryChanged_cutline[%1]  unresolved changed_geometry[%2]" ).arg( fid ).arg( changed_geometry.exportToWkt() );
   }
 }
 //-----------------------------------------------------------

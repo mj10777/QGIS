@@ -163,6 +163,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
      * - which will also save any new position that were not commited after 'geometryChanged_gcp'
      * @see getGcpConvert
      * @see jumpToGcpConvert
+     * @see saveEditsGcp
      * @param fid (a minus number when inserting to the database, a positive number when adding to a layer)
      */
     void featureAdded_gcp( QgsFeatureId fid );
@@ -172,6 +173,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
      *  -- any activity should then only be done once
      * \note all 'fid' < 0 will be ignored
      *  - the changed position in NOT saved to the database
+     * @see saveEditsGcp
      * @param fid (a minus number when inserting to the database, a positive number when adding to a layer)
      * @param changed_geometry the changed geometry value must be updated in the gcp-list
      */
@@ -184,6 +186,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
      *  - id_gcp_coverage of the active coverage in georeferencer
      *  - belongs_to_01 the name of the active coverage in georeferencer
      *  - belongs_to_02 the raster_name of the active coverage in georeferencer
+     * @see saveEditsGcp
      * @param fid (a minus number when inserting to the database, a positive number when adding to a layer)
      */
     void featureAdded_cutline( QgsFeatureId fid );
@@ -191,6 +194,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
      * Reacts to a Spatialite-Database storing a cutline [cutline_points, linestrings, polygons and mecator_polygons]
      *  - save edit after each change
      *  -- so that the geometries can bee seen in the Canvos while moving around
+     * @see saveEditsGcp
      * @param fis (a minus number when inserting to the database, a positive number when adding to a layer)
      * @param changed_geometry the changed geometry value must be updated in the gcp-list
      */
@@ -530,7 +534,25 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     /**
      * Simplify the commit of the gcp-layers, with checking and commiting as needed
      * @note
-     * used during events and Gcp-Layer unloading in clearGCPData()
+     * For the Spatialite Gcp-Logic to work correctly
+     * - added, changed or deleted data must be saved by OGR to the Database-Source
+     * ->  since the 'GCP_Compute' reads the stored data to create the needed matrix
+     * --> uncommited data in the 'VectorLayerEditBuffer' cannot be evaluated
+     * this is the main reason for commiting the data after each change
+     * - which is contrary to the normal behavour in the QGIS-Application
+     * @note
+     * The compleate process is
+     * - After loading the Data: startEditing()
+     * -> After any Adding, Changing of Delete: editBuffer()->commitChanges
+     * --> During unloading: endEditCommand()
+     * @note
+     * - used during events and Gcp-Layer unloading in clearGCPData()
+     * -> triggerRepaint will be called after commit
+     * @note
+     * - this function cause Appllication crashes in its intiallial form
+     * ->  'gcp_layer->commitChanges' instead of 'editBuffer()->commitChanges'
+     * --> Warning: QUndoStack::endMacro(): no matching beginMacro()
+     * ---> possibly from QgsVectorLayer::endEditCommand() : undoStack()->endMacro();
      * @param gcp_layer either gcp_points or gcp_pixels
      * @param leaveEditable to call startEditing() and set set proper QgsVectorLayerEditBuffer member
      * @return true in case of success of commitChanges()
