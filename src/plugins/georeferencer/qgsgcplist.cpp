@@ -26,7 +26,7 @@ QgsGCPList::QgsGCPList()
 QgsGCPList::QgsGCPList( const QgsGCPList &list )
     : QList<QgsGeorefDataPoint *>()
     , mIsDirty( true )
-    , mHasChanged( false )
+    , mHasChanged( true )
     , mGcpDbData( nullptr )
 {
   clear();
@@ -53,12 +53,12 @@ void QgsGCPList::createGCPVectors( QVector<QgsPoint> &mapCoords, QVector<QgsPoin
     }
   }
 }
-QgsGeorefDataPoint* QgsGCPList::getDataPoint( int id )
+QgsGeorefDataPoint* QgsGCPList::getDataPoint( int id_gcp )
 {
   for ( int i = 0; i < sizeAll(); i++ )
   {
     QgsGeorefDataPoint *data_point = at( i );
-    if ( data_point->id() == id )
+    if ( data_point->id() == id_gcp )
     {
       return data_point;
     }
@@ -70,14 +70,14 @@ bool QgsGCPList::addDataPoint( QgsGeorefDataPoint* data_point )
   append(data_point);
   return setDirty();
 }
-bool QgsGCPList::removeDataPoint( int id )
+bool QgsGCPList::removeDataPoint( int id_gcp )
 {
   int i_position_at = -1;
   bool b_hit = false;
   for ( int i = 0; i < sizeAll(); i++ )
   {
     QgsGeorefDataPoint *data_point = at( i );
-    if ( data_point->id() == id )
+    if ( data_point->id() == id_gcp )
     {
       i_position_at = i;
       break;
@@ -91,10 +91,10 @@ bool QgsGCPList::removeDataPoint( int id )
   }
   return b_hit;
 }
-bool QgsGCPList::updateDataPoint( int id, bool b_point_map, QgsPoint update_point )
+bool QgsGCPList::updateDataPoint( int id_gcp, bool b_point_map, QgsPoint update_point )
 { // i_point_type0=pixel ; 1 = map
   bool b_hit = false;
-  QgsGeorefDataPoint *update_data_point = getDataPoint( id );
+  QgsGeorefDataPoint *update_data_point = getDataPoint( id_gcp );
   if ( update_data_point )
   {
     if ( b_point_map )
@@ -111,20 +111,26 @@ bool QgsGCPList::updateDataPoint( int id, bool b_point_map, QgsPoint update_poin
   return b_hit;
 }
 
-int QgsGCPList::size() const
+int QgsGCPList::size()
 {
   if ( QList<QgsGeorefDataPoint *>::isEmpty() )
-    return 0;
-
-  int s = 0;
+  {
+    i_count_enabled=0;
+    return i_count_enabled;
+  }
+  if (!mIsDirty)
+  { //  no need to be recalulated since 'mIsDirty' is not true
+    return i_count_enabled;
+  }
+  i_count_enabled=0;
   const_iterator it = begin();
   while ( it != end() )
   {
     if (( *it )->isEnabled() )
-      s++;
+      i_count_enabled++;
     ++it;
   }
-  return s;
+  return i_count_enabled;
 }
 
 int QgsGCPList::sizeAll() const
@@ -141,5 +147,6 @@ QgsGCPList &QgsGCPList::operator =( const QgsGCPList & list )
     QgsGeorefDataPoint *data_point = new QgsGeorefDataPoint( **it );
     append( data_point );
   }
+  setDirty();
   return *this;
 }

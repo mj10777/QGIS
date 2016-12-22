@@ -141,7 +141,26 @@ class QgsGCPListWidget : public QTableView
      * @return mGcpDbDatawhich contains all needed information to use Spatialite Gcp-Support
      */
     QgsSpatiaLiteProviderGcpUtils::GcpDbData* getGcpDbData() { return mGCPListModel->getGcpDbData(); }
-
+    /**
+     * Remove all Data-Points
+     *  - set to isDirty
+     */
+    void clearDataPoints() {mGCPListModel->clearDataPoints(); };
+    /**
+     * Return amount of DataPoints
+     *  - Enabled and Disabled
+     */
+    int countDataPoints() {return mGCPListModel->countDataPoints(); };
+    /**
+     * Return amount of enabled DataPoints
+     *  - Enabled only
+     */
+    int countDataPointsEnabled() {return mGCPListModel->countDataPointsEnabled(); };
+    /**
+     * Return amount of disabled DataPoints
+     *  - Disabled only
+     */
+    int countDataPointsDisabled() {return mGCPListModel->countDataPointsDisabled(); };
   public slots:
     // This slot is called by the list view if an item is double-clicked
     void itemDoubleClicked( QModelIndex index );

@@ -131,7 +131,26 @@ class QgsGCPListModel : public QStandardItemModel
      * @return mGcpDbDatawhich contains all needed information to use Spatialite Gcp-Support
      */
     QgsSpatiaLiteProviderGcpUtils::GcpDbData* getGcpDbData() { return mGCPList->getGcpDbData(); }
-
+    /**
+     * Remove all Data-Points
+     *  - set to isDirty
+     */
+    void clearDataPoints() {mGCPList->clearDataPoints(); };
+    /**
+     * Return amount of DataPoints
+     *  - Enabled and Disabled
+     */
+    int countDataPoints() {return mGCPList->countDataPoints(); };
+    /**
+     * Return amount of enabled DataPoints
+     *  - Enabled only
+     */
+    int countDataPointsEnabled() {return mGCPList->countDataPointsEnabled(); };
+    /**
+     * Return amount of disabled DataPoints
+     *  - Disabled only
+     */
+    int countDataPointsDisabled() {return mGCPList->countDataPointsDisabled(); };
   private:
     QgsGCPList         *mGCPList;
     QgsGeorefTransform *mGeorefTransform;

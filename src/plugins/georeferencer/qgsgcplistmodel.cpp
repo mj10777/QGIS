@@ -132,7 +132,7 @@ void QgsGCPListModel::updateModel()
   setHorizontalHeaderLabels( itemLabels );
   setRowCount( mGCPList->size() );
 
-  for ( int i = 0; i < mGCPList->sizeAll(); ++i )
+  for ( int i = 0; i < mGCPList->countDataPoints(); ++i )
   {
     int j = 0;
     QgsGeorefDataPoint *data_point = mGCPList->at( i );
@@ -244,16 +244,7 @@ bool QgsGCPListModel::calculateMeanError( double& error ) const
     return false;
   }
 
-  int nPointsEnabled = 0;
-  for ( int i = 0; i < mGCPList->sizeAll(); ++i )
-  {
-    QgsGeorefDataPoint *data_point = mGCPList->at( i );
-    if ( data_point->isEnabled() )
-    {
-      ++nPointsEnabled;
-    }
-  }
-
+  int nPointsEnabled = mGCPList->countDataPointsEnabled();
   if ( nPointsEnabled == mGeorefTransform->getMinimumGCPCount() )
   {
     error = 0;
@@ -267,7 +258,7 @@ bool QgsGCPListModel::calculateMeanError( double& error ) const
   double sumVxSquare = 0;
   double sumVySquare = 0;
 
-  for ( int i = 0; i < mGCPList->sizeAll(); ++i )
+  for ( int i = 0; i < mGCPList->countDataPoints(); ++i )
   {
     QgsGeorefDataPoint *data_point = mGCPList->at( i );
     if ( data_point->isEnabled() )

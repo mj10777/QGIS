@@ -62,7 +62,7 @@ class QgsGcpCoveragesDialog : public QMainWindow, private Ui::QgsGcpCoveragesDia
     QTreeWidgetItem * createTreeItemGcpCoverage();
     // Formatting Tree after adding or rebuilding Coverages
     void init_TreeWidget();
-    // Fill specfic Coverage, parsing Information of column-Data
+    // Fill specific Coverage, parsing Information of column-Data
     QTreeWidgetItem * createTreeItemCoverage( int id_gcp_coverage, QStringList sa_fields );
     // Coverage-Information sent by caller
     QgsSpatiaLiteProviderGcpUtils::GcpDbData* mGcpDbData;

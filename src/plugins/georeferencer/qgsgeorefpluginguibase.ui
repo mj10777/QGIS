@@ -83,7 +83,7 @@
    </widget>
    <widget class="QMenu" name="menuGcpDatabase">
     <property name="title">
-     <string>GCP-Database</string>
+     <string>Gcp-Database</string>
     </property>
      <widget class="QMenu" name="menuGcpDatabaseSetting">
      <property name="title">
@@ -92,6 +92,14 @@
      <addaction name="mActionLegacyMode"/>
      <addaction name="separator"/>
     <addaction name="mActionOpenGcpMaster"/>
+    </widget>
+     <widget class="QMenu" name="menuGcpDbCreate">
+     <property name="title">
+      <string>Create empty Gcp-Databases</string>
+     </property>
+     <addaction name="mActionCreateGcpDbCoverages"/>
+     <addaction name="separator"/>
+     <addaction name="mActionCreateGcpDbMaster"/>
     </widget>
      <widget class="QMenu" name="menuGcpMercatorPolygons">
      <property name="title">
@@ -451,6 +459,30 @@
    <property name="icon">
     <iconset resource="../../../images/images.qrc">
      <normaloff>:/images/themes/default/mActionZoomToLayer.svg</normaloff>:/images/themes/default/mActionZoomToLayer.svg</iconset>
+   </property>
+  </action>
+  <action name="mActionCreateGcpDbCoverages">
+   <property name="text">
+    <string>Create empty Gcp-Coverages Database</string>
+   </property>
+   <property name="statusTip">
+    <string>Create empty Gcp-Coverages Database</string>
+   </property>
+   <property name="icon">
+    <iconset resource="../../../images/images.qrc">
+     <normaloff>:/images/themes/default/mActionAddOgrLayer.svg</normaloff>:/images/themes/default/mActionAddOgrLayer.svg</iconset>
+   </property>
+  </action>
+  <action name="mActionCreateGcpDbMaster">
+   <property name="text">
+    <string>Create empty Gcp-Master Database</string>
+   </property>
+   <property name="statusTip">
+    <string>Create empty Gcp-Master Database</string>
+   </property>
+   <property name="icon">
+    <iconset resource="../../../images/images.qrc">
+     <normaloff>:/images/themes/default/mActionAddOgrLayer.svg</normaloff>:/images/themes/default/mActionAddOgrLayer.svg</iconset>
    </property>
   </action>
   <action name="mActionOpenGcpMaster">

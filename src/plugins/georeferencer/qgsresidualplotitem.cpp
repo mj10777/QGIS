@@ -34,7 +34,7 @@ void QgsResidualPlotItem::paint( QPainter* painter, const QStyleOptionGraphicsIt
 {
   Q_UNUSED( itemStyle );
   Q_UNUSED( pWidget );
-  if ( mGCPList->size() < 1 || !painter )
+  if ( mGCPList->countDataPointsEnabled() < 1 || !painter )
   {
     return;
   }
@@ -53,7 +53,7 @@ void QgsResidualPlotItem::paint( QPainter* painter, const QStyleOptionGraphicsIt
 
   painter->setRenderHint( QPainter::Antialiasing, true );
 
-  for ( int i = 0; i < mGCPList->sizeAll(); ++i )
+  for ( int i = 0; i < mGCPList->countDataPoints(); ++i )
   {
     QgsGeorefDataPoint *data_point = mGCPList->at( i );
     QgsPoint gcpCoords = data_point->pixelCoords();
@@ -81,7 +81,7 @@ void QgsResidualPlotItem::paint( QPainter* painter, const QStyleOptionGraphicsIt
   }
 
   //draw residual arrows
-  for ( int i = 0; i < mGCPList->sizeAll(); ++i )
+  for ( int i = 0; i < mGCPList->countDataPoints(); ++i )
   {
     QgsGeorefDataPoint *data_point = mGCPList->at( i );
     QgsPoint gcpCoords = data_point->pixelCoords();
@@ -124,8 +124,6 @@ void QgsResidualPlotItem::paint( QPainter* painter, const QStyleOptionGraphicsIt
     scaleBarWidthUnits *= pow( 10.0, nDecPlaces );
   }
   initialScaleBarWidth = scaleBarWidthUnits * minMMPixelRatio;
-
-
 
   painter->setPen( QColor( 0, 0, 0 ) );
   painter->drawLine( QPointF( 5, rect().height() - 5 ), QPointF( 5 + initialScaleBarWidth, rect().height() - 5 ) );

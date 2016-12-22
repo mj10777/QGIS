@@ -69,10 +69,24 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     ~QgsGeorefPluginGui();
 
   protected:
+    /**
+     * closeEvent
+     * @note QGIS 3.0
+     * Common for both  ( mLegacyMode == 0+1 )
+     *  - therefore is needed
+     *  - TODO: document
+     */
     void closeEvent( QCloseEvent * ) override;
 
   private slots:
     // file
+    /**
+     * reset
+     * @note QGIS 3.0
+     * Common for both  ( mLegacyMode == 0+1 )
+     *  - therefore is needed
+     *  - TODO: document
+     */
     void reset();
     /**
      * Reacts to mActionOpenRaster
@@ -83,24 +97,122 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
      * @see openRaster
      */
     void openRasterDialog();
+    /**
+     * doGeoreference
+     * @note QGIS 3.0
+     * Common for both  ( mLegacyMode == 0+1 )
+     *  - therefore is needed
+     *  - TODO: document
+     */
     void doGeoreference();
+    /**
+     * generateGDALScript
+     * @note QGIS 3.0
+     * Common for both  ( mLegacyMode == 0+1 )
+     *  - therefore is needed
+     *  - TODO: document
+     */
     void generateGDALScript();
+    /**
+     * getTransformSettings
+     * @note QGIS 3.0
+     * Common for both  ( mLegacyMode == 0+1 )
+     *  - therefore is needed
+     *  - TODO: document
+     */
     bool getTransformSettings();
 
     // edit
+    /**
+     * setZoomOutTool
+     * @note QGIS 3.0
+     * Common for both  ( mLegacyMode == 0+1 )
+     *  - therefore is needed
+     *  - TODO: document
+     */
     void setAddPointTool();
+    /**
+     * setZoomOutTool
+     * @note QGIS 3.0
+     * Common for both  ( mLegacyMode == 0+1 )
+     *  - therefore is needed
+     *  - TODO: document
+     */
     void setDeletePointTool();
+    /**
+     * setZoomOutTool
+     * @note QGIS 3.0
+     * Common for both  ( mLegacyMode == 0+1 )
+     *  - therefore is needed
+     *  - TODO: document
+     */
     void setMovePointTool();
 
     // view
     void setZoomInTool();
+    /**
+     * setZoomOutTool
+     * @note QGIS 3.0
+     * Common for both  ( mLegacyMode == 0+1 )
+     *  - therefore is needed
+     *  - TODO: document
+     */
     void setZoomOutTool();
+    /**
+     * zoomToLayerTool
+     * @note QGIS 3.0
+     * Common for both  ( mLegacyMode == 0+1 )
+     *  - therefore is needed
+     *  - TODO: document
+     */
     void zoomToLayerTool();
+    /**
+     * zoomToLast
+     * @note QGIS 3.0
+     * Common for both  ( mLegacyMode == 0+1 )
+     *  - therefore is needed
+     *  - TODO: document
+     */
     void zoomToLast();
+    /**
+     * zoomToNext
+     * @note QGIS 3.0
+     * Common for both  ( mLegacyMode == 0+1 )
+     *  - therefore is needed
+     *  - TODO: document
+     */
     void zoomToNext();
+    /**
+     * setPanTool
+     * @note QGIS 3.0
+     * Common for both  ( mLegacyMode == 0+1 )
+     *  - therefore is needed
+     *  - TODO: document
+     */
     void setPanTool();
+    /**
+     * linkGeorefToQGis
+     * @note QGIS 3.0
+     * Common for both  ( mLegacyMode == 0+1 )
+     *  - therefore is needed
+     *  - TODO: document
+     */
     void linkGeorefToQGis( bool link );
+    /**
+     * linkQGisToGeoref
+     * @note QGIS 3.0
+     * Common for both  ( mLegacyMode == 0+1 )
+     *  - therefore is needed
+     *  - TODO: document
+     */
     void linkQGisToGeoref( bool link );
+    /**
+     * zoomMercatorPolygonExtent
+     * @note QGIS 3.0
+     * New for ( mLegacyMode == 1 )
+     *  - therefore is needed
+     *  - TODO: document
+     */
     void zoomMercatorPolygonExtent();
     /**
      * Changes the Selection of a Layer
@@ -135,17 +247,69 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     * @see mMapCanvasLayers
      */
     void visibilityLayerTreeViewChanged( QgsLayerTreeNode* layer_treenode, Qt::CheckState check_state );
-
     // gcps
+    /**
+     * Adding a Point
+     *  - reaction to emit pointAdded
+     * @note QGIS 3.0
+     *  - the 'if (mLegacyMode == 1)' portion is needed
+     *  -> when the Spatialite-Gcp-Logic is not active
+     *  --> not enough Points or Spatialite is not compiled with Gcp-Logic
+     * @note QGIS 3.0
+     *  - the 'if (mLegacyMode == 0)' portion can be removed
+     * @see showCoordDialog
+     * @see featureAdded_gcp
+     */
     void addPoint( const QgsPoint& pixelCoords, const QgsPoint& mapCoords, int id_gcp = -1, bool b_PixelMap = true,
                    bool enable = true, bool refreshCanvas = true );
+    /**
+     * Delete Data-Point
+     * @note QGIS 3.0
+     * Only when ( mLegacyMode == 0 )
+     *  - therefore not needed if mLegacyMode is not supported
+     * @param QPoint
+     */
     void deleteDataPoint( QPoint pixelCoords );
-    void deleteDataPoint( int index );
+    /**
+     * Delete Data-Point
+     * @note QGIS 3.0
+     * Only when ( mLegacyMode == 0 )
+     *  - therefore not needed if mLegacyMode is not supported
+     * @param id_gcp
+     */
+    void deleteDataPoint( int id_gcp );
+    /**
+     * Show CoordDialog
+     * @note QGIS 3.0
+     * Only when ( mLegacyMode == 0 )
+     *  - therefore not needed if mLegacyMode is not supported
+     * @param QgsPoint
+     */
     void showCoordDialog( const QgsPoint &pixelCoords );
-
-    void selectPoint( QPoint );
-    void movePoint( QPoint );
-    void releasePoint( QPoint );
+    /**
+     * Select Data-Point
+     * @note QGIS 3.0
+     * Only when ( mLegacyMode == 0 )
+     *  - therefore not needed if mLegacyMode is not supported
+     * @param QPoint
+     */
+    void selectPoint( QPoint coords);
+    /**
+     * Move Data-Point
+     * @note QGIS 3.0
+     * Only when ( mLegacyMode == 0 )
+     *  - therefore not needed if mLegacyMode is not supported
+     * @param QPoint
+     */
+    void movePoint( QPoint coords);
+    /**
+     * Move Data-Point
+     * @note QGIS 3.0
+     * Only when ( mLegacyMode == 0 )
+     *  - therefore not needed if mLegacyMode is not supported
+     * @param QPoint
+     */
+    void releasePoint( QPoint coords);
     /**
      * Reacts to a Spatialite-Database storing the Gcp-Points [gcp_point, gcp_pixel]
      *  - the TRIGGER will create an empty POINT (0,0) if not set
@@ -199,18 +363,70 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
      * @param changed_geometry the changed geometry value must be updated in the gcp-list
      */
     void geometryChanged_cutline( QgsFeatureId fid, QgsGeometry& changed_geometry );
-
+    /**
+     * loadGCPsDialog
+     * @note QGIS 3.0
+     * Only when ( mLegacyMode == 0 )
+     *  - therefore not needed if mLegacyMode is not supported
+     */
     void loadGCPsDialog();
+    /**
+     * saveGCPsDialog(
+     * @note QGIS 3.0
+     * Only when ( mLegacyMode == 0 )
+     *  - therefore not needed if mLegacyMode is not supported
+     */
     void saveGCPsDialog();
 
     // settings
+    /**
+     * showGeorefConfigDialog
+     * @note QGIS 3.0
+     * Common for both  ( mLegacyMode == 0+1 )
+     *  - therefore is needed
+     *  - TODO: document
+     */
     void showRasterPropertiesDialog();
+    /**
+     * listGcpCoverages
+     * @note QGIS 3.0
+     * New for ( mLegacyMode == 1 )
+     *  - therefore is needed
+     *  - TODO: document
+     */
     void showMercatorPolygonPropertiesDialog();
+    /**
+     * showGeorefConfigDialog
+     * @note QGIS 3.0
+     * Common for both  ( mLegacyMode == 0+1 )
+     *  - therefore is needed
+     *  - TODO: document
+     */
     void showGeorefConfigDialog();
 
     // GcpDatabase
+    /**
+     * setLegacyMode
+     * @note QGIS 3.0
+     * Only when ( mLegacyMode == 0 )
+     *  - therefore not needed if mLegacyMode is not supported
+     */
     void setLegacyMode();
+    /**
+     * setLegacyMode
+     * @note QGIS 3.0
+     * New for ( mLegacyMode == 1 )
+     *  - therefore is needed
+     *  - TODO: document
+     */
     void setPointsPolygon();
+    /**
+     * listGcpCoverages
+     * @note QGIS 3.0
+     * New for ( mLegacyMode == 1 )
+     *  - therefore is needed
+     *  - TODO: document
+     */
     void listGcpCoverages();
     // Load selected coverage, when not alread loaded
     /**
@@ -233,35 +449,113 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
      *  - prepairs auxiliary file names (.point etc)
      *  - calls addRaster
      *  - set Canvas extents and QgsMapTool settings
+     * @note QGIS 3.0
+     *  - the 'if (mLegacyMode == 0)' portion can be removed
      * @see openRasterDialog
      * @see loadGcpCoverage
      * @see addRaster
      */
     void openRaster( QFileInfo raster_file );
+    /**
+     * openGcpDb
+     * @note QGIS 3.0
+     * New for ( mLegacyMode == 1 )
+     *  - therefore is needed
+     *  - TODO: document
+     */
     void openGcpDb();
 
     // plugin info
+    /**
+     * contextHelp
+     * @note QGIS 3.0
+     * Common for both  ( mLegacyMode == 0+1 )
+     *  - therefore is needed
+     *  - TODO: document
+     */
     void contextHelp();
 
     // comfort
+    /**
+     * jumpToGCP
+     * @note QGIS 3.0
+     * Common for both  ( mLegacyMode == 0+1 )
+     *  - therefore is needed
+     *  - TODO: document
+     */
     void jumpToGCP( uint theGCPIndex );
+    /**
+     * extentsChangedGeorefCanvas
+     * @note QGIS 3.0
+     * Common for both  ( mLegacyMode == 0+1 )
+     *  - therefore is needed
+     *  - TODO: document
+     */
     void extentsChangedGeorefCanvas();
+    /**
+     * extentsChangedQGisCanvas
+     * @note QGIS 3.0
+     * Common for both  ( mLegacyMode == 0+1 )
+     *  - therefore is needed
+     *  - TODO: document
+     */
     void extentsChangedQGisCanvas();
 
     // canvas info
+    /**
+     * showMouseCoords
+     * @note QGIS 3.0
+     * Common for both  ( mLegacyMode == 0+1 )
+     *  - therefore is needed
+     *  - TODO: document
+     */
     void showMouseCoords( const QgsPoint &pt );
+    /**
+     * updateMouseCoordinatePrecision
+     * @note QGIS 3.0
+     * Common for both  ( mLegacyMode == 0+1 )
+     *  - therefore is needed
+     *  - TODO: document
+     */
     void updateMouseCoordinatePrecision();
 
     // Histogram stretch
+    /**
+     * localHistogramStretch
+     * @note QGIS 3.0
+     * Common for both  ( mLegacyMode == 0+1 )
+     *  - therefore is needed
+     *  - TODO: document
+     */
     void localHistogramStretch();
+    /**
+     * fullHistogramStretch
+     * @note QGIS 3.0
+     * Common for both  ( mLegacyMode == 0+1 )
+     *  - therefore is needed
+     *  - TODO: document
+     */
     void fullHistogramStretch();
 
-
     // when one Layer is removed
+    /**
+     * layerWillBeRemoved
+     * @note QGIS 3.0
+     * Common for both  ( mLegacyMode == 0+1 )
+     *  - therefore is needed
+     *  - TODO: document
+     */
     void layerWillBeRemoved( const QString& theLayerId );
+    /**
+     * extentsChanged
+     * @note QGIS 3.0
+     * Common for both  ( mLegacyMode == 0+1 )
+     *  - therefore is needed
+     *  - TODO: document
+     */
     void extentsChanged(); // Use for need add again Raster (case above)
     /**
-     * Update Modual
+     * Update Modell
      *  - calls createGCPVectors to recreate List of enabled Points
      *  - rebuilds List calculating residual value
      * @note this is also done in updateModel
@@ -271,10 +565,23 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
      * @return true if the id was found, otherwise false
      */
     bool updateGeorefTransform();
-
+    /**
+     * updateIconTheme
+     * @note QGIS 3.0
+     * Common for both  ( mLegacyMode == 0+1 )
+     *  - therefore is needed
+     *  - TODO: document
+     */
     void updateIconTheme( const QString& theme );
 
   private:
+    /**
+     * SaveGCPs
+     * @note QGIS 3.0
+     * Possibly not needed for ( mLegacyMode == 1 )
+     *  - to be determined
+     *  - TODO: document
+     */
     enum SaveGCPs
     {
       GCPSAVE,
@@ -284,14 +591,77 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     };
 
     // gui
+    /**
+     * createActions
+     * @note QGIS 3.0
+     * Common for both  ( mLegacyMode == 0+1 )
+     *  - therefore is needed
+     *  - TODO: document
+     */
     void createActions();
+    /**
+     * createActionGroups
+     * @note QGIS 3.0
+     * Common for both  ( mLegacyMode == 0+1 )
+     *  - therefore is needed
+     *  - TODO: document
+     */
     void createActionGroups();
+    /**
+     * createMapCanvas
+     * @note QGIS 3.0
+     * Common for both  ( mLegacyMode == 0+1 )
+     *  - therefore is needed
+     *  - TODO: document
+     */
     void createMapCanvas();
+    /**
+     * createMenus
+     * @note QGIS 3.0
+     * Common for both  ( mLegacyMode == 0+1 )
+     *  - therefore is needed
+     *  - TODO: document
+     */
     void createMenus();
+    /**
+     * createDockWidgets
+     * @note QGIS 3.0
+     * Common for both  ( mLegacyMode == 0+1 )
+     *  - therefore is needed
+     *  - TODO: document
+     */
     void createDockWidgets();
+    /**
+     * createBaseLabelStatus
+     * @note QGIS 3.0
+     * Common for both  ( mLegacyMode == 0+1 )
+     *  - therefore is needed
+     *  - TODO: document
+     */
     QLabel* createBaseLabelStatus();
+    /**
+     * createStatusBar
+     * @note QGIS 3.0
+     * Common for both  ( mLegacyMode == 0+1 )
+     *  - therefore is needed
+     *  - TODO: document
+     */
     void createStatusBar();
+    /**
+     * setupConnections
+     * @note QGIS 3.0
+     * Common for both  ( mLegacyMode == 0+1 )
+     *  - therefore is needed
+     *  - TODO: document
+     */
     void setupConnections();
+    /**
+     * removeOldLayer
+     * @note QGIS 3.0
+     * Common for both  ( mLegacyMode == 0+1 )
+     *  - therefore is needed
+     *  - TODO: document
+     */
     void removeOldLayer();
 
     // Mapcanvas Plugin
@@ -306,10 +676,31 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
      * @param file name as string
      */
     void addRaster( const QString& file );
+    /**
+     * loadGTifInQgis
+     * @note QGIS 3.0
+     * Common for both  ( mLegacyMode == 0+1 )
+     *  - therefore is needed
+     *  - TODO: document
+     */
     void loadGTifInQgis( const QString& gtif_file );
 
     // settings
+    /**
+     * readSettings
+     * @note QGIS 3.0
+     * Common for both  ( mLegacyMode == 0+1 )
+     *  - therefore is needed
+     *  - TODO: document
+     */
     void readSettings();
+    /**
+     * writeSettings
+     * @note QGIS 3.0
+     * Common for both  ( mLegacyMode == 0+1 )
+     *  - therefore is needed
+     *  - TODO: document
+     */
     void writeSettings();
 
     // gcp points
@@ -327,18 +718,58 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
      * - both methods will:
      * -> add the QgsGeorefDataPoint
      * - calls 'setGCPList' AFTER all points have been added
+     * @note QGIS 3.0
+     *  - the 'if (mLegacyMode == 0)' portion can be removed
+     *  -> reading of the .points file
+     *  --> the Gcp-Database will still read an existing '.points' file upon creation if the gcp_points TABLE does not exist
      * @see openRaster
      * @see extentsChanged
      * @see createGcpDb
      * @see QgsGCPListWidget::setGCPList
+     * @see QgsSpatiaLiteProviderGcpUtils::createGcpDb
      * @param file name as string
      */
     bool loadGCPs( /*bool verbose = true*/ );
+    /**
+     * saveGCPs
+     * @note QGIS 3.0
+     *  - the 'if (mLegacyMode == 1)' portion is needed
+     *  -> update extent of Database
+     * @note QGIS 3.0
+     *  - the 'if (mLegacyMode == 0)' portion can be removed
+     *  -> .points file is save when needed
+     */
     void saveGCPs();
+    /**
+     * SaveGCPs and checkNeedGCPSave
+     *  ->  ?? weird construction ??
+     * @note QGIS 3.0
+     *  - for 'if (mLegacyMode == 1)' 
+     *  -> not really needed
+     * @note QGIS 3.0
+     *  - the 'if (mLegacyMode == 0)' portion can be removed
+     *  -> based on enum SaveGCPs how to save ,points file
+     * @see SaveGCPs
+     */
     QgsGeorefPluginGui::SaveGCPs checkNeedGCPSave();
 
     // mj10777
+    /**
+     * mGcp_srid
+     *  - srid of Gcp (to be stored or retrieved from Gcp-Database
+     * @note QGIS 3.0
+     * New for ( mLegacyMode == 1 )
+     *  - therefore is needed
+     */
     int mGcp_srid;
+    /**
+     * s_gcp_authid
+     *  - 
+     * @note QGIS 3.0
+     * New for ( mLegacyMode == 1 )
+     *  - therefore is needed
+     *  - TODO: document
+     */
     QString s_gcp_authid;
     QString s_gcp_description;
     QString mGcp_coverage_name;
@@ -346,7 +777,14 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     QString mGcp_points_table_name;
     int mId_gcp_coverage;
     int mId_gcp_cutline;
-
+    /**
+     * jumpToGcpConvert
+     *  - After adding a new Point to canvas_X
+     *  -> move canvas_Y to the point created by the Spatialite-Gcp-logic 
+     * @note QGIS 3.0
+     * New for ( mLegacyMode == 1 )
+     *  - therefore is needed
+     */
     void jumpToGcpConvert( QgsPoint input_point, bool b_toPixel = false );
     /**
      * Translate QgsGeorefTransform::TransformParametrisation numbering to Spatialite numbering
@@ -382,8 +820,27 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
      * @return above, otherwise 'Lanczos' for GRA_Lanczos
      */
     QgsImageWarper::ResamplingMethod setGcpResamplingMethod( QString s_ResamplingMethod );
+    /**
+     * mSpatialite_gcp_enabled
+     *  - Has the Spatialite being used been compiled withthe Gcp-Logic
+     *  -> if not the Legacy QgsMapCoordsDialog will be called
+     * @note QGIS 3.0
+     * New for ( mLegacyMode == 1 )
+     *  - therefore is needed
+     * @see SaveGCPs
+     */
     bool mSpatialite_gcp_enabled;
-    bool isGcpEnabled();
+    /**
+     * isGcpEnabled
+     *  - Has the Spatialite being used been compiled withthe Gcp-Logic
+     *  -> if not the Legacy QgsMapCoordsDialog will be called
+     * @note QGIS 3.0
+     * New for ( mLegacyMode == 1 )
+     *  - therefore is needed
+     * @see mSpatialite_gcp_enabled
+     * @return  mSpatialite_gcp_enabled
+     */
+    bool isGcpEnabled() { return mSpatialite_gcp_enabled; }
     // mj10777: add gui logic for this and store in setting
     bool b_gdalscript_or_gcp_list;
     // mj10777: add gui logic for this and store in setting
@@ -642,14 +1099,43 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
 
     QgsDockWidget* mDock;
     int messageTimeout();
+    /**
+     * Project interact with static Functions to
+     *  - create, read and administer Gcp-Coverage Tables
+     *  -> also using Spatialite Gcp-Logic
+     * @note QGIS 3.0
+     * New for ( mLegacyMode == 1 )
+     *  - therefore is needed
+     * @see QgsSpatiaLiteProviderGcpUtils::GcpDbData
+     */
     QgsSpatiaLiteProviderGcpUtils::GcpDbData* mGcpDbData;
-    bool isGcpDb();
-    bool createGcpDb( bool b_DatabaseDump = false );
+    /**
+     * isGcpDb
+     *  - Has the Spatialite been made and is usable
+     *  -> true Gcp-Points have been read
+     * @note QGIS 3.0
+     * New for ( mLegacyMode == 1 )
+     *  - therefore is needed
+     * @see layer_gcp_pixels
+     * @return  true uíf usable result have been made
+     */
+    bool isGcpDb() {if ( layer_gcp_pixels != nullptr ) return true; else return false;};
+    /**
+     * ProjectFunctions to interact with
+     *  - create, read and administer Gcp-Coverage Tables
+     *  -> also using Spatialite Gcp-Logic
+     * @note QGIS 3.0
+     * New for ( mLegacyMode == 1 )
+     *  - therefore is needed
+     * @see QgsSpatiaLiteProviderGcpUtils::GcpDbData
+     */
     bool readGcpDb( QString  s_database_filename, bool b_DatabaseDump = false );
+    bool createGcpDb( bool b_DatabaseDump = false );
     bool updateGcpDb( QString s_coverage_name );
     bool updateGcpCompute( QString s_coverage_name );
     QgsPoint getGcpConvert( QString s_coverage_name, QgsPoint input_point, bool b_toPixel = false, int i_order = 0, bool b_reCompute = true, int id_gcp = -1 );
-    bool createGcpMasterDb( QString  s_database_filename, QString  s_gcp_master_tablename = "gcp_master", int i_srid = 3068 );
+    bool createGcpMasterDb( QString  s_database_filename,  int i_srid = 3068, bool b_dump=false );
+    bool createGcpCoverageDb( QString  s_database_filename, int i_srid = 3068, bool b_dump=false );
     // docks ------------------------------------------
     QgsLayerTreeGroup* mRootLayerTreeGroup;
     // QgsLayerTreeRegistryBridge* mLayerTreeRegistryBridge;

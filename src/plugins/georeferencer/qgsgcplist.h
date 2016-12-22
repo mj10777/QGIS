@@ -22,6 +22,7 @@
 #include "qgsgeorefdatapoint.h"
 #include "qgsspatialiteprovidergcputils.h"
 
+class QgsSpatiaLiteProviderGcpUtils;
 class QgsGeorefDataPoint;
 class QgsPoint;
 
@@ -31,19 +32,40 @@ class QgsGCPList : public QList<QgsGeorefDataPoint *>
   public:
     QgsGCPList();
     QgsGCPList( const QgsGCPList &list );
-    /**
-     * Returns amount of Data-Point pairs that are enabled
-     * @return amount of Data-Point pairs that are enabled
-     */
-    int size() const;
-    /**
-     * Returns total count of Data-Point pairs (enabled and disabled)
-     * @return count of Data-Point pairs  (enabled and disabled)
-     */
-    int sizeAll() const;
 
     QgsGCPList &operator =( const QgsGCPList &list );
+    /**
+     * Remove all Data-Points
+     *  - set to isDirty
+     */
+    void clearDataPoints() {clear(); setDirty();  };
+    /**
+     * Return amount of DataPoints
+     *  - Enabled and Disabled
+     */
+    int countDataPoints() {return sizeAll(); };
+    /**
+     * Return amount of enabled DataPoints
+     *  - Enabled only
+     */
+    int countDataPointsEnabled() {return size(); };
+    /**
+     * Return amount of disabled DataPoints
+     *  - Disabled only
+     */
+    int countDataPointsDisabled() {return (sizeAll()-size()); };
+    /**
+     * Return mGcpDbData for Spatialite Gcp-Support
+     * @return mGcpDbDatawhich contains all needed information to use Spatialite Gcp-Support
+     */
+    QgsSpatiaLiteProviderGcpUtils::GcpDbData* getGcpDbData() { return mGcpDbData; }
    protected:
+    /**
+     * Set mGcpDbData for Spatialite Gcp-Support
+     * @param parms_GcpDbData which contains all needed information to use Spatialite Gcp-Support
+     * @param b_clear clear the list
+     */
+    void setGcpDbData(QgsSpatiaLiteProviderGcpUtils::GcpDbData* parms_GcpDbData, bool b_clear) { mGcpDbData=parms_GcpDbData; if (b_clear) {clearDataPoints();} };
     /**
      * Builds List of Map/Pixel Point in List that are enabled
      * @param mapCoords to store the Map-points
@@ -96,26 +118,28 @@ class QgsGCPList : public QList<QgsGeorefDataPoint *>
      */
     bool hasChanged() { return mHasChanged; }
     /**
-     * Informs QgsGCPList (when true) that the Initial loading of Point-Pairs has been compleated
+     * Informs QgsGCPList (when true) that the Initial loading of Point-Pairs is compleated
      * @param true or false
      */
     void setChanged(bool b_changed) { mHasChanged=b_changed; };
-    /**
-     * Set mGcpDbData for Spatialite Gcp-Support
-     * @param parms_GcpDbData which contains all needed information to use Spatialite Gcp-Support
-     * @param b_clear clear the list
-     */
-    void setGcpDbData(QgsSpatiaLiteProviderGcpUtils::GcpDbData* parms_GcpDbData, bool b_clear) { mGcpDbData=parms_GcpDbData; if (b_clear) clear(); };
-    /**
-     * Return mGcpDbData for Spatialite Gcp-Support
-     * @return mGcpDbDatawhich contains all needed information to use Spatialite Gcp-Support
-     */
-    QgsSpatiaLiteProviderGcpUtils::GcpDbData* getGcpDbData() { return mGcpDbData; }
   private:
+
+    int size();
+    int i_count_enabled;
+    int sizeAll() const;
     bool mIsDirty;
     bool mHasChanged;
-    bool setDirty() { mIsDirty=true; mHasChanged=true ; return mIsDirty; }
+    /**
+     * Project interact with static Functions to
+     *  - create, read and administer Gcp-Coverage Tables
+     *  -> also using Spatialite Gcp-Logic
+     * @note QGIS 3.0
+     * New for ( mLegacyMode == 1 )
+     *  - therefore is needed
+     * @see QgsSpatiaLiteProviderGcpUtils::GcpDbData
+     */
     QgsSpatiaLiteProviderGcpUtils::GcpDbData* mGcpDbData;
+    bool setDirty() { mIsDirty=true; mHasChanged=true ; return mIsDirty; }
     friend class QgsGCPListModel; // in order to access createGCPVectors, getPoint, updatePoint and removePoint
 };
 

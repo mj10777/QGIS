@@ -217,7 +217,7 @@ class QgsSpatiaLiteProviderGcpUtils
      * @param b_toPixel true=convert Map-Point to Pixel Point ; false: Convert Pixel-Point to Map-Point
      * @param i_order 0-3 [ThinPlateSpline, PolynomialOrder1, PolynomialOrder2, PolynomialOrder3]
      * @param b_reCompute re-calculate value by reading al enable points, othewise read stored values in gcp_convert.
-     * @param id_gcp read value from specfic gcp point [input_point will be ignored]
+     * @param id_gcp read value from specific gcp point [input_point will be ignored]
      * @return QgsPoint of result (0,0 when invalid)
      */
     static QgsPoint getGcpConvert( GcpDbData* parms_GcpDbData );

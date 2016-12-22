@@ -32,6 +32,12 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData* parms_GcpDbData )
   }
   QString  s_database_filename = parms_GcpDbData->mGcpDatabaseFileName;
   QString s_coverage_name = parms_GcpDbData->mGcp_coverage_name;
+  bool b_create_empty_database=false;
+  if (s_coverage_name == "gcp_coverage")
+  {
+   b_create_empty_database=true;
+   s_coverage_name == QString::null;
+  }
   int i_srid = parms_GcpDbData->mGcp_srid;
   QString s_points_table_name = parms_GcpDbData->mGcp_points_table_name;
   QString s_points_file_name = parms_GcpDbData->mGcpPointsFileName;
@@ -52,6 +58,10 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData* parms_GcpDbData )
   // qDebug() << QString( "-I-> QgsSpatiaLiteProviderGcpUtils::createGcpDb -0- GCPdatabaseFileName[%1] " ).arg( s_database_filename );
   // After being opened (with CREATE), the file will exist, so store if it exist now
   bool b_database_exists = QFile( s_database_filename ).exists();
+  if ((b_database_exists) && (b_create_empty_database))
+  {
+    return false;
+  }
   QString s_sql_newline = QString( "---------------" );
   QString s_sql_output = QString::null;
   b_gcp_enabled = false;
@@ -127,8 +137,8 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData* parms_GcpDbData )
       // return b_database_exists;
     }
   }
-  if (( !b_database_exists ) && ( parms_GcpDbData->mDatabaseDump ) )
-  { // Cannot dup a Databse that dies not exist
+  if (( !b_create_empty_database ) && ( !b_database_exists ) && ( parms_GcpDbData->mDatabaseDump ) )
+  { // Cannot dump a Databse that does not exist
     return b_database_exists;
   }
   // base on code found in 'QgsOSMDatabase::createSpatialTable'
@@ -308,7 +318,7 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData* parms_GcpDbData )
     }
   }
   if ( !s_coverage_name.isNull() )
-  { // reading a specfic gcp_points TABLE
+  { // reading a specific gcp_points TABLE
     // qDebug() << QString( "-I-> QgsSpatiaLiteProviderGcpUtils::createGcpDb -01- id_gcp_coverage[%2] b_gcp_coverage_create[%3] gcp_points_table_name[%1] " ).arg( s_points_table_name ).arg( id_gcp_coverage ).arg( b_gcp_coverage_create );
     ret = sqlite3_exec( db_handle, "BEGIN", NULL, NULL, 0 );
     Q_ASSERT( ret == SQLITE_OK );
@@ -472,6 +482,7 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData* parms_GcpDbData )
       }
     }
   }
+  if (( b_database_exists ) && ( b_gcp_coverage ) )
   { // if the database already exists, check that '"gcp_pixel' and 'gcp_point' geometries in 'gcp_points' exist and correct the statistics if needed
     // Sanity checks to insure that this is a table we can work with, otherwise return 'db' not found
     // Start TRANSACTION
@@ -639,10 +650,10 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData* parms_GcpDbData )
     }
   }
   if ( !s_coverage_name.isNull() )
-  { // reading a specfic gcp_points TABLE
+  { // reading a specific gcp_points TABLE
     // qDebug() << QString( "-I-> QgsSpatiaLiteProviderGcpUtils::createGcpDb[%1,%2,%3] s_points_file_name[%4] " ).arg( id_gcp_coverage ).arg( b_import_points ).arg( point_file.exists() ).arg( s_points_file_name );
     if ((( b_import_points ) && ( point_file.exists() ) ) && ( id_gcp_coverage >= 0 ) )
-    {
+    { // Reading of '.points' file [for QGIS 3.0: this should NOT not removed]
       // qDebug() << QString( "-I-> QgsSpatiaLiteProviderGcpUtils::createGcpDb s_points_file_name[%1] " ).arg( s_points_file_name );
       if ( point_file.open( QIODevice::ReadOnly ) )
       {

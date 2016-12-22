@@ -107,7 +107,7 @@ class QgsOgrProvider : public QgsVectorDataProvider
      * Logic changes:
      * For non-Database-drivers, such as GML,KML
      * - duplicate layer-names can exist, therefore all layers must be listed to check againt duplicate Layer-Names
-     *-- the skipping-logic, when searching for a specfic layer has been removed.
+     *-- the skipping-logic, when searching for a specific layer has been removed.
      * @see OGRGetLayerWrapper()
      * For cases where the geometry type could not be reliably determined
      * - all the features of the Layer where checked until something was found
@@ -590,7 +590,7 @@ class QgsOgrProviderUtils
      * Logic changes:
      * For non-Database-drivers, such as GML,KML
      * - duplicate layer-names can exist, therefore all layers must be listed to check againt duplicate Layer-Names
-     *-- the skipping-logic, when searching for a specfic layer has been removed.
+     *-- the skipping-logic, when searching for a specific layer has been removed.
      * The created SubLayer string now has 5 fields (ogr_get_type was added)
      * - layer_id:layer_name:feature_count:geometry_type:ogr_get_type
      * -- ogr_get_type=0: OGRGetLayerNameWrapper() ; 1: OGRGetLayerIndexWrapper

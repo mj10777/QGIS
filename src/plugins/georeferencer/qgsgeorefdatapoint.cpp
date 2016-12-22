@@ -161,6 +161,8 @@ bool QgsGeorefDataPoint::contains( QPoint search_point, bool isMapPlugin )
   }
   else
   {
+    if ( ! mGCPDestinationItem )
+      return false;
     QPointF pnt = mGCPDestinationItem->mapFromScene( search_point );
     return mGCPDestinationItem->shape().contains( pnt );
   }
@@ -177,10 +179,16 @@ void QgsGeorefDataPoint::moveTo( QPoint p, bool isMapPlugin )
   }
   else
   {
-    QgsPoint pnt = mGCPDestinationItem->toMapCoordinates( p );
-    mMapCoords = pnt;
+    if ( mGCPDestinationItem )
+    {
+      QgsPoint pnt = mGCPDestinationItem->toMapCoordinates( p );
+      mMapCoords = pnt;
+    }
   }
   mGCPSourceItem->update();
-  mGCPDestinationItem->update();
+  if ( mGCPDestinationItem )
+  {
+    mGCPDestinationItem->update();
+  }
   updateCoords();
 }
