@@ -32,26 +32,26 @@ class QgsPoint;
 /**
   * Class to to list, change and remove point read
   *  - OGR source or the original .points file
-  * \note In the older version it seemed to be that:
+  * @note In the older version it seemed to be that:
   *  - is being done to often (for some single changes called multible times)
   *  - often replcing all the point when one was changed, added or removed
-  * \note QgsGCPList [as a member of QgsGCPListModel]
+  * @note QgsGCPList [as a member of QgsGCPListModel]
   *  - will set itsself as 'isDirty' after:
   * -> Adding, Changing or Removing a Data-Point pair
   *  - mGCPListModel->updateModel
   * -> will now only be called if isDirty() returns true
   * --> avoiding re-calculations when nothing has changed
   * -> when compleated, will call setClean(); [i.e not isDirty]
-  * \note
+  * @note
   *  - setChanged(true) should be called after the Initial loading of Point-Pairs
   * -> After any further Adding, Changing or Removing a Data-Point pairs
   * -->  hasChanged() would then return true, even if isDirty() returns false
   * --->  saving to a .points file is then only needed when hasChanged() returns true
-  * \note Goal was to avoid 3 copies of the GcpPoint-Data
+  * @note Goal was to avoid 3 copies of the GcpPoint-Data
   *  - 'mPoints', 'mInitialPoints' and the version inside 'mGCPListModel'
   *  - 'QgsResidualPlotItem' will not recieve a pointer to the version inside 'mGCPListModel'
   * --> avoiding, yet again, another copy
-  * \note Precision of 10 is now used in QgsStandardItem, avoiding the use of exponential formating in
+  * @note Precision of 10 is now used in QgsStandardItem, avoiding the use of exponential formating in
   * - 'mGCPListModel->updateModel' is now done
   * --> however reverts back to 2 after changes are made 
   */

@@ -79,7 +79,9 @@
     <addaction name="separator"/>
     <addaction name="mActionOpenRaster"/>
     <addaction name="separator"/>
-    <addaction name="mOpenGcpDatabase"/>
+    <addaction name="mOpenGcpCoverages"/>
+    <addaction name="separator"/>
+    <addaction name="mActionOpenGcpMaster"/>
    </widget>
    <widget class="QMenu" name="menuGcpDatabase">
     <property name="title">
@@ -91,7 +93,6 @@
      </property>
      <addaction name="mActionLegacyMode"/>
      <addaction name="separator"/>
-    <addaction name="mActionOpenGcpMaster"/>
     </widget>
      <widget class="QMenu" name="menuGcpDbCreate">
      <property name="title">
@@ -111,6 +112,8 @@
      <addaction name="mActionPointsPolygon"/>
     </widget>
     <addaction name="menuGcpDatabaseSetting"/>
+    <addaction name="separator"/>
+    <addaction name="menuGcpDbCreate"/>
     <addaction name="separator"/>
     <addaction name="menuGcpMercatorPolygons"/>
    </widget>
@@ -505,7 +508,7 @@
     <string>List Gcp-Coverages of Gcp-Database</string>
    </property>
   </action>
-  <action name="mOpenGcpDatabase">
+  <action name="mOpenGcpCoverages">
    <property name="text">
     <string>Open Gcp-Database</string>
    </property>

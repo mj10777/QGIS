@@ -25,18 +25,23 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData* parms_GcpDbData )
 {
   if ( !parms_GcpDbData )
     return false;
-  if (( parms_GcpDbData->mGcpDatabaseFileName.isEmpty() ) && (!parms_GcpDbData->mRasterFileName.isEmpty()))
+  parms_GcpDbData->mDatabaseValid = false;
+  if (( parms_GcpDbData->mGcpDatabaseFileName.isEmpty() ) && ( !parms_GcpDbData->mRasterFileName.isEmpty() ) )
   { // if no Gcp-Database is given, use the Parent-Directory-Name of the Raster as the default name and store it in that Directory
     QFileInfo raster_file( parms_GcpDbData->mRasterFileName );
     parms_GcpDbData->mGcpDatabaseFileName = QString( "%1/%2.maps.gcp.db" ).arg( raster_file.canonicalPath() ).arg( raster_file.absoluteDir().dirName() );
   }
   QString  s_database_filename = parms_GcpDbData->mGcpDatabaseFileName;
   QString s_coverage_name = parms_GcpDbData->mGcp_coverage_name;
-  bool b_create_empty_database=false;
-  if (s_coverage_name == "gcp_coverage")
+  bool b_create_empty_database = false;
+  if ( s_coverage_name == "gcp_coverage" )
   {
-   b_create_empty_database=true;
-   s_coverage_name == QString::null;
+    b_create_empty_database = true;
+    s_coverage_name = QString::null;
+  }
+  if ( s_coverage_name.isEmpty() )
+  {
+    s_coverage_name = QString::null;
   }
   int i_srid = parms_GcpDbData->mGcp_srid;
   QString s_points_table_name = parms_GcpDbData->mGcp_points_table_name;
@@ -52,14 +57,15 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData* parms_GcpDbData )
   QString s_CompressionMethod = parms_GcpDbData->mCompressionMethod;
   int i_RasterNoData = parms_GcpDbData->mRasterNodata;
   int i_RasterScale = parms_GcpDbData->mRasterScale;
-  QFile point_file;
+  QFile points_file;
   int id_gcp_coverage = -1;
   int id_cutline = -1;
   // qDebug() << QString( "-I-> QgsSpatiaLiteProviderGcpUtils::createGcpDb -0- GCPdatabaseFileName[%1] " ).arg( s_database_filename );
   // After being opened (with CREATE), the file will exist, so store if it exist now
   bool b_database_exists = QFile( s_database_filename ).exists();
-  if ((b_database_exists) && (b_create_empty_database))
+  if (( b_database_exists ) && ( b_create_empty_database ) )
   {
+    parms_GcpDbData->mError = QString( "Failed to create database [file exists]: rc=%1 database[%2]" ).arg( 1 ).arg( s_database_filename );
     return false;
   }
   QString s_sql_newline = QString( "---------------" );
@@ -84,7 +90,7 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData* parms_GcpDbData )
   if ( !s_coverage_name.isNull() )
   { // Reading a gcp_points TABLE
     s_points_table_name = QString( "gcp_points_%1" ).arg( s_coverage_name );
-    point_file.setFileName( s_points_file_name );
+    points_file.setFileName( s_points_file_name );
     if ( raster_layer )
     {
       parms_GcpDbData->map_providertags = QgsRasterLayer::read_providertags( raster_layer, true );
@@ -113,6 +119,7 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData* parms_GcpDbData )
           QTextStream  world_file_out( &world_file );
           // A World file to emulate EPSG:3395 (WGS 84 / World Mercator) for gdal cutlines using create_mercator_polygons
           world_file_out << QString( "%1\n%2\n%2\n-%1\n%2\n%2" ).arg( "1.00000000000000" ).arg( "0.00000000000000" );
+          world_file_out.flush();
           world_file.close();
         }
       }
@@ -481,6 +488,10 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData* parms_GcpDbData )
         Q_UNUSED( ret );
       }
     }
+    if ( id_gcp_coverage > 0 )
+    { // We have found the requested Coverage, assume the Database is valid
+      parms_GcpDbData->mDatabaseValid = true;
+    }
   }
   if (( b_database_exists ) && ( b_gcp_coverage ) )
   { // if the database already exists, check that '"gcp_pixel' and 'gcp_point' geometries in 'gcp_points' exist and correct the statistics if needed
@@ -587,11 +598,15 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData* parms_GcpDbData )
           parms_GcpDbData->gcp_coverages.insert( i_id, s_value );
         }
       }
-      if (parms_GcpDbData->gcp_coverages.size() == 0)
+      if ( parms_GcpDbData->gcp_coverages.size() == 0 )
       {
         parms_GcpDbData->mError = QString( "Query of gcp_coverages returned no results:  gcp_coverages.size=%1 cause[%2] sql[%3]\n" ).arg( parms_GcpDbData->gcp_coverages.size() ).arg( "possible NULL values in ROW [correction: set to 0]" ).arg( s_sql );
       }
-     sa_sql_commands.clear();
+      else
+      {
+        parms_GcpDbData->mDatabaseValid = true;
+      }
+      sa_sql_commands.clear();
     }
     sa_tables.clear();
     // End TRANSACTION
@@ -651,21 +666,21 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData* parms_GcpDbData )
   }
   if ( !s_coverage_name.isNull() )
   { // reading a specific gcp_points TABLE
-    // qDebug() << QString( "-I-> QgsSpatiaLiteProviderGcpUtils::createGcpDb[%1,%2,%3] s_points_file_name[%4] " ).arg( id_gcp_coverage ).arg( b_import_points ).arg( point_file.exists() ).arg( s_points_file_name );
-    if ((( b_import_points ) && ( point_file.exists() ) ) && ( id_gcp_coverage >= 0 ) )
+    // qDebug() << QString( "-I-> QgsSpatiaLiteProviderGcpUtils::createGcpDb[%1,%2,%3] s_points_file_name[%4] " ).arg( id_gcp_coverage ).arg( b_import_points ).arg( points_file.exists() ).arg( s_points_file_name );
+    if ((( b_import_points ) && ( points_file.exists() ) ) && ( id_gcp_coverage >= 0 ) )
     { // Reading of '.points' file [for QGIS 3.0: this should NOT not removed]
       // qDebug() << QString( "-I-> QgsSpatiaLiteProviderGcpUtils::createGcpDb s_points_file_name[%1] " ).arg( s_points_file_name );
-      if ( point_file.open( QIODevice::ReadOnly ) )
+      if ( points_file.open( QIODevice::ReadOnly ) )
       {
         // Start TRANSACTION
         ret = sqlite3_exec( db_handle, "BEGIN", NULL, NULL, 0 );
         Q_ASSERT( ret == SQLITE_OK );
         Q_UNUSED( ret );
-        QTextStream points( &point_file );
-        QString line = points.readLine();
-        while ( !points.atEnd() )
+        QTextStream stream_points( &points_file );
+        QString line = stream_points.readLine();
+        while ( !stream_points.atEnd() )
         {
-          line = points.readLine();
+          line = stream_points.readLine();
           QStringList ls;
           if ( line.contains( QRegExp( "," ) ) ) // in previous format "\t" is delimiter of points in new - ","
           {  // points from new georeferencer
@@ -778,6 +793,7 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData* parms_GcpDbData )
         ret = sqlite3_exec( db_handle, "COMMIT", NULL, NULL, 0 );
         Q_ASSERT( ret == SQLITE_OK );
         Q_UNUSED( ret );
+        points_file.close();
       }
     }
   }
@@ -830,10 +846,10 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData* parms_GcpDbData )
       {
         for ( int i_list = 0;i_list < sa_sql_commands.size();i_list++ )
         { // We have no other fields to UPDATE, so fill with an empty string [every 2nd command has no formatting needs]
-          if (sa_sql_commands.at( i_list ).contains("%1"))
-           s_sql = QString( "%1" ).arg( QString( sa_sql_commands.at( i_list ) ).arg( "" ) );
+          if ( sa_sql_commands.at( i_list ).contains( "%1" ) )
+            s_sql = QString( "%1" ).arg( QString( sa_sql_commands.at( i_list ) ).arg( "" ) );
           else
-           s_sql = sa_sql_commands.at( i_list );
+            s_sql = sa_sql_commands.at( i_list );
           ret = sqlite3_exec( db_handle, s_sql.toUtf8().constData(), NULL, NULL, &errMsg );
           if ( ret != SQLITE_OK )
           {
@@ -1267,6 +1283,7 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData* parms_GcpDbData )
       // The command to execute the sql-script
       sql_out << QString( "%1\n-- %2\n%1\n%3\n%1\nBEGIN;\n%1\n" ).arg( s_sql_newline ).arg( s_command_text ).arg( QString( "SELECT DateTime('now'),'%1 [start]';" ).arg( s_sql_name ) );
       sql_out << s_sql_output << QString( "%1\n%2\n%3\n%2" ).arg( "COMMIT;" ).arg( s_sql_newline ).arg( QString( "SELECT DateTime('now'),'%1 [finished]';" ).arg( s_sql_name ) );
+      sql_out.flush();
       sql_file.close();
       s_sql_output = QString::null;
     }
@@ -1299,6 +1316,7 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData* parms_GcpDbData )
     // The command to execute the sql-script
     sql_out << QString( "%1\n-- %2\n%1\n%3\n%1\nBEGIN;\n%1\n" ).arg( s_sql_newline ).arg( s_command_text ).arg( QString( "SELECT DateTime('now'),'%1 [start]';" ).arg( s_sql_name ) );
     sql_out << s_sql_output << QString( "%1\n%2\n%3\n%2\n" ).arg( "COMMIT;" ).arg( s_sql_newline ).arg( QString( "SELECT DateTime('now'),'%1 [finished]';" ).arg( s_sql_name ) );
+    sql_out.flush();
     sql_file.close();
   }
   // Update extent of active raster [will resuse the connection]
@@ -1314,7 +1332,7 @@ bool QgsSpatiaLiteProviderGcpUtils::updateGcpDb( GcpDbData* parms_GcpDbData )
   QString  s_database_filename = parms_GcpDbData->mGcpDatabaseFileName;
   bool b_database_exists = QFile( s_database_filename ).exists();
   QString s_coverage_name = parms_GcpDbData->mGcp_coverage_name;
-  if ( s_coverage_name.isEmpty() )
+  if (( s_coverage_name.isEmpty() ) || ( s_coverage_name.isNull() ) )
   { // The Database is being opened to only to retrieve a list of coverages.
     return b_database_exists;
   }
@@ -1760,8 +1778,13 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpMasterDb( GcpDbData* parms_GcpDbDat
 {
   if ( !parms_GcpDbData )
     return false;
+  parms_GcpDbData->mDatabaseValid = false;
   QString  s_database_filename = parms_GcpDbData->mGcpDatabaseFileName;
   QString s_gcp_master = parms_GcpDbData->mGcp_coverage_name.toLower();
+  if (( s_gcp_master.isEmpty() ) || ( s_gcp_master.isNull() ) )
+  {
+    s_gcp_master = "gcp_master";
+  }
   int i_srid = parms_GcpDbData->mGcp_srid;
   int i_gcp_enabled = parms_GcpDbData->mGcp_enabled;
   bool b_gcp_master = false;
@@ -2221,6 +2244,8 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpMasterDb( GcpDbData* parms_GcpDbDat
     i_sql_counter++;
   }
   QgsSpatiaLiteProviderGcpUtils::spatialiteShutdown( parms_GcpDbData );
+  // If we arrive here, a gcp_master TABLE exist and the used srid is known - thus valid
+  parms_GcpDbData->mDatabaseValid = true;
   parms_GcpDbData->mGcp_srid = i_srid;
   parms_GcpDbData->mGcp_enabled = i_gcp_enabled;
   if (( parms_GcpDbData->mSqlDump ) && ( !s_sql_output.isNull() ) )
@@ -2236,6 +2261,7 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpMasterDb( GcpDbData* parms_GcpDbDat
     // The command to execute the sql-script
     sql_out << QString( "%1\n-- %2\n%1\n%3\n%1\nBEGIN;\n%1\n" ).arg( s_sql_newline ).arg( s_command_text ).arg( QString( "SELECT DateTime('now'),'%1 [start]';" ).arg( s_sql_name ) );
     sql_out << s_sql_output << QString( "%1\n%2\n%3\n%2\n" ).arg( "COMMIT;" ).arg( s_sql_newline ).arg( QString( "SELECT DateTime('now'),'%1 [finished]';" ).arg( s_sql_name ) );
+    sql_out.flush();
     sql_file.close();
   }
   return b_database_exists;
@@ -2520,28 +2546,28 @@ QStringList QgsSpatiaLiteProviderGcpUtils::createGcpSqlCoveragesCommands( GcpDbD
       // s_sql += QString( "SELECT_COVERAGES%1'||%2" ).arg( parms_GcpDbData->mParseString ).arg( "" );
       s_sql = QString( "SELECT\n id_gcp_coverage," );
       s_sql += QString( "%1" ).arg( "id_gcp_coverage" );
-      s_sql += QString( "||'%1'||%2" ).arg(parms_GcpDbData->mParseString).arg( "coverage_name" );
-      s_sql += QString( "||'%1'||%2" ).arg(parms_GcpDbData->mParseString).arg( "map_date" );
-      s_sql += QString( "||'%1'||%2" ).arg(parms_GcpDbData->mParseString).arg( "raster_file" );
-      s_sql += QString( "||'%1'||%2" ).arg(parms_GcpDbData->mParseString).arg( "raster_gtif" );
-      s_sql += QString( "||'%1'||%2" ).arg(parms_GcpDbData->mParseString).arg( "title" );
-      s_sql += QString( "||'%1'||%2" ).arg(parms_GcpDbData->mParseString).arg( "abstract" );
-      s_sql += QString( "||'%1'||%2" ).arg(parms_GcpDbData->mParseString).arg( "copyright" );
-      s_sql += QString( "||'%1'||%2" ).arg(parms_GcpDbData->mParseString).arg( "scale" );
-      s_sql += QString( "||'%1'||%2" ).arg(parms_GcpDbData->mParseString).arg( "nodata" );
-      s_sql += QString( "||'%1'||%2" ).arg(parms_GcpDbData->mParseString).arg( "srid" );
-      s_sql += QString( "||'%1'||%2" ).arg(parms_GcpDbData->mParseString).arg( "id_cutline" );
-      s_sql += QString( "||'%1'||%2" ).arg(parms_GcpDbData->mParseString).arg( "gcp_count" );
-      s_sql += QString( "||'%1'||%2" ).arg(parms_GcpDbData->mParseString).arg( "transformtype" );
-      s_sql += QString( "||'%1'||%2" ).arg(parms_GcpDbData->mParseString).arg( "resampling" );
-      s_sql += QString( "||'%1'||%2" ).arg(parms_GcpDbData->mParseString).arg( "compression" );
-      s_sql += QString( "||'%1'||%2" ).arg(parms_GcpDbData->mParseString).arg( "image_max_x" );
-      s_sql += QString( "||'%1'||%2" ).arg(parms_GcpDbData->mParseString).arg( "image_max_y" );
-      s_sql += QString( "||'%1'||%2" ).arg(parms_GcpDbData->mParseString).arg( "extent_minx" );
-      s_sql += QString( "||'%1'||%2" ).arg(parms_GcpDbData->mParseString).arg( "extent_miny" );
-      s_sql += QString( "||'%1'||%2" ).arg(parms_GcpDbData->mParseString).arg( "extent_maxx" );
-      s_sql += QString( "||'%1'||%2" ).arg(parms_GcpDbData->mParseString).arg( "extent_maxy" );
-      s_sql += QString( "||'%1'||%2" ).arg(parms_GcpDbData->mParseString).arg( "raster_path" );
+      s_sql += QString( "||'%1'||%2" ).arg( parms_GcpDbData->mParseString ).arg( "coverage_name" );
+      s_sql += QString( "||'%1'||%2" ).arg( parms_GcpDbData->mParseString ).arg( "map_date" );
+      s_sql += QString( "||'%1'||%2" ).arg( parms_GcpDbData->mParseString ).arg( "raster_file" );
+      s_sql += QString( "||'%1'||%2" ).arg( parms_GcpDbData->mParseString ).arg( "raster_gtif" );
+      s_sql += QString( "||'%1'||%2" ).arg( parms_GcpDbData->mParseString ).arg( "title" );
+      s_sql += QString( "||'%1'||%2" ).arg( parms_GcpDbData->mParseString ).arg( "abstract" );
+      s_sql += QString( "||'%1'||%2" ).arg( parms_GcpDbData->mParseString ).arg( "copyright" );
+      s_sql += QString( "||'%1'||%2" ).arg( parms_GcpDbData->mParseString ).arg( "scale" );
+      s_sql += QString( "||'%1'||%2" ).arg( parms_GcpDbData->mParseString ).arg( "nodata" );
+      s_sql += QString( "||'%1'||%2" ).arg( parms_GcpDbData->mParseString ).arg( "srid" );
+      s_sql += QString( "||'%1'||%2" ).arg( parms_GcpDbData->mParseString ).arg( "id_cutline" );
+      s_sql += QString( "||'%1'||%2" ).arg( parms_GcpDbData->mParseString ).arg( "gcp_count" );
+      s_sql += QString( "||'%1'||%2" ).arg( parms_GcpDbData->mParseString ).arg( "transformtype" );
+      s_sql += QString( "||'%1'||%2" ).arg( parms_GcpDbData->mParseString ).arg( "resampling" );
+      s_sql += QString( "||'%1'||%2" ).arg( parms_GcpDbData->mParseString ).arg( "compression" );
+      s_sql += QString( "||'%1'||%2" ).arg( parms_GcpDbData->mParseString ).arg( "image_max_x" );
+      s_sql += QString( "||'%1'||%2" ).arg( parms_GcpDbData->mParseString ).arg( "image_max_y" );
+      s_sql += QString( "||'%1'||%2" ).arg( parms_GcpDbData->mParseString ).arg( "extent_minx" );
+      s_sql += QString( "||'%1'||%2" ).arg( parms_GcpDbData->mParseString ).arg( "extent_miny" );
+      s_sql += QString( "||'%1'||%2" ).arg( parms_GcpDbData->mParseString ).arg( "extent_maxx" );
+      s_sql += QString( "||'%1'||%2" ).arg( parms_GcpDbData->mParseString ).arg( "extent_maxy" );
+      s_sql += QString( "||'%1'||%2" ).arg( parms_GcpDbData->mParseString ).arg( "raster_path" );
       s_sql += QString( "%1" ).arg( " AS coverage_value\n" );
       s_sql += QString( "FROM '%1'" ).arg( "gcp_coverages" );
       if ( !s_coverage_values.isNull() )

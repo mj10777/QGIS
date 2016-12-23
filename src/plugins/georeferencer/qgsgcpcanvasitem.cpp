@@ -196,7 +196,7 @@ double QgsGCPCanvasItem::residualToScreenFactor() const
   QStringList canvasLayers = mMapCanvas->mapSettings().layers();
   if ( !canvasLayers.isEmpty() )
   { // Map-Layer is the last [there may be other layers such as gcp_points]
-    QString layerId = canvasLayers.at( canvasLayers.size()-1 );
+    QString layerId = canvasLayers.at( canvasLayers.size() - 1 );
     QgsMapLayer* mapLayer = QgsMapLayerRegistry::instance()->mapLayer( layerId );
     if ( mapLayer )
     {

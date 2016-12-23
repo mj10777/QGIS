@@ -30,13 +30,13 @@ class QgsRasterLayer;
   * Class to CREATE and read specific Spatialite Gcp-Databases
   *  - mainly indended for use with the Georeferencer
   *  -> but designed to be used elsewere
-  * \note 'PROJECTNAME.gcp.db'
+  * @note 'PROJECTNAME.gcp.db'
   *  Will be a Database that will contain TABLEs for each raster in a directory
   *  - that is be georeferenced (Gcp)
   *  -> they will contain (for each raster)
   *  --> 'map-points' of a specific srid
   *  --> 'pixel-points' of pixel positions (srid=-1)
-  * \note 'gcp_master.db'
+  * @note 'gcp_master.db'
   *  Will be a Database that will contain a TABLE called 'gcp_master'
   *  - that will contain points of a specific srid
   *  - the TABLE will also contain metadata about each point
@@ -56,28 +56,28 @@ class QgsSpatiaLiteProviderGcpUtils
     /**
      * Structure to transfer Data between an using application and the static functions
      *  - for use the the creation and reading of Gcp-specific Databases
-     * \note a long term Database connection is NOT intended
+     * @note a long term Database connection is NOT intended
      *  When calling from an Application
      *  - the Database connection should be closed when returned to the Application
      *  -> the use of the connection is only indended for internal use
      */
     struct GcpDbData
     {
-      GcpDbData( QString s_database_filename, QString s_coverage_name="gcp_cutline", int i_srid=3068)
+      GcpDbData( QString s_database_filename, QString s_coverage_name = "gcp_cutline", int i_srid = 3068 )
           : mGcpDatabaseFileName( s_database_filename )
           , mGcpMasterDatabaseFileName( QString::null )
           , mGcp_coverage_name( s_coverage_name )
-          , mGcp_srid(  i_srid )
+          , mGcp_srid( i_srid )
           , mGcp_points_table_name( QString::null )
           , mLayer( nullptr )
           , mGcp_enabled( false )
-          , mInputPoint( QgsPoint(0.0, 0.0) )
+          , mInputPoint( QgsPoint( 0.0, 0.0 ) )
           , mToPixel( false )
           , mOrder( 0 )
           , mReCompute( true )
           , mIdGcp( -1 )
-          , mId_gcp_coverage(-1 )
-          , mId_gcp_cutline(-1 )
+          , mId_gcp_coverage( -1 )
+          , mId_gcp_cutline( -1 )
           , mTransformParam( -1 )
           , mResamplingMethod( "Lanczos" )
           , mRasterYear( 0 )
@@ -93,27 +93,28 @@ class QgsSpatiaLiteProviderGcpUtils
           , mError( QString::null )
           , mSqlDump( false )
           , mDatabaseDump( false )
+          , mDatabaseValid( false )
           , mParseString( ";#;#" )
-          , spatialite_cache(nullptr)
-          , db_handle(nullptr)
-          , mUsed_database_filename(QString::null)
-          , mUsed_database_filename_count(0)
+          , spatialite_cache( nullptr )
+          , db_handle( nullptr )
+          , mUsed_database_filename( QString::null )
+          , mUsed_database_filename_count( 0 )
       {}
-      GcpDbData( QString s_database_filename, QString s_coverage_name, int i_srid, QString s_points_table_name,  QgsRasterLayer *raster_layer, bool b_Gcp_enabled=false)
+      GcpDbData( QString s_database_filename, QString s_coverage_name, int i_srid, QString s_points_table_name,  QgsRasterLayer *raster_layer, bool b_Gcp_enabled = false )
           : mGcpDatabaseFileName( s_database_filename )
           , mGcpMasterDatabaseFileName( QString::null )
           , mGcp_coverage_name( s_coverage_name )
-          , mGcp_srid(  i_srid )
+          , mGcp_srid( i_srid )
           , mGcp_points_table_name( s_points_table_name )
           , mLayer( raster_layer )
           , mGcp_enabled( b_Gcp_enabled )
-          , mInputPoint( QgsPoint(0.0, 0.0) )
+          , mInputPoint( QgsPoint( 0.0, 0.0 ) )
           , mToPixel( false )
           , mOrder( 0 )
           , mReCompute( true )
           , mIdGcp( -1 )
-          , mId_gcp_coverage(-1 )
-          , mId_gcp_cutline(-1 )
+          , mId_gcp_coverage( -1 )
+          , mId_gcp_cutline( -1 )
           , mTransformParam( -1 )
           , mResamplingMethod( "Lanczos" )
           , mRasterYear( 0 )
@@ -129,11 +130,12 @@ class QgsSpatiaLiteProviderGcpUtils
           , mError( QString::null )
           , mSqlDump( false )
           , mDatabaseDump( false )
+          , mDatabaseValid( false )
           , mParseString( ";#;#" )
-          , spatialite_cache(nullptr)
-          , db_handle(nullptr)
-          , mUsed_database_filename(QString::null)
-          , mUsed_database_filename_count(0)
+          , spatialite_cache( nullptr )
+          , db_handle( nullptr )
+          , mUsed_database_filename( QString::null )
+          , mUsed_database_filename_count( 0 )
       {}
 
       QString mGcpDatabaseFileName;
@@ -165,6 +167,7 @@ class QgsSpatiaLiteProviderGcpUtils
       QString mError;
       bool mSqlDump;
       bool mDatabaseDump;
+      bool mDatabaseValid;
       QString mParseString;
       QMap<int, QString> gcp_coverages;
       void *spatialite_cache;
@@ -176,26 +179,27 @@ class QgsSpatiaLiteProviderGcpUtils
     /**
      * Creates a Spatialite-Database storing the Gcp-Points
      *  A 'gcp_convert' TABLE can also be created to use the Spatialite GCP_Transform/Compute logic
-     * \note the Spatialite running must be compiled with './configure --enable-gcp=yes'
+     * @note the Spatialite running must be compiled with './configure --enable-gcp=yes'
      *  QGIS can be compiled without this setting since only SQL-Queries are being used
      *  The Tables will only be created/updated after checking that 'SELECT HasGCP()' returns true
      * <a href="https://www.gaia-gis.it/fossil/libspatialite/wiki?name=Ground+Control+Points </a>
-     * \note only when 'gcp_enable' is true, will the POINT be used
+     * @note only when 'gcp_enable' is true, will the POINT be used
      *  Based on the value of id_order, only those points will be used
+     * @note
      * @see getGcpConvert
      * @param s_coverage_name name of map to use
      * @return true if database exists
      */
-    static bool createGcpDb(GcpDbData* parms_GcpDbData);
+    static bool createGcpDb( GcpDbData* parms_GcpDbData );
     static bool updateGcpDb( GcpDbData* parms_GcpDbData );
     /**
      * Stores the Thin Plate Spline/Polynomial Coefficients of the Gcp-Points
      *  using Spatialite GCP_Transform/Compute
-     * \note the Spatialite running must be compiled with './configure --enable-gcp=yes'
+     * @note the Spatialite running must be compiled with './configure --enable-gcp=yes'
      *  QGIS can be compiled without this setting since only SQL-Queries are being used
      *  The Tables will only be created/updated after checking that 'SELECT HasGCP()' returns true
      * <a href="https://www.gaia-gis.it/fossil/libspatialite/wiki?name=Ground+Control+Points </a>
-     * \note only when 'gcp_enable' is true, will the POINT be used
+     * @note only when 'gcp_enable' is true, will the POINT be used
      *  Based on the value of id_order, only those points will be used
      * @see getGcpConvert
      * @param s_coverage_name name of map to use
@@ -205,11 +209,11 @@ class QgsSpatiaLiteProviderGcpUtils
     /**
      * Convert Pixel/Map value to Map/Pixel value
      *  using Spatialite GCP_Transform/Compute
-     * \note the Spatialite running must be compiled with './configure --enable-gcp=yes'
+     * @note the Spatialite running must be compiled with './configure --enable-gcp=yes'
      *  QGIS can be compiled without this setting since only SQL-Queries are being used
      *  The SQL-Queries will only be called after checking that 'SELECT HasGCP()' returns true
      * <a href="https://www.gaia-gis.it/fossil/libspatialite/wiki?name=Ground+Control+Points </a>
-     * \note only PolynomialOrder1, PolynomialOrder2, PolynomialOrder3 and ThinPlateSpline aresupported
+     * @note only PolynomialOrder1, PolynomialOrder2, PolynomialOrder3 and ThinPlateSpline aresupported
      * @see getGcpTransformParam
      * @see updateGcpCompute
      * @param s_coverage_name name of map to search for
@@ -222,61 +226,78 @@ class QgsSpatiaLiteProviderGcpUtils
      */
     static QgsPoint getGcpConvert( GcpDbData* parms_GcpDbData );
     /**
-     * Creates a Spatialite-Database storing the Gcp-Master-Points
-     *  A 'gcp_master' TABLE will be created based on the current srid being used
-     *  - this will only contain Map-Points
-     * \note a list of known position can be stored in the database
-     *  - goal is to make it possible to import these known points into the 'gcp_points' TABLE
-     *  When using the Spatialite GCP_Transform/Compute logic is being used
-     *  - the Map-Points can be converted to Pixel-Points
+     * Create an empty Gcp-Master Database
+     *  - a Database to be used to reference POINTs to assist while Georeferencing
+     *  -> all POINTs must be of the same srid
+     *  --> that are listed in the central 'gcp_coverages' table
+     * @note TRIGGERS
+     *  - will be created to set fields with default (readable) values from the given POINT
+     *  -> map_x: result of ST_X(gcp_point)
+     *  -> map_y: result of ST_Y(gcp_point)
+     *  -> srid: result of ST_SRID(gcp_point)
+     *  -> order_selected: 0 if nothing is given [0-4]
+     *  ---> see the CREATE Statement of 'gcp_master' for the supported values
+     *  -> valid_since: '0001-01-01' if nothing is given
+     *  -> valid_until: '3000-01-01' if nothing is given
+     *  -> gcp_type: 0 if nothing is given
+     *  --> many SpatialView's are created to SELECT only specfic gcp_points based on the 'gcp_type'
+     *  ---> see the CREATE Statement of 'gcp_master' for the supported values
+     * @note
+     *  - the 'GcpDbData->mGcp_coverage_name' SHOULD remain 'QString::null' so that the default name
+     *  -> 'gcp_master' will be used
+     *  --> this application will assume that the default name is being used
+     *  --> POINTs from this 'gcp_master' Database can then be 'imported'
+     * @note
+     *  - When the Spatialite Gcp-Logic is being used and returns usefull results
+     *  -> i.e. when adding new gcp-points and the created pixel-points are very near where they are expected
      * @param parms_GcpDbData  with full path the the file to be created and srid to use
      * @return true if database exists
      */
-    static bool createGcpMasterDb(GcpDbData* parms_GcpDbData);
+    static bool createGcpMasterDb( GcpDbData* parms_GcpDbData );
   private:
     /**
      * Creates sql to CREATE a 'gcp_points_||gcp_coverage' TABLE, TRIGGERS and VIEWs for the coresponding gcp_coverage entry
      *  - goal is the maintainence of the field-name syntax is in one place
      *  -- any changes in the column-names are done here
-     * \note Format of each sa_tables entry: 'id_gcp_coverage+mParseString+srid+mParseString+coverage_name'
-     *  - this is used both for a single entry OR when 
+     * @note Format of each sa_tables entry: 'id_gcp_coverage+mParseString+srid+mParseString+coverage_name'
+     *  - this is used both for a single entry OR when
      * @param parms_GcpDbData  which will contain a spatialite connection (but otherwise not used)
      * @param sa_tables  list of formatted entries
      * @return sa_sql_commands QStringList of all sql-commands to be executed
      */
-    static QStringList createGcpSqlPointsCommands(GcpDbData* parms_GcpDbData, QStringList sa_tables);
+    static QStringList createGcpSqlPointsCommands( GcpDbData* parms_GcpDbData, QStringList sa_tables );
     /**
      * Creates sql for gcp_coverage, gcp_compute and cutline TABLEs
      *  - goal is the maintainence of the field-name syntax is in one place
      *  -- any changes in the column-names are done here
-     * \note 'CREATE_COVERAGE' 'CREATE_COVERAGES+mParseString+srid'
+     * @note 'CREATE_COVERAGE' 'CREATE_COVERAGES+mParseString+srid'
      *  - builds CREATE Statement for 'gcp_coverages' TABLE
      *  -> when Spatialite Gcp-logic is active: also CREATE Statment for 'gcp_compute' TABLE
-     * \note 'UPDATE_COVERAGE_EXTENT': 'UPDATE_COVERAGE_EXTENT+mParseString+id_gcp_coverage+mParseString+coverage_name"
+     * @note 'UPDATE_COVERAGE_EXTENT': 'UPDATE_COVERAGE_EXTENT+mParseString+id_gcp_coverage+mParseString+coverage_name"
      *  - builds UPDATE Statement for 'gcp_coverages' TABLE
      *  -> will build Sql-Subqueries to the corresponding 'gcp_points_' TABLE returning extent min/max  x+y values
      *  -> will build Sql-Subquery to the corresponding 'create_cutline_polygons' TABLE returning id_cutline
      *  --> WHERE cutline_type = 77 for matching id_gcp_coverage
      *  ---> when more than 1 is found: max(id_cutline) is returned
      *  ---> when  none are found: -1 is returned
-     * \note 'SELECT_COVERAGES': 'SELECT_COVERAGES+mParseString+coverage_name'
+     * @note 'SELECT_COVERAGES': 'SELECT_COVERAGES+mParseString+coverage_name'
      *  - builds SELECT Statement for all columns of 'gcp_coverages' TABLE
      *  -> 2 results returned: 'id_gcp_coverage' and all values (including 'id_gcp_coverage') seperated with 'parms_GcpDbData->mParseString'
      *  --> used to build 'parms_GcpDbData->gcp_coverages' [QMap<int, QString>]
      *  -> when 'coverage_name' is not empty: only tha coverage will be returned, otherwise all coverages
-     * \note 'INSERT_COVERAGES': 'SELECT_COVERAGES+mParseString+VALUES([values of all columns properly formatted])'
+     * @note 'INSERT_COVERAGES': 'SELECT_COVERAGES+mParseString+VALUES([values of all columns properly formatted])'
      *  - builds INSERT Statement for all 'gcp_coverages' entries for Sql-Dump
-     * \note 'INSERT_COVERAGE': 'SELECT_COVERAGES+mParseString+VALUES([values of all columns (without id_gcp_coverage) properly formatted])'
+     * @note 'INSERT_COVERAGE': 'SELECT_COVERAGES+mParseString+VALUES([values of all columns (without id_gcp_coverage) properly formatted])'
      *  - builds INSERT Statement for new 'gcp_coverages' entry
-     * \note 'CREATE_CUTLINES': 'CREATE_CUTLINES+mParseString+srid'
-     * \note 'INSERT_COMPUTE': INSERT_COMPUTE+mParseString+id_gcp_coverage+mParseString+srid+mParseString+coverage_name+mParseString+image_max_x+mParseString+image_max_y'
+     * @note 'CREATE_CUTLINES': 'CREATE_CUTLINES+mParseString+srid'
+     * @note 'INSERT_COMPUTE': INSERT_COMPUTE+mParseString+id_gcp_coverage+mParseString+srid+mParseString+coverage_name+mParseString+image_max_x+mParseString+image_max_y'
      *  - builds INSERT Statement for new 'gcp_compute' entry
-     * \note 'UPDATE_COMPUTE' : 'UPDATE_COMPUTE+mParseString+id_gcp_coverage+mParseString+srid+mParseString+coverage_name+mParseString+image_max_x+mParseString+image_max_y'
+     * @note 'UPDATE_COMPUTE' : 'UPDATE_COMPUTE+mParseString+id_gcp_coverage+mParseString+srid+mParseString+coverage_name+mParseString+image_max_x+mParseString+image_max_y'
      *  -> when Spatialite Gcp-logic is active
      * @param parms_GcpDbData  which will contain a spatialite connection (with mParseString to use and if Spatialite Gcp-logic is active)
      * @return sa_sql_commands QStringList of all sql-commands to be executed
      */
-    static QStringList createGcpSqlCoveragesCommands(GcpDbData* parms_GcpDbData, QStringList sa_tables);
+    static QStringList createGcpSqlCoveragesCommands( GcpDbData* parms_GcpDbData, QStringList sa_tables );
     /**
      * Creates a new Spatialite-Database connection to a specific Database
      *  - opens sqlite3 connection with OPEN READWRITE and CREATE
@@ -284,14 +305,14 @@ class QgsSpatiaLiteProviderGcpUtils
      *  - creating Spatialite cache
      *  --> stores cache pointer in GcpDbData->spatialite_cache
      *  - calls spatialite_init_ex using db_handle and spatialite_cache
-     * \note stores Database-file name in GcpDbData->mUsed_database_filename
+     * @note stores Database-file name in GcpDbData->mUsed_database_filename
      *  - will return SQLITE_OK when
      *  -> a new connection has been made
      *  -> a connection exists for the given Database-file [will NOT create new connection]
      *  --> stores count of requested connections in GcpDbData->mUsed_database_filename_count
      *  - will return SQLITE_MISUSE when
      *  -> a connection exists for another Database-file [will NOT create new connection]
-     * \note a long term connection is NOT intended
+     * @note a long term connection is NOT intended
      *  - when the static function(s) are compleated, the connection should be closed
      *  - when one static function calls another static function (using the same database)
      *  --> it will use the same connection
@@ -304,24 +325,24 @@ class QgsSpatiaLiteProviderGcpUtils
      * @param s_database_filename  Database file-name to open
      * @return SQLITE_OK or SQLITE_MISUSE see above
      */
-    static int spatialiteInitEx(GcpDbData* parms_GcpDbData, QString s_database_filename);
+    static int spatialiteInitEx( GcpDbData* parms_GcpDbData, QString s_database_filename );
     /**
      * Closes a Spatialite-Database connection to a specific Database
      *  - close sqlite3 connection will be called
      *  --> sets handle pointer to nullptr in GcpDbData->db_handle
-     *  --> sets the Database-file name to QString::null in GcpDbData->mUsed_database_filename 
+     *  --> sets the Database-file name to QString::null in GcpDbData->mUsed_database_filename
      *  --> sets the Database-file counter to 0 in GcpDbData->mUsed_database_filename_count
      *  - spatialite_cleanup_ex is called to free the Spatialite cache
      *  --> sets cache pointer to nullptr in GcpDbData->spatialite_cache
      *  - calls spatialite_shutdown()
-     * \note if more than one connection request exists (mUsed_database_filename_count > 1)
+     * @note if more than one connection request exists (mUsed_database_filename_count > 1)
      *  - the close request will be ignored
      *  -> mUsed_database_filename_count will be reduced by 1 and returns true
      * @see spatialiteInitEx
      * @param parms_GcpDbData  to store Database file-name, count, handle and cache
      * @return true when  parms_GcpDbData is not NULL
      */
-    static bool spatialiteShutdown(GcpDbData* parms_GcpDbData);
+    static bool spatialiteShutdown( GcpDbData* parms_GcpDbData );
 };
 
 #endif

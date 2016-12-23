@@ -156,10 +156,10 @@ void QgsGCPListModel::updateModel()
 
     setItem( i, j++, si );
     setItem( i, j++, new QgsStandardItem( data_point-> id() ) );
-    setItem( i, j++, new QgsStandardItem( QString::number(data_point->pixelCoords().x(), 'f', 10) ) );
-    setItem( i, j++, new QgsStandardItem( QString::number(data_point->pixelCoords().y(), 'f', 10) ) );
-    setItem( i, j++, new QgsStandardItem( QString::number(data_point->mapCoords().x(), 'f', 10) ) );
-    setItem( i, j++, new QgsStandardItem( QString::number(data_point->mapCoords().y(), 'f', 10) ) );
+    setItem( i, j++, new QgsStandardItem( QString::number( data_point->pixelCoords().x(), 'f', 10 ) ) );
+    setItem( i, j++, new QgsStandardItem( QString::number( data_point->pixelCoords().y(), 'f', 10 ) ) );
+    setItem( i, j++, new QgsStandardItem( QString::number( data_point->mapCoords().x(), 'f', 10 ) ) );
+    setItem( i, j++, new QgsStandardItem( QString::number( data_point->mapCoords().y(), 'f', 10 ) ) );
 
     double residual;
     double dX = 0;
@@ -209,15 +209,15 @@ void QgsGCPListModel::updateModel()
 
     if ( residual >= 0.f )
     {
-      setItem( i, j++, new QgsStandardItem( QString::number(dX, 'f', 10) ) );
-      setItem( i, j++, new QgsStandardItem( QString::number(dY, 'f', 10) ) );
-      setItem( i, j++, new QgsStandardItem( QString::number(residual, 'f', 10) ) );
-      setItem( i, j++, new QgsStandardItem( QString::number(data_point->pixelDistanceReverse(), 'f', 4) ) );
-      setItem( i, j++, new QgsStandardItem( QString::number(data_point->pixelAzimuthReverse(), 'f', 4) ) );
-      setItem( i, j++, new QgsStandardItem( data_point->pixelCoordsReverse().wellKnownText()) );
-      setItem( i, j++, new QgsStandardItem( QString::number(data_point->mapDistanceReverse(), 'f', 4) ) );
-      setItem( i, j++, new QgsStandardItem( QString::number(data_point->mapAzimuthReverse(), 'f', 4) ) );
-      setItem( i, j++, new QgsStandardItem( data_point->mapCoordsReverse().wellKnownText()) );
+      setItem( i, j++, new QgsStandardItem( QString::number( dX, 'f', 10 ) ) );
+      setItem( i, j++, new QgsStandardItem( QString::number( dY, 'f', 10 ) ) );
+      setItem( i, j++, new QgsStandardItem( QString::number( residual, 'f', 10 ) ) );
+      setItem( i, j++, new QgsStandardItem( QString::number( data_point->pixelDistanceReverse(), 'f', 4 ) ) );
+      setItem( i, j++, new QgsStandardItem( QString::number( data_point->pixelAzimuthReverse(), 'f', 4 ) ) );
+      setItem( i, j++, new QgsStandardItem( data_point->pixelCoordsReverse().wellKnownText() ) );
+      setItem( i, j++, new QgsStandardItem( QString::number( data_point->mapDistanceReverse(), 'f', 4 ) ) );
+      setItem( i, j++, new QgsStandardItem( QString::number( data_point->mapAzimuthReverse(), 'f', 4 ) ) );
+      setItem( i, j++, new QgsStandardItem( data_point->mapCoordsReverse().wellKnownText() ) );
     }
     else
     {
