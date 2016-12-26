@@ -13,6 +13,7 @@
 #ifndef QGSSPATIALITEPROVIDERGCPUTILS_H
 #define QGSSPATIALITEPROVIDERGCPUTILS_H
 
+#include <limits>
 #include <QString>
 #include <QDir>
 #include <QFileInfo>
@@ -61,13 +62,18 @@ class QgsSpatiaLiteProviderGcpUtils
      *  - the Database connection should be closed when returned to the Application
      *  -> the use of the connection is only indended for internal use
      */
+    enum GcpDatabases
+    {
+      GcpCoverages,
+      GcpMaster
+    };
     struct GcpDbData
     {
-      GcpDbData( QString s_database_filename, QString s_coverage_name = "gcp_cutline", int i_srid = 3068 )
+      GcpDbData( QString s_database_filename, QString s_coverage_name = QString::null, int i_srid = INT_MIN )
           : mGcpDatabaseFileName( s_database_filename )
           , mGcpMasterDatabaseFileName( QString::null )
           , mGcp_coverage_name( s_coverage_name )
-          , mGcp_srid( i_srid )
+          , mGcpSrid( i_srid )
           , mGcp_points_table_name( QString::null )
           , mLayer( nullptr )
           , mGcp_enabled( false )
@@ -104,7 +110,7 @@ class QgsSpatiaLiteProviderGcpUtils
           : mGcpDatabaseFileName( s_database_filename )
           , mGcpMasterDatabaseFileName( QString::null )
           , mGcp_coverage_name( s_coverage_name )
-          , mGcp_srid( i_srid )
+          , mGcpSrid( i_srid )
           , mGcp_points_table_name( s_points_table_name )
           , mLayer( raster_layer )
           , mGcp_enabled( b_Gcp_enabled )
@@ -141,7 +147,7 @@ class QgsSpatiaLiteProviderGcpUtils
       QString mGcpDatabaseFileName;
       QString mGcpMasterDatabaseFileName;
       QString mGcp_coverage_name; // file without extention Lower-Case
-      int mGcp_srid;
+      int mGcpSrid;
       QString mGcp_points_table_name;
       QgsRasterLayer *mLayer;
       bool mGcp_enabled;
@@ -186,6 +192,11 @@ class QgsSpatiaLiteProviderGcpUtils
      * @note only when 'gcp_enable' is true, will the POINT be used
      *  Based on the value of id_order, only those points will be used
      * @note
+     *  - Conditions to set mDatabaseValid to true:
+     *  -> if a Database is being created only (and has no coverages) : will be set to true
+     *  -> if a Database is being created with a new coverages, and the coverage was created : will be set to true
+     *  -> if a Database is being read (without request for a specific coverage) and a gcp_coverage TABLE exists : will be set to true
+     *  -> if a Database is being read for a specific coverage and  that coverage exists : will be set to true
      * @see getGcpConvert
      * @param s_coverage_name name of map to use
      * @return true if database exists
@@ -298,6 +309,38 @@ class QgsSpatiaLiteProviderGcpUtils
      * @return sa_sql_commands QStringList of all sql-commands to be executed
      */
     static QStringList createGcpSqlCoveragesCommands( GcpDbData* parms_GcpDbData, QStringList sa_tables );
+    /**
+     * Creates sql for gcp_coverage, gcp_compute and cutline TABLEs
+     *  - goal is the maintainence of the field-name syntax is in one place
+     *  -- any changes in the column-names are done here
+     * @note 'CREATE_MASTER_TABLE' 'CREATE_MASTER_TABLE+mParseString+gcp_master+mParseString+srid'
+     *  - builds CREATE Statement for 'gcp_master' TABLE
+     * @note 'CREATE_MASTER_VIEWS' 'CREATE_MASTER_VIEWS+mParseString+srid'
+     *  - builds CREATE Statement for 'gcp_master' TABLE
+     * @param parms_GcpDbData  which will contain a spatialite connection (with mParseString to use and if Spatialite Gcp-logic is active)
+     * @return sa_sql_commands QStringList of all sql-commands to be executed
+     */
+    static QStringList createGcpSqlMasterCommands( GcpDbData* parms_GcpDbData, QStringList sa_tables );
+    /**
+     * Write Sql-Script to file
+     *  - dealing with common errors that may occur
+     * @note 
+     *  - Original use was to replace '.db' with '.sql'
+     *  -> when the directory also contained a '.db', that too was replaced
+     *  --> resulting in a QFile::OpenError [5] during open
+     *  - Since this functionality is often being used [4 times at the time of writing]
+     *  -> a single version with proper replacement (file-name only) and Error controls was made
+     * @note 
+     *  - This Function will add the following to the Sql-Statements:
+     *  -> a header [in sql comments] showing how the script should be called
+     *  -> 'BEGIN;' and 'COMMIT;' Statement inserted around the Sql-Statements
+     *  -> A general Start/End Message with a now time Statement around the Sql-Statements
+     * @param s_source_filename source file (with path) to use as a base for the output file
+     * @param s_sql_output collection of Sql-Statments to be dumped to file
+     * @param s_extention the extention to use to replace the source file extention with
+     * @return file_result result of QFile error() by open/output commands
+     */
+    static QFile::FileError writeGcpSqlDump( QString s_source_filename, QString s_sql_output=QString::null, QString s_extention="sql" );
     /**
      * Creates a new Spatialite-Database connection to a specific Database
      *  - opens sqlite3 connection with OPEN READWRITE and CREATE

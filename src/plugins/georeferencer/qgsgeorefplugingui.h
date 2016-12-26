@@ -380,7 +380,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
 
     // settings
     /**
-     * showGeorefConfigDialog
+     * showRasterPropertiesDialog
      * @note QGIS 3.0
      * Common for both  ( mLegacyMode == 0+1 )
      *  - therefore is needed
@@ -388,13 +388,47 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
      */
     void showRasterPropertiesDialog();
     /**
-     * listGcpCoverages
+     * showMercatorPolygonPropertiesDialog
      * @note QGIS 3.0
      * New for ( mLegacyMode == 1 )
      *  - therefore is needed
      *  - TODO: document
      */
     void showMercatorPolygonPropertiesDialog();
+    /**
+     * createGcpDatabaseDialog
+     *  - create an empty Gcp-Database
+     *  -> option will be offered to create a Sql-Dump of the created Database
+     * @note
+     *  - 'gcp_coverage'
+     *  -> should have the 'gcp.db' suffix/file-extention to be recognised by this application
+     * @note
+     *  - 'gcp_master'
+     *  -> should have the 'db' suffix/file-extention to be recognised by this application
+     * @note QGIS 3.0
+     * New for ( mLegacyMode == 1 )
+     *  - therefore is needed
+     * @see QgsGcpDatabaseDialog::accept
+     * @see createGcpCoverageDb
+     * @see createGcpMasterDb
+     */
+    void createGcpDatabaseDialog();
+    /**
+     * createSqlDumpGcpCoverage
+     *  -> Create a Sql-Dump of the active Gcp-Coverages Database
+     * @note QGIS 3.0
+     * New for ( mLegacyMode == 1 )
+     * @see createGcpCoverageDb
+     */
+    void createSqlDumpGcpCoverage();
+    /**
+     * createSqlDumpGcpMaster
+     *  -> Create a Sql-Dump of the active Gcp-Master Database
+     * @note QGIS 3.0
+     * New for ( mLegacyMode == 1 )
+     * @see createGcpMasterDb
+     */
+    void createSqlDumpGcpMaster();
     /**
      * showGeorefConfigDialog
      * @note QGIS 3.0
@@ -763,13 +797,21 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
 
     // mj10777
     /**
-     * mGcp_srid
+     * mGcpSrid
      *  - srid of Gcp (to be stored or retrieved from Gcp-Database
      * @note QGIS 3.0
      * New for ( mLegacyMode == 1 )
      *  - therefore is needed
      */
-    int mGcp_srid;
+    int mGcpSrid;
+    /**
+     * Srid of read MasterDB
+     *  - srid of Gcp (to be stored or retrieved from Gcp-Database
+     * @note QGIS 3.0
+     * New for ( mLegacyMode == 1 )
+     *  - therefore is needed
+     */
+    int mGcpMasterSrid;
     /**
      * s_gcp_authid
      *  -
@@ -1017,6 +1059,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     QString mGcpFileName;
     QString mGcpDatabaseFileName;
     QString mGcpMasterDatabaseFileName;
+    int mMasterSrid;
     QString mGcpBaseFileName;
     int mRasterYear;
     int mRasterScale;
@@ -1246,7 +1289,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
      * @param s_database_filename Database file name to create [can exist]
      * @param srid to use for cutline TABLEs that will be created
      * @param b_dump create and '.sql' file with the used Sql-Statements that can be run as a script
-     * @return return_srid INT_MIN if invalid, otherwise the srid being used
+     * @return return_srid INT_MIN if invalid, otherwise the srid being used will be returned
      */
     int createGcpMasterDb( QString  s_database_filename,  int i_srid = 3068, bool b_dump = false );
     /**
@@ -1267,8 +1310,9 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
      * @param s_database_filename Database file name to create (must not exist)
      * @param srid to use for cutline TABLEs that will be created
      * @param b_dump create and '.sql' file with the used Sql-Statements that can be run as a script
+     * @return return_srid INT_MIN if invalid, otherwise the srid being used will be returned
      */
-    bool createGcpCoverageDb( QString  s_database_filename, int i_srid = 3068, bool b_dump = false );
+    int createGcpCoverageDb( QString  s_database_filename, int i_srid = 3068, bool b_dump = false );
     // docks ------------------------------------------
     QgsLayerTreeGroup* mRootLayerTreeGroup;
     QgsDockWidget *mLayerTreeDock;

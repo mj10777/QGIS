@@ -12,7 +12,6 @@
  *   (at your option) any later version.                                   *
  *                                                                         *
  ***************************************************************************/
-#include <limits>
 #include <QDesktopWidget>
 #include <QDialogButtonBox>
 #include <QClipboard>
@@ -86,6 +85,7 @@
 
 #include "qgslayertree.h"
 #include "qgslayertreemodel.h"
+#include "qgsgcpdatabasedialog.h"
 
 QgsGeorefDockWidget::QgsGeorefDockWidget( const QString & title, QWidget * parent, Qt::WindowFlags flags )
     : QgsDockWidget( title, parent, flags )
@@ -124,6 +124,8 @@ QgsGeorefPluginGui::QgsGeorefPluginGui( QgisInterface* theQgisInterface, QWidget
   layer_mercator_polygons = nullptr;
   mGcpDbData = nullptr;
   mGcpMasterDatabaseFileName = QString::null;
+  mGcpMasterSrid = -1;
+  mGcpSrid = -1;
   mGcpDatabaseFileName = QString::null;
   mGcpFileName = QString::null;
   mGcpBaseFileName = QString::null;
@@ -390,11 +392,11 @@ void QgsGeorefPluginGui::openRaster( QFileInfo raster_file )
   QString s_srid = "-1";
   if ( sa_authid.length() == 2 )
     s_srid = sa_authid[1];
-  mGcp_srid = s_srid.toInt();
+  mGcpSrid = s_srid.toInt();
   // destinationCrs: authid[EPSG:3068]  srsid[1031]  description[DHDN / Soldner Berlin]
-  // s_srid=QString("destinationCrs[%1]: authid[%2]  srsid[%3]  description[%4] ").arg(mGcp_srid).arg(s_gcp_authid).arg(mIface->mapCanvas()->mapRenderer()->destinationCrs().srsid()).arg(s_gcp_description);
+  // s_srid=QString("destinationCrs[%1]: authid[%2]  srsid[%3]  description[%4] ").arg(mGcpSrid).arg(s_gcp_authid).arg(mIface->mapCanvas()->mapRenderer()->destinationCrs().srsid()).arg(s_gcp_description);
   // qDebug()<<s_srid;
-  if ( mGcp_srid > 0 )
+  if ( mGcpSrid > 0 )
   { // with srid (of project), activate the buttons and set set output-filename
     // give this a default name
     mModifiedRasterFileName = QString( "%1.%2.map.%3" ).arg( mGcpBaseFileName ).arg( s_srid ).arg( raster_file.suffix() );
@@ -412,7 +414,7 @@ void QgsGeorefPluginGui::openRaster( QFileInfo raster_file )
   mCanvas->refresh();
   mIface->mapCanvas()->refresh();
   // mj10777
-  if ( mGcp_srid > 0 )
+  if ( mGcpSrid > 0 )
   { // with srid (of project), activate the buttons and set set output-filename
     mActionLinkGeorefToQGis->setChecked( false );
     mActionLinkQGisToGeoref->setChecked( false );
@@ -1172,7 +1174,6 @@ void QgsGeorefPluginGui::createActions()
   connect( mActionLegacyMode, SIGNAL( triggered() ), this, SLOT( setLegacyMode() ) );
 
   mActionOpenRaster->setIcon( getThemeIcon( "/mActionAddRasterLayer.svg" ) );
-  connect( mActionOpenGcpMaster, SIGNAL( triggered() ), this, SLOT( openMasterDialog() ) );
 
   mActionPointsPolygon->setIcon( getThemeIcon( "/mActionTransformSettings.png" ) );
   mActionPointsPolygon->setCheckable( true );
@@ -1185,6 +1186,9 @@ void QgsGeorefPluginGui::createActions()
 
   connect( mOpenGcpCoverages, SIGNAL( triggered() ), this, SLOT( openGcpCoveragesDb() ) );
   connect( mActionOpenGcpMaster, SIGNAL( triggered() ), this, SLOT( openGcpMasterDb() ) );
+  connect( mActionCreateGcpDatabase, SIGNAL( triggered() ), this, SLOT( createGcpDatabaseDialog() ) );
+  connect( mActionSqlDumpGcpCoverage, SIGNAL( triggered() ), this, SLOT( createSqlDumpGcpCoverage() ) );
+  connect( mActionSqlDumpGcpMaster, SIGNAL( triggered() ), this, SLOT( createSqlDumpGcpMaster() ) );
 
   // Histogram stretch
   mActionLocalHistogramStretch->setIcon( getThemeIcon( "/mActionLocalHistogramStretch.svg" ) );
@@ -1875,8 +1879,11 @@ bool QgsGeorefPluginGui::loadGcpMaster( QString  s_database_filename )
     QFileInfo database_file( s_database_filename );
     if ( database_file.exists() )
     {
-      if ( createGcpMasterDb( database_file.canonicalFilePath() ) != INT_MIN )
+      int i_return_srid = createGcpMasterDb( database_file.canonicalFilePath() );
+      if ( i_return_srid != INT_MIN )
       { // will return srid being used in the gcp_master, otherwise INT_MIN if not found
+        mGcpMasterDatabaseFileName = database_file.canonicalFilePath();
+        mGcpMasterSrid = i_return_srid;
         if ( group_georeferencer )
         {
           if ( !group_gcp_master )
@@ -3355,7 +3362,7 @@ bool QgsGeorefPluginGui::setCutlineLayerSettings( QgsVectorLayer *layer_cutline 
                   cutline_layer_symbol_innerline->setMapUnitScale( 0 );
                   cutline_layer_symbol_innerline->setPenStyle( Qt::DashLine );
                   cutline_layer_symbol_innerline->setPenJoinStyle( Qt::RoundJoin );
-                  // Set transparency for both and add PInner and Outer Linestrings
+                  // Set transparency for both and add Inner and Outer Linestrings
                   cutline_layer_symbol_container->setAlpha( 0.80 );
                   cutline_layer_symbol_container->appendSymbolLayer( cutline_layer_symbol_outline );
                   cutline_layer_symbol_container->appendSymbolLayer( cutline_layer_symbol_innerline );
@@ -3461,10 +3468,12 @@ bool QgsGeorefPluginGui::setCutlineLayerSettings( QgsVectorLayer *layer_cutline 
     { // see: core/qgspallabeling.cpp/h and  app/qgslabelingwidget.cpp
       // fontPointSize=15 ; _size_font=12
       color_background = color_lightblue;
+      int i_transparency = 50;
       if ( i_table_type == 1 )
       {
         color_background = color_palegoldenrod;
         color_shadow = color_khaki;
+        i_transparency = 25;
       }
       QgsPalLayerSettings cutline_layer_settings;
       cutline_layer_settings.readFromLayer( layer_cutline );
@@ -3485,7 +3494,7 @@ bool QgsGeorefPluginGui::setCutlineLayerSettings( QgsVectorLayer *layer_cutline 
       cutline_layer_settings.shapeType = QgsPalLayerSettings::ShapeEllipse;
       cutline_layer_settings.shapeFillColor = color_background;
       cutline_layer_settings.shapeBorderColor = color_darkgreen;
-      cutline_layer_settings.shapeTransparency = 50;
+      cutline_layer_settings.shapeTransparency = i_transparency;
       cutline_layer_settings.shapeBorderWidth = 1;
       cutline_layer_settings.shapeBorderWidthUnits = QgsPalLayerSettings::MM;
       // Placement
@@ -3589,7 +3598,7 @@ void QgsGeorefPluginGui::openGcpCoveragesDb()
   if ( database_file.exists() )
   {
     QDir parent_dir( database_file.canonicalPath() );
-    s.setValue( "/Plugin-GeoReferencer/gcpdb_directory", database_file.path() );
+    s.setValue( "/Plugin-GeoReferencer/gcpdb_directory", database_file.canonicalPath() );
     s.setValue( "/Plugin-GeoReferencer/lastusedb", lastUsedFilter );
     readGcpDb( s_GcpCoverages_FileName, false );
     if ( mGcpDbData )
@@ -3603,7 +3612,7 @@ void QgsGeorefPluginGui::openGcpCoveragesDb()
   }
 }
 void QgsGeorefPluginGui::openGcpMasterDb()
-{ // Do nothing for now [Dialog select Database]
+{
   QSettings s;
   QString dir = s.value( "/Plugin-GeoReferencer/gcpdb_directory" ).toString();
   if ( dir.isEmpty() )
@@ -3624,13 +3633,94 @@ void QgsGeorefPluginGui::openGcpMasterDb()
   QFileInfo database_file( s_GcpMaster_FileName );
   if ( database_file.exists() )
   {
-    if ( createGcpMasterDb( database_file.canonicalFilePath() ) != INT_MIN )
+    int i_return_srid = createGcpMasterDb( database_file.canonicalFilePath() );
+    if ( i_return_srid != INT_MIN )
     { // will return srid being used in the gcp_master, otherwise INT_MIN if not found
       mGcpMasterDatabaseFileName = database_file.canonicalFilePath();
+      mGcpMasterSrid = i_return_srid;
       QDir parent_dir( database_file.canonicalPath() );
       s.setValue( "/Plugin-GeoReferencer/gcpdb_directory", database_file.canonicalPath() );
       s.setValue( "/Plugin-GeoReferencer/gcp_master_db", mGcpMasterDatabaseFileName );
       loadGcpMaster( mGcpMasterDatabaseFileName ); // Will be added if group_georeferencer exists and is loadable
+    }
+  }
+}
+void QgsGeorefPluginGui::createGcpDatabaseDialog()
+{
+  QgsGcpDatabaseDialog create_gcpdb( mIface->mapCanvas()->mapSettings().destinationCrs() );
+  if ( create_gcpdb.exec() == QDialog::Accepted )
+  {
+    QFileInfo database_file = create_gcpdb.GcpDatabaseFile();
+    bool b_sqlDump = create_gcpdb.GcpDatabaseDump();
+    int i_srid = create_gcpdb.GcpDatabaseSrid();
+    QgsSpatiaLiteProviderGcpUtils::GcpDatabases gcp_db_type = create_gcpdb.GcpDatabaseType();
+    if ( ! database_file.exists() )
+    { // since the file does not exist, canonicalFilePath() cannot be used [use: absoluteFilePath()]
+      switch ( gcp_db_type )
+      {
+        case QgsSpatiaLiteProviderGcpUtils::GcpCoverages:
+        {
+          qDebug() << QString( "QgsGeorefPluginGui::createGcpDatabaseDialog -1- GcpCoverages srid[%1] dump[%2] file[%3]" ).arg( i_srid ).arg( b_sqlDump ).arg( database_file.absoluteFilePath() );
+          if ( createGcpCoverageDb( database_file.absoluteFilePath(), i_srid, b_sqlDump ) == i_srid )
+          { // will return srid being used in the gcp_master, otherwise INT_MIN if not found
+            statusBar()->showMessage( tr( "Created GcpCoverages: srid[%1] dump[%2] in %3" ).arg( i_srid ).arg( b_sqlDump ).arg( database_file.absoluteFilePath() ) );
+          }
+          else
+          {
+            statusBar()->showMessage( tr( "Creation failed: GcpCoverages: srid[%1] dump[%2] in %3" ).arg( i_srid ).arg( b_sqlDump ).arg( database_file.absoluteFilePath() ) );
+          }
+        }
+        break;
+        case QgsSpatiaLiteProviderGcpUtils::GcpMaster:
+        {
+          qDebug() << QString( "QgsGeorefPluginGui::createGcpDatabaseDialog -2- GcpMaster srid[%1] dump[%2] file[%3]" ).arg( i_srid ).arg( b_sqlDump ).arg( database_file.absoluteFilePath() );
+          if ( createGcpMasterDb( database_file.absoluteFilePath(), i_srid, b_sqlDump ) == i_srid )
+          { // will return srid being used in the gcp_master, otherwise INT_MIN if not found
+            statusBar()->showMessage( tr( "Created GcpMaster: srid[%1] dump[%2] in %3" ).arg( i_srid ).arg( b_sqlDump ).arg( database_file.absoluteFilePath() ) );
+          }
+          else
+          {
+            statusBar()->showMessage( tr( "Creation failed: GcpMaster: srid[%1] dump[%2] in %3" ).arg( i_srid ).arg( b_sqlDump ).arg( database_file.absoluteFilePath() ) );
+          }
+        }
+        break;
+      }
+    }
+  }
+}
+void QgsGeorefPluginGui::createSqlDumpGcpCoverage()
+{
+  if ( mGcpDbData )
+  {
+    if ( QFile::exists( mGcpDbData->mGcpDatabaseFileName ) )
+    {
+      int return_srid = createGcpCoverageDb( mGcpDbData->mGcpDatabaseFileName, mGcpDbData->mGcpSrid, true );
+      if ( return_srid == mGcpDbData->mGcpSrid )
+      {
+        statusBar()->showMessage( tr( "Created GcpCoverages Sql-Dump: srid[%1] in %2" ).arg( mGcpDbData->mGcpSrid ).arg( mGcpDbData->mGcpDatabaseFileName ) );
+      }
+      else
+      {
+        statusBar()->showMessage( tr( "Creation failed: GcpCoverages Sql-Dump: srid[%1] recieved[%2]in %3" ).arg( mGcpDbData->mGcpSrid ).arg( return_srid ).arg( mGcpDbData->mGcpDatabaseFileName ) );
+      }
+    }
+  }
+}
+void QgsGeorefPluginGui::createSqlDumpGcpMaster()
+{
+  if ( mGcpDbData )
+  {
+    if ( QFile::exists( mGcpMasterDatabaseFileName ) )
+    {
+      int return_srid = createGcpMasterDb( mGcpMasterDatabaseFileName, mGcpMasterSrid, true );
+      if ( return_srid == mGcpMasterSrid )
+      {
+        statusBar()->showMessage( tr( "Created GcpMaster Sql-Dump: srid[%1] in %2" ).arg( mGcpMasterSrid ).arg( mGcpMasterDatabaseFileName ) );
+      }
+      else
+      {
+        statusBar()->showMessage( tr( "Creation failed: GcpMaster Sql-Dump: srid[%1], recieved[%2] in %3" ).arg( mGcpMasterSrid ).arg( return_srid ).arg( mGcpMasterDatabaseFileName ) );
+      }
     }
   }
 }
@@ -4358,32 +4448,39 @@ bool QgsGeorefPluginGui::readGcpDb( QString  s_database_filename, bool b_Databas
   if ( mLegacyMode == 0 )
     return b_rc;
   QgsSpatiaLiteProviderGcpUtils::GcpDbData *parms_GcpDbData = nullptr;
-  parms_GcpDbData = new QgsSpatiaLiteProviderGcpUtils::GcpDbData( s_database_filename, QString::null, -2 );
+  parms_GcpDbData = new QgsSpatiaLiteProviderGcpUtils::GcpDbData( s_database_filename, QString::null, INT_MIN );
   if ( QgsSpatiaLiteProviderGcpUtils::createGcpDb( parms_GcpDbData ) )
   {
-    if ( parms_GcpDbData->gcp_coverages.size() > 0 )
+    if ( parms_GcpDbData->mDatabaseValid )
     {
-      qDebug() << QString( "QgsGeorefPluginGui::readGcpDb -replacing GcpDbData-pointer- old[%1] new[%2]" ).arg( QString().sprintf( "%8p", mGcpDbData ) ).arg( QString().sprintf( "%8p", parms_GcpDbData ) );
-      mGcpDbData = parms_GcpDbData;
-      mGcp_coverages = mGcpDbData->gcp_coverages;
-      mGcpDatabaseFileName = mGcpDbData->mGcpDatabaseFileName;
-      mListGcpCoverages->setEnabled( true );
-      connect( QgsGcpCoverages::instance(), SIGNAL( loadRasterCoverage( int ) ), this, SLOT( loadGcpCoverage( int ) ) );
-      if ( b_DatabaseDump )
+      if ( parms_GcpDbData->gcp_coverages.size() > 0 )
       {
-        parms_GcpDbData->mSqlDump = true;
-        QgsSpatiaLiteProviderGcpUtils::createGcpDb( parms_GcpDbData );
+        qDebug() << QString( "QgsGeorefPluginGui::readGcpDb -replacing GcpDbData-pointer- old[%1] new[%2]" ).arg( QString().sprintf( "%8p", mGcpDbData ) ).arg( QString().sprintf( "%8p", parms_GcpDbData ) );
+        mGcpDbData = parms_GcpDbData;
+        mGcp_coverages = mGcpDbData->gcp_coverages;
+        mGcpDatabaseFileName = mGcpDbData->mGcpDatabaseFileName;
+        mListGcpCoverages->setEnabled( true );
+        connect( QgsGcpCoverages::instance(), SIGNAL( loadRasterCoverage( int ) ), this, SLOT( loadGcpCoverage( int ) ) );
+        if ( b_DatabaseDump )
+        {
+          parms_GcpDbData->mSqlDump = true;
+          QgsSpatiaLiteProviderGcpUtils::createGcpDb( parms_GcpDbData );
+        }
+        b_rc = true;
       }
-      b_rc = true;
+      else
+      {
+        qDebug() << QString( "QgsGeorefPluginGui::readGcpDb - no Gcp-Coverages found - db[%1] error[%2]" ).arg( parms_GcpDbData->mGcpDatabaseFileName ).arg( parms_GcpDbData->mError );
+      }
     }
     else
     {
-      qDebug() << QString( "QgsGeorefPluginGui::readGcpDb - no Gcp-Coverages found- db[%1] error[%2]" ).arg( parms_GcpDbData->mGcpDatabaseFileName ).arg( parms_GcpDbData->mError );
+      qDebug() << QString( "QgsGeorefPluginGui:readGcpDb -  Database considered invalid - db[%1] error[%2]" ).arg( parms_GcpDbData->mGcpDatabaseFileName ).arg( parms_GcpDbData->mError );
     }
   }
   else
   {
-    qDebug() << QString( "QgsGeorefPluginGui::readGcpDb - open of Database failed- db[%1] error[%2]" ).arg( parms_GcpDbData->mGcpDatabaseFileName ).arg( parms_GcpDbData->mError );
+    qDebug() << QString( "QgsGeorefPluginGui::readGcpDb - open of Database failed - db[%1] error[%2]" ).arg( parms_GcpDbData->mGcpDatabaseFileName ).arg( parms_GcpDbData->mError );
   }
   parms_GcpDbData = nullptr;
   return b_rc;
@@ -4413,9 +4510,9 @@ bool QgsGeorefPluginGui::createGcpDb( bool b_DatabaseDump )
         mRasterYear = i_year;
         mGcp_coverage_name_base = sa_list_id_fields[1];
         QString s_build = QString( "%1.%2.%3" ).arg( QString( "%1" ).arg( mRasterYear, 4, 10, QChar( '0' ) ) ).arg( mGcp_coverage_name_base ).arg( mRasterScale );
-        if ( mGcp_srid > 0 )
+        if ( mGcpSrid > 0 )
         { // give this a default name
-          mModifiedRasterFileName = QString( "%1.%2.map.%3" ).arg( s_build ).arg( mGcp_srid ).arg( raster_file.suffix() );
+          mModifiedRasterFileName = QString( "%1.%2.map.%3" ).arg( s_build ).arg( mGcpSrid ).arg( raster_file.suffix() );
         }
         else
         {
@@ -4426,10 +4523,10 @@ bool QgsGeorefPluginGui::createGcpDb( bool b_DatabaseDump )
   }
   if ( !mGcpDbData )
   {
-    mGcpDbData = new QgsSpatiaLiteProviderGcpUtils::GcpDbData( mGcpDatabaseFileName, mGcp_coverage_name, mGcp_srid, mGcp_points_table_name, mLayer, mSpatialite_gcp_enabled );
+    mGcpDbData = new QgsSpatiaLiteProviderGcpUtils::GcpDbData( mGcpDatabaseFileName, mGcp_coverage_name, mGcpSrid, mGcp_points_table_name, mLayer, mSpatialite_gcp_enabled );
   }
   mGcpDbData->mId_gcp_coverage = mId_gcp_coverage;
-  mGcpDbData->mId_gcp_coverage = mId_gcp_cutline;
+  mGcpDbData->mId_gcp_cutline = mId_gcp_cutline;
   mGcpDbData->mTransformParam = getGcpTransformParam( mTransformParam );
   mGcpDbData->mResamplingMethod = getGcpResamplingMethod( mResamplingMethod );
   mGcpDbData->mCompressionMethod = mCompressionMethod;
@@ -4443,42 +4540,45 @@ bool QgsGeorefPluginGui::createGcpDb( bool b_DatabaseDump )
   mGcpDbData->mRasterYear = mRasterYear;
   mGcpDbData->mRasterScale = mRasterScale;
   mGcpDbData->mRasterNodata = mRasterNodata;
-  // mGcpDbData->mSqlDump = true;
   if ( b_DatabaseDump )
     mGcpDbData->mDatabaseDump = true;
   if ( QgsSpatiaLiteProviderGcpUtils::createGcpDb( mGcpDbData ) )
   {
-    mGcp_points_table_name = mGcpDbData->mGcp_points_table_name;
-    mSpatialite_gcp_enabled = mGcpDbData->mGcp_enabled;
-    mId_gcp_coverage = mGcpDbData->mId_gcp_coverage;
-    mId_gcp_cutline = mGcpDbData->mId_gcp_cutline;
-    mTransformParam = setGcpTransformParam( mGcpDbData->mTransformParam );
-    mCompressionMethod = mGcpDbData->mCompressionMethod;
-    mResamplingMethod = setGcpResamplingMethod( mGcpDbData->mResamplingMethod );
-    mModifiedRasterFileName = mGcpDbData->mModifiedRasterFileName;
-    mRasterNodata = mGcpDbData->mRasterNodata;
-    mError = mGcpDbData->mError;
-    if ( mGcpDbData->gcp_coverages.size() > 0 )
+    if ( mGcpDbData->mDatabaseValid )
     {
-      mGcp_coverages = mGcpDbData->gcp_coverages;
-      mListGcpCoverages->setEnabled( true );
-      connect( QgsGcpCoverages::instance(), SIGNAL( loadRasterCoverage( int ) ), this, SLOT( loadGcpCoverage( int ) ) );
+      mGcpSrid = mGcpDbData->mGcpSrid;
+      mGcp_points_table_name = mGcpDbData->mGcp_points_table_name;
+      mSpatialite_gcp_enabled = mGcpDbData->mGcp_enabled;
+      mId_gcp_coverage = mGcpDbData->mId_gcp_coverage;
+      mId_gcp_cutline = mGcpDbData->mId_gcp_cutline;
+      mTransformParam = setGcpTransformParam( mGcpDbData->mTransformParam );
+      mCompressionMethod = mGcpDbData->mCompressionMethod;
+      mResamplingMethod = setGcpResamplingMethod( mGcpDbData->mResamplingMethod );
+      mModifiedRasterFileName = mGcpDbData->mModifiedRasterFileName;
+      mRasterNodata = mGcpDbData->mRasterNodata;
+      mError = mGcpDbData->mError;
+      if ( mGcpDbData->gcp_coverages.size() > 0 )
+      {
+        mGcp_coverages = mGcpDbData->gcp_coverages;
+        mListGcpCoverages->setEnabled( true );
+        connect( QgsGcpCoverages::instance(), SIGNAL( loadRasterCoverage( int ) ), this, SLOT( loadGcpCoverage( int ) ) );
+      }
+      else
+      {
+        qDebug() << QString( "QgsGeorefPluginGui::createGcpDb  - Gcp-Coverage[%3] not found - db[%1] error[%2]" ).arg( mGcpDbData->mGcpDatabaseFileName ).arg( mGcpDbData->mError ).arg( mGcp_coverage_name );
+      }
     }
     else
     {
-      qDebug() << QString( "QgsGeorefPluginGui::readGcpDb  - Gcp-Coverage[%3] not found- db[%1] error[%2]" ).arg( mGcpDbData->mGcpDatabaseFileName ).arg( mGcpDbData->mError ).arg( mGcp_coverage_name );
+      qDebug() << QString( "QgsGeorefPluginGui:createGcpDb -  Database considered invalid - db[%1] error[%2]" ).arg( mGcpDbData->mGcpDatabaseFileName ).arg( mGcpDbData->mError );
     }
-
-    createGcpMasterDb( QString::null, mGcp_srid, true );
-    mGcpDbData->mDatabaseDump = true;
-    QgsSpatiaLiteProviderGcpUtils::createGcpDb( mGcpDbData );
     return true;
   }
   else
   {
-    qDebug() << QString( "QgsGeorefPluginGui::createGcpDb - open of Database failed- db[%1] error[%2]" ).arg( mGcpDbData->mGcpDatabaseFileName ).arg( mGcpDbData->mError );
+    qDebug() << QString( "QgsGeorefPluginGui::createGcpDb - open of Database failed - db[%1] error[%2]" ).arg( mGcpDbData->mGcpDatabaseFileName ).arg( mGcpDbData->mError );
   }
-  // createGcpMasterDb( s_gcp_master_db, s_gcp_master_tablename, mGcp_srid );
+  // createGcpMasterDb( s_gcp_master_db, s_gcp_master_tablename, mGcpSrid );
   mError = mGcpDbData->mError;
   return false;
 }
@@ -4488,7 +4588,7 @@ bool QgsGeorefPluginGui::updateGcpDb( QString s_coverage_name )
     return false;
   if ( !mGcpDbData )
   {
-    mGcpDbData = new QgsSpatiaLiteProviderGcpUtils::GcpDbData( mGcpDatabaseFileName, mGcp_coverage_name, mGcp_srid, mGcp_points_table_name, mLayer, mSpatialite_gcp_enabled );
+    mGcpDbData = new QgsSpatiaLiteProviderGcpUtils::GcpDbData( mGcpDatabaseFileName, mGcp_coverage_name, mGcpSrid, mGcp_points_table_name, mLayer, mSpatialite_gcp_enabled );
   }
   mGcpDbData->mGcp_coverage_name = s_coverage_name;
   if ( QgsSpatiaLiteProviderGcpUtils::updateGcpDb( mGcpDbData ) )
@@ -4509,7 +4609,7 @@ QgsPoint QgsGeorefPluginGui::getGcpConvert( QString s_coverage_name, QgsPoint in
   }
   if ( !mGcpDbData )
   { // mGcpDatabaseFileName
-    mGcpDbData = new QgsSpatiaLiteProviderGcpUtils::GcpDbData( mGcpDatabaseFileName, mGcp_coverage_name, mGcp_srid, mGcp_points_table_name, mLayer, mSpatialite_gcp_enabled );
+    mGcpDbData = new QgsSpatiaLiteProviderGcpUtils::GcpDbData( mGcpDatabaseFileName, mGcp_coverage_name, mGcpSrid, mGcp_points_table_name, mLayer, mSpatialite_gcp_enabled );
   }
   mGcpDbData->mGcp_coverage_name = s_coverage_name;
   mGcpDbData->mInputPoint = input_point;
@@ -4532,7 +4632,7 @@ bool QgsGeorefPluginGui::updateGcpCompute( QString s_coverage_name )
     return false;
   if ( !mGcpDbData )
   {
-    mGcpDbData = new QgsSpatiaLiteProviderGcpUtils::GcpDbData( mGcpDatabaseFileName, mGcp_coverage_name, mGcp_srid, mGcp_points_table_name, mLayer, mSpatialite_gcp_enabled );
+    mGcpDbData = new QgsSpatiaLiteProviderGcpUtils::GcpDbData( mGcpDatabaseFileName, mGcp_coverage_name, mGcpSrid, mGcp_points_table_name, mLayer, mSpatialite_gcp_enabled );
   }
   mGcpDbData->mGcp_coverage_name = s_coverage_name;
   mError = mGcpDbData->mError = "";
@@ -4556,37 +4656,56 @@ int QgsGeorefPluginGui::createGcpMasterDb( QString  s_database_filename,  int i_
     s_database_filename = QString( "%1/%2.db" ).arg( mRasterFilePath ).arg( "gcp_master.db" );
   }
   QgsSpatiaLiteProviderGcpUtils::GcpDbData *parms_GcpDbData = nullptr;
-  parms_GcpDbData = new QgsSpatiaLiteProviderGcpUtils::GcpDbData( s_database_filename, "gcp_master", i_srid );
-  parms_GcpDbData->mSqlDump = b_dump;
+  parms_GcpDbData = new QgsSpatiaLiteProviderGcpUtils::GcpDbData( s_database_filename,  QString::null, i_srid );
+  parms_GcpDbData->mDatabaseDump = b_dump;
   if ( QgsSpatiaLiteProviderGcpUtils::createGcpMasterDb( parms_GcpDbData ) )
   {
     if ( parms_GcpDbData->mDatabaseValid )
     {
-      return_srid = parms_GcpDbData->mGcp_srid;
+      return_srid = parms_GcpDbData->mGcpSrid;
     }
+    else
+    {
+      qDebug() << QString( "QgsGeorefPluginGui:createGcpCoverageDb -  Database considered invalid-  db[%1] error[%2]" ).arg( parms_GcpDbData->mGcpDatabaseFileName ).arg( parms_GcpDbData->mError );
+    }
+  }
+  else
+  {
+    qDebug() << QString( "QgsGeorefPluginGui::createGcpMasterDb - creation of Database failed - db[%1] error[%2]" ).arg( parms_GcpDbData->mGcpDatabaseFileName ).arg( parms_GcpDbData->mError );
   }
   parms_GcpDbData = nullptr;
   return return_srid;
 }
-bool QgsGeorefPluginGui::createGcpCoverageDb( QString  s_database_filename, int i_srid, bool b_dump )
+int QgsGeorefPluginGui::createGcpCoverageDb( QString  s_database_filename, int i_srid, bool b_dump )
 {
-  bool b_rc = false;
+  int return_srid = INT_MIN; // Invalid
   if ( s_database_filename.isNull() )
   { // Create default Databas-File name, when not given
     if ( mRasterFilePath.isNull() )
     {
-      return b_rc;
+      return return_srid;
     }
-    s_database_filename = QString( "%1/%2.db" ).arg( mRasterFilePath ).arg( "gcp_coverage.db" );
+    s_database_filename = QString( "%1/%2.db" ).arg( mRasterFilePath ).arg( "gcp_coverage.gcp.db" );
   }
   QgsSpatiaLiteProviderGcpUtils::GcpDbData *parms_GcpDbData = nullptr;
   parms_GcpDbData = new QgsSpatiaLiteProviderGcpUtils::GcpDbData( s_database_filename, QString::null, i_srid );
-  parms_GcpDbData->mSqlDump = b_dump;
+  parms_GcpDbData->mDatabaseDump = b_dump;
   if ( QgsSpatiaLiteProviderGcpUtils::createGcpDb( parms_GcpDbData ) )
   {
-    b_rc = true;
+    if ( parms_GcpDbData->mDatabaseValid )
+    {
+      return_srid = parms_GcpDbData->mGcpSrid;
+    }
+    else
+    {
+      qDebug() << QString( "QgsGeorefPluginGui:createGcpCoverageDb -  Database considered invalid - db[%1] error[%2]" ).arg( parms_GcpDbData->mGcpDatabaseFileName ).arg( parms_GcpDbData->mError );
+    }
+  }
+  else
+  {
+    qDebug() << QString( "QgsGeorefPluginGui:createGcpCoverageDb - creation of Database failed - db[%1] error[%2]" ).arg( parms_GcpDbData->mGcpDatabaseFileName ).arg( parms_GcpDbData->mError );
   }
   parms_GcpDbData = nullptr;
-  return b_rc;
+  return return_srid;
 }
 

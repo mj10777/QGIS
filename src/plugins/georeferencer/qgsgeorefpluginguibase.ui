@@ -94,13 +94,15 @@
      <addaction name="mActionLegacyMode"/>
      <addaction name="separator"/>
     </widget>
-     <widget class="QMenu" name="menuGcpDbCreate">
+     <widget class="QMenu" name="menuGcpDbTasks">
      <property name="title">
-      <string>Create empty Gcp-Databases</string>
+      <string>Gcp-Database Tasks</string>
      </property>
-     <addaction name="mActionCreateGcpDbCoverages"/>
+     <addaction name="mActionCreateGcpDatabase"/>
      <addaction name="separator"/>
-     <addaction name="mActionCreateGcpDbMaster"/>
+     <addaction name="mActionSqlDumpGcpCoverage"/>
+     <addaction name="separator"/>
+     <addaction name="mActionSqlDumpGcpMaster"/>
     </widget>
      <widget class="QMenu" name="menuGcpMercatorPolygons">
      <property name="title">
@@ -113,7 +115,7 @@
     </widget>
     <addaction name="menuGcpDatabaseSetting"/>
     <addaction name="separator"/>
-    <addaction name="menuGcpDbCreate"/>
+    <addaction name="menuGcpDbTasks"/>
     <addaction name="separator"/>
     <addaction name="menuGcpMercatorPolygons"/>
    </widget>
@@ -464,28 +466,40 @@
      <normaloff>:/images/themes/default/mActionZoomToLayer.svg</normaloff>:/images/themes/default/mActionZoomToLayer.svg</iconset>
    </property>
   </action>
-  <action name="mActionCreateGcpDbCoverages">
+  <action name="mActionCreateGcpDatabase">
    <property name="text">
-    <string>Create empty Gcp-Coverages Database</string>
+    <string>Create an empty Gcp-Database</string>
    </property>
    <property name="statusTip">
-    <string>Create empty Gcp-Coverages Database</string>
+    <string>Create an empty Gcp-Database (Coverage / Master) with Srid</string>
    </property>
    <property name="icon">
     <iconset resource="../../../images/images.qrc">
-     <normaloff>:/images/themes/default/mActionAddOgrLayer.svg</normaloff>:/images/themes/default/mActionAddOgrLayer.svg</iconset>
+     <normaloff>:/images/themes/default/mActionNewSpatiaLiteLayer.svg</normaloff>:/images/themes/default/mActionNewSpatiaLiteLayer.svg</iconset>
    </property>
   </action>
-  <action name="mActionCreateGcpDbMaster">
+  <action name="mActionSqlDumpGcpCoverage">
    <property name="text">
-    <string>Create empty Gcp-Master Database</string>
+    <string>Create an Sql-Dump of the active Gcp-Coverage Database</string>
    </property>
    <property name="statusTip">
-    <string>Create empty Gcp-Master Database</string>
+    <string>Create an Sql-Dump of  the active Gcp-Coverage Database</string>
    </property>
    <property name="icon">
     <iconset resource="../../../images/images.qrc">
-     <normaloff>:/images/themes/default/mActionAddOgrLayer.svg</normaloff>:/images/themes/default/mActionAddOgrLayer.svg</iconset>
+     <normaloff>:/images/themes/default/mActionNewSpatiaLiteLayer.svg</normaloff>:/images/themes/default/mActionNewSpatiaLiteLayer.svg</iconset>
+   </property>
+  </action>
+  <action name="mActionSqlDumpGcpMaster">
+   <property name="text">
+    <string>Create an Sql-Dump of the active Gcp-Master Database</string>
+   </property>
+   <property name="statusTip">
+    <string>Create an Sql-Dump of the active Gcp-Master Database</string>
+   </property>
+   <property name="icon">
+    <iconset resource="../../../images/images.qrc">
+     <normaloff>:/images/themes/default/mActionNewSpatiaLiteLayer.svg</normaloff>:/images/themes/default/mActionNewSpatiaLiteLayer.svg</iconset>
    </property>
   </action>
   <action name="mActionOpenGcpMaster">

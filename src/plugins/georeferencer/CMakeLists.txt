@@ -21,6 +21,7 @@ SET (GEOREF_SRCS
      qgsmapcoordsdialog.cpp
      qgsresidualplotitem.cpp
      qgstransformsettingsdialog.cpp
+     qgsgcpdatabasedialog.cpp
 
      qgsgcplist.cpp
      qgsgcplistmodel.cpp
@@ -39,6 +40,7 @@ SET (GEOREF_UIS
      qgsgeorefpluginguibase.ui
      qgsmapcoordsdialogbase.ui
      qgstransformsettingsdialogbase.ui
+     qgsgcpdatabasedialogbase.ui
      ../../ui/qgsprojectionselectorbase.ui
      ../../ui/qgsrasterlayerpropertiesbase.ui
      qgsgcpcoveragesdialogbase.ui
@@ -58,6 +60,7 @@ SET (GEOREF_MOC_HDRS
      qgsmapcoordsdialog.h
      qgsresidualplotitem.h
      qgstransformsettingsdialog.h
+     qgsgcpdatabasedialog.h
      qgsvalidateddoublespinbox.h
     
      qgsgcplistmodel.h
