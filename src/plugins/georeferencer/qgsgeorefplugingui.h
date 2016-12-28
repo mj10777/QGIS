@@ -124,7 +124,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
 
     // edit
     /**
-     * setZoomOutTool
+     * setAddPointTool
      * @note QGIS 3.0
      * Common for both  ( mLegacyMode == 0+1 )
      *  - therefore is needed
@@ -132,7 +132,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
      */
     void setAddPointTool();
     /**
-     * setZoomOutTool
+     * setDeletePointTool
      * @note QGIS 3.0
      * Common for both  ( mLegacyMode == 0+1 )
      *  - therefore is needed
@@ -140,13 +140,22 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
      */
     void setDeletePointTool();
     /**
-     * setZoomOutTool
+     * setMovePointTool
      * @note QGIS 3.0
      * Common for both  ( mLegacyMode == 0+1 )
      *  - therefore is needed
      *  - TODO: document
      */
     void setMovePointTool();
+    /**
+     * setSpatialiteGcpTool
+     *  - turn Spatialite Gcp Logic on/off
+     * @note QGIS 3.0
+     * Common for both  ( mLegacyMode == 0+1 )
+     *  - therefore is needed
+     *  - TODO: document
+     */
+    void setSpatialiteGcpTool();
 
     // view
     void setZoomInTool();
@@ -882,7 +891,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     bool mSpatialite_gcp_enabled;
     /**
      * isGcpEnabled
-     *  - Has the Spatialite being used been compiled withthe Gcp-Logic
+     *  - Has the Spatialite being used been compiled with the Gcp-Logic
      *  -> if not the Legacy QgsMapCoordsDialog will be called
      * @note QGIS 3.0
      * New for ( mLegacyMode == 1 )
@@ -891,10 +900,23 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
      * @return  mSpatialite_gcp_enabled
      */
     bool isGcpEnabled() { return mSpatialite_gcp_enabled; }
+    /**
+     * isGcpOff
+     *  - Has the User turned off the Spatialite the Gcp-Logic =
+     *  -> if yes the Legacy QgsMapCoordsDialog will be called
+     * @note QGIS 3.0
+     * New for ( mLegacyMode == 1 )
+     *  - therefore is needed
+     * @see mSpatialite_gcp_enabled
+     * @return  mSpatialite_gcp_enabled
+     */
+    bool isGcpOff() { if (isGcpEnabled()) return mSpatialite_gcp_off; else return isGcpEnabled(); }
     // mj10777: add gui logic for this and store in setting
     bool b_gdalscript_or_gcp_list;
     // mj10777: add gui logic for this and store in setting
     bool b_points_or_spatialite_gcp;
+    // mj10777: Prevent usage of Spatialite-Gcp logic when desired
+    bool mSpatialite_gcp_off;
     QString mError;
     QgsGeorefTransform mTransformType;
     QString mGcpLabelExpression;
@@ -1175,6 +1197,8 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     QgsLayerTreeGroup *group_cutline_mercator;
     QString mMercator_polygons_layername;
     QgsVectorLayer *layer_mercator_polygons;
+    QString mMercator_polygons_transform_layername;
+    QgsVectorLayer *layer_mercator_polygons_transform;
     // Pixel-Points of active Gcp-Points]
     QString mGcp_pixel_layername;
     QgsVectorLayer *layer_gcp_pixels;
@@ -1269,6 +1293,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     bool createGcpDb( bool b_DatabaseDump = false );
     bool updateGcpDb( QString s_coverage_name );
     bool updateGcpCompute( QString s_coverage_name );
+    bool updateGcpTranslate( QString s_coverage_name );
     QgsPoint getGcpConvert( QString s_coverage_name, QgsPoint input_point, bool b_toPixel = false, int i_order = 0, bool b_reCompute = true, int id_gcp = -1 );
     /**
      * Create an empty Gcp-Master Database

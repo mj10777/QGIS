@@ -202,6 +202,27 @@ class QgsSpatiaLiteProviderGcpUtils
      * @return true if database exists
      */
     static bool createGcpDb( GcpDbData* parms_GcpDbData );
+    /**
+     * Updates the gcp_coverage TABLE
+     *  - General Data about the coverage will be stored
+     * @note the Spatialite running must be compiled with './configure --enable-gcp=yes'
+     *  - Data such as the extent of the enable POINTS will be read and stored
+     *  - The srid of the POINTs TABLE will be (again) stored
+     *  - Title, Abstract and Copyright will be stored
+     *  - General settings will be stored 
+     * @note 
+     *  A calling Application should set thes values in the 'GcpDbData' structure
+     *  - when any settings have changed
+     * @note
+     *  - 'GcpDbData' structure will be filled with the values found in the Database
+     *  -> and should be 'transfered' to the member variablen of the Application
+     * @note
+     *  this function will be called
+     *  -> durring an open, change or close
+     * @see createGcpDb
+     * @param parms_GcpDbData  with full path the the file to be created and srid to use
+     * @return true if database exists
+     */
     static bool updateGcpDb( GcpDbData* parms_GcpDbData );
     /**
      * Stores the Thin Plate Spline/Polynomial Coefficients of the Gcp-Points
@@ -217,6 +238,20 @@ class QgsSpatiaLiteProviderGcpUtils
      * @return true if database exists
      */
     static bool updateGcpCompute( GcpDbData* parms_GcpDbData );
+    /**
+     * Converts a Geometry based on the values given by Polynomial Coefficients of the Gcp-Points
+     *  using Spatialite GCP_Transform/Compute
+     * @note the Spatialite running must be compiled with './configure --enable-gcp=yes'
+     *  QGIS can be compiled without this setting since only SQL-Queries are being used
+     *  The Tables will only be created/updated after checking that 'SELECT HasGCP()' returns true
+     * <a href="https://www.gaia-gis.it/fossil/libspatialite/wiki?name=Ground+Control+Points </a>
+     * @note only when 'gcp_enable' is true, will the POINT be used
+     *  Based on the value of id_order, only those points will be used
+     * @see getGcpConvert
+     * @param s_coverage_name name of map to use
+     * @return true if database exists
+     */
+    static bool updateGcpTranslate( GcpDbData* parms_GcpDbData );
     /**
      * Convert Pixel/Map value to Map/Pixel value
      *  using Spatialite GCP_Transform/Compute
@@ -241,6 +276,17 @@ class QgsSpatiaLiteProviderGcpUtils
      *  - a Database to be used to reference POINTs to assist while Georeferencing
      *  -> all POINTs must be of the same srid
      *  --> that are listed in the central 'gcp_coverages' table
+     *  The intention a generaly reusable Database for Well-Known-Points
+     *  - also readable for non-spatial applications
+     * @note Fields
+     *  - id_gcp : should be unique
+     *  - name : should be a discriptive name for the POINT
+     *  - notes : placeholder for any other information that might ge useful
+     *  - text : placeholder for any other information that might ge useful
+     *  - belongs_to_01 / 02 : possible (text) placeholder to where the POINT belongs to
+     *  - valid_since / until : the timeframe where this POINT is valid (usable)
+     *  - map_x / y, srid : the position in a non-spatial envoirment
+     *  - gcp_type: a general classification of what type
      * @note TRIGGERS
      *  - will be created to set fields with default (readable) values from the given POINT
      *  -> map_x: result of ST_X(gcp_point)

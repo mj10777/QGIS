@@ -56,9 +56,11 @@
     <property name="title">
      <string>Edit</string>
     </property>
-    <addaction name="mActionAddPoint"/>
-    <addaction name="mActionDeletePoint"/>
-    <addaction name="mActionMoveGCPPoint"/>
+    <addaction name="mActionAddFeature"/>
+    <addaction name="mActionDeleteSelected"/>
+    <addaction name="mActionMoveFeature"/>
+    <addaction name="separator"/>
+    <addaction name="mActionSpatialiteGcp"/>
    </widget>
    <widget class="QMenu" name="menuSettings">
     <property name="title">
@@ -75,11 +77,11 @@
      <property name="toolTip">
       <string>Open Raster directly or through Gcp-Database</string>
      </property>
+    <addaction name="mOpenGcpCoverages"/>
+    <addaction name="separator"/>
     <addaction name="mListGcpCoverages"/>
     <addaction name="separator"/>
     <addaction name="mActionOpenRaster"/>
-    <addaction name="separator"/>
-    <addaction name="mOpenGcpCoverages"/>
     <addaction name="separator"/>
     <addaction name="mActionOpenGcpMaster"/>
    </widget>
@@ -168,9 +170,11 @@
    <attribute name="toolBarBreak">
     <bool>false</bool>
    </attribute>
-   <addaction name="mActionAddPoint"/>
-   <addaction name="mActionDeletePoint"/>
-   <addaction name="mActionMoveGCPPoint"/>
+   <addaction name="mActionAddFeature"/>
+   <addaction name="mActionDeleteSelected"/>
+   <addaction name="mActionMoveFeature"/>
+    <addaction name="separator"/>
+    <addaction name="mActionSpatialiteGcp"/>
   </widget>
   <widget class="QToolBar" name="toolBarView">
    <property name="windowTitle">
@@ -277,7 +281,7 @@
     <string>Transformation settings</string>
    </property>
   </action>
-  <action name="mActionAddPoint">
+  <action name="mActionAddFeature">
    <property name="text">
     <string>Add Point</string>
    </property>
@@ -288,7 +292,7 @@
     <string>Ctrl+A</string>
    </property>
   </action>
-  <action name="mActionDeletePoint">
+  <action name="mActionDeleteSelected">
    <property name="text">
     <string>Delete Point</string>
    </property>
@@ -297,6 +301,23 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+D</string>
+   </property>
+  </action>
+  <action name="mActionSpatialiteGcp">
+   <property name="text">
+    <string>SpatialiteGcp</string>
+   </property>
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="toolTip">
+    <string>Turn Spatialite Gcp-Logic on or off when creating a new Gcp-Point</string>
+   </property>
+   <property name="statusTip">
+    <string>Turn Spatialite Gcp-Logic on or off when creating a new Gcp-Point</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+G</string>
    </property>
   </action>
   <action name="mActionQuit">
@@ -391,12 +412,8 @@
    <property name="statusTip">
     <string>View Raster Properties</string>
    </property>
-   <property name="icon">
-    <iconset resource="../../../images/images.qrc">
-     <normaloff>:/images/themes/default/mActionPropertyItem.svg</normaloff>:/images/themes/default/mActionPropertyItem.svg</iconset>
-   </property>
   </action>
-  <action name="mActionMoveGCPPoint">
+  <action name="mActionMoveFeature">
    <property name="text">
     <string>Move GCP Point</string>
    </property>
@@ -417,10 +434,6 @@
   <action name="mActionLegacyMode">
    <property name="text">
     <string>Switch Legacy-Mode</string>
-   </property>
-   <property name="icon">
-    <iconset resource="../../../images/images.qrc">
-     <normaloff>:/images/themes/default/mActionRotatePointSymbols.svg</normaloff>:/images/themes/default/mActionRotatePointSymbols.svg</iconset>
    </property>
   </action>
   <action name="mActionPointsPolygon">
@@ -449,10 +462,6 @@
    <property name="statusTip">
     <string>View MercatorPolygon Properties</string>
    </property>
-   <property name="icon">
-    <iconset resource="../../../images/images.qrc">
-     <normaloff>:/images/themes/default/mActionPropertyItem.svg</normaloff>:/images/themes/default/mActionPropertyItem.svg</iconset>
-   </property>
   </action>
   <action name="mActionMercatorPolygonExtent">
    <property name="text">
@@ -460,10 +469,6 @@
    </property>
    <property name="statusTip">
     <string>Zoom to MercatorPolygon Extent</string>
-   </property>
-   <property name="icon">
-    <iconset resource="../../../images/images.qrc">
-     <normaloff>:/images/themes/default/mActionZoomToLayer.svg</normaloff>:/images/themes/default/mActionZoomToLayer.svg</iconset>
    </property>
   </action>
   <action name="mActionCreateGcpDatabase">
@@ -473,10 +478,6 @@
    <property name="statusTip">
     <string>Create an empty Gcp-Database (Coverage / Master) with Srid</string>
    </property>
-   <property name="icon">
-    <iconset resource="../../../images/images.qrc">
-     <normaloff>:/images/themes/default/mActionNewSpatiaLiteLayer.svg</normaloff>:/images/themes/default/mActionNewSpatiaLiteLayer.svg</iconset>
-   </property>
   </action>
   <action name="mActionSqlDumpGcpCoverage">
    <property name="text">
@@ -485,10 +486,6 @@
    <property name="statusTip">
     <string>Create an Sql-Dump of  the active Gcp-Coverage Database</string>
    </property>
-   <property name="icon">
-    <iconset resource="../../../images/images.qrc">
-     <normaloff>:/images/themes/default/mActionNewSpatiaLiteLayer.svg</normaloff>:/images/themes/default/mActionNewSpatiaLiteLayer.svg</iconset>
-   </property>
   </action>
   <action name="mActionSqlDumpGcpMaster">
    <property name="text">
@@ -496,10 +493,6 @@
    </property>
    <property name="statusTip">
     <string>Create an Sql-Dump of the active Gcp-Master Database</string>
-   </property>
-   <property name="icon">
-    <iconset resource="../../../images/images.qrc">
-     <normaloff>:/images/themes/default/mActionNewSpatiaLiteLayer.svg</normaloff>:/images/themes/default/mActionNewSpatiaLiteLayer.svg</iconset>
    </property>
   </action>
   <action name="mActionOpenGcpMaster">
@@ -512,10 +505,6 @@
     <property name="statusTip">
      <string>Open Gcp_Master Database</string>
     </property>
-   <property name="icon">
-    <iconset resource="../../../images/images.qrc">
-     <normaloff>:/images/themes/default/mActionAddOgrLayer.svg</normaloff>:/images/themes/default/mActionAddOgrLayer.svg</iconset>
-   </property>
   </action>
   <action name="mListGcpCoverages">
    <property name="text">
@@ -532,10 +521,6 @@
    <property name="toolTip">
     <string>Open Gcp-Database and list Gcp-Coverages\nuse 'Open Raster' to create a new Gcp-Database</string>
    </property>
-   <property name="icon">
-    <iconset resource="../../../images/images.qrc">
-     <normaloff>:/images/themes/default/mActionAddOgrLayer.svg</normaloff>:/images/themes/default/mActionAddOgrLayer.svg</iconset>
-   </property>
   </action>
   <action name="mActionLocalHistogramStretch">
    <property name="text">
@@ -548,10 +533,6 @@
    </property>
   </action>
   <action name="mActionReset">
-   <property name="icon">
-    <iconset resource="../../../images/images.qrc">
-     <normaloff>:/images/themes/default/mIconClear.svg</normaloff>:/images/themes/default/mIconClear.svg</iconset>
-   </property>
    <property name="text">
     <string>Reset Georeferencer</string>
    </property>
