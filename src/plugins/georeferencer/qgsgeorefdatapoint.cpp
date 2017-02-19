@@ -272,7 +272,7 @@ QString QgsGeorefDataPoint::sqlInsertPointsCoverage() const
         s_sql_insert += QString( "%1 AS gcp_point;" ).arg( GeomFromEWKT( 1 ) );
         break;
       case 2: // UPDATE
-        s_sql_insert  = QString( "UPDATE \"%1\" SET gcp_point=%2,name='%3', notes='%4', gcp_text='%5';" ).arg( s_points_table_name ).arg( GeomFromEWKT( 1 ) ).arg( sa_fields.at( 3 ) ).arg( sa_fields.at( 4 ) ).arg( sa_fields.at( 6 ) );
+        s_sql_insert  = QString( "UPDATE \"%1\" SET gcp_point=%2,name='%3', notes='%4', gcp_text='%5' WHERE (id_gcp=%6);" ).arg( s_points_table_name ).arg( GeomFromEWKT( 1 ) ).arg( sa_fields.at( 3 ) ).arg( sa_fields.at( 4 ) ).arg( sa_fields.at( 6 ) ).arg(sa_fields.at( 0 ));
         break;
     }
   }

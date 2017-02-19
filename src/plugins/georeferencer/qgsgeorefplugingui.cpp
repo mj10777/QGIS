@@ -5074,7 +5074,7 @@ int QgsGeorefPluginGui::bulkGcpPointsInsert( QgsGCPList* master_GcpList )
         parms_GcpDbData->gcp_coverages.insert( data_point->getIdMaster(), data_point->sqlInsertPointsCoverage() );
         break;
       case 2: // UPDATE
-        qDebug() << QString( "QgsGeorefPluginGui::bulkGcpPointsInsert[%1] UPDATE id_gcp=%3 sql[%2]" ).arg( i ).arg( data_point->sqlInsertPointsCoverage() ).arg( data_point->id() );
+        // qDebug() << QString( "QgsGeorefPluginGui::bulkGcpPointsInsert[%1] UPDATE id_gcp=%3 sql[%2]" ).arg( i ).arg( data_point->sqlInsertPointsCoverage() ).arg( data_point->id() );
         sql_update.insert( data_point->id(), data_point->sqlInsertPointsCoverage() );
         break;
     }
