@@ -55,7 +55,7 @@ class QgsGcpCoveragesDialog : public QMainWindow, private Ui::QgsGcpCoveragesDia
     void on_actionCollapseAll_triggered( bool checked );
   protected:
     // Create all Coverages
-    QTreeWidgetItem * createTreeItemCoverages(QgsSpatiaLiteProviderGcpUtils::GcpDbData* parms_GcpDbData);
+    QTreeWidgetItem * createTreeItemCoverages( QgsSpatiaLiteProviderGcpUtils::GcpDbData* parms_GcpDbData );
   private:
     void init();
     // Create all Gcp-Coverage [root]

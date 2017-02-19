@@ -31,7 +31,7 @@ QgsGcpDatabaseDialog::QgsGcpDatabaseDialog( const QgsCoordinateReferenceSystem  
     , mDestCRS( destCRS )
     , b_create_sqldump( false )
     , gcp_db_type( QgsSpatiaLiteProviderGcpUtils::GcpCoverages )
-    , mDbSuffic("db")
+    , mDbSuffic( "db" )
 {
   setupUi( this );
   QSettings s;
@@ -42,9 +42,9 @@ QgsGcpDatabaseDialog::QgsGcpDatabaseDialog( const QgsCoordinateReferenceSystem  
     s_srid = sa_authid[1];
   mGcpSrid = s_srid.toInt();
   gcp_db_type = ( QgsSpatiaLiteProviderGcpUtils::GcpDatabases )s.value( "/Plugin-GeoReferencer/lastdbtype", 0 ).toInt();
-  if ( gcp_db_type == QgsSpatiaLiteProviderGcpUtils::GcpCoverages)
+  if ( gcp_db_type == QgsSpatiaLiteProviderGcpUtils::GcpCoverages )
   {
-    mDbSuffic="gcp.db";
+    mDbSuffic = "gcp.db";
   }
   mDatabaseDir = s.value( "/Plugin-GeoReferencer/gcpdb_directory" ).toString();
   QDir build_dir( mDatabaseDir );
@@ -52,10 +52,10 @@ QgsGcpDatabaseDialog::QgsGcpDatabaseDialog( const QgsCoordinateReferenceSystem  
   leOutputDatabaseDir->setText( mDatabaseDir );
   cmbGcpDatabaseType->addItem( tr( "GcpCoverages" ), ( int )QgsSpatiaLiteProviderGcpUtils::GcpCoverages );
   cmbGcpDatabaseType->addItem( tr( "GcpMaster" ), ( int )QgsSpatiaLiteProviderGcpUtils::GcpMaster );
-  cmbGcpDatabaseType->setCurrentIndex( (int)gcp_db_type ); 
+  cmbGcpDatabaseType->setCurrentIndex(( int )gcp_db_type );
   mCrsSelector->setCrs( mDestCRS );
   // setGcpDatabaseName will be called, setting mDatabaseFile and mOutputDatabaseFileEdit
-  database_file.setFile( QString( "%1/%2" ).arg( mDatabaseDir ).arg( mDatabaseFile )  );
+  database_file.setFile( QString( "%1/%2" ).arg( mDatabaseDir ).arg( mDatabaseFile ) );
 }
 
 QgsGcpDatabaseDialog::~QgsGcpDatabaseDialog()
@@ -87,10 +87,10 @@ void QgsGcpDatabaseDialog::accept()
     }
     else
     {
-      if (!mDatabaseFile.endsWith(mDbSuffic))
+      if ( !mDatabaseFile.endsWith( mDbSuffic ) )
       {
-        QFileInfo adapt_file(mDatabaseFile);
-        mDatabaseFile=QString("%1.%2").arg(adapt_file.baseName()).arg(mDbSuffic);
+        QFileInfo adapt_file( mDatabaseFile );
+        mDatabaseFile = QString( "%1.%2" ).arg( adapt_file.baseName() ).arg( mDbSuffic );
       }
     }
     mDatabaseDir = leOutputDatabaseDir->text();
@@ -115,7 +115,7 @@ void QgsGcpDatabaseDialog::on_tbnOutputDatabaseDir_clicked()
   leOutputDatabaseDir->setText( mDatabaseDir );
   leOutputDatabaseDir->setToolTip( mDatabaseDir );
 }
-void QgsGcpDatabaseDialog::on_mCrsSelector_crsChanged( const QgsCoordinateReferenceSystem & changed_Crs)
+void QgsGcpDatabaseDialog::on_mCrsSelector_crsChanged( const QgsCoordinateReferenceSystem & changed_Crs )
 {
   QString s_gcp_authid = changed_Crs.authid();
   QStringList sa_authid = s_gcp_authid.split( ":" );
@@ -126,34 +126,34 @@ void QgsGcpDatabaseDialog::on_mCrsSelector_crsChanged( const QgsCoordinateRefere
 }
 void QgsGcpDatabaseDialog::on_cmbGcpDatabaseType_currentIndexChanged( const QString& text )
 {
- setGcpDatabaseName( text );
+  setGcpDatabaseName( text );
 }
 QString QgsGcpDatabaseDialog::setGcpDatabaseName( QString text, int i_srid )
 {
-  bool isDefaultName=false;
-  if (text.isNull())
+  bool isDefaultName = false;
+  if ( text.isNull() )
   { // Emulating result of on_cmbGcpDatabaseType_currentIndexChanged
-    switch (gcp_db_type)
+    switch ( gcp_db_type )
     {
-     case QgsSpatiaLiteProviderGcpUtils::GcpCoverages:
-      text="GcpCoverages";
-     break;
-     case QgsSpatiaLiteProviderGcpUtils::GcpMaster:
-      text="GcpMaster";
-     break;
+      case QgsSpatiaLiteProviderGcpUtils::GcpCoverages:
+        text = "GcpCoverages";
+        break;
+      case QgsSpatiaLiteProviderGcpUtils::GcpMaster:
+        text = "GcpMaster";
+        break;
     }
   }
-  if (( mOutputDatabaseFileEdit->text().isEmpty() ) || ( mOutputDatabaseFileEdit->text() == defaultGcpDatabaseName() ))
+  if (( mOutputDatabaseFileEdit->text().isEmpty() ) || ( mOutputDatabaseFileEdit->text() == defaultGcpDatabaseName() ) )
   { // Previous members values must remain in place before the first call to defaultGcpDatabaseName()
-   isDefaultName=true;
+    isDefaultName = true;
   }
-  if (i_srid != INT_MIN)
+  if ( i_srid != INT_MIN )
   { // Now we can change the (possibly) changed member values
-    mGcpSrid=i_srid;
+    mGcpSrid = i_srid;
   }
   if ( text == "GcpCoverages" )
   {
-    mDbSuffic="gcp.db";
+    mDbSuffic = "gcp.db";
     gcp_db_type = QgsSpatiaLiteProviderGcpUtils::GcpCoverages;
     if ( isDefaultName )
     {
@@ -161,13 +161,13 @@ QString QgsGcpDatabaseDialog::setGcpDatabaseName( QString text, int i_srid )
     }
     else
     {
-      QFileInfo adapt_file(mOutputDatabaseFileEdit->text());
-      mDatabaseFile=QString("%1.%2").arg(adapt_file.baseName()).arg(mDbSuffic);
+      QFileInfo adapt_file( mOutputDatabaseFileEdit->text() );
+      mDatabaseFile = QString( "%1.%2" ).arg( adapt_file.baseName() ).arg( mDbSuffic );
     }
   }
   if ( text == "GcpMaster" )
   { // Previous values must remain in place befor the first call to defaultGcpDatabaseName()
-    mDbSuffic="db";
+    mDbSuffic = "db";
     gcp_db_type = QgsSpatiaLiteProviderGcpUtils::GcpMaster;
     if ( isDefaultName )
     {
@@ -175,8 +175,8 @@ QString QgsGcpDatabaseDialog::setGcpDatabaseName( QString text, int i_srid )
     }
     else
     {
-      QFileInfo adapt_file(mOutputDatabaseFileEdit->text());
-      mDatabaseFile=QString("%1.%2").arg(adapt_file.baseName()).arg(mDbSuffic);
+      QFileInfo adapt_file( mOutputDatabaseFileEdit->text() );
+      mDatabaseFile = QString( "%1.%2" ).arg( adapt_file.baseName() ).arg( mDbSuffic );
     }
   }
   mOutputDatabaseFileEdit->setText( mDatabaseFile );

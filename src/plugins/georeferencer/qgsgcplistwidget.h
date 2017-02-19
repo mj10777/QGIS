@@ -53,13 +53,13 @@ class QgsPoint;
   * --> avoiding, yet again, another copy
   * @note Precision of 10 is now used in QgsStandardItem, avoiding the use of exponential formating in
   * - 'mGCPListModel->updateModel' is now done
-  * --> however reverts back to 2 after changes are made 
+  * --> however reverts back to 2 after changes are made
   */
 class QgsGCPListWidget : public QTableView
 {
     Q_OBJECT
   public:
-    explicit QgsGCPListWidget( QWidget *parent = nullptr, int i_LegacyMode=1 );
+    explicit QgsGCPListWidget( QWidget *parent = nullptr, int i_LegacyMode = 1 );
 
     void setLegacyMode( int i_LegacyMode );
     void setGCPList( QgsGCPList *theGCPList );
@@ -82,7 +82,7 @@ class QgsGCPListWidget : public QTableView
      * Informs QgsGCPList (when true) that the Initial loading of Point-Pairs has been compleated
      * @param true or false
      */
-    void setChanged(bool b_changed) { mGCPListModel->setChanged(b_changed); }
+    void setChanged( bool b_changed ) { mGCPListModel->setChanged( b_changed ); }
     bool transformUpdated() { return mGCPListModel->transformUpdated(); }
     bool mapUnitsPossible() { return mGCPListModel->mapUnitsPossible(); }
     /**
@@ -91,36 +91,36 @@ class QgsGCPListWidget : public QTableView
      * @param pixelCoords to store the Pixel-points
      * @return nullptr if the id was not found, otherwise Point of the fiven id
      */
-    void createGCPVectors( QVector<QgsPoint> &mapCoords, QVector<QgsPoint> &pixelCoords ) { return  mGCPListModel->createGCPVectors(mapCoords,pixelCoords); }
+    void createGCPVectors( QVector<QgsPoint> &mapCoords, QVector<QgsPoint> &pixelCoords ) { return  mGCPListModel->createGCPVectors( mapCoords, pixelCoords ); }
     /**
      * Retrieve Data-Point pair in List
      *  - added to insure that a specific Point can be retrieved
-     * @param id (either id_gcp of the database OR a count whlie loading .points file) to search for and update
-     * @return nullptr if the id was not found, otherwise Point of the fiven id
+     * @param id_gcp (either id_gcp of the database OR a count whlie loading .points file) to search for and update
+     * @return nullptr if the id was not found, otherwise Point of the given id
      */
-    QgsGeorefDataPoint* getDataPoint( int id )   { return mGCPListModel->getDataPoint(id); }
+    QgsGeorefDataPoint* getDataPoint( int id_gcp )   { return mGCPListModel->getDataPoint( id_gcp ); }
     /**
      * Add a Data-Point pair to the List
-     * @param data_point 
+     * @param data_point
      * @return truealways
      */
-    bool addDataPoint(QgsGeorefDataPoint* data_point ) { return mGCPListModel->addDataPoint(data_point); }
+    bool addDataPoint( QgsGeorefDataPoint* data_point ) { return mGCPListModel->addDataPoint( data_point ); }
     /**
      * Update Data-Point pait in List
      *  - added to avoid reloading all the points again
-     * @param id (either id_gcp of the database OR a count whlie loading .points file) to search for and update
+     * @param id_gcp (either id_gcp of the database OR a count whlie loading .points file) to search for and update
      * @param b_point_map (either pixel.point [false] of map.point [true]) to update at give id
      * @param update_point the point to use
      * @return true if the id was found, otherwise false
      */
-    bool updateDataPoint( int id, bool b_point_map, QgsPoint update_point )  { return  mGCPListModel->updateDataPoint(id, b_point_map,update_point); }
+    bool updateDataPoint( int id_gcp, bool b_point_map, QgsPoint update_point )  { return  mGCPListModel->updateDataPoint( id_gcp, b_point_map, update_point ); }
     /**
      * Remove Data-Point pair in List
      *  - added to avoid reloading all the points again
-     * @param id (either id_gcp of the database OR a count whlie loading .points file) to search for and update
+     * @param id_gcp (either id_gcp of the database OR a count whlie loading .points file) to search for and update
      * @return true if the id was found, otherwise false
      */
-    bool removeDataPoint( int id )  { return  mGCPListModel->removeDataPoint(id); }
+    bool removeDataPoint( int id_gcp )  { return  mGCPListModel->removeDataPoint( id_gcp ); }
     /**
      * Calculates root mean squared error for the currently active
      * ground control points and transform method.
@@ -129,13 +129,13 @@ class QgsGCPListWidget : public QTableView
      * @param error out: the mean error
      * @return true in case of success
      */
-    bool calculateMeanError( double& error ) const { return mGCPListModel->calculateMeanError(error); }
+    bool calculateMeanError( double& error ) const { return mGCPListModel->calculateMeanError( error ); }
     /**
      * Set mGcpDbData for Spatialite Gcp-Support
      * @param parms_GcpDbData which contains all needed information to use Spatialite Gcp-Support
      * @param b_clear clear the list
      */
-    void setGcpDbData(QgsSpatiaLiteProviderGcpUtils::GcpDbData* parms_GcpDbData, bool b_clear) { mGCPListModel->setGcpDbData(parms_GcpDbData,b_clear); };
+    void setGcpDbData( QgsSpatiaLiteProviderGcpUtils::GcpDbData* parms_GcpDbData, bool b_clear ) { mGCPListModel->setGcpDbData( parms_GcpDbData, b_clear ); };
     /**
      * Return mGcpDbData for Spatialite Gcp-Support
      * @return mGcpDbDatawhich contains all needed information to use Spatialite Gcp-Support
@@ -161,6 +161,27 @@ class QgsGCPListWidget : public QTableView
      *  - Disabled only
      */
     int countDataPointsDisabled() {return mGCPListModel->countDataPointsDisabled(); };
+    /**
+     * Search Point in List
+     *  - find a QPoint inside the List
+     * @note Goals:
+     *  - avoid the adding of Points that exist allready
+     *  - determine the need to update existing Points that are near the search Point
+     * @note result_type:
+     *  - 0: not found
+     *  - 1: result is exact [the Points are equal]
+     *  - 2: result within parameters given [QgsPoint::compare == true], but not exact
+     *  - 3: outside area  [QgsPoint::compare == false]
+     * @param search_point QPoint to use to search the List with
+     * @param b_point_map (either pixel.point [false] of map.point [true]) to update at give id
+     * @param epsilon area around point to search in [1 meter around point=0.5] - as used in QgsPoint::compare
+     * @param id_gcp of nearest
+     * @param distance to nearest point
+     * @param i_result_type to nearest point
+     * @see QgsPoint::compare
+     * @return true result is exact, otherwise false
+     */
+    bool searchDataPoint( QgsPoint search_point, bool b_point_map = true, double epsilon = 0.5, int *id_gcp = nullptr, double *distance = nullptr, int *i_result_type = nullptr )  {return mGCPListModel->searchDataPoint( search_point, b_point_map, epsilon, id_gcp, distance, i_result_type ); };
   public slots:
     // This slot is called by the list view if an item is double-clicked
     void itemDoubleClicked( QModelIndex index );
@@ -168,7 +189,7 @@ class QgsGCPListWidget : public QTableView
 
   signals:
     void jumpToGCP( uint theGCPIndex );
-    void replaceDataPoint(QgsGeorefDataPoint *pnt, int row);
+    void replaceDataPoint( QgsGeorefDataPoint *pnt, int row );
     void pointEnabled( QgsGeorefDataPoint *pnt, int i );
     void deleteDataPoint( int index );
 

@@ -116,7 +116,7 @@ class QgsMapCoordsDialog : public QDialog, private Ui::QgsMapCoordsDialogBase
     Q_OBJECT
 
   public:
-    QgsMapCoordsDialog( QgsMapCanvas *qgisCanvas, const QgsPoint &pixelCoords, int id_gcp=-1, QWidget *parent = nullptr, int i_LegacyMode=1 );
+    QgsMapCoordsDialog( QgsMapCanvas *qgisCanvas, const QgsPoint &pixelCoords, int id_gcp = -1, QWidget *parent = nullptr, int i_LegacyMode = 1 );
     ~QgsMapCoordsDialog();
 
   private slots:
@@ -129,7 +129,7 @@ class QgsMapCoordsDialog : public QDialog, private Ui::QgsMapCoordsDialogBase
     void setPrevTool();
 
   signals:
-    void pointAdded( const QgsPoint &, const QgsPoint & , const int &, const bool &);
+    void pointAdded( const QgsPoint &, const QgsPoint & , const int &, const bool & );
 
   private:
     double dmsToDD( const QString& dms );

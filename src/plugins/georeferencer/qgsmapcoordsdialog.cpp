@@ -31,21 +31,21 @@ QgsMapCoordsDialog::QgsMapCoordsDialog( QgsMapCanvas* qgisCanvas, const QgsPoint
 {
   mMapCoords.setX( 0.0 );
   mMapCoords.setY( 0.0 );
-  if (qgisCanvas->objectName() == "georefCanvas")
+  if ( qgisCanvas->objectName() == "georefCanvas" )
   { // Map-Point to Pixel-Point [recieving a Map-Point and a Pixel-Canvas to select a Pixel-Point from]
-   mPixelMap=true;
-   mMapCoords=mPixelCoords;
-   mPixelCoords.setX( 0.0 );
-   mPixelCoords.setY( 0.0 );
+    mPixelMap = true;
+    mMapCoords = mPixelCoords;
+    mPixelCoords.setX( 0.0 );
+    mPixelCoords.setY( 0.0 );
   }
-  qDebug() << QString( "QgsMapCoordsDialog[%1]  dialog- mPixelMap[%2] " ).arg(qgisCanvas->objectName() ).arg( mPixelMap );
+  qDebug() << QString( "QgsMapCoordsDialog[%1]  dialog- mPixelMap[%2] " ).arg( qgisCanvas->objectName() ).arg( mPixelMap );
   setupUi( this );
 
   QSettings s;
   restoreGeometry( s.value( "/Plugin-GeoReferencer/MapCoordsWindow/geometry" ).toByteArray() );
 
   setAttribute( Qt::WA_DeleteOnClose );
-  if (qgisCanvas->objectName() == "georefCanvas")
+  if ( qgisCanvas->objectName() == "georefCanvas" )
   {
     mPointFromCanvasPushButton = new QPushButton( QIcon( ":/icons/default/mPushButtonPencil.png" ), tr( "From Georef canvas" ) );
   }
@@ -105,15 +105,15 @@ void QgsMapCoordsDialog::on_buttonBox_accepted()
   double y = leYCoord->text().toDouble( &ok );
   if ( !ok )
     y = dmsToDD( leYCoord->text() );
-  if (mPixelMap)
+  if ( mPixelMap )
   {
-   mPixelCoords.setX( x );
-   mPixelCoords.setY( y );
+    mPixelCoords.setX( x );
+    mPixelCoords.setY( y );
   }
   else
   {
-   mMapCoords.setX( x );
-   mMapCoords.setY( y );
+    mMapCoords.setX( x );
+    mMapCoords.setY( y );
   }
 
   emit pointAdded( mPixelCoords, mMapCoords, mIdGcp, mPixelMap );

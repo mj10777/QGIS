@@ -104,10 +104,10 @@ void QgsGCPListWidget::setGeorefTransform( QgsGeorefTransform *theGeorefTransfor
 
 void QgsGCPListWidget::updateGCPList()
 {
-  if (isDirty())
+  if ( isDirty() )
   {
-   mGCPListModel->updateModel();
-   adjustTableContent();
+    mGCPListModel->updateModel();
+    adjustTableContent();
   }
 }
 

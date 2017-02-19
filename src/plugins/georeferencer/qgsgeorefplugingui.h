@@ -148,14 +148,27 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
      */
     void setMovePointTool();
     /**
-     * setSpatialiteGcpTool
+     * setSpatialiteGcpUsage
      *  - turn Spatialite Gcp Logic on/off
      * @note QGIS 3.0
      * Common for both  ( mLegacyMode == 0+1 )
      *  - therefore is needed
      *  - TODO: document
      */
-    void setSpatialiteGcpTool();
+    void setSpatialiteGcpUsage();
+    /**
+     * Fetch from the GcpMaster Database, Gcp-Point within the present MapExtent
+     *  - assumes Active GcpMaster and Coverge
+     *  -> also using Spatialite Gcp-Logic
+     * @note
+     *  - will query QGis-Map-Extent
+     *  -- search for Gcp-Points inside that extent that are NOT contained in the Coverage-Gcps
+     *  --> add these Points using Spatialite Gcp-Logic
+     * @note QGIS 3.0
+     * New for ( mLegacyMode == 1 )
+     *  - therefore is needed
+     */
+    void fetchGcpMasterPointsExtent( );
 
     // view
     void setZoomInTool();
@@ -446,7 +459,6 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
      *  - TODO: document
      */
     void showGeorefConfigDialog();
-
     // GcpDatabase
     /**
      * setLegacyMode
@@ -822,6 +834,23 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
      */
     int mGcpMasterSrid;
     /**
+     * Circle around MasterDB Gcp-Point
+     *  - default: 5.0 (2.5 Map-Units [meters] around (left/right/top/bottom of point)
+     * @note
+     *  - Assumption
+     *  -> the Gcp-Master Point is a precise position that is valid for all maps
+     *  -> checking is done (from older projects) during fetchGcpMasterPointsExtent
+     *  --> if existing Gcp-Points exist within the given  Circle
+     *  ---> if found, the former Gcp-Point will be replaced with the Gcp-Master Point
+     *  ----> the Pixel-Value will NOT be changed
+     * @note QGIS 3.0
+     * New for ( mLegacyMode == 1 )
+     *  - therefore is needed
+     * @see setCutlineGcpMasterArea
+     * @see fetchGcpMasterPointsExtent
+     */
+    double mGcpMasterArea;
+    /**
      * s_gcp_authid
      *  -
      * @note QGIS 3.0
@@ -910,7 +939,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
      * @see mSpatialite_gcp_enabled
      * @return  mSpatialite_gcp_enabled
      */
-    bool isGcpOff() { if (isGcpEnabled()) return mSpatialite_gcp_off; else return isGcpEnabled(); }
+    bool isGcpOff() { if ( isGcpEnabled() ) return mSpatialite_gcp_off; else return false; }
     // mj10777: add gui logic for this and store in setting
     bool b_gdalscript_or_gcp_list;
     // mj10777: add gui logic for this and store in setting
@@ -1013,6 +1042,15 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
      * @return  true íf usable result have been made
      */
     bool setCutlineLayerSettings( QgsVectorLayer *layer_cutline );
+    /**
+     * Circle around MasterDB Gcp-Point
+     *  - default: 2.0 (1 meter around (lef/right/top/bottom point)
+     * @note QGIS 3.0
+     * New for ( mLegacyMode == 1 )
+     *  - therefore is needed
+     * @see mGcpMasterArea
+     */
+    bool setCutlineGcpMasterArea( double d_area = 2.0, QgsVectorLayer *layer_cutline = nullptr );
     /**
      * createSvgColors
      * @param i_method  filling logic to use
@@ -1338,6 +1376,26 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
      * @return return_srid INT_MIN if invalid, otherwise the srid being used will be returned
      */
     int createGcpCoverageDb( QString  s_database_filename, int i_srid = 3068, bool b_dump = false );
+    /**
+     * Bulk INSERT (or UPDATE) of Gcp-coverages Points TABLE
+     *  - execute INSERT (or UPDATE)   commands stored in
+     *  -- retrieving created id_gcp [INSERT only]
+     * @note
+     * QMap<int, QString> gcp_coverages of the parms_GcpDbData structure
+     *  - the QString will contain the sql-command
+     *  -- it will be replaced with the returned id_gcp
+     *  - the 'int' will be used by the calling function
+     *  -- to identify to what the created id_gcp belongs to
+     * @note
+     * mOrder of the parms_GcpDbData structure
+     *  - will contain what type of Sql-Command will be used
+     *  -- 1=INSERT (will call getSqliteSequence after each INSERT)
+     *  -- 2=UPDATE (will not call SqliteSequence)
+     * @see getSqliteSequence
+     * @param parms_GcpDbData  which will contain a spatialite connection (with mParseString to use and if Spatialite Gcp-logic is active)
+     * @return true if all commands where executed correctly
+     */
+    int bulkGcpPointsInsert( QgsGCPList* master_GcpList );
     // docks ------------------------------------------
     QgsLayerTreeGroup* mRootLayerTreeGroup;
     QgsDockWidget *mLayerTreeDock;

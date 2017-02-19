@@ -60,6 +60,8 @@
     <addaction name="mActionDeleteSelected"/>
     <addaction name="mActionMoveFeature"/>
     <addaction name="separator"/>
+    <addaction name="mActionFetchMasterGcpExtent"/>
+    <addaction name="separator"/>
     <addaction name="mActionSpatialiteGcp"/>
    </widget>
    <widget class="QMenu" name="menuSettings">
@@ -144,6 +146,9 @@
    <attribute name="toolBarBreak">
     <bool>false</bool>
    </attribute>
+   <addaction name="mOpenGcpCoverages"/>
+   <addaction name="mListGcpCoverages"/>
+   <addaction name="separator"/>
    <addaction name="mActionOpenRaster"/>
    <addaction name="separator"/>
    <addaction name="mActionStartGeoref"/>
@@ -173,6 +178,8 @@
    <addaction name="mActionAddFeature"/>
    <addaction name="mActionDeleteSelected"/>
    <addaction name="mActionMoveFeature"/>
+    <addaction name="separator"/>
+    <addaction name="mActionFetchMasterGcpExtent"/>
     <addaction name="separator"/>
     <addaction name="mActionSpatialiteGcp"/>
   </widget>
@@ -318,6 +325,20 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+G</string>
+   </property>
+  </action>
+  <action name="mActionFetchMasterGcpExtent">
+   <property name="text">
+    <string>Fetch Master-Gcp(s) from Map Extent</string>
+   </property>
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="toolTip">
+    <string>Fetch Master-Gcp(s) from Map Extent and add as a new Gcp-Point</string>
+   </property>
+   <property name="statusTip">
+    <string>Fetch Master-Gcp(s) from Map Extent and add as a new Gcp-Point</string>
    </property>
   </action>
   <action name="mActionQuit">

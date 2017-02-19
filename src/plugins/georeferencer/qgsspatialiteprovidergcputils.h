@@ -209,8 +209,8 @@ class QgsSpatiaLiteProviderGcpUtils
      *  - Data such as the extent of the enable POINTS will be read and stored
      *  - The srid of the POINTs TABLE will be (again) stored
      *  - Title, Abstract and Copyright will be stored
-     *  - General settings will be stored 
-     * @note 
+     *  - General settings will be stored
+     * @note
      *  A calling Application should set thes values in the 'GcpDbData' structure
      *  - when any settings have changed
      * @note
@@ -311,6 +311,26 @@ class QgsSpatiaLiteProviderGcpUtils
      * @return true if database exists
      */
     static bool createGcpMasterDb( GcpDbData* parms_GcpDbData );
+    /**
+     * Bulk INSERT (or UPDATE) of Gcp-coverages Points TABLE
+     *  - execute INSERT (or UPDATE)   commands stored in 
+     *  -- retrieving created id_gcp [INSERT only]
+     * @note       
+     * QMap<int, QString> gcp_coverages of the parms_GcpDbData structure
+     *  - the QString will contain the sql-command
+     *  -- it will be replaced with the returned id_gcp
+     *  - the 'int' will be used by the calling function
+     *  -- to identify to what the created id_gcp belongs to
+     * @note
+     * mOrder of the parms_GcpDbData structure
+     *  - will contain what type of Sql-Command will be used
+     *  -- 1=INSERT (will call getSqliteSequence after each INSERT)
+     *  -- 2=UPDATE (will not call SqliteSequence)
+     * @see getSqliteSequence
+     * @param parms_GcpDbData  which will contain a spatialite connection (with mParseString to use and if Spatialite Gcp-logic is active)
+     * @return true if all commands where executed correctly
+     */
+    static bool bulkGcpPointsInsert( GcpDbData* parms_GcpDbData );
   private:
     /**
      * Creates sql to CREATE a 'gcp_points_||gcp_coverage' TABLE, TRIGGERS and VIEWs for the coresponding gcp_coverage entry
@@ -370,13 +390,13 @@ class QgsSpatiaLiteProviderGcpUtils
     /**
      * Write Sql-Script to file
      *  - dealing with common errors that may occur
-     * @note 
+     * @note
      *  - Original use was to replace '.db' with '.sql'
      *  -> when the directory also contained a '.db', that too was replaced
      *  --> resulting in a QFile::OpenError [5] during open
      *  - Since this functionality is often being used [4 times at the time of writing]
      *  -> a single version with proper replacement (file-name only) and Error controls was made
-     * @note 
+     * @note
      *  - This Function will add the following to the Sql-Statements:
      *  -> a header [in sql comments] showing how the script should be called
      *  -> 'BEGIN;' and 'COMMIT;' Statement inserted around the Sql-Statements
@@ -386,7 +406,16 @@ class QgsSpatiaLiteProviderGcpUtils
      * @param s_extention the extention to use to replace the source file extention with
      * @return file_result result of QFile error() by open/output commands
      */
-    static QFile::FileError writeGcpSqlDump( QString s_source_filename, QString s_sql_output=QString::null, QString s_extention="sql" );
+    static QFile::FileError writeGcpSqlDump( QString s_source_filename, QString s_sql_output = QString::null, QString s_extention = "sql" );
+    /**
+     * Retrieve last use Segquence Number of TABLE
+     *  - retrieve last used Primary-Key value after INSERT
+     *  -- SELECT seq FROM sqlite_sequence WHERE (name="gcp_points_1909.straube_blatt_iii_a.4000")
+     * @param parms_GcpDbData  which will contain a spatialite connection (with mParseString to use and if Spatialite Gcp-logic is active)
+     * @param s_tablename TABLE name to retieve 
+     * @return id_seq  last used Primary-Key value for the given TABLE
+     */
+    static int getSqliteSequence( GcpDbData* parms_GcpDbData, QString s_tablename );
     /**
      * Creates a new Spatialite-Database connection to a specific Database
      *  - opens sqlite3 connection with OPEN READWRITE and CREATE

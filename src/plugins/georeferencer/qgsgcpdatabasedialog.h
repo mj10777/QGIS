@@ -107,7 +107,7 @@ class QgsGcpDatabaseDialog : public QDialog, private Ui::QgsGcpDatabaseDialog
   private slots:
     void on_tbnOutputDatabaseDir_clicked();
     void on_cmbGcpDatabaseType_currentIndexChanged( const QString& text );
-    void on_mCrsSelector_crsChanged( const QgsCoordinateReferenceSystem & changed_Crs);
+    void on_mCrsSelector_crsChanged( const QgsCoordinateReferenceSystem & changed_Crs );
 
   private:
     /**
@@ -128,7 +128,7 @@ class QgsGcpDatabaseDialog : public QDialog, private Ui::QgsGcpDatabaseDialog
      * @see setGcpDatabaseName
      * @return mDatabaseFile the default name for mOutputDatabaseFileEdit
      */
-    QString defaultGcpDatabaseName() { if ( gcp_db_type == QgsSpatiaLiteProviderGcpUtils::GcpCoverages ) return QString("gcp_coverages.%1.%2").arg(mGcpSrid).arg(mDbSuffic); else return QString("gcp_master.%1.%2").arg(mGcpSrid).arg(mDbSuffic); }
+    QString defaultGcpDatabaseName() { if ( gcp_db_type == QgsSpatiaLiteProviderGcpUtils::GcpCoverages ) return QString( "gcp_coverages.%1.%2" ).arg( mGcpSrid ).arg( mDbSuffic ); else return QString( "gcp_master.%1.%2" ).arg( mGcpSrid ).arg( mDbSuffic ); }
     /**
      * Create an default name for the Gcp-Database (Coverage/Master)
      * @note
@@ -149,7 +149,7 @@ class QgsGcpDatabaseDialog : public QDialog, private Ui::QgsGcpDatabaseDialog
      * @param i_srid if not INT_MIN: will set the member mGcpSrid
      * @return mDatabaseFile at its present setting (not used)
      */
-    QString setGcpDatabaseName(QString text=QString::null, int i_srid=INT_MIN);
+    QString setGcpDatabaseName( QString text = QString::null, int i_srid = INT_MIN );
     /**
      * The Directory to store the Database
      * @note QGIS 3.0
@@ -229,7 +229,7 @@ class QgsGcpDatabaseDialog : public QDialog, private Ui::QgsGcpDatabaseDialog
      *  - therefore is needed
      * @note
      *  -> will be used to the srid of the Database
-     * @see GcpDatabaseType() 
+     * @see GcpDatabaseType()
      * @see QgsGeorefPluginGui::createGcpCoverageDb
      * @see QgsGeorefPluginGui::createGcpMasterDb
      */
