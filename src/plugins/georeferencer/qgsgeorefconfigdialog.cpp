@@ -125,6 +125,15 @@ void QgsGeorefConfigDialog::readSettings()
     mPixelsButton->setChecked( true );
   }
 
+  if ( s.value( "/Plugin-GeoReferencer/Config/GDALScript" ).toString() == "Full" )
+  {
+    mGdalFullButton->setChecked( true );
+  }
+  else
+  {
+    mGdalGcpButton->setChecked( true );
+  }
+
   mLeftMarginSpinBox->setValue( s.value( "/Plugin-GeoReferencer/Config/LeftMarginPDF", "2.0" ).toDouble() );
   mRightMarginSpinBox->setValue( s.value( "/Plugin-GeoReferencer/Config/RightMarginPDF", "2.0" ).toDouble() );
 
@@ -158,6 +167,14 @@ void QgsGeorefConfigDialog::writeSettings()
   else
   {
     s.setValue( "/Plugin-GeoReferencer/Config/ResidualUnits", "mapUnits" );
+  }
+  if ( mGdalFullButton->isChecked() )
+  {
+    s.setValue( "/Plugin-GeoReferencer/Config/GDALScript", "Full" );
+  }
+  else
+  {
+    s.setValue( "/Plugin-GeoReferencer/Config/GDALScript", "Gcp" );
   }
   s.setValue( "/Plugin-GeoReferencer/Config/LeftMarginPDF", mLeftMarginSpinBox->value() );
   s.setValue( "/Plugin-GeoReferencer/Config/RightMarginPDF", mRightMarginSpinBox->value() );

@@ -74,6 +74,10 @@ class QgsSpatiaLiteProviderGcpUtils
           , mGcpMasterDatabaseFileName( QString::null )
           , mGcp_coverage_name( s_coverage_name )
           , mGcpSrid( i_srid )
+          , mGcp_coverage_title( "" )
+          , mGcp_coverage_abstract( "" )
+          , mGcp_coverage_copyright( "" )
+          , mGcp_coverage_map_date( "" )
           , mGcp_points_table_name( QString::null )
           , mLayer( nullptr )
           , mGcp_enabled( false )
@@ -111,6 +115,10 @@ class QgsSpatiaLiteProviderGcpUtils
           , mGcpMasterDatabaseFileName( QString::null )
           , mGcp_coverage_name( s_coverage_name )
           , mGcpSrid( i_srid )
+          , mGcp_coverage_title( "" )
+          , mGcp_coverage_abstract( "" )
+          , mGcp_coverage_copyright( "" )
+          , mGcp_coverage_map_date( "" )
           , mGcp_points_table_name( s_points_table_name )
           , mLayer( raster_layer )
           , mGcp_enabled( b_Gcp_enabled )
@@ -148,6 +156,10 @@ class QgsSpatiaLiteProviderGcpUtils
       QString mGcpMasterDatabaseFileName;
       QString mGcp_coverage_name; // file without extention Lower-Case
       int mGcpSrid;
+      QString mGcp_coverage_title;
+      QString mGcp_coverage_abstract;
+      QString mGcp_coverage_copyright;
+      QString mGcp_coverage_map_date; 
       QString mGcp_points_table_name;
       QgsRasterLayer *mLayer;
       bool mGcp_enabled;

@@ -84,6 +84,7 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData* parms_GcpDbData )
   QString s_coverage_title = "";
   QString s_coverage_abstract = "";
   QString s_coverage_copyright = "";
+  QString s_map_date="";
   QString s_sql_select_coverages = QString::null;
   int i_image_max_x = 0;
   int i_image_max_y = 0;
@@ -301,7 +302,7 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData* parms_GcpDbData )
     parms_GcpDbData->mDatabaseValid = b_gcp_coverage;
     if ( !s_coverage_name.isNull() )
     {
-      s_sql = QString( "SELECT id_gcp_coverage,srid,transformtype,resampling, compression FROM gcp_coverages WHERE coverage_name='%1'" ).arg( s_coverage_name );
+      s_sql = QString( "SELECT id_gcp_coverage,srid,transformtype,resampling, compression,nodata,id_cutline FROM gcp_coverages WHERE coverage_name='%1'" ).arg( s_coverage_name );
       ret = sqlite3_exec( db_handle, "BEGIN", NULL, NULL, 0 );
       Q_ASSERT( ret == SQLITE_OK );
       Q_UNUSED( ret );
@@ -324,11 +325,15 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData* parms_GcpDbData )
         if ( sqlite3_column_type( stmt, 1 ) != SQLITE_NULL )
           i_srid = sqlite3_column_int( stmt, 1 );
         if ( sqlite3_column_type( stmt, 2 ) != SQLITE_NULL )
-          i_TransformParam = sqlite3_column_int( stmt, 1 );
+          i_TransformParam = sqlite3_column_int( stmt, 2 );
         if ( sqlite3_column_type( stmt, 3 ) != SQLITE_NULL )
-          s_ResamplingMethod = QString::fromUtf8(( const char * ) sqlite3_column_text( stmt, 2 ) );
+          s_ResamplingMethod = QString::fromUtf8(( const char * ) sqlite3_column_text( stmt, 3 ) );
         if ( sqlite3_column_type( stmt, 4 ) != SQLITE_NULL )
-          s_CompressionMethod = QString::fromUtf8(( const char * ) sqlite3_column_text( stmt, 3 ) );
+          s_CompressionMethod = QString::fromUtf8(( const char * ) sqlite3_column_text( stmt, 4 ) );
+        if ( sqlite3_column_type( stmt, 5 ) != SQLITE_NULL )
+          i_RasterNoData = sqlite3_column_int( stmt, 5 );
+        if ( sqlite3_column_type( stmt, 6 ) != SQLITE_NULL )
+         id_cutline = sqlite3_column_int( stmt, 6 );
       }
       sqlite3_finalize( stmt );
       // End TRANSACTION
@@ -346,7 +351,7 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData* parms_GcpDbData )
     if ( id_gcp_coverage < 0 )
     { // INSERT raster entry [title, abstract and copyright are taken from the TIFFTAGS (if they exist)]
       b_import_points = true; // import of .points file only when first created
-      QString s_map_date = QString( "%1-01-01" ).arg( parms_GcpDbData->mRasterYear, 4, 10, QChar( '0' ) );
+      s_map_date = QString( "%1-01-01" ).arg( parms_GcpDbData->mRasterYear, 4, 10, QChar( '0' ) );
       s_sql_select_coverages  = QString( "INSERT_COVERAGE%1%2" ).arg( parms_GcpDbData->mParseString ).arg( "VALUES(" );
       s_sql_select_coverages += QString( "'%1'," ).arg( s_coverage_name );
       s_sql_select_coverages += QString( "'%1'," ).arg( s_map_date );
@@ -426,7 +431,7 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData* parms_GcpDbData )
     }
     else
     { // the gcp_coverages exists, retrieve metadata and update the layer.
-      s_sql = QString( "SELECT id_gcp_coverage,srid, title, abstract, copyright FROM gcp_coverages WHERE (coverage_name='%1')" ).arg( s_coverage_name );
+      s_sql = QString( "SELECT id_gcp_coverage,srid, title, abstract, copyright, map_date FROM gcp_coverages WHERE (coverage_name='%1')" ).arg( s_coverage_name );
       ret = sqlite3_prepare_v2( db_handle, s_sql.toUtf8().constData(), -1, &stmt, NULL );
       if ( ret != SQLITE_OK )
       { //  rc=1 [no such table: vector_layers_statistics or gcp_points, 'no such column' for gcp_pixel and gcp_ppoint] is an error
@@ -451,6 +456,8 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData* parms_GcpDbData )
           s_coverage_abstract = QString::fromUtf8(( const char * ) sqlite3_column_text( stmt, 3 ) );
         if ( sqlite3_column_type( stmt, 4 ) != SQLITE_NULL )
           s_coverage_copyright = QString::fromUtf8(( const char * ) sqlite3_column_text( stmt, 4 ) );
+        if ( sqlite3_column_type( stmt, 5 ) != SQLITE_NULL )
+          s_map_date = QString::fromUtf8(( const char * ) sqlite3_column_text( stmt, 5 ) );
       }
       sqlite3_finalize( stmt );
       if ( raster_layer )
@@ -1370,6 +1377,10 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData* parms_GcpDbData )
     parms_GcpDbData->mResamplingMethod = s_ResamplingMethod;
     parms_GcpDbData->mCompressionMethod = s_CompressionMethod;
     parms_GcpDbData->mRasterNodata = i_RasterNoData;
+    parms_GcpDbData->mGcp_coverage_title = s_coverage_title;
+    parms_GcpDbData->mGcp_coverage_abstract = s_coverage_abstract;
+    parms_GcpDbData->mGcp_coverage_copyright = s_coverage_copyright;
+    parms_GcpDbData->mGcp_coverage_map_date = s_map_date;
   }
   else
   { // when dumping the Database, no need for Update

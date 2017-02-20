@@ -975,7 +975,56 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
                                      double targetResX, double targetResY );
 
     // mj10777
-    QString generateGDALgcpCommand();
+    /**
+     * generateGcpList
+     *  - for gdal_translate or as seperate list
+     * @note
+     * Based on settings in QgsGeorefConfigDialog
+     *  - b_gdalscript_or_gcp_list will be set
+     *  - false: Full Gdal-Script will be returned
+     *  - true : Only Gcp-List will be returned
+     * @see generateGDALtranslateCommand
+     * @see generateGDALScript()
+     * @return  QString with Gcp-List
+     */
+    QString generateGDALGcpList();
+    /**
+     * generateGDALTifftags
+     *  - for gdal_translate or gdalwarp
+     * @note
+     * Following TIFFTAGS are supported
+     *  - TIFFTAG_DOCUMENTNAME [gcp_coverages.title]
+     *  - TIFFTAG_IMAGEDESCRIPTION [gcp_coverages.abstract]
+     *  - TIFFTAG_COPYRIGHT [gcp_coverages.copyright]
+     *  - TIFFTAG_DATETIME [gcp_coverages.map_date]
+     *  - TIFFTAG_ARTIST
+     * @note QGIS 3.0
+     * New for ( mLegacyMode == 1 )
+     *  - therefore is needed
+     * @param i_gdal_command : 0=gdal_translate, 1=gdalwarp
+     * @see generateGDALtranslateCommand
+     * @see generateGDALwarpCommand
+     * @return  QString with -to or -mo parameters
+     */
+    QString generateGDALTifftags(int i_gdal_command);
+    /**
+     * generateGDALNodataCutlineParms
+     *  - for gdalwarp
+     * @note
+     * Nodata value stored in [gcp_coverages.nodata]
+     *  - TODO: add Diealog to set value
+     * Cutline, stored in create_cutline_polygon
+     *  - The last found id_cutline that fullfills the following conditions
+     *  -- id_gcp_coverage of the active coverage
+     *  -- cutline_type=77
+     *  - will create a Statement that looks like this:
+     *  -> -crop_to_cutline -cutline /abosult_directory/Berlin_Straube.maps.gcp.db -csql "SELECT cutline_polygon FROM create_cutline_polygons WHERE (id_cutline = 20);"
+     *  - The id_cutline will be searched for and set when the gcp_coverages is updated
+     * @see generateGDALScript()
+     * @see QgsSpatiaLiteProviderGcpUtils::updateGcpDb
+     * @return  QString with Gdal-Parameters
+     */
+    QString generateGDALNodataCutlineParms();
 
     // utils
     bool checkReadyGeoref();
@@ -1277,7 +1326,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     QgsDockWidget* mDock;
     int messageTimeout();
     /**
-     * Project interact with static Functions to
+     * Project interaction with static Functions to
      *  - create, read and administer Gcp-Coverage Tables
      *  -> also using Spatialite Gcp-Logic
      * @note QGIS 3.0

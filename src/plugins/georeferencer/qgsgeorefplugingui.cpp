@@ -206,6 +206,14 @@ QgsGeorefPluginGui::QgsGeorefPluginGui( QgisInterface* theQgisInterface, QWidget
   {
     dockThisWindow( true );
   }
+  if ( s.value( "/Plugin-GeoReferencer/Config/GDALScript" ).toString() == "Full" )
+  {
+    b_gdalscript_or_gcp_list = false;
+  }
+  else
+  {
+    b_gdalscript_or_gcp_list = true;
+  }
 }
 
 void QgsGeorefPluginGui::dockThisWindow( bool dock )
@@ -512,6 +520,15 @@ void QgsGeorefPluginGui::generateGDALScript()
 {
   if ( !checkReadyGeoref() )
     return;
+  QSettings s;
+  if ( s.value( "/Plugin-GeoReferencer/Config/GDALScript" ).toString() == "Full" )
+  {
+    b_gdalscript_or_gcp_list = false;
+  }
+  else
+  {
+    b_gdalscript_or_gcp_list = true;
+  }
 
   switch ( mTransformParam )
   { // for the spatialite/gisGrass logic wit presice POINTs:
@@ -530,8 +547,7 @@ void QgsGeorefPluginGui::generateGDALScript()
       if ( b_gdalscript_or_gcp_list )
       {
         // mj10777: for use when only gcp-list is to be returned
-        QString gcpCommand = generateGDALgcpCommand();
-        showGDALScript( QStringList() << gcpCommand );
+        showGDALScript( QStringList() << generateGDALGcpList() );
       }
       else
       {
@@ -2003,7 +2019,7 @@ void QgsGeorefPluginGui::saveGCPs()
     if ( gcpFile.open( QIODevice::WriteOnly ) )
     {
       QTextStream gcps( &gcpFile );
-      gcps << generateGDALgcpCommand();
+      gcps << generateGDALGcpList();
     }
   }
   if ( mLegacyMode == 0 )
@@ -2594,7 +2610,7 @@ void QgsGeorefPluginGui::showGDALScript( const QStringList& commands )
 QString QgsGeorefPluginGui::generateGDALtranslateCommand( bool generateTFW )
 {
   QStringList gdalCommand;
-  gdalCommand << "gdal_translate" << "-of GTiff";
+  gdalCommand << "gdal_translate" << "-of GTiff" << generateGDALTifftags( 0 );
   if ( generateTFW )
   {
     // say gdal generate associated ESRI world file
@@ -2602,14 +2618,7 @@ QString QgsGeorefPluginGui::generateGDALtranslateCommand( bool generateTFW )
   }
 
   // mj10777: replaces Q_FOREACH loop
-  gdalCommand << generateGDALgcpCommand();
-  /*
-  Q_FOREACH ( QgsGeorefDataPoint *pt, mPoints )
-  {
-    gdalCommand << QString( "-gcp %1 %2 %3 %4" ).arg( pt->pixelCoords().x() ).arg( -pt->pixelCoords().y() )
-    .arg( pt->mapCoords().x() ).arg( pt->mapCoords().y() );
-  }
-  */
+  gdalCommand << generateGDALGcpList();
 
   QFileInfo raster_file( mRasterFileName );
   mTranslatedRasterFileName = QDir::tempPath() + '/' + raster_file.fileName();
@@ -2622,7 +2631,7 @@ QString QgsGeorefPluginGui::generateGDALwarpCommand( const QString& resampling, 
     bool useZeroForTrans, int order, double targetResX, double targetResY )
 {
   QStringList gdalCommand;
-  gdalCommand << "gdalwarp" << "-r" << resampling;
+  gdalCommand << "gdalwarp" << "-r" << resampling << generateGDALTifftags( 1 ) << generateGDALNodataCutlineParms();
 
   if ( order > 0 && order <= 3 )
   {
@@ -2634,7 +2643,7 @@ QString QgsGeorefPluginGui::generateGDALwarpCommand( const QString& resampling, 
     // Otherwise, use thin plate spline interpolation
     gdalCommand << "-tps";
   }
-  gdalCommand << "-co COMPREss=" + compress << ( useZeroForTrans ? "-dstalpha" : "" );
+  gdalCommand << "-co COMPRESS=" + compress << ( useZeroForTrans ? "-dstalpha" : "" );
 
   if ( targetResX != 0.0 && targetResY != 0.0 )
   {
@@ -3081,7 +3090,7 @@ int QgsGeorefPluginGui::messageTimeout()
 }
 
 // mj10777: added functions
-QString QgsGeorefPluginGui::generateGDALgcpCommand()
+QString QgsGeorefPluginGui::generateGDALGcpList()
 {
   QStringList gdalCommand;
 
@@ -3095,7 +3104,50 @@ QString QgsGeorefPluginGui::generateGDALgcpCommand()
   }
   return gdalCommand.join( " " );
 }
-
+QString QgsGeorefPluginGui::generateGDALTifftags( int i_gdal_command )
+{
+  QStringList gdal_tifftags;
+  QString s_parm = "-mo"; // gdal_translate
+  if ( i_gdal_command == 1 )
+  {
+    s_parm = "-to"; // gdalwarp
+  }
+  if ( mGcpDbData->mGcp_coverage_title.isEmpty() )
+  { //  -to 'TIFFTAG_DOCUMENTNAME=1700 Grundriss der Friedrichstadt und Dorotheenstadt'
+    gdal_tifftags << QString( "%1 'TIFFTAG_DOCUMENTNAME=%2'" ).arg( s_parm ).arg( mGcpDbData->mGcp_coverage_title );
+  }
+  if ( !mGcpDbData->mGcp_coverage_abstract.isEmpty() )
+  { // -to 'TIFFTAG_IMAGEDESCRIPTION=1700 Grundriss der Friedrichstadt und Dorotheenstadt, Federzeichnung um 1700.'
+    gdal_tifftags << QString( "%1 'TIFFTAG_IMAGEDESCRIPTION=%2'" ).arg( s_parm ).arg( mGcpDbData->mGcp_coverage_abstract );
+  }
+  if ( !mGcpDbData->mGcp_coverage_copyright.isEmpty() )
+  { // -to 'TIFFTAG_COPYRIGHT=https://de.wikipedia.org/wiki/Datei:Friedrichstadt_dorotheensta.jpg'
+    gdal_tifftags << QString( "%1 'TIFFTAG_COPYRIGHT=%2'" ).arg( s_parm ).arg( mGcpDbData->mGcp_coverage_copyright );
+  }
+  if ( !mGcpDbData->mGcp_coverage_map_date.isEmpty() )
+  { // -to 'TIFFTAG_DATETIME=1700'
+    gdal_tifftags << QString( "%1 'TIFFTAG_DATETIME=%2'" ).arg( s_parm ).arg( mGcpDbData->mGcp_coverage_map_date );
+  }
+  if ( !mGcpDbData->map_providertags.value( "TIFFTAG_ARTIST" ).isEmpty() )
+  { // -to 'TIFFTAG_ARTIST=mj10777.de.eu'
+    gdal_tifftags << QString( "%1 'TIFFTAG_ARTIST=%2'" ).arg( s_parm ).arg( mGcpDbData->map_providertags.value( "TIFFTAG_ARTIST" ) );
+  }
+  return gdal_tifftags.join( " " );
+}
+QString QgsGeorefPluginGui::generateGDALNodataCutlineParms()
+{
+  QStringList gdal_nodata_cutline;
+  if ( mGcpDbData->mRasterNodata >= 0 )
+  { // -srcnodata 255 -dstnodata 255
+    gdal_nodata_cutline << QString( "-srcnodata %1 -dstnodata %1 " ).arg( mGcpDbData->mRasterNodata );
+  }
+  if ( mGcpDbData->mId_gcp_cutline >= 0 )
+  { // -crop_to_cutline -cutline qgis/cutline.gcp.db -csql "SELECT cutline_polygon FROM create_cutline_polygons WHERE (id_cutline = 20);"
+    QString s_cutline_sql=QString( "SELECT cutline_polygon FROM create_cutline_polygons WHERE (id_cutline = %1);").arg(mGcpDbData->mId_gcp_cutline);
+    gdal_nodata_cutline << QString( "-crop_to_cutline -cutline %1 -csql \"%2\"" ).arg( mGcpDbData->mGcpDatabaseFileName ).arg(s_cutline_sql);
+  }
+  return gdal_nodata_cutline.join( " " );
+}
 int  QgsGeorefPluginGui::getGcpTransformParam( QgsGeorefTransform::TransformParametrisation i_TransformParam )
 { // Use when calling QgsGeorefPluginGui::getGcpConvert
   int i_GpsTransformParam = 0;
@@ -5118,7 +5170,7 @@ int QgsGeorefPluginGui::bulkGcpPointsInsert( QgsGCPList* master_GcpList )
     parms_GcpDbData->gcp_coverages = sql_update;
     if ( QgsSpatiaLiteProviderGcpUtils::bulkGcpPointsInsert( parms_GcpDbData ) )
     { // insure that the screen is refreshed afterwards by adding to return_count
-      return_count+=sql_update.count();
+      return_count += sql_update.count();
       // qDebug() << QString( "QgsGeorefPluginGui::bulkGcpPointsInsert[%1] -I-> UPDATE compleated" ).arg( sql_update.count() );
     }
   }
