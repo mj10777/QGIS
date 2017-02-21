@@ -4327,8 +4327,6 @@ bool QgsGeorefPluginGui::saveEditsGcp( QgsVectorLayer *gcp_layer, bool leaveEdit
 }
 void QgsGeorefPluginGui::featureAdded_gcp( QgsFeatureId fid )
 {
-  if ( mEvent_point_status > 0 )
-    return;
   if (( layer_gcp_points ) && ( layer_gcp_pixels ) )
   { // Default assumtion: a map-point has been added and the pixel-point must be updated
     bool b_toPixel = true;
@@ -4387,6 +4385,7 @@ void QgsGeorefPluginGui::featureAdded_gcp( QgsFeatureId fid )
               }
               QString s_map_points = QString( "pixel[%1] map[%2]" ).arg( pixel_point.wellKnownText() ).arg( map_point.wellKnownText() );
               s_Event = QString( "%1 id_gcp[%2] - %3[%4]" ).arg( s_Event ).arg( id_gcp ).arg( "Adding Point" ).arg( s_map_points );
+              // qDebug() << QString( "QgsGeorefPluginGui::featureAdded_gcp[%1] -zz- after commit update_fid[%2]  event_modified[%3] update_modified[%4]" ).arg( s_Event ).arg( fet_point_update.id() ).arg( layer_gcp_event->isModified() ).arg( layer_gcp_update->isModified() );
               if ( fet_point_update.geometry()->asPoint() != added_point_update )
               { // We  have a usable result
                 QgsGeometry* geometry_update = QgsGeometry::fromPoint( added_point_update );
@@ -4406,7 +4405,7 @@ void QgsGeorefPluginGui::featureAdded_gcp( QgsFeatureId fid )
                     qDebug() << s_Event << layer_gcp_update->commitErrors();
                   }
                 }
-                qDebug() << QString( "QgsGeorefPluginGui::featureAdded_gcp[%1] -zz- after commit update_fid[%2]  event_modified[%3] update_modified[%4]" ).arg( s_Event ).arg( fet_point_update.id() ).arg( layer_gcp_event->isModified() ).arg( layer_gcp_update->isModified() );
+                // qDebug() << QString( "QgsGeorefPluginGui::featureAdded_gcp[%1] -zz- after commit update_fid[%2]  event_modified[%3] update_modified[%4]" ).arg( s_Event ).arg( fet_point_update.id() ).arg( layer_gcp_event->isModified() ).arg( layer_gcp_update->isModified() );
                 mEvent_gcp_status = 0;
                 mEvent_point_status = 0;
                 QgsGeorefDataPoint* data_point = new QgsGeorefDataPoint( mCanvas, mIface->mapCanvas(), pixel_point, map_point, mGcpSrid, id_gcp, 1, mLegacyMode );
