@@ -114,6 +114,16 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
      */
     void generateGDALScript();
     /**
+     * generateMercatorScript
+     *  - generates a script base on POLYGONs found in 'create_mercator_polygon'
+     * Script will create images out of the source image based on the cutline
+     *  - Goal is to cutout portions of Maps with folds into single images without the Fold portions
+     * @note QGIS 3.0
+     * New for ( mLegacyMode == 1 )
+     *  - therefore is needed
+     */
+    QString generateGDALMercatorScript();
+    /**
      * getTransformSettings
      * @note QGIS 3.0
      * Common for both  ( mLegacyMode == 0+1 )
@@ -132,19 +142,18 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
      */
     void setAddPointTool();
     /**
-     * setDeletePointTool
+     * setNodePointTool
      * @note QGIS 3.0
      * Common for both  ( mLegacyMode == 0+1 )
      *  - therefore is needed
      *  - TODO: document
      */
-    void setDeletePointTool();
+    void setNodePointTool();
     /**
      * setMovePointTool
      * @note QGIS 3.0
-     * Common for both  ( mLegacyMode == 0+1 )
-     *  - therefore is needed
-     *  - TODO: document
+     * Not needed, used only in ( mLegacyMode == 0 )
+     *  - therefore is not needed
      */
     void setMovePointTool();
     /**
@@ -843,6 +852,9 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
      *  --> if existing Gcp-Points exist within the given  Circle
      *  ---> if found, the former Gcp-Point will be replaced with the Gcp-Master Point
      *  ----> the Pixel-Value will NOT be changed
+     * @note
+     *  The User can change this value, which will be retrieved before being used in fetchGcpMasterPointsExtent
+     *  - a (possibly changed) value is NOT stored in the QSettings
      * @note QGIS 3.0
      * New for ( mLegacyMode == 1 )
      *  - therefore is needed
@@ -954,9 +966,6 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     int mPointsPolygon;
     double fontPointSize;
     bool exportLayerDefinition( QgsLayerTreeGroup *group_layer, QString file_path = QString::null );
-    // QgsMapTool *mAddFeature;
-    // QgsMapTool *mMoveFeature;
-    // QgsMapTool *mNodeTool;
 
     // georeference
     bool georeference();
@@ -1006,7 +1015,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
      * @see generateGDALwarpCommand
      * @return  QString with -to or -mo parameters
      */
-    QString generateGDALTifftags(int i_gdal_command);
+    QString generateGDALTifftags( int i_gdal_command );
     /**
      * generateGDALNodataCutlineParms
      *  - for gdalwarp
@@ -1092,8 +1101,18 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
      */
     bool setCutlineLayerSettings( QgsVectorLayer *layer_cutline );
     /**
-     * Circle around MasterDB Gcp-Point
-     *  - default: 2.0 (1 meter around (lef/right/top/bottom point)
+     * Retrieve value used for Circle around MasterDB Gcp-Point
+     *  - default: 5.0 (2.5 meter around (lef/right/top/bottom point)
+     * @note
+     * The User may change this value befor calling 'fetchGcpMasterPointsExtent'
+     *  - therefore the, possibly changed value, must be retrieved befor first usage
+     * @see mGcpMasterArea
+     * @see fetchGcpMasterPointsExtent
+     */
+    double getCutlineGcpMasterArea( QgsVectorLayer *layer_cutline = nullptr );
+    /**
+     * Set value used for Circle around MasterDB Gcp-Point
+     *  - default: 5.0 (2.5 meter around (lef/right/top/bottom point)
      * @note QGIS 3.0
      * New for ( mLegacyMode == 1 )
      *  - therefore is needed
@@ -1311,7 +1330,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     QgsMapTool *mToolZoomOut;
     QgsMapTool *mToolPan;
     QgsMapTool *mToolAddPoint;
-    QgsMapTool *mToolDeletePoint;
+    QgsMapTool *mToolNodePoint;
     QgsMapTool *mToolMovePoint;
     QgsMapTool *mToolMovePointQgis;
 
@@ -1450,6 +1469,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     QgsDockWidget *mLayerTreeDock;
     QgsLayerTreeView* mLayerTreeView;
     void initLayerTreeView();
+    bool bAvoidUnneededUpdates;
 };
 
 #endif

@@ -20,6 +20,7 @@ QgsGCPList::QgsGCPList()
     , mIsDirty( true )
     , mHasChanged( false )
     , mGcpDbData( nullptr )
+    , bAvoidUnneededUpdates( false )
 {
 }
 
@@ -28,6 +29,7 @@ QgsGCPList::QgsGCPList( const QgsGCPList &list )
     , mIsDirty( true )
     , mHasChanged( true )
     , mGcpDbData( nullptr )
+    , bAvoidUnneededUpdates( false )
 {
   clear();
   QgsGCPList::const_iterator it = list.constBegin();

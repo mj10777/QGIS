@@ -165,7 +165,7 @@ void QgsGCPListModel::updateModel()
     double dX = 0;
     double dY = 0;
     // Calculate residual if transform is available and up-to-date
-    if ( mGeorefTransform && bTransformUpdated && mGeorefTransform->parametersInitialized() )
+    if ( mGeorefTransform && bTransformUpdated && mGeorefTransform->parametersInitialized() && !mGCPList->avoidUnneededUpdates() )
     {
       QgsPoint reverse_point_pixel;
       QgsPoint reverse_point_map;

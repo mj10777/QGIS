@@ -172,6 +172,8 @@ class QgsGCPListModel : public QStandardItemModel
      * @return true result is exact, otherwise false
      */
     bool searchDataPoint( QgsPoint search_point, bool b_point_map = true, double epsilon = 0.5, int *id_gcp = nullptr, double *distance = nullptr, int *i_result_type = nullptr )  {return mGCPList->searchDataPoint( search_point, b_point_map, epsilon, id_gcp, distance, i_result_type ); };
+    bool avoidUnneededUpdates() {return mGCPList->avoidUnneededUpdates();};
+    void setAvoidUnneededUpdates(bool b_AvoidUnneededUpdates) {mGCPList->setAvoidUnneededUpdates(b_AvoidUnneededUpdates);};
   private:
     QgsGCPList         *mGCPList;
     QgsGeorefTransform *mGeorefTransform;

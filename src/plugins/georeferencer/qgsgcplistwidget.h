@@ -182,6 +182,8 @@ class QgsGCPListWidget : public QTableView
      * @return true result is exact, otherwise false
      */
     bool searchDataPoint( QgsPoint search_point, bool b_point_map = true, double epsilon = 0.5, int *id_gcp = nullptr, double *distance = nullptr, int *i_result_type = nullptr )  {return mGCPListModel->searchDataPoint( search_point, b_point_map, epsilon, id_gcp, distance, i_result_type ); };
+    bool avoidUnneededUpdates() {return mGCPListModel->avoidUnneededUpdates();};
+    void setAvoidUnneededUpdates(bool b_AvoidUnneededUpdates) {mGCPListModel->setAvoidUnneededUpdates(b_AvoidUnneededUpdates);};
   public slots:
     // This slot is called by the list view if an item is double-clicked
     void itemDoubleClicked( QModelIndex index );

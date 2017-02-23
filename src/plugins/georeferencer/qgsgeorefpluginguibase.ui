@@ -57,7 +57,7 @@
      <string>Edit</string>
     </property>
     <addaction name="mActionAddFeature"/>
-    <addaction name="mActionDeleteSelected"/>
+    <addaction name="mActionNodeFeature"/>
     <addaction name="mActionMoveFeature"/>
     <addaction name="separator"/>
     <addaction name="mActionFetchMasterGcpExtent"/>
@@ -176,7 +176,7 @@
     <bool>false</bool>
    </attribute>
    <addaction name="mActionAddFeature"/>
-   <addaction name="mActionDeleteSelected"/>
+   <addaction name="mActionNodeFeature"/>
    <addaction name="mActionMoveFeature"/>
     <addaction name="separator"/>
     <addaction name="mActionFetchMasterGcpExtent"/>
@@ -299,12 +299,12 @@
     <string>Ctrl+A</string>
    </property>
   </action>
-  <action name="mActionDeleteSelected">
+  <action name="mActionNodeFeature">
    <property name="text">
-    <string>Delete Point</string>
+    <string>Change Point</string>
    </property>
    <property name="statusTip">
-    <string>Delete point</string>
+    <string>Change point</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+D</string>

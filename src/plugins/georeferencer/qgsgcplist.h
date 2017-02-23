@@ -143,6 +143,8 @@ class QgsGCPList : public QList<QgsGeorefDataPoint *>
      * @param true or false
      */
     void setChanged( bool b_changed ) { mHasChanged = b_changed; };
+    bool avoidUnneededUpdates() {return bAvoidUnneededUpdates;};
+    void setAvoidUnneededUpdates(bool b_AvoidUnneededUpdates) {bAvoidUnneededUpdates=b_AvoidUnneededUpdates;};
   private:
 
     int size();
@@ -162,6 +164,7 @@ class QgsGCPList : public QList<QgsGeorefDataPoint *>
     QgsSpatiaLiteProviderGcpUtils::GcpDbData* mGcpDbData;
     bool setDirty() { mIsDirty = true; mHasChanged = true ; return mIsDirty; }
     friend class QgsGCPListModel; // in order to access createGCPVectors, getPoint, updatePoint and removePoint
+    bool bAvoidUnneededUpdates;
 };
 
 #endif
