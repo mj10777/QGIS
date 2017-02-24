@@ -172,7 +172,13 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
      * @note
      *  - will query QGis-Map-Extent
      *  -- search for Gcp-Points inside that extent that are NOT contained in the Coverage-Gcps
-     *  --> add these Points using Spatialite Gcp-Logic
+     *  --> add these Points using Spatialite Gcp-Logic, when NOT turned off or if NOT available
+     * @note
+     * Gcp-Master Point correctoons of existing Gcp-Points
+     *  - when a existing Gcp-Points is within the 'mGcpMasterArea' Circle
+     *  -> the existing Gcp-Map point will be replaced with the Gcp-Master Point
+     *  --> this functionality is available, when the Spatialite Gcp-Logic has been NOT turned off or if NOT available
+     *  --> this combination also allows for the corrections of Gcp-Points WITHOUT the fetching of other Gcp-Master Points
      * @note QGIS 3.0
      * New for ( mLegacyMode == 1 )
      *  - therefore is needed
@@ -922,7 +928,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     QgsImageWarper::ResamplingMethod setGcpResamplingMethod( QString s_ResamplingMethod );
     /**
      * mSpatialite_gcp_enabled
-     *  - Has the Spatialite being used been compiled withthe Gcp-Logic
+     *  - Has the Spatialite being used been compiled with the Gcp-Logic
      *  -> if not the Legacy QgsMapCoordsDialog will be called
      * @note QGIS 3.0
      * New for ( mLegacyMode == 1 )
@@ -943,7 +949,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     bool isGcpEnabled() { return mSpatialite_gcp_enabled; }
     /**
      * isGcpOff
-     *  - Has the User turned off the Spatialite the Gcp-Logic =
+     *  - Has the User turned off the Spatialite the Gcp-Logic ?
      *  -> if yes the Legacy QgsMapCoordsDialog will be called
      * @note QGIS 3.0
      * New for ( mLegacyMode == 1 )

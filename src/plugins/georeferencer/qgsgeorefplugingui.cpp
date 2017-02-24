@@ -592,11 +592,20 @@ void QgsGeorefPluginGui::setSpatialiteGcpUsage()
     else
       s_text = "Spatialite Gcp-Logic will be used when creating a new Gcp-Point";
   }
+  mActionSpatialiteGcp->setEnabled( true );
   mActionSpatialiteGcp->setText( s_text );
   mActionSpatialiteGcp->setToolTip( s_text );
   mActionSpatialiteGcp->setStatusTip( s_text );
   mActionSpatialiteGcp->setChecked( !mSpatialite_gcp_off );
-  mActionFetchMasterGcpExtent->setEnabled( !mSpatialite_gcp_off );
+  s_text = "Fetch Master-Gcp(s) from Map Extent and add as a new Gcp-Point, with Gcp-Master Point correctoons";
+  if (( !isGcpEnabled() ) || ( mSpatialite_gcp_off ) )
+  {
+    s_text = "Gcp-Master Point correctoons from Map Extent, without the Fetching of Master-Gcp(s) ";
+  }
+  mActionFetchMasterGcpExtent->setText( s_text );
+  mActionFetchMasterGcpExtent->setToolTip( s_text );
+  mActionFetchMasterGcpExtent->setStatusTip( s_text );
+  mActionFetchMasterGcpExtent->setEnabled( true );
   // qDebug() << QString( "-I-> QgsGeorefPluginGui::setSpatialiteGcpUsage[%1,%2,%3]" ).arg(mSpatialite_gcp_off).arg(mActionSpatialiteGcp->isChecked()).arg(s_text);
 }
 void QgsGeorefPluginGui::setAddPointTool()
@@ -1941,18 +1950,14 @@ bool QgsGeorefPluginGui::loadGCPs( /*bool verbose*/ )
     {
       mIface->layerTreeView()->setCurrentLayer( layer_gcp_points );
       mLayerTreeView->setCurrentLayer( layer_gcp_pixels );
-      QString s_text = "Spatialite Gcp-Logic cannot be used";
-      if ( isGcpEnabled() )
+      mActionFetchMasterGcpExtent->setEnabled( true );
+      mSpatialite_gcp_off = false;
+      if (( !isGcpOff() ) && (mGCPListWidget->countDataPointsEnabled() > 3))
       {
-        s_text = "Spatialite Gcp-Logic will be used when creating a new Gcp-Point";
-        mSpatialite_gcp_off = false;
-        mActionSpatialiteGcp->setEnabled( true );
-        mActionFetchMasterGcpExtent->setEnabled( true );
+        mSpatialite_gcp_off = true;
       }
-      mActionSpatialiteGcp->setText( s_text );
-      mActionSpatialiteGcp->setToolTip( s_text );
-      mActionSpatialiteGcp->setStatusTip( s_text );
-      mActionSpatialiteGcp->setChecked( !mSpatialite_gcp_off );
+      // Will set the opposite and all the text
+      setSpatialiteGcpUsage();
     }
     mCanvas->refresh();
     mIface->mapCanvas()->refresh();
@@ -3070,6 +3075,7 @@ void QgsGeorefPluginGui::clearGCPData()
         group_cutline_mercator->removeLayer( layer_gcp_pixels );
         layer_gcp_pixels = nullptr;
       }
+      mRootLayerTreeGroup->removeChildNode(( QgsLayerTreeNode * )group_cutline_mercator );
       group_cutline_mercator = nullptr;
     }
   }
@@ -5073,7 +5079,7 @@ int QgsGeorefPluginGui::createGcpCoverageDb( QString  s_database_filename, int i
 }
 void QgsGeorefPluginGui::fetchGcpMasterPointsExtent( )
 {
-  if (( mLegacyMode == 0 ) || ( isGcpOff() ) || ( !mLayer ) || ( !mGcpDbData ) || ( !mIface->mapCanvas() ) || ( !mCanvas ) || ( !mGCPListWidget ) ||
+  if (( mLegacyMode == 0 ) || ( !mLayer ) || ( !mGcpDbData ) || ( !mIface->mapCanvas() ) || ( !mCanvas ) || ( !mGCPListWidget ) ||
       ( !layer_gcp_master ) || ( !layer_gcp_points ) || ( !layer_gcp_points->isEditable() ) )
   { // Preconditions [everything we need to fullfill the task must be active]
     mActionFetchMasterGcpExtent->setChecked( false );
@@ -5150,35 +5156,38 @@ void QgsGeorefPluginGui::fetchGcpMasterPointsExtent( )
         }
         else
         {
-          b_valid = true;
-          id_gcp_master = fet_master_point.attribute( QString( "id_gcp" ) ).toInt();
-          s_master_TextInfo  = QString( "%2%1" ).arg( mGcpDbData->mParseString ).arg( id_gcp_master );
-          s_master_TextInfo += QString( "%2%1" ).arg( mGcpDbData->mParseString ).arg( mId_gcp_coverage );
-          s_master_TextInfo += QString( "%2%1" ).arg( mGcpDbData->mParseString ).arg( mGcp_points_table_name );
-          s_master_TextInfo += QString( "%2%1" ).arg( mGcpDbData->mParseString ).arg( fet_master_point.attribute( QString( "name" ) ).toString() );
-          s_master_TextInfo += QString( "%2%1" ).arg( mGcpDbData->mParseString ).arg( fet_master_point.attribute( QString( "notes" ) ).toString() );
-          s_master_TextInfo += QString( "%2%1" ).arg( mGcpDbData->mParseString ).arg( getGcpTransformParam( mTransformParam ) );
-          s_master_TextInfo += QString( "%1" ).arg( QString( "GcpMaster[%1]" ).arg( id_gcp_master ) );
-          // qDebug() << QString( "master_TextInfo[%1] " ).arg( s_master_TextInfo );
-          pt_pixel = getGcpConvert( mGcp_coverage_name, pt_point, b_toPixel, mTransformParam );
-          if (( pt_pixel.x() == 0.0 ) && ( pt_pixel.x() == 0.0 ) )
-          {
-            b_valid = false;
-          }
-          if (( i_search_result_type < 2 ) || ( i_search_result_type > 3 ) )
-          { // 2=possible update ; 3 new point
-            b_valid = false;
-          }
-          if (( !b_permit_update ) && ( i_search_result_type == 2 ) )
-          { // We may, at some time, offer a option to turn off automatic UPDATEs [b_permit_update=false]
-            b_valid = false;
-          }
-          if ( b_valid )
-          {
-            QgsGeorefDataPoint* data_point = new QgsGeorefDataPoint( pt_pixel, pt_point, mGcpSrid, id_gcp_master, id_gcp_master, i_search_result_type, s_master_TextInfo );
-            data_point->setEnabled( true );
-            master_GcpList->append( data_point );
-            // s_searchDataPoint = QString( "-I-> searchDataPoint[%1] [gcp-INSERT] result_type[%2] distance[%3] id_gcp[%4]" ).arg( b_searchDataPoint ).arg( i_search_result_type ).arg( search_distance ).arg( i_search_id_gcp );
+          if ( !isGcpOff() )
+          { // Only when the User has NOT turned off the Spatialite the Gcp-Logic and the Spatialite being used been compiled with the Gcp-Logic
+            b_valid = true;
+            id_gcp_master = fet_master_point.attribute( QString( "id_gcp" ) ).toInt();
+            s_master_TextInfo  = QString( "%2%1" ).arg( mGcpDbData->mParseString ).arg( id_gcp_master );
+            s_master_TextInfo += QString( "%2%1" ).arg( mGcpDbData->mParseString ).arg( mId_gcp_coverage );
+            s_master_TextInfo += QString( "%2%1" ).arg( mGcpDbData->mParseString ).arg( mGcp_points_table_name );
+            s_master_TextInfo += QString( "%2%1" ).arg( mGcpDbData->mParseString ).arg( fet_master_point.attribute( QString( "name" ) ).toString() );
+            s_master_TextInfo += QString( "%2%1" ).arg( mGcpDbData->mParseString ).arg( fet_master_point.attribute( QString( "notes" ) ).toString() );
+            s_master_TextInfo += QString( "%2%1" ).arg( mGcpDbData->mParseString ).arg( getGcpTransformParam( mTransformParam ) );
+            s_master_TextInfo += QString( "%1" ).arg( QString( "GcpMaster[%1]" ).arg( id_gcp_master ) );
+            // qDebug() << QString( "master_TextInfo[%1] " ).arg( s_master_TextInfo );
+            pt_pixel = getGcpConvert( mGcp_coverage_name, pt_point, b_toPixel, mTransformParam );
+            if (( pt_pixel.x() == 0.0 ) && ( pt_pixel.x() == 0.0 ) )
+            {
+              b_valid = false;
+            }
+            if (( i_search_result_type < 2 ) || ( i_search_result_type > 3 ) )
+            { // 2=possible update ; 3 new point
+              b_valid = false;
+            }
+            if (( !b_permit_update ) && ( i_search_result_type == 2 ) )
+            { // We may, at some time, offer a option to turn off automatic UPDATEs [b_permit_update=false]
+              b_valid = false;
+            }
+            if ( b_valid )
+            {
+              QgsGeorefDataPoint* data_point = new QgsGeorefDataPoint( pt_pixel, pt_point, mGcpSrid, id_gcp_master, id_gcp_master, i_search_result_type, s_master_TextInfo );
+              data_point->setEnabled( true );
+              master_GcpList->append( data_point );
+              // s_searchDataPoint = QString( "-I-> searchDataPoint[%1] [gcp-INSERT] result_type[%2] distance[%3] id_gcp[%4]" ).arg( b_searchDataPoint ).arg( i_search_result_type ).arg( search_distance ).arg( i_search_id_gcp );
+            }
           }
         }
       }
