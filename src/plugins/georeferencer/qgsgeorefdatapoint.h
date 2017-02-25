@@ -134,15 +134,20 @@ class QgsGeorefDataPoint : public QObject
      *  - Format point a EWKT for INSERT / UPDATE Sql-Statements
      *  -> using the set Srid of the point
      * @note
-     * Expected values:
+     * Expected values for i_point_type  pixel:
      *  0: Pixel-Value
      *  1: Map-Value
      *  2: reversed Pixel-Value
      *  3: reversed Map-Value
+     * @note
+     * Gcp-Master : when contains another srid:
+     * - the srid of the master is given and transformed into the srid of the project
      * @see GeomFromEWKT
+     * @param i_point_type  pixel Pixel/Map/Reversed
+     * @param i_srid srid to use for ST_Transform
      * @return  Spatialite specific formated String as EWKT of point
      */
-    QString AsEWKT( int i_point_type = 1 ) const;
+    QString AsEWKT( int i_point_type = 1, int i_srid = -1 ) const;
     /**
      * sqlInsertPointsCoverage
      *  - Depending on how point is being used
@@ -154,10 +159,12 @@ class QgsGeorefDataPoint : public QObject
      * @see getResultType
      * @see setResultType
      * @see getTextInfo
+     * @see AsEWKT
      * @see QgsGeorefPluginGui::bulkGcpPointsInsert
+     * @param i_srid srid to use for ST_Transform during AsEWKT
      * @return valid SQL to UPDATE or INSERT the point
      */
-    QString sqlInsertPointsCoverage() const;
+    QString sqlInsertPointsCoverage(int i_srid = -1) const;
     /**
      * GeomFromEWKT
      *  - Format point a EWKT for INSERT / UPDATE Sql-Statements
@@ -169,9 +176,11 @@ class QgsGeorefDataPoint : public QObject
      *  2: reversed Pixel-Value
      *  3: reversed Map-Value
      * @see AsEWKT
+     * @param i_point_type  pixel Pixel/Map/Reversed
+     * @param i_srid srid to use for ST_Transform
      * @return  Spatialite specific GeomFromEWKT command, with formated String as EWKT of point
      */
-    QString GeomFromEWKT( int i_point_type = 1 ) const { return QString( "GeomFromEWKT('%1')" ).arg( AsEWKT( i_point_type ) ); };
+    QString GeomFromEWKT( int i_point_type = 1, int i_srid = -1 ) const { return QString( "GeomFromEWKT('%1')" ).arg( AsEWKT( i_point_type,i_srid ) ); };
     bool contains( QPoint p, bool isMapPlugin );
     /**
      * Returns pixel (Georeferencer) Canvas

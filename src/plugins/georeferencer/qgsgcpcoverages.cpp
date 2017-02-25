@@ -196,7 +196,7 @@ QTreeWidgetItem * QgsGcpCoveragesDialog::createTreeItemCoverage( int id_gcp_cove
   QTreeWidgetItem *coverage_Item = new QTreeWidgetItem( coverage_data, id_gcp_coverage );
   QString s_copyright = QString( "copyright=%1" ).arg( sa_fields.at( 7 ) );
   QString s_scale = QString( "scale=%1" ).arg( sa_fields.at( 8 ) );
-  QString s_nodata = QString( "notada=%1" ).arg( sa_fields.at( 9 ) );
+  QString s_nodata = QString( "nodata=%1" ).arg( sa_fields.at( 9 ) );
   QString s_srid = QString( "srid=%1" ).arg( sa_fields.at( 10 ) );
   QString s_id_cutline = QString( "id_cutline=%1" ).arg( sa_fields.at( 11 ) );
   QString s_gcp_count = QString( "gcp_count=%1" ).arg( sa_fields.at( 12 ) );

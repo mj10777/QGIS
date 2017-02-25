@@ -74,6 +74,7 @@ class QgsSpatiaLiteProviderGcpUtils
           , mGcpMasterDatabaseFileName( QString::null )
           , mGcp_coverage_name( s_coverage_name )
           , mGcpSrid( i_srid )
+          , mGcpMasterSrid( -1 )
           , mGcp_coverage_title( "" )
           , mGcp_coverage_abstract( "" )
           , mGcp_coverage_copyright( "" )
@@ -115,6 +116,7 @@ class QgsSpatiaLiteProviderGcpUtils
           , mGcpMasterDatabaseFileName( QString::null )
           , mGcp_coverage_name( s_coverage_name )
           , mGcpSrid( i_srid )
+          , mGcpMasterSrid( -1 )
           , mGcp_coverage_title( "" )
           , mGcp_coverage_abstract( "" )
           , mGcp_coverage_copyright( "" )
@@ -156,6 +158,7 @@ class QgsSpatiaLiteProviderGcpUtils
       QString mGcpMasterDatabaseFileName;
       QString mGcp_coverage_name; // file without extention Lower-Case
       int mGcpSrid;
+      int mGcpMasterSrid;
       QString mGcp_coverage_title;
       QString mGcp_coverage_abstract;
       QString mGcp_coverage_copyright;

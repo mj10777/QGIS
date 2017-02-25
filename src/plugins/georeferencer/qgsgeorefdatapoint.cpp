@@ -229,7 +229,7 @@ void QgsGeorefDataPoint::moveTo( QPoint p, bool isMapPlugin )
   updateCoords();
 }
 
-QString QgsGeorefDataPoint::AsEWKT( int i_point_type ) const
+QString QgsGeorefDataPoint::AsEWKT( int i_point_type, int i_srid ) const
 {
   QString s_EWKT = QString( "SRID=%1;%2" );
   switch ( i_point_type )
@@ -241,16 +241,34 @@ QString QgsGeorefDataPoint::AsEWKT( int i_point_type ) const
       s_EWKT = QString( s_EWKT ).arg( -1 ).arg( mPixelCoords_reverse.wellKnownText() );
       break;
     case 3:
-      s_EWKT = QString( s_EWKT ).arg( getSrid() ).arg( mMapCoords_reverse.wellKnownText() );
-      break;
+    {
+      if (( i_srid > 0 ) && ( i_srid != getSrid() ) )
+      {
+        s_EWKT = QString("ST_Transform(%1,%2)").arg(QString( s_EWKT ).arg( i_srid ).arg( mMapCoords_reverse.wellKnownText() )).arg(getSrid());
+      }
+      else
+      {
+        s_EWKT = QString( s_EWKT ).arg( getSrid() ).arg( mMapCoords_reverse.wellKnownText() );
+      }
+    }
+    break;
     case 1:
     default:
-      s_EWKT = QString( s_EWKT ).arg( getSrid() ).arg( mMapCoords.wellKnownText() );
-      break;
+    {
+      if (( i_srid > 0 ) && ( i_srid != getSrid() ) )
+      {
+        s_EWKT = QString("ST_Transform(%1,%2)").arg(QString( s_EWKT ).arg( i_srid ).arg( mMapCoords.wellKnownText() )).arg(getSrid());
+      }
+      else
+      {
+        s_EWKT = QString( s_EWKT ).arg( getSrid() ).arg( mMapCoords.wellKnownText() );
+      }
+    }
+    break;
   }
   return s_EWKT;
 }
-QString QgsGeorefDataPoint::sqlInsertPointsCoverage() const
+QString QgsGeorefDataPoint::sqlInsertPointsCoverage( int i_srid ) const
 {
   QString s_sql_insert = "";
   QStringList sa_fields = getTextInfo().split( mParseString ); // 10
@@ -269,10 +287,10 @@ QString QgsGeorefDataPoint::sqlInsertPointsCoverage() const
         s_sql_insert += QString( "%1 AS order_selected," ).arg( sa_fields.at( 5 ) );
         s_sql_insert += QString( "'%1' AS gcp_text," ).arg( sa_fields.at( 6 ) );
         s_sql_insert += QString( "%1 AS gcp_pixel," ).arg( GeomFromEWKT( 0 ) );
-        s_sql_insert += QString( "%1 AS gcp_point;" ).arg( GeomFromEWKT( 1 ) );
+        s_sql_insert += QString( "%1 AS gcp_pixel," ).arg( GeomFromEWKT( 1, i_srid ) );
         break;
       case 2: // UPDATE
-        s_sql_insert  = QString( "UPDATE \"%1\" SET gcp_point=%2,name='%3', notes='%4', gcp_text='%5' WHERE (id_gcp=%6);" ).arg( s_points_table_name ).arg( GeomFromEWKT( 1 ) ).arg( sa_fields.at( 3 ) ).arg( sa_fields.at( 4 ) ).arg( sa_fields.at( 6 ) ).arg(sa_fields.at( 0 ));
+        s_sql_insert  = QString( "UPDATE \"%1\" SET gcp_point=%2,name='%3', notes='%4', gcp_text='%5' WHERE (id_gcp=%6);" ).arg( s_points_table_name ).arg( GeomFromEWKT( 1 , i_srid) ).arg( sa_fields.at( 3 ) ).arg( sa_fields.at( 4 ) ).arg( sa_fields.at( 6 ) ).arg( sa_fields.at( 0 ) );
         break;
     }
   }

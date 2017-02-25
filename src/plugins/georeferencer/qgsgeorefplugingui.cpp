@@ -5127,11 +5127,16 @@ void QgsGeorefPluginGui::fetchGcpMasterPointsExtent( )
       i_count++;
       b_valid = false;
       pt_point = fet_master_point.geometry()->vertexAt( 0 );
-      b_searchDataPoint = mGCPListWidget->searchDataPoint( pt_point, b_point_map, mGcpMasterArea, &i_search_id_gcp, &search_distance, &i_search_result_type );
+      b_searchDataPoint=false;
+      if (mGcpMasterSrid == mGcpSrid)
+      { // If not the same srid, will never be found without transformation
+       b_searchDataPoint = mGCPListWidget->searchDataPoint( pt_point, b_point_map, mGcpMasterArea, &i_search_id_gcp, &search_distance, &i_search_result_type );
+      }
+      // TODO: Transform Point
       // s_searchDataPoint = QString( "-I-> searchDataPoint[%1] [gcp-exists] result_type[%2] distance[%3] id_gcp[%4]" ).arg( b_searchDataPoint ).arg( i_search_result_type ).arg( search_distance ).arg( i_search_id_gcp );
       if ( !b_searchDataPoint )
       { // Only id_gcp was when not found [not an exact match]
-        if ( search_distance <= ( mGcpMasterArea / 2 ) )
+        if (( search_distance <= ( mGcpMasterArea / 2 ) ) && (mGcpMasterSrid == mGcpSrid))
         { // POINT is near the GCP (left/right/top/bottom of point) [update with Master-Gcp Position]
           if ( mGCPListWidget->updateDataPoint( i_search_id_gcp, b_point_map, pt_point ) )
           { // Retrieve the UPDATEd QgsGeorefDataPoint
@@ -5233,11 +5238,11 @@ int QgsGeorefPluginGui::bulkGcpPointsInsert( QgsGCPList* master_GcpList )
     {
       case 3: // INSERT
         // qDebug() << QString( "QgsGeorefPluginGui::bulkGcpPointsInsert[%1] INSERT  id_gcp=%3 sql[%2]" ).arg( i ).arg( data_point->sqlInsertPointsCoverage() ).arg(data_point->id());
-        parms_GcpDbData->gcp_coverages.insert( data_point->getIdMaster(), data_point->sqlInsertPointsCoverage() );
+        parms_GcpDbData->gcp_coverages.insert( data_point->getIdMaster(), data_point->sqlInsertPointsCoverage(mGcpMasterSrid) );
         break;
       case 2: // UPDATE
         // qDebug() << QString( "QgsGeorefPluginGui::bulkGcpPointsInsert[%1] UPDATE id_gcp=%3 sql[%2]" ).arg( i ).arg( data_point->sqlInsertPointsCoverage() ).arg( data_point->id() );
-        sql_update.insert( data_point->id(), data_point->sqlInsertPointsCoverage() );
+        sql_update.insert( data_point->id(), data_point->sqlInsertPointsCoverage(mGcpMasterSrid) );
         break;
     }
   }
