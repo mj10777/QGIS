@@ -5118,6 +5118,10 @@ void QgsGeorefPluginGui::fetchGcpMasterPointsExtent( )
   QgsPoint pt_pixel;
   QString s_master_TextInfo;
   QMap<int, QString> sql_insert;
+  // fetchGcpMasterPoint only within 110% of image area
+  QgsRectangle image_extent= mLayer->extent();
+  double scale_area=1.10;
+   image_extent.scale(scale_area);
   // The User may have reset value, so this value needs to be retrieved beforhand
   mGcpMasterArea = getCutlineGcpMasterArea( layer_gcp_master );
   while ( layer_gcp_master_fit.nextFeature( fet_master_point ) )
@@ -5174,6 +5178,10 @@ void QgsGeorefPluginGui::fetchGcpMasterPointsExtent( )
             s_master_TextInfo += QString( "%1" ).arg( QString( "GcpMaster[%1]" ).arg( id_gcp_master ) );
             // qDebug() << QString( "master_TextInfo[%1] " ).arg( s_master_TextInfo );
             pt_pixel = getGcpConvert( mGcp_coverage_name, pt_point, b_toPixel, mTransformParam );
+            if (!image_extent.contains(pt_pixel))
+            { // fetchGcpMasterPoint only within 110% of image area [prevent fetching of GcpMasterPoint outside of image area]
+              b_valid = false;
+            }
             if (( pt_pixel.x() == 0.0 ) && ( pt_pixel.x() == 0.0 ) )
             {
               b_valid = false;

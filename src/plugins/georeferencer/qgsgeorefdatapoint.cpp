@@ -287,7 +287,7 @@ QString QgsGeorefDataPoint::sqlInsertPointsCoverage( int i_srid ) const
         s_sql_insert += QString( "%1 AS order_selected," ).arg( sa_fields.at( 5 ) );
         s_sql_insert += QString( "'%1' AS gcp_text," ).arg( sa_fields.at( 6 ) );
         s_sql_insert += QString( "%1 AS gcp_pixel," ).arg( GeomFromEWKT( 0 ) );
-        s_sql_insert += QString( "%1 AS gcp_pixel," ).arg( GeomFromEWKT( 1, i_srid ) );
+        s_sql_insert += QString( "%1 AS gcp_point" ).arg( GeomFromEWKT( 1, i_srid ) );
         break;
       case 2: // UPDATE
         s_sql_insert  = QString( "UPDATE \"%1\" SET gcp_point=%2,name='%3', notes='%4', gcp_text='%5' WHERE (id_gcp=%6);" ).arg( s_points_table_name ).arg( GeomFromEWKT( 1 , i_srid) ).arg( sa_fields.at( 3 ) ).arg( sa_fields.at( 4 ) ).arg( sa_fields.at( 6 ) ).arg( sa_fields.at( 0 ) );

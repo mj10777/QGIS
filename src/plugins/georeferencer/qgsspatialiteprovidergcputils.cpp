@@ -1774,7 +1774,7 @@ QgsPoint QgsSpatiaLiteProviderGcpUtils::getGcpConvert( GcpDbData* parms_GcpDbDat
   QString s_map_point_to_pixel_point = "Map-Point to Pixel-Point";
   if ( b_database_exists )
   {
-    qDebug() << QString( "QgsSpatiaLiteProviderGcpUtils::getGcpConvert start - 01 - toPixel[%3] point[%1,%2]  " ).arg( input_point.x() ).arg( input_point.y() ).arg( b_toPixel );
+    // qDebug() << QString( "QgsSpatiaLiteProviderGcpUtils::getGcpConvert start - 01 - toPixel[%3] point[%1,%2]  " ).arg( input_point.x() ).arg( input_point.y() ).arg( b_toPixel );
     sqlite3* db_handle;
     sqlite3_stmt* stmt;
     // open database
