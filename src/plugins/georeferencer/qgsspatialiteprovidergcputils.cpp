@@ -84,7 +84,7 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData* parms_GcpDbData )
   QString s_coverage_title = "";
   QString s_coverage_abstract = "";
   QString s_coverage_copyright = "";
-  QString s_map_date="";
+  QString s_map_date = "";
   QString s_sql_select_coverages = QString::null;
   int i_image_max_x = 0;
   int i_image_max_y = 0;
@@ -333,7 +333,7 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData* parms_GcpDbData )
         if ( sqlite3_column_type( stmt, 5 ) != SQLITE_NULL )
           i_RasterNoData = sqlite3_column_int( stmt, 5 );
         if ( sqlite3_column_type( stmt, 6 ) != SQLITE_NULL )
-         id_cutline = sqlite3_column_int( stmt, 6 );
+          id_cutline = sqlite3_column_int( stmt, 6 );
       }
       sqlite3_finalize( stmt );
       // End TRANSACTION
@@ -3272,4 +3272,137 @@ bool QgsSpatiaLiteProviderGcpUtils::spatialiteShutdown( GcpDbData* parms_GcpDbDa
     b_rc = true;
   }
   return b_rc;
+}
+double QgsSpatiaLiteProviderGcpUtils::metersToMapPoint( GcpDbData* parms_GcpDbData )
+{
+  int i_isDegree = 0;
+  QString s_UnitName = "";
+  //----
+  QString  s_database_filename = parms_GcpDbData->mGcpDatabaseFileName;
+  bool b_database_exists = QFile( s_database_filename ).exists();
+  sqlite3* db_handle;
+  char *errMsg = nullptr;
+  // open database
+  // Note: this will not repopen the connection when called from another function such as createGcpDb
+  int ret = QgsSpatiaLiteProviderGcpUtils::spatialiteInitEx( parms_GcpDbData, s_database_filename );
+  if ( ret != SQLITE_OK )
+  {
+    parms_GcpDbData->mError = QString( "Failed to open database: rc=%1 database[%2]" ).arg( ret ).arg( s_database_filename );
+    if ( ret != SQLITE_MISUSE )
+    { // 'SQLITE_MISUSE': in use with another file, do not close
+      QgsSpatiaLiteProviderGcpUtils::spatialiteShutdown( parms_GcpDbData );
+    }
+    return false;
+  }
+  if ( parms_GcpDbData )
+  {
+    if ( parms_GcpDbData->db_handle )
+    {
+      sqlite3_stmt* stmt;
+      QString s_sql = QString( "SELECT SridIsGeographic(%1), SridGetUnit(%1);" ).arg( parms_GcpDbData->mGcpSrid );
+      // SELECT SridIsGeographic(3068), SridGetUnit(3068),SridIsGeographic(4326), SridGetUnit(4326); : 0 metre 1 degree
+      int ret = sqlite3_prepare_v2( parms_GcpDbData->db_handle, s_sql.toUtf8().constData(), -1, &stmt, NULL );
+      if ( ret != SQLITE_OK )
+      {
+        parms_GcpDbData->mError = QString( "Unable to retrieve SridIsGeographic(%4), SridGetUnit(%4) : rc=%1 [%2] sql[%3]\n" ).arg( ret ).arg( QString::fromUtf8( sqlite3_errmsg( parms_GcpDbData->db_handle ) ) ).arg( s_sql ).arg( parms_GcpDbData->mGcpSrid );
+        qDebug() << QString( "QgsSpatiaLiteProviderGcpUtils::metersToMapPoint -UnitName and Type - [%1] " ).arg( parms_GcpDbData->mError );
+        QgsSpatiaLiteProviderGcpUtils::spatialiteShutdown( parms_GcpDbData );
+        return parms_GcpDbData->mGcpMasterArea;
+      }
+      while ( sqlite3_step( stmt ) == SQLITE_ROW )
+      {
+        if ( sqlite3_column_type( stmt, 0 ) != SQLITE_NULL )
+          i_isDegree = sqlite3_column_int( stmt, 0 );
+        if ( sqlite3_column_type( stmt, 1 ) != SQLITE_NULL )
+          s_UnitName = QString::fromUtf8(( const char * ) sqlite3_column_text( stmt, 1 ) ).toLower();
+      }
+      sqlite3_finalize( stmt );
+      s_sql = "";
+      if (( i_isDegree == 0 ) && (( s_UnitName.contains( QString( "metre" ) ) || ( s_UnitName.contains( QString( "meter" ) ) ) ) ) )
+      {
+        return parms_GcpDbData->mGcpMasterArea;
+      }
+      else
+      {
+        QString s_cvt_command = "";
+        if ( i_isDegree == 1 )
+        { // SELECT ST_Transform(MakePoint(24250.41,21182.19,3068),4326); SRID=4326;POINT(13.3934162138589 52.51751576264239)
+          QString s_GeomFromEWKT = QString( "GeomFromEWKT('SRID=%1;%2')" ).arg( parms_GcpDbData->mGcpSrid).arg( parms_GcpDbData->mInputPoint.wellKnownText() );
+          // SELECT ST_Transform(MakePoint(13.3934162138589,52.51751576264239,4326),3395)
+          // SELECT ST_Length(MakeLine(MakePoint(13.3934162138589,52.51751576264239,4326),ST_Project(MakePoint(13.3934162138589,52.51751576264239,4326),5,PI()/2)))
+          // 0.000074
+          s_sql = QString( "SELECT ST_Length(MakeLine(%1,ST_Project(%1,%2,PI()/2));" ).arg( s_GeomFromEWKT ).arg( parms_GcpDbData->mGcpMasterArea );
+        }
+        else
+        { // SELECT DISTINCT unit FROM spatial_ref_sys_aux
+          if ( s_UnitName.contains( QString( "foot" ) ) )
+          {
+            s_cvt_command = "CvtToFt";
+            if ( s_UnitName.contains( QString( "us" ) ) )
+            {
+              s_cvt_command = "CvtToUsFt";
+            }
+            if ( s_UnitName.contains( QString( "indian" ) ) )
+            {
+              s_cvt_command = "CvtToIndFt";
+            }
+          }
+          if ( s_UnitName.contains( QString( "yard" ) ) )
+          {
+            s_cvt_command = "CvtToYd";
+            if ( s_UnitName.contains( QString( "us" ) ) )
+            {
+              s_cvt_command = "CvtToUsYd";
+            }
+            if ( s_UnitName.contains( QString( "indian" ) ) )
+            {
+              s_cvt_command = "CvtToIndYd";
+            }
+          }
+          if ( s_UnitName.contains( QString( "chain" ) ) )
+          {
+            s_cvt_command = "CvtToCh";
+            if ( s_UnitName.contains( QString( "us" ) ) )
+            {
+              s_cvt_command = "CvtToUsCh";
+            }
+            if ( s_UnitName.contains( QString( "indian" ) ) )
+            {
+              s_cvt_command = "CvtToIndCh";
+            }
+          }
+          if ( s_UnitName.contains( QString( "link" ) ) )
+          {
+            s_cvt_command = "CvtToLink";
+          }
+          if ( s_UnitName.contains( QString( "fath" ) ) )
+          {
+            s_cvt_command = "CvtToFath";
+          }
+          s_sql = QString( "SELECT %1(%2);" ).arg( s_cvt_command ).arg( parms_GcpDbData->mGcpMasterArea );
+        }
+        if ( s_sql.isEmpty() )
+        {
+          return parms_GcpDbData->mGcpMasterArea;
+        }
+        ret = sqlite3_prepare_v2( parms_GcpDbData->db_handle, s_sql.toUtf8().constData(), -1, &stmt, NULL );
+        if ( ret != SQLITE_OK )
+        {
+          parms_GcpDbData->mError = QString( "Unable to retrieve MapUnits for %4 failed. : rc=%1 [%2] sql[%3]\n" ).arg( ret ).arg( QString::fromUtf8( sqlite3_errmsg( parms_GcpDbData->db_handle ) ) ).arg( s_sql ).arg( parms_GcpDbData->mGcpSrid );
+          qDebug() << QString( "QgsSpatiaLiteProviderGcpUtils::metersToMapPoint -UnitName and Type - [%1] " ).arg( parms_GcpDbData->mError );
+          QgsSpatiaLiteProviderGcpUtils::spatialiteShutdown( parms_GcpDbData );
+          return parms_GcpDbData->mGcpMasterArea;
+        }
+        while ( sqlite3_step( stmt ) == SQLITE_ROW )
+        {
+          if ( sqlite3_column_type( stmt, 0 ) != SQLITE_NULL )
+            parms_GcpDbData->mGcpMasterArea = sqlite3_column_double( stmt, 0 );
+        }
+        sqlite3_finalize( stmt );
+      }
+    }
+  }
+  //----------------
+  QgsSpatiaLiteProviderGcpUtils::spatialiteShutdown( parms_GcpDbData );
+  return parms_GcpDbData->mGcpMasterArea;
 }

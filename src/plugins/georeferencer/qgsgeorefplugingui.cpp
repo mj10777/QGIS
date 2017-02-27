@@ -600,7 +600,7 @@ void QgsGeorefPluginGui::setSpatialiteGcpUsage()
   s_text = "Fetch Master-Gcp(s) from Map Extent and add as a new Gcp-Point, with Gcp-Master Point correctoons";
   if (( !isGcpEnabled() ) || ( mSpatialite_gcp_off ) )
   {
-    s_text = "Gcp-Master Point correctoons from Map Extent, without the Fetching of Master-Gcp(s) ";
+    s_text = "Gcp-Master Point corrections from Map Extent, without the Fetching of Master-Gcp(s) ";
   }
   mActionFetchMasterGcpExtent->setText( s_text );
   mActionFetchMasterGcpExtent->setToolTip( s_text );
@@ -4680,13 +4680,13 @@ void QgsGeorefPluginGui::geometryChanged_gcp( QgsFeatureId fid, QgsGeometry& cha
                   }
                   break;
               }
-              qDebug() <<  QString( "%1 id_gcp[%2] - %3[%4]" ).arg( s_Event ).arg( id_gcp ).arg( s_Event ).arg( changed_geometry.exportToWkt() );
+              // qDebug() <<  QString( "%1 id_gcp[%2] - %3[%4]" ).arg( s_Event ).arg( id_gcp ).arg( s_Event ).arg( changed_geometry.exportToWkt() );
               if ( i_updateGCPList > 0 )
               { // 'updateGCPList' will rebuild the list and recalulate the 'residual' values.
                 updateGeorefTransform();
               }
             }
-            qDebug() << QString( "QgsGeorefPluginGui::geometryChanged_gcp[%1]\n\t\t -zz- after commit fid[%2] event_modified[%3] update_modified[%4]" ).arg( s_Event ).arg( mEvent_gcp_status ).arg( layer_gcp_event->isModified() ).arg( layer_gcp_update->isModified() );
+            // qDebug() << QString( "QgsGeorefPluginGui::geometryChanged_gcp[%1]\n\t\t -zz- after commit fid[%2] event_modified[%3] update_modified[%4]" ).arg( s_Event ).arg( mEvent_gcp_status ).arg( layer_gcp_event->isModified() ).arg( layer_gcp_update->isModified() );
             // Warning: Object::connect: No such slot QObject::addError( QgsGeometry::Error )
             // Warning: Object::connect: No such slot QObject::validationFinished()
             // Warning: QUndoStack::endMacro(): no matching beginMacro()
@@ -4891,6 +4891,12 @@ bool QgsGeorefPluginGui::createGcpDb( bool b_DatabaseDump )
   mGcpDbData->mRasterYear = mRasterYear;
   mGcpDbData->mRasterScale = mRasterScale;
   mGcpDbData->mRasterNodata = mRasterNodata;
+  mGcpDbData->mGcpMasterArea = mGcpMasterArea;
+  if (layer_gcp_master)
+  {
+     mGcpDbData->mInputPoint=layer_gcp_master->extent().center();
+   }
+  // mInputPoint
   if ( b_DatabaseDump )
     mGcpDbData->mDatabaseDump = true;
   if ( QgsSpatiaLiteProviderGcpUtils::createGcpDb( mGcpDbData ) )
@@ -4908,6 +4914,14 @@ bool QgsGeorefPluginGui::createGcpDb( bool b_DatabaseDump )
       mModifiedRasterFileName = mGcpDbData->mModifiedRasterFileName;
       mRasterNodata = mGcpDbData->mRasterNodata;
       mError = mGcpDbData->mError;
+      if (mGcpMasterArea != mGcpDbData->mGcpMasterArea)
+      {
+        mGcpMasterArea = mGcpDbData->mGcpMasterArea;
+        if (layer_gcp_master)
+        {
+         setCutlineGcpMasterArea( mGcpDbData->mGcpMasterArea, layer_gcp_master );
+        }
+      }
       if ( mGcpDbData->gcp_coverages.size() > 0 )
       {
         mGcp_coverages = mGcpDbData->gcp_coverages;
@@ -4950,6 +4964,43 @@ bool QgsGeorefPluginGui::updateGcpDb( QString s_coverage_name )
   }
   mError = mGcpDbData->mError;
   return false;
+}
+double QgsGeorefPluginGui::getMetersToMapPoint( double d_GcpMasterArea, int i_srid,  QgsPoint inputPoint)
+{
+  if ( mLegacyMode == 0 )
+    return false;
+  QgsSpatiaLiteProviderGcpUtils::GcpDbData *parms_GcpDbData = nullptr;
+  if (i_srid <=0)
+  {
+    QString s_gcp_authid = mIface->mapCanvas()->mapSettings().destinationCrs().authid();
+    QStringList sa_authid = s_gcp_authid.split( ":" );
+    QString s_srid = "-1";
+    if ( sa_authid.length() == 2 )
+    {
+      s_srid = sa_authid[1];
+      i_srid = s_srid.toInt();
+    }
+    else
+    {
+     i_srid=mGcpSrid;
+    }
+    inputPoint=mIface->mapCanvas()->extent().center();
+  }
+  parms_GcpDbData = new QgsSpatiaLiteProviderGcpUtils::GcpDbData( mGcpDatabaseFileName,  QString::null, i_srid );
+  parms_GcpDbData->mGcpMasterArea=d_GcpMasterArea;
+  parms_GcpDbData->mInputPoint=inputPoint;
+  if ( QgsSpatiaLiteProviderGcpUtils::metersToMapPoint( parms_GcpDbData ) )
+  {
+      if (d_GcpMasterArea != parms_GcpDbData->mGcpMasterArea)
+      {
+        d_GcpMasterArea = parms_GcpDbData->mGcpMasterArea;
+        if (layer_gcp_master)
+        {
+         setCutlineGcpMasterArea( d_GcpMasterArea, layer_gcp_master );
+        }
+      }
+  }
+  return d_GcpMasterArea;
 }
 QgsPoint QgsGeorefPluginGui::getGcpConvert( QString s_coverage_name, QgsPoint input_point, bool b_toPixel, int i_order, bool b_reCompute, int id_gcp )
 {

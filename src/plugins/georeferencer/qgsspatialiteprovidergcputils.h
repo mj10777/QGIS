@@ -110,6 +110,7 @@ class QgsSpatiaLiteProviderGcpUtils
           , db_handle( nullptr )
           , mUsed_database_filename( QString::null )
           , mUsed_database_filename_count( 0 )
+          , mGcpMasterArea( 5 )
       {}
       GcpDbData( QString s_database_filename, QString s_coverage_name, int i_srid, QString s_points_table_name,  QgsRasterLayer *raster_layer, bool b_Gcp_enabled = false )
           : mGcpDatabaseFileName( s_database_filename )
@@ -152,6 +153,7 @@ class QgsSpatiaLiteProviderGcpUtils
           , db_handle( nullptr )
           , mUsed_database_filename( QString::null )
           , mUsed_database_filename_count( 0 )
+          , mGcpMasterArea( 5 )
       {}
 
       QString mGcpDatabaseFileName;
@@ -162,7 +164,7 @@ class QgsSpatiaLiteProviderGcpUtils
       QString mGcp_coverage_title;
       QString mGcp_coverage_abstract;
       QString mGcp_coverage_copyright;
-      QString mGcp_coverage_map_date; 
+      QString mGcp_coverage_map_date;
       QString mGcp_points_table_name;
       QgsRasterLayer *mLayer;
       bool mGcp_enabled;
@@ -196,6 +198,7 @@ class QgsSpatiaLiteProviderGcpUtils
       QString mUsed_database_filename;
       int mUsed_database_filename_count;
       QMap<QString, QString> map_providertags;
+      double mGcpMasterArea;
     };
     /**
      * Creates a Spatialite-Database storing the Gcp-Points
@@ -328,9 +331,9 @@ class QgsSpatiaLiteProviderGcpUtils
     static bool createGcpMasterDb( GcpDbData* parms_GcpDbData );
     /**
      * Bulk INSERT (or UPDATE) of Gcp-coverages Points TABLE
-     *  - execute INSERT (or UPDATE)   commands stored in 
+     *  - execute INSERT (or UPDATE)   commands stored in
      *  -- retrieving created id_gcp [INSERT only]
-     * @note       
+     * @note
      * QMap<int, QString> gcp_coverages of the parms_GcpDbData structure
      *  - the QString will contain the sql-command
      *  -- it will be replaced with the returned id_gcp
@@ -346,6 +349,19 @@ class QgsSpatiaLiteProviderGcpUtils
      * @return true if all commands where executed correctly
      */
     static bool bulkGcpPointsInsert( GcpDbData* parms_GcpDbData );
+    /**
+     * Given a meters Map-Unit value
+     *  - a realistic Map-Unit value for the srid used will be returned
+     * meters value: parms_GcpDbData->mGcpMasterArea
+     * srid value:  parms_GcpDbData->mGcpSrid
+     * @note 
+     *  - for Degrees a start position must be set
+     *  -> parms_GcpDbData->mInputPoint
+     * @see spatialiteInitEx
+     * @param parms_GcpDbData  to store Database file-name, count, handle and cache
+     * @return Map-Unit for the given srid
+     */
+    static double metersToMapPoint( GcpDbData* parms_GcpDbData );
   private:
     /**
      * Creates sql to CREATE a 'gcp_points_||gcp_coverage' TABLE, TRIGGERS and VIEWs for the coresponding gcp_coverage entry
@@ -427,7 +443,7 @@ class QgsSpatiaLiteProviderGcpUtils
      *  - retrieve last used Primary-Key value after INSERT
      *  -- SELECT seq FROM sqlite_sequence WHERE (name="gcp_points_1909.straube_blatt_iii_a.4000")
      * @param parms_GcpDbData  which will contain a spatialite connection (with mParseString to use and if Spatialite Gcp-logic is active)
-     * @param s_tablename TABLE name to retieve 
+     * @param s_tablename TABLE name to retieve
      * @return id_seq  last used Primary-Key value for the given TABLE
      */
     static int getSqliteSequence( GcpDbData* parms_GcpDbData, QString s_tablename );

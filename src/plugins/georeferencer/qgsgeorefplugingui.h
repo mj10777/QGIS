@@ -1408,6 +1408,19 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     bool updateGcpTranslate( QString s_coverage_name );
     QgsPoint getGcpConvert( QString s_coverage_name, QgsPoint input_point, bool b_toPixel = false, int i_order = 0, bool b_reCompute = true, int id_gcp = -1 );
     /**
+     * Given a meters Map-Unit value
+     *  - a realistic Map-Unit value for the srid used will be returned
+     * meters value: parms_GcpDbData->mGcpMasterArea
+     * srid value:  parms_GcpDbData->mGcpSrid
+     * @note 
+     *  - for Degrees a start position must be set
+     *  -> parms_GcpDbData->mInputPoint
+     * @see spatialiteInitEx
+     * @param parms_GcpDbData  to store Database file-name, count, handle and cache
+     * @return Map-Unit for the given srid
+     */
+    double getMetersToMapPoint( double d_GcpMasterArea=5.0, int i_srid=-1,  QgsPoint inputPoint= QgsPoint( 0.0, 0.0 ));
+    /**
      * Create an empty Gcp-Master Database
      *  - a Database to be used to reference POINTs to assist while Georeferencing
      *  -> all POINTs must be of the same srid
