@@ -869,6 +869,26 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
      */
     double mGcpMasterArea;
     /**
+     * Circle around MasterDB Gcp-Point
+     *  - default: 2.0 (1.0 Map-Units [meters] around (left/right/top/bottom of point)
+     * @note QGIS 3.0
+     * New for ( mLegacyMode == 1 )
+     *  - therefore is needed
+     * @see setCutlineGcpMasterArea
+     * @see fetchGcpMasterPointsExtent
+     */
+    double mGcpPointArea;
+    /**
+     * Map-Point Unit based on 1 meter
+     *  - 1.0 meters Map-Unit based on srid being used in QGIS
+     * @note QGIS 3.0
+     * New for ( mLegacyMode == 1 )
+     *  - therefore is needed
+     * @see setCutlineGcpMasterArea
+     * @see fetchGcpMasterPointsExtent
+     */
+    double mMapPointUnit;
+    /**
      * s_gcp_authid
      *  -
      * @note QGIS 3.0

@@ -157,6 +157,10 @@ QgsGeorefPluginGui::QgsGeorefPluginGui( QgisInterface* theQgisInterface, QWidget
   layer_gcp_master = nullptr;
   // Circle 2.5 meters around MasterPoint
   mGcpMasterArea = 5.0;
+ // Circle 1.0 meters around GcpPoint
+  mGcpPointArea = 2.0;
+ // 1.0 meters Map-Unit based on srid being used in QGIS
+  mMapPointUnit = 1.0;
   bAvoidUnneededUpdates = false;
   mLayer_gtif_raster = nullptr;
   mLoadGTifInQgis = 1;
@@ -1940,7 +1944,7 @@ bool QgsGeorefPluginGui::loadGCPs( /*bool verbose*/ )
     // Informs QgsGCPList that the Initial loading of Point-Pairs has been compleated
     mGCPListWidget->setChanged( true );
     updateGeorefTransform();
-    if ( !mActionLinkGeorefToQGis->isChecked() )
+    if ( mActionLinkGeorefToQGis->isChecked() )
     {
       QgsRectangle rectMap = mGeorefTransform.hasCrs() ? mGeorefTransform.getBoundingBox( mCanvas->extent(), true ) : mCanvas->extent();
       QgsRectangle boundingBox = transformViewportBoundingBox( rectMap, mGeorefTransform, true );
@@ -2974,7 +2978,7 @@ void QgsGeorefPluginGui::clearGCPData()
         // Warning: Object::disconnect: No such signal QObject::featureAdded( QgsFeatureId )
         // Warning: Object::disconnect:  (receiver name: 'QgsGeorefPluginGuiBase')
         // ?? No idea why ',( QgsGeorefPluginGui* )this' is needed. Otherwise crash ??
-        // qDebug() << QString( "-I-> QgsGeorefPluginGui::clearGCPData[%1]" ).arg( "layer_cutline_points" );
+        qDebug() << QString( "-I-> QgsGeorefPluginGui::clearGCPData[%1]" ).arg( "layer_cutline_points" );
         disconnect( layer_cutline_points, SIGNAL( featureAdded( QgsFeatureId ) ), ( QgsGeorefPluginGui* )this, SLOT( featureAdded_cutline( QgsFeatureId ) ) );
         disconnect( layer_cutline_points, SIGNAL( geometryChanged( QgsFeatureId, QgsGeometry& ) ), ( QgsGeorefPluginGui* )this, SLOT( geometryChanged_cutline( QgsFeatureId, QgsGeometry& ) ) );
         saveEditsGcp( layer_cutline_points, false );
@@ -2982,7 +2986,7 @@ void QgsGeorefPluginGui::clearGCPData()
         QgsMapLayerRegistry::instance()->removeMapLayers(( QStringList() << layer_cutline_points->id() ) );
         layer_cutline_points = nullptr;
         //-------
-        // qDebug() << QString( "-I-> QgsGeorefPluginGui::clearGCPData[%1]" ).arg( "layer_cutline_linestrings" );
+        qDebug() << QString( "-I-> QgsGeorefPluginGui::clearGCPData[%1]" ).arg( "layer_cutline_linestrings" );
         disconnect( layer_cutline_linestrings, SIGNAL( featureAdded( QgsFeatureId ) ), ( QgsGeorefPluginGui* )this, SLOT( featureAdded_cutline( QgsFeatureId ) ) );
         disconnect( layer_cutline_linestrings, SIGNAL( geometryChanged( QgsFeatureId, QgsGeometry& ) ), ( QgsGeorefPluginGui* )this, SLOT( geometryChanged_cutline( QgsFeatureId, QgsGeometry& ) ) );
         saveEditsGcp( layer_cutline_linestrings, false );
@@ -2990,7 +2994,7 @@ void QgsGeorefPluginGui::clearGCPData()
         QgsMapLayerRegistry::instance()->removeMapLayers(( QStringList() << layer_cutline_linestrings->id() ) );
         layer_cutline_linestrings = nullptr;
         //-------
-        // qDebug() << QString( "-I-> QgsGeorefPluginGui::clearGCPData[%1]" ).arg( "layer_cutline_polygons" );
+        qDebug() << QString( "-I-> QgsGeorefPluginGui::clearGCPData[%1]" ).arg( "layer_cutline_polygons" );
         disconnect( layer_cutline_polygons, SIGNAL( featureAdded( QgsFeatureId ) ), ( QgsGeorefPluginGui* )this, SLOT( featureAdded_cutline( QgsFeatureId ) ) );
         disconnect( layer_cutline_polygons, SIGNAL( geometryChanged( QgsFeatureId, QgsGeometry& ) ), ( QgsGeorefPluginGui* )this, SLOT( geometryChanged_cutline( QgsFeatureId, QgsGeometry& ) ) );
         saveEditsGcp( layer_cutline_polygons, false );
@@ -2998,7 +3002,7 @@ void QgsGeorefPluginGui::clearGCPData()
         QgsMapLayerRegistry::instance()->removeMapLayers(( QStringList() << layer_cutline_polygons->id() ) );
         layer_cutline_polygons = nullptr;
         //-------
-        // qDebug() << QString( "-I-> QgsGeorefPluginGui::clearGCPData[%1]" ).arg( "layer_mercator_polygons_transform" );
+        qDebug() << QString( "-I-> QgsGeorefPluginGui::clearGCPData[%1]" ).arg( "layer_mercator_polygons_transform" );
 #if 0
         disconnect( layer_mercator_polygons_transform, SIGNAL( featureAdded( QgsFeatureId ) ), ( QgsGeorefPluginGui* )this, SLOT( featureAdded_cutline( QgsFeatureId ) ) );
         disconnect( layer_mercator_polygons_transform, SIGNAL( geometryChanged( QgsFeatureId, QgsGeometry& ) ), ( QgsGeorefPluginGui* )this, SLOT( geometryChanged_cutline( QgsFeatureId, QgsGeometry& ) ) );
@@ -3013,12 +3017,15 @@ void QgsGeorefPluginGui::clearGCPData()
       }
       if ( group_gcp_points )
       { // Order: disconnect ; save ; group_remove ; MapLayerRemove
-        // qDebug() << QString( "-I-> QgsGeorefPluginGui::clearGCPData[%1]" ).arg( "layer_gcp_points" );
+        qDebug() << QString( "-I-> QgsGeorefPluginGui::clearGCPData[%1]" ).arg( "layer_gcp_points" );
         disconnect( layer_gcp_points, SIGNAL( featureAdded( QgsFeatureId ) ), ( QgsGeorefPluginGui* )this, SLOT( featureAdded_gcp( QgsFeatureId ) ) );
         disconnect( layer_gcp_points, SIGNAL( geometryChanged( QgsFeatureId, QgsGeometry& ) ), ( QgsGeorefPluginGui* )this, SLOT( geometryChanged_gcp( QgsFeatureId, QgsGeometry& ) ) );
         saveEditsGcp( layer_gcp_points, false );
-        group_gcp_points->removeLayer( layer_gcp_points );
-        QgsMapLayerRegistry::instance()->removeMapLayers(( QStringList() << layer_gcp_points->id() ) );
+        if ( group_gcp_points->findLayer( layer_gcp_points->id() ) )
+        { // Remove only if layer is still contained in the main-group, may have been moved elsewhere by the user
+          group_gcp_points->removeLayer( layer_gcp_points );
+          QgsMapLayerRegistry::instance()->removeMapLayers(( QStringList() << layer_gcp_points->id() ) );
+        }
         layer_gcp_points = nullptr;
         //-------
         group_gcp_points = nullptr;
@@ -3029,7 +3036,8 @@ void QgsGeorefPluginGui::clearGCPData()
         if (( mLayer_gtif_raster ) && ( group_gtif_raster ) )
         { // Check if layer is still contained in group
           if ( group_gtif_rasters->findLayer( group_gtif_raster->layerId() ) )
-          { // Remove only if layer is still contained in the main-group, may have been movwd elsewhere by the user
+          { // Remove only if layer is still contained in the main-group, may have been moved elsewhere by the user
+            qDebug() << QString( "-I-> QgsGeorefPluginGui::clearGCPData[%1]" ).arg( "mLayer_gtif_raster" );
             group_gtif_rasters->removeLayer( mLayer_gtif_raster );
             QgsMapLayerRegistry::instance()->removeMapLayers(( QStringList() << mLayer_gtif_raster->id() ) );
             mLayer_gtif_raster = nullptr;
@@ -3040,7 +3048,7 @@ void QgsGeorefPluginGui::clearGCPData()
       }
       if ( group_gcp_master )
       { // Order: disconnect ; save ; group_remove ; MapLayerRemove
-        // qDebug() << QString( "-I-> QgsGeorefPluginGui::clearGCPData[%1]" ).arg( "layer_gcp_master" );
+        qDebug() << QString( "-I-> QgsGeorefPluginGui::clearGCPData[%1]" ).arg( "layer_gcp_master" );
         disconnect( layer_gcp_master, SIGNAL( featureAdded( QgsFeatureId ) ), ( QgsGeorefPluginGui* )this, SLOT( featureAdded_cutline( QgsFeatureId ) ) );
         disconnect( layer_gcp_master, SIGNAL( geometryChanged( QgsFeatureId, QgsGeometry& ) ), ( QgsGeorefPluginGui* )this, SLOT( geometryChanged_cutline( QgsFeatureId, QgsGeometry& ) ) );
         saveEditsGcp( layer_gcp_master, false );
@@ -3057,7 +3065,7 @@ void QgsGeorefPluginGui::clearGCPData()
     { // Georeferencer-Canvas
       if ( layer_mercator_polygons )
       { // Order: disconnect ; save ; group_remove ; MapLayerRemove
-        // qDebug() << QString( "-I-> QgsGeorefPluginGui::clearGCPData[%1]" ).arg( "layer_mercator_polygons" );
+        qDebug() << QString( "-I-> QgsGeorefPluginGui::clearGCPData[%1]" ).arg( "layer_mercator_polygons" );
         disconnect( layer_mercator_polygons, SIGNAL( featureAdded( QgsFeatureId ) ), ( QgsGeorefPluginGui* )this, SLOT( featureAdded_cutline( QgsFeatureId ) ) );
         disconnect( layer_mercator_polygons, SIGNAL( geometryChanged( QgsFeatureId, QgsGeometry& ) ), ( QgsGeorefPluginGui* )this, SLOT( geometryChanged_cutline( QgsFeatureId, QgsGeometry& ) ) );
         saveEditsGcp( layer_mercator_polygons, false );
@@ -3067,7 +3075,7 @@ void QgsGeorefPluginGui::clearGCPData()
       }
       if ( layer_gcp_pixels )
       { // Order: disconnect ; save ; group_remove ; MapLayerRemove
-        // qDebug() << QString( "-I-> QgsGeorefPluginGui::clearGCPData[%1]" ).arg( "layer_gcp_pixels" );
+        qDebug() << QString( "-I-> QgsGeorefPluginGui::clearGCPData[%1]" ).arg( "layer_gcp_pixels" );
         disconnect( layer_gcp_pixels, SIGNAL( featureAdded( QgsFeatureId ) ), ( QgsGeorefPluginGui* )this, SLOT( featureAdded_gcp( QgsFeatureId ) ) );
         disconnect( layer_gcp_pixels, SIGNAL( geometryChanged( QgsFeatureId, QgsGeometry& ) ), ( QgsGeorefPluginGui* )this, SLOT( geometryChanged_gcp( QgsFeatureId, QgsGeometry& ) ) );
         saveEditsGcp( layer_gcp_pixels, false );
@@ -3318,10 +3326,18 @@ bool QgsGeorefPluginGui::setGcpLayerSettings( QgsVectorLayer *layer_gcp )
   {
     QColor color_red( "red" );
     QColor color_yellow( "yellow" );
+    QColor color_goldenrod( "goldenrod" );
     QColor color_cyan( "cyan" );
+    QColor color_forestgreen( "forestgreen" );
     QColor color_background = color_red;
     QColor color_forground = color_yellow;
     QColor color_shadow = color_cyan;
+    QColor color_area = color_forestgreen;
+    bool b_toPixel=true;
+    if ( layer_gcp->name() == mGcp_points_layername )
+    {
+      b_toPixel=false;
+    }
     switch ( mGcp_label_type )
     {
       case 1:
@@ -3329,7 +3345,10 @@ bool QgsGeorefPluginGui::setGcpLayerSettings( QgsVectorLayer *layer_gcp )
         break;
       case 2:
         if ( layer_gcp->name() == mGcp_points_layername )
+        {
           mGcpLabelExpression = "id_gcp||' ['||point_x||', '||point_y||']'";
+          b_toPixel=false;
+        }
         else
           mGcpLabelExpression = "id_gcp||' ['||pixel_x||', '||pixel_y||']'";
         break;
@@ -3433,6 +3452,7 @@ bool QgsGeorefPluginGui::setGcpLayerSettings( QgsVectorLayer *layer_gcp )
                 QgsSimpleMarkerSymbolLayerV2 *gcp_layer_symbol_circle = static_cast<QgsSimpleMarkerSymbolLayerV2*>( gcp_layer_symbol_star->clone() );
                 if ( gcp_layer_symbol_circle )
                 { // see core/symbology-ng/QgsSymbolV2.h, qgsmarkersymbollayerv2.h
+                  int i_valid_layer_count = 2;
                   // Star
                   color_background = color_red;
                   color_forground = color_yellow;
@@ -3457,9 +3477,25 @@ bool QgsGeorefPluginGui::setGcpLayerSettings( QgsVectorLayer *layer_gcp )
                   gcp_layer_symbol_circle->setPenJoinStyle( Qt::RoundJoin );
                   // Set transparency for both and add Star, Circle
                   gcp_layer_symbol_container->setAlpha( 1.0 );
+                  if ( !b_toPixel )
+                  { // prepair a (possible) third [gcp_master] QgsSymbolV2 from the first, insuring that it has the correct default attributes
+                    QgsSimpleMarkerSymbolLayerV2 *gcp_layer_symbol_area = static_cast<QgsSimpleMarkerSymbolLayerV2*>( gcp_layer_symbol_circle->clone() );
+                    if ( gcp_layer_symbol_area )
+                    { // Will show area of 2.5 meters around the Point [only noticeable when zoomed in]
+                      gcp_layer_symbol_area->setOutputUnit( QgsSymbolV2::MapUnit );
+                      gcp_layer_symbol_area->setFillColor( color_area );
+                      gcp_layer_symbol_area->setOutlineColor( color_goldenrod );
+                      gcp_layer_symbol_area->setSize( mGcpPointArea );
+                      gcp_layer_symbol_area->setOutlineWidth( (mGcpPointArea/20) );
+                      gcp_layer_symbol_area->setMapUnitScale( 0 );
+                      gcp_layer_symbol_container->appendSymbolLayer( gcp_layer_symbol_area );
+                      gcp_layer_symbol_container->setAlpha( 0.75 );
+                      i_valid_layer_count++;
+                    }
+                  }
                   gcp_layer_symbol_container->appendSymbolLayer( gcp_layer_symbol_star );
                   gcp_layer_symbol_container->appendSymbolLayer( gcp_layer_symbol_circle );
-                  if (( gcp_layer_symbol_container->type() == QgsSymbolV2::Marker ) && ( gcp_layer_symbol_container->symbolLayerCount() == 2 ) )
+                  if (( gcp_layer_symbol_container->type() == QgsSymbolV2::Marker ) && ( gcp_layer_symbol_container->symbolLayerCount() == i_valid_layer_count ) )
                   { // checking that we have what is desired
                     isDirty = true;
                   }
@@ -3641,14 +3677,14 @@ bool QgsGeorefPluginGui::setCutlineLayerSettings( QgsVectorLayer *layer_cutline 
                   cutline_layer_symbol_container->setAlpha( 1.0 );
                   if ( i_table_type == 1 )
                   { // prepair a (possible) third [gcp_master] QgsSymbolV2 from the first, insuring that it has the correct default attributes
-                    QgsSimpleMarkerSymbolLayerV2 *cutline_layer_symbol_circle = static_cast<QgsSimpleMarkerSymbolLayerV2*>( cutline_layer_symbol_cross->clone() );
-                    if ( cutline_layer_symbol_circle )
+                    QgsSimpleMarkerSymbolLayerV2 *cutline_layer_symbol_area = static_cast<QgsSimpleMarkerSymbolLayerV2*>( cutline_layer_symbol_cross->clone() );
+                    if ( cutline_layer_symbol_area )
                     { // Will show area of 2.5 meters around the Point [only noticeable when zoomed in]
-                      cutline_layer_symbol_circle->setFillColor( color_red );
-                      cutline_layer_symbol_circle->setMapUnitScale( 0 );
-                      cutline_layer_symbol_circle->setOutputUnit( QgsSymbolV2::MapUnit );
-                      cutline_layer_symbol_circle->setSize( mGcpMasterArea );
-                      cutline_layer_symbol_container->appendSymbolLayer( cutline_layer_symbol_circle );
+                      cutline_layer_symbol_area->setFillColor( color_red );
+                      cutline_layer_symbol_area->setMapUnitScale( 0 );
+                      cutline_layer_symbol_area->setOutputUnit( QgsSymbolV2::MapUnit );
+                      cutline_layer_symbol_area->setSize( mGcpMasterArea );
+                      cutline_layer_symbol_container->appendSymbolLayer( cutline_layer_symbol_area );
                       cutline_layer_symbol_container->setAlpha( 0.75 );
                       i_valid_layer_count++;
                     }
