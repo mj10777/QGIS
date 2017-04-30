@@ -113,6 +113,7 @@ QgsUnitSelectionWidget::QgsUnitSelectionWidget( QWidget *parent )
 void QgsUnitSelectionWidget::setUnits( const QStringList &units, int mapUnitIdx )
 {
   blockSignals( true );
+          qDebug() << QString( "QgsUnitSelectionWidget::setUnits - [%1] " ).arg( "StringList" );
   mUnitCombo->addItems( units );
   mMapUnitIdx = mapUnitIdx;
   blockSignals( false );
@@ -122,7 +123,6 @@ void QgsUnitSelectionWidget::setUnits( const QgsSymbolV2::OutputUnitList &units 
 {
   blockSignals( true );
   mUnitCombo->clear();
-
   //instead of iterating over the units list, we specifically check for presence of unit types
   //to ensure that the widget always keeps the same order for units, regardless of the
   //order specified in the units list

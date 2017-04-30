@@ -34,6 +34,7 @@ email                : a.furieri@lqt.it
 #include <QMessageBox>
 #include <QFileInfo>
 #include <QDir>
+#include <QDebug>
 
 
 const QString SPATIALITE_KEY = "spatialite";
@@ -520,6 +521,7 @@ QgsSpatiaLiteProvider::QgsSpatiaLiteProvider( QString const &uri )
     mEnabledCapabilities |= QgsVectorDataProvider::ChangeAttributeValues;
     mEnabledCapabilities |= QgsVectorDataProvider::AddFeatures;
     mEnabledCapabilities |= QgsVectorDataProvider::AddAttributes;
+
   }
 
   alreadyDone = false;
@@ -4204,7 +4206,6 @@ bool QgsSpatiaLiteProvider::checkLayerTypeAbstractInterface( gaiaVectorLayerPtr 
       mVShapeBased = true;
       break;
   }
-
   if ( lyr->AuthInfos )
   {
     if ( lyr->AuthInfos->IsReadOnly )
@@ -4219,7 +4220,6 @@ bool QgsSpatiaLiteProvider::checkLayerTypeAbstractInterface( gaiaVectorLayerPtr 
   {
     mQuery = quotedIdentifier( mTableName );
   }
-
   return true;
 }
 #endif

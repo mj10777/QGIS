@@ -2162,7 +2162,6 @@ QgsVectorFileWriter::WriterError QgsVectorFileWriter::writeAsVectorFormat( QgsVe
   {
     return ErrInvalidLayer;
   }
-
   bool shallTransform = false;
   const QgsCoordinateReferenceSystem* outputCRS = nullptr;
   if ( ct )
@@ -2259,7 +2258,6 @@ QgsVectorFileWriter::WriterError QgsVectorFileWriter::writeAsVectorFormat( QgsVe
       }
     }
   }
-
   QgsVectorFileWriter* writer =
     new QgsVectorFileWriter( fileName, fileEncoding, fields, destWkbType,
                              outputCRS, driverName, datasourceOptions, layerOptions,
@@ -2343,7 +2341,6 @@ QgsVectorFileWriter::WriterError QgsVectorFileWriter::writeAsVectorFormat( QgsVe
   writer->resetMap( attributes );
   // Reset mFields to layer fields, and not just exported fields
   writer->mFields = layer->fields();
-
   // write all features
   while ( fit.nextFeature( fet ) )
   {
@@ -2377,7 +2374,6 @@ QgsVectorFileWriter::WriterError QgsVectorFileWriter::writeAsVectorFormat( QgsVe
     {
       fet.initAttributes( 0 );
     }
-
     if ( !writer->addFeature( fet, layer->rendererV2(), mapUnits ) )
     {
       WriterError err = writer->hasError();
@@ -2404,7 +2400,6 @@ QgsVectorFileWriter::WriterError QgsVectorFileWriter::writeAsVectorFormat( QgsVe
     }
     n++;
   }
-
   if ( transactionsEnabled )
   {
     if ( OGRERR_NONE != OGR_L_CommitTransaction( writer->mLayer ) )
@@ -2420,7 +2415,6 @@ QgsVectorFileWriter::WriterError QgsVectorFileWriter::writeAsVectorFormat( QgsVe
   {
     *errorMessage += QObject::tr( "\nOnly %1 of %2 features written." ).arg( n - errors ).arg( n );
   }
-
   return errors == 0 ? NoError : ErrFeatureWriteFailed;
 }
 

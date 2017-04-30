@@ -101,12 +101,12 @@ QgsSublayersDialog::LayerDefinitionList QgsSublayersDialog::selection()
      bool is_unique=_isLayerIdUnique( def.layerId, layersTable );
      // If Layer-Name is unique would be more interesting. Ogr.SubLayers determins this
      if (mShowCount)
-      def.count=item->text( 2 ).toInt();     
+      def.count=item->text( 2 ).toInt();
      def.type = item->text( mShowCount ? 3 : 2 );
      if ( mProviderType == QgsSublayersDialog::Ogr )
      { // Ogr-Internal use only - no needed to show to user
       def.getType = item->text(  mShowCount ? 4 : 3 ).toInt();
-     }     
+     }
     }
     list << def;
   }
@@ -193,8 +193,8 @@ void QgsSublayersDialog::populateLayerTable( const QStringList& theList, const Q
 {
   int i_element_count = 4;
   if ( mProviderType == QgsSublayersDialog::Ogr )
-  {
-   i_element_count = 5;
+  { //  layer_id:layer_name:feature_count:geometry_type:geometry_name:field_geometry_id:ogr_get_type
+   i_element_count = 6;
   }
   Q_FOREACH ( const QString& item, theList )
   {

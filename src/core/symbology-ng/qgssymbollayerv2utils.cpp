@@ -3378,6 +3378,10 @@ double QgsSymbolLayerV2Utils::lineWidthScaleFactor( const QgsRenderContext& c, Q
   {
     case QgsSymbolV2::MM:
       return c.scaleFactor();
+    case QgsSymbolV2::MetersUnit:
+    { // TODO check if correct
+       return 1.0;
+    }
     case QgsSymbolV2::MapUnit:
     {
       double mup = scale.computeMapUnitsPerPixel( c );
@@ -3423,6 +3427,10 @@ double QgsSymbolLayerV2Utils::convertToMapUnits( const QgsRenderContext &c, doub
 
   switch ( unit )
   {
+    case QgsSymbolV2::MetersUnit:
+    { // Note: must fall through to QgsSymbolV2::MapUnit
+     size=size*c.meterAsMapUnit();
+    }
     case QgsSymbolV2::MapUnit:
     {
       // check scale
@@ -3473,6 +3481,10 @@ double QgsSymbolLayerV2Utils::pixelSizeScaleFactor( const QgsRenderContext& c, Q
   {
     case QgsSymbolV2::MM:
       return ( c.scaleFactor() * c.rasterScaleFactor() );
+    case QgsSymbolV2::MetersUnit:
+    { // TODO check if correct
+       return 1.0;
+    }
     case QgsSymbolV2::MapUnit:
     {
       double mup = scale.computeMapUnitsPerPixel( c );
@@ -3501,6 +3513,10 @@ double QgsSymbolLayerV2Utils::mapUnitScaleFactor( const QgsRenderContext &c, Qgs
   {
     case QgsSymbolV2::MM:
       return scale.computeMapUnitsPerPixel( c ) * c.scaleFactor() * c.rasterScaleFactor();
+    case QgsSymbolV2::MetersUnit:
+    { // TODO check if correct
+       return 1.0;
+    }
     case QgsSymbolV2::MapUnit:
     {
       return 1.0;

@@ -33,7 +33,7 @@ class QgsRasterChangeCoords
     QgsPoint toXY( const QgsPoint &pntPixel );
 
   private:
-    bool mHasCrs;
+    bool mHasCrs = false;
     double mUL_X;
     double mUL_Y;
     double mResX;

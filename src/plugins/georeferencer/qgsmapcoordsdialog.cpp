@@ -20,14 +20,12 @@
 #include "qgsgeorefvalidators.h"
 #include "qgsmapcoordsdialog.h"
 
-QgsMapCoordsDialog::QgsMapCoordsDialog( QgsMapCanvas* qgisCanvas, const QgsPoint &pixelCoords, int id_gcp, QWidget* parent, int i_LegacyMode )
+QgsMapCoordsDialog::QgsMapCoordsDialog( QgsMapCanvas* qgisCanvas, const QgsPoint &pixelCoords, int id_gcp, QWidget* parent, int iLegacyMode )
     : QDialog( parent, Qt::Dialog )
-    , mPrevMapTool( nullptr )
     , mQgisCanvas( qgisCanvas )
     , mPixelCoords( pixelCoords )
-    , mPixelMap( false )
     , mIdGcp( id_gcp )
-    , mLegacyMode( i_LegacyMode )
+    , mLegacyMode( iLegacyMode )
 {
   mMapCoords.setX( 0.0 );
   mMapCoords.setY( 0.0 );

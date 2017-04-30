@@ -116,7 +116,7 @@ class QgsMapCoordsDialog : public QDialog, private Ui::QgsMapCoordsDialogBase
     Q_OBJECT
 
   public:
-    QgsMapCoordsDialog( QgsMapCanvas *qgisCanvas, const QgsPoint &pixelCoords, int id_gcp = -1, QWidget *parent = nullptr, int i_LegacyMode = 1 );
+    QgsMapCoordsDialog( QgsMapCanvas *qgisCanvas, const QgsPoint &pixelCoords, int id_gcp = -1, QWidget *parent = nullptr, int iLegacyMode = 1 );
     ~QgsMapCoordsDialog();
 
   private slots:
@@ -136,15 +136,15 @@ class QgsMapCoordsDialog : public QDialog, private Ui::QgsMapCoordsDialogBase
 
     QPushButton *mPointFromCanvasPushButton;
 
-    QgsGeorefMapToolEmitPoint* mToolEmitPoint;
-    QgsMapTool* mPrevMapTool;
-    QgsMapCanvas* mQgisCanvas;
+    QgsGeorefMapToolEmitPoint* mToolEmitPoint = nullptr;
+    QgsMapTool* mPrevMapTool = nullptr;
+    QgsMapCanvas* mQgisCanvas = nullptr;
 
     QgsPoint mPixelCoords;
     QgsPoint mMapCoords;
-    bool mPixelMap;
-    int mIdGcp;
-    int mLegacyMode;
+    bool mPixelMap = false;
+    int mIdGcp = 0;
+    int mLegacyMode = 0;
 };
 
 #endif

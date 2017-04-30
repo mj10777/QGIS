@@ -60,6 +60,7 @@ QgsRenderContext::QgsRenderContext( const QgsRenderContext& rh )
     , mFeatureFilterProvider( rh.mFeatureFilterProvider ? rh.mFeatureFilterProvider->clone() : nullptr )
     , mSegmentationTolerance( rh.mSegmentationTolerance )
     , mSegmentationToleranceType( rh.mSegmentationToleranceType )
+    , mMeterAsMapUnit(0.0)
 {
 }
 
@@ -83,6 +84,7 @@ QgsRenderContext&QgsRenderContext::operator=( const QgsRenderContext & rh )
   mFeatureFilterProvider = rh.mFeatureFilterProvider ? rh.mFeatureFilterProvider->clone() : nullptr;
   mSegmentationTolerance = rh.mSegmentationTolerance;
   mSegmentationToleranceType = rh.mSegmentationToleranceType;
+  mMeterAsMapUnit=rh.mMeterAsMapUnit;
   return *this;
 }
 

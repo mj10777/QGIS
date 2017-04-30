@@ -30,7 +30,7 @@ class QgsResidualPlotItem: public QgsComposerItem
     explicit QgsResidualPlotItem( QgsComposition* c );
     ~QgsResidualPlotItem();
 
-    /** \brief Reimplementation of QCanvasItem::paint*/
+    //! \brief Reimplementation of QCanvasItem::paint
     virtual void paint( QPainter* painter, const QStyleOptionGraphicsItem* itemStyle, QWidget* pWidget ) override;
 
     void setGCPList( QgsGCPList* list ) { mGCPList = list; }
@@ -47,16 +47,16 @@ class QgsResidualPlotItem: public QgsComposerItem
 
   private:
     //gcp list
-    QgsGCPList* mGCPList;
+    QgsGCPList* mGCPList = nullptr;
 
     QgsRectangle mExtent;
-    /** True if the scale bar units should be converted to map units. This can be done for transformation where the scaling in all directions is the same (helmert)*/
-    bool mConvertScaleToMapUnits;
+    //! True if the scale bar units should be converted to map units. This can be done for transformation where the scaling in all directions is the same (helmert)
+    bool mConvertScaleToMapUnits = false;
 
-    /** Calculates maximal possible mm to pixel ratio such that the residual arrow is still inside the frame*/
+    //! Calculates maximal possible mm to pixel ratio such that the residual arrow is still inside the frame
     double maxMMToPixelRatioForGCP( const QgsGeorefDataPoint* p, double pixelXMM, double pixelYMM );
 
-    /** Returns distance between two points*/
+    //! Returns distance between two points
     double dist( QPointF p1, QPointF p2 ) const;
 };
 

@@ -147,7 +147,7 @@ void QgsRendererV2Widget::changeSymbolUnit()
 
   bool ok;
   int currentUnit = ( firstSymbol->outputUnit() == QgsSymbolV2::MM ) ? 0 : 1;
-  QString item = QInputDialog::getItem( this, tr( "Symbol unit" ), tr( "Select symbol unit" ), QStringList() << tr( "Millimeter" ) << tr( "Map unit" ), currentUnit, false, &ok );
+  QString item = QInputDialog::getItem( this, tr( "Symbol unit" ), tr( "Select symbol unit" ), QStringList() << tr( "Millimeter" )  << tr( "Meters as Map unit" ) << tr( "Map unit" ), currentUnit, false, &ok );
   if ( ok )
   {
     QgsSymbolV2::OutputUnit unit = ( item.compare( tr( "Millimeter" ) ) == 0 ) ? QgsSymbolV2::MM : QgsSymbolV2::MapUnit;

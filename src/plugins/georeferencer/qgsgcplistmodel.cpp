@@ -53,21 +53,18 @@ class QgsStandardItem : public QStandardItem
     }
 };
 
-QgsGCPListModel::QgsGCPListModel( QObject *parent, int i_LegacyMode )
+QgsGCPListModel::QgsGCPListModel( QObject *parent, int iLegacyMode )
     : QStandardItemModel( parent )
     , mGCPList( new QgsGCPList() )
-    , mGeorefTransform( nullptr )
-    , mLegacyMode( i_LegacyMode )
-    , bTransformUpdated( false )
-    , bMapUnitsPossible( false )
+    , mLegacyMode( iLegacyMode )
 {
   // Use data provided by Qt::UserRole as sorting key (needed for numerical sorting).
   setSortRole( Qt::UserRole );
 }
 
-void QgsGCPListModel::setLegacyMode( int i_LegacyMode )
+void QgsGCPListModel::setLegacyMode( int iLegacyMode )
 {
-  mLegacyMode = i_LegacyMode;
+  mLegacyMode = iLegacyMode;
 }
 
 void QgsGCPListModel::setGCPList( QgsGCPList *theGCPList )
@@ -135,31 +132,31 @@ void QgsGCPListModel::updateModel()
   for ( int i = 0; i < mGCPList->countDataPoints(); ++i )
   {
     int j = 0;
-    QgsGeorefDataPoint *data_point = mGCPList->at( i );
+    QgsGeorefDataPoint *dataPoint = mGCPList->at( i );
 
-    if ( !data_point )
+    if ( !dataPoint )
       continue;
     switch ( mLegacyMode )
     {
       case 0:
-        data_point->setId( i );
+        dataPoint->setId( i );
         break;
     }
 
     QStandardItem *si = new QStandardItem();
     si->setTextAlignment( Qt::AlignCenter );
     si->setCheckable( true );
-    if ( data_point->isEnabled() )
+    if ( dataPoint->isEnabled() )
       si->setCheckState( Qt::Checked );
     else
       si->setCheckState( Qt::Unchecked );
 
     setItem( i, j++, si );
-    setItem( i, j++, new QgsStandardItem( data_point-> id() ) );
-    setItem( i, j++, new QgsStandardItem( QString::number( data_point->pixelCoords().x(), 'f', 10 ) ) );
-    setItem( i, j++, new QgsStandardItem( QString::number( data_point->pixelCoords().y(), 'f', 10 ) ) );
-    setItem( i, j++, new QgsStandardItem( QString::number( data_point->mapCoords().x(), 'f', 10 ) ) );
-    setItem( i, j++, new QgsStandardItem( QString::number( data_point->mapCoords().y(), 'f', 10 ) ) );
+    setItem( i, j++, new QgsStandardItem( dataPoint-> id() ) );
+    setItem( i, j++, new QgsStandardItem( QString::number( dataPoint->pixelCoords().x(), 'f', 10 ) ) );
+    setItem( i, j++, new QgsStandardItem( QString::number( dataPoint->pixelCoords().y(), 'f', 10 ) ) );
+    setItem( i, j++, new QgsStandardItem( QString::number( dataPoint->mapCoords().x(), 'f', 10 ) ) );
+    setItem( i, j++, new QgsStandardItem( QString::number( dataPoint->mapCoords().y(), 'f', 10 ) ) );
 
     double residual;
     double dX = 0;
@@ -169,7 +166,7 @@ void QgsGCPListModel::updateModel()
     {
       QgsPoint reverse_point_pixel;
       QgsPoint reverse_point_map;
-      QgsPoint pixel_point = mGeorefTransform->hasCrs() ? mGeorefTransform->toColumnLine( data_point->pixelCoords() ) : data_point->pixelCoords();
+      QgsPoint pixelPoint = mGeorefTransform->hasCrs() ? mGeorefTransform->toColumnLine( dataPoint->pixelCoords() ) : dataPoint->pixelCoords();
       if ( unitType == tr( "pixels" ) )
       {
         // Transform from world to raster coordinate:
@@ -178,46 +175,46 @@ void QgsGCPListModel::updateModel()
         // interested in the residual in this direction
         // correct   : 23258.22999986090144375,20888.28000062370119849,4036.55863499999986743,-1720.50918799999999464,1
         // incorrect: 23258.22999986090144375,20888.28000062370119849,4039.69056077662253301,-2549.30078565706389782,1
-        if ( mGeorefTransform->transformWorldToRaster( data_point->mapCoords(), reverse_point_pixel ) )
+        if ( mGeorefTransform->transformWorldToRaster( dataPoint->mapCoords(), reverse_point_pixel ) )
         {
-          dX = ( reverse_point_pixel.x() - pixel_point.x() );
-          dY = -( reverse_point_pixel.y() - pixel_point.y() );
-          data_point->setPixelCoordsReverse( reverse_point_pixel );
-          if ( mGeorefTransform->transformRasterToWorld( data_point->pixelCoords(), reverse_point_map ) )
+          dX = ( reverse_point_pixel.x() - pixelPoint.x() );
+          dY = -( reverse_point_pixel.y() - pixelPoint.y() );
+          dataPoint->setPixelCoordsReverse( reverse_point_pixel );
+          if ( mGeorefTransform->transformRasterToWorld( dataPoint->pixelCoords(), reverse_point_map ) )
           {
-            data_point->setMapCoordsReverse( reverse_point_map );
+            dataPoint->setMapCoordsReverse( reverse_point_map );
           }
         }
       }
       else if ( unitType == tr( "map units" ) )
       {
-        if ( mGeorefTransform->transformRasterToWorld( pixel_point, reverse_point_map ) )
+        if ( mGeorefTransform->transformRasterToWorld( pixelPoint, reverse_point_map ) )
         {
-          dX = ( reverse_point_map.x() - data_point->mapCoords().x() );
-          dY = ( reverse_point_map.y() - data_point->mapCoords().y() );
-          data_point->setMapCoordsReverse( reverse_point_map );
-          if ( mGeorefTransform->transformWorldToRaster( data_point->mapCoords(), reverse_point_pixel ) )
+          dX = ( reverse_point_map.x() - dataPoint->mapCoords().x() );
+          dY = ( reverse_point_map.y() - dataPoint->mapCoords().y() );
+          dataPoint->setMapCoordsReverse( reverse_point_map );
+          if ( mGeorefTransform->transformWorldToRaster( dataPoint->mapCoords(), reverse_point_pixel ) )
           {
-            data_point->setPixelCoordsReverse( reverse_point_pixel );
+            dataPoint->setPixelCoordsReverse( reverse_point_pixel );
           }
         }
       }
     }
     residual = sqrt( dX * dX + dY * dY );
 
-    data_point->setResidual( QPointF( dX, dY ) );
+    dataPoint->setResidual( QPointF( dX, dY ) );
 
     if ( residual >= 0.f )
     {
       setItem( i, j++, new QgsStandardItem( QString::number( dX, 'f', 10 ) ) );
       setItem( i, j++, new QgsStandardItem( QString::number( dY, 'f', 10 ) ) );
       setItem( i, j++, new QgsStandardItem( QString::number( residual, 'f', 10 ) ) );
-      setItem( i, j++, new QgsStandardItem( QString::number( data_point->pixelDistanceReverse(), 'f', 4 ) ) );
-      setItem( i, j++, new QgsStandardItem( QString::number( data_point->pixelAzimuthReverse(), 'f', 4 ) ) );
-      setItem( i, j++, new QgsStandardItem( data_point->pixelCoordsReverse().wellKnownText() ) );
-      setItem( i, j++, new QgsStandardItem( QString::number( data_point->mapDistanceReverse(), 'f', 4 ) ) );
-      setItem( i, j++, new QgsStandardItem( QString::number( data_point->mapAzimuthReverse(), 'f', 4 ) ) );
-      setItem( i, j++, new QgsStandardItem( data_point->mapCoordsReverse().wellKnownText() ) );
+      setItem( i, j++, new QgsStandardItem( QString::number( dataPoint->pixelDistanceReverse(), 'f', 4 ) ) );
+      setItem( i, j++, new QgsStandardItem( QString::number( dataPoint->pixelAzimuthReverse(), 'f', 4 ) ) );
+      setItem( i, j++, new QgsStandardItem( dataPoint->pixelCoordsReverse().wellKnownText() ) );
+      setItem( i, j++, new QgsStandardItem( QString::number( dataPoint->mapDistanceReverse(), 'f', 4 ) ) );
+      setItem( i, j++, new QgsStandardItem( QString::number( dataPoint->mapAzimuthReverse(), 'f', 4 ) ) );
+      setItem( i, j++, new QgsStandardItem( dataPoint->mapCoordsReverse().wellKnownText() ) );
     }
     else
     {
@@ -260,11 +257,11 @@ bool QgsGCPListModel::calculateMeanError( double& error ) const
 
   for ( int i = 0; i < mGCPList->countDataPoints(); ++i )
   {
-    QgsGeorefDataPoint *data_point = mGCPList->at( i );
-    if ( data_point->isEnabled() )
+    QgsGeorefDataPoint *dataPoint = mGCPList->at( i );
+    if ( dataPoint->isEnabled() )
     {
-      sumVxSquare += ( data_point->residual().x() * data_point->residual().x() );
-      sumVySquare += ( data_point->residual().y() * data_point->residual().y() );
+      sumVxSquare += ( dataPoint->residual().x() * dataPoint->residual().x() );
+      sumVySquare += ( dataPoint->residual().y() * dataPoint->residual().y() );
     }
   }
 

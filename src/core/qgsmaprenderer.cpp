@@ -43,6 +43,7 @@ QgsMapRenderer::QgsMapRenderer()
 {
   mScale = 1.0;
   mRotation = 0.0;
+  mMeterAsMapUnit=0.0;
   mScaleCalculator = new QgsScaleCalculator;
   mDistArea = new QgsDistanceArea;
 
@@ -117,6 +118,12 @@ bool QgsMapRenderer::setExtent( const QgsRectangle& extent )
   }
 
   mExtent = extent;
+  if ( mDestCRS->geographicFlag() )
+  { // Retrieve realistic MapUnits for a meter based on retult of QgsMapCanvas::center()
+     // mMeterAsMapUnit=something_TODO
+     mMeterAsMapUnit=0.000015;
+     mRenderContext.setMeterAsMapUnit( mMeterAsMapUnit ) ;
+  }
   if ( !extent.isEmpty() )
     adjustExtentToSize();
 
@@ -705,6 +712,8 @@ void QgsMapRenderer::setDestinationCrs( const QgsCoordinateReferenceSystem& crs,
     mDistArea->setSourceCrs( crs.srsid() );
     *mDestCRS = crs;
     updateFullExtent();
+    mMeterAsMapUnit=QgsUnitTypes::fromUnitToUnitFactor(QGis::Meters,crs.mapUnits());
+    mRenderContext.setMeterAsMapUnit( mMeterAsMapUnit ) ;
 
     if ( !rect.isEmpty() )
     {

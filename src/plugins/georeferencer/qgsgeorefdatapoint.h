@@ -28,20 +28,20 @@ class QgsGeorefDataPoint : public QObject
     //! constructor
     QgsGeorefDataPoint( QgsMapCanvas *srcCanvas, QgsMapCanvas *dstCanvas,
                         const QgsPoint& pixelCoords, const QgsPoint& mapCoords, int i_srid, int id_gcp,
-                        bool enable, int i_LegacyMode );
+                        bool enable, int iLegacyMode );
     QgsGeorefDataPoint( const QgsPoint& pixelCoords, const QgsPoint& mapCoords, int i_srid, int id_gcp,
-                        int id_gcp_master, int i_ResultType, QString s_TextInfo );
-    QgsGeorefDataPoint( const QgsGeorefDataPoint &data_point );
+                        int id_gcp_master, int iResultType, QString sTextInfo );
+    QgsGeorefDataPoint( const QgsGeorefDataPoint &dataPoint );
     ~QgsGeorefDataPoint();
 
     //! returns coordinates of the point
     QgsPoint pixelCoords() const { return mPixelCoords; }
-    void setPixelCoords( const QgsPoint &pixel_point );
+    void setPixelCoords( const QgsPoint &pixelPoint );
 
-    QgsPoint pixelCoordsReverse() const { return mPixelCoords_reverse; }
-    void setPixelCoordsReverse( const QgsPoint &pixel_point ) { mPixelCoords_reverse = pixel_point; }
-    double pixelDistanceReverse()  { return mPixelCoords.distance( mPixelCoords_reverse ); }
-    double pixelAzimuthReverse()  { return fabs( mPixelCoords.azimuth( mPixelCoords_reverse ) ); }
+    QgsPoint pixelCoordsReverse() const { return mPixelCoordsReverse; }
+    void setPixelCoordsReverse( const QgsPoint &pixelPoint ) { mPixelCoordsReverse = pixelPoint; }
+    double pixelDistanceReverse()  { return mPixelCoords.distance( mPixelCoordsReverse ); }
+    double pixelAzimuthReverse()  { return fabs( mPixelCoords.azimuth( mPixelCoordsReverse ) ); }
 
     QgsPoint mapCoords() const { return mMapCoords; }
     void setMapCoords( const QgsPoint &map_point );
@@ -59,14 +59,14 @@ class QgsGeorefDataPoint : public QObject
     /**
      * getSrid()
      *  - Retrieve the Srid of the point
-     * @see AsEWKT
-     * @return  srid of point
+     * \see AsEWKT
+     * \return  srid of point
      */
     int getSrid() const { return mSrid; };
     /**
      * setSrid()
      *  - Set the Srid of the point
-     * @return  srid of point
+     * \return  srid of point
      */
     void setSrid( int i_srid ) {mSrid = i_srid;};
     void setIdMaster( int id_master ) {mIdMaster = id_master;};
@@ -75,48 +75,48 @@ class QgsGeorefDataPoint : public QObject
      * getResultType()
      *  - How the point is being used
      *  -> UPDATE and INSERT should only be used on copys of the GCPListWidget entries
-     * @note
+     * \note
      * Expected values:
      *  0: default value upon creation
      *  1: enabled GCP-Point
      *  2: is being used to UPDATE the Database with the present values
      *  3: is being used to INSERT into the Database with the present values
-     * @see setResultType
-     * @see sqlInsertPointsCoverage
-     * @return  0-3
+     * \see setResultType
+     * \see sqlInsertPointsCoverage
+     * \return  0-3
      */
     int getResultType() const { return mResultType; };
     /**
      * setResultType()
      *  - How the point is to be used
      *  -> UPDATE and INSERT should only be used on copiess of the GCPListWidget entries
-     * @note
+     * \note
      * Expected values:
      *  0: default value upon creation
      *  1: enabled GCP-Point
      *  2: is being used to UPDATE the Database with the present values
      *  3: is being used to INSERT into the Database with the present values
-     * @see getResultType
-     * @return  0-3
+     * \see getResultType
+     * \return  0-3
      */
-    void setResultType( int i_ResultType ) {mResultType = i_ResultType;};
+    void setResultType( int iResultType ) {mResultType = iResultType;};
     /**
      * getTextInfo()
      *  - Formatted String to be used as Meta-Data when creating a point from a GCP-Master entry
      *  -> UPDATE and INSERT Sql created will use these values
-     * @note
+     * \note
      * UPDATE  will only use the following fields:
      *  3: name
      *  4: notes
      *  6: gcp_text
-     * @see sqlInsertPointsCoverage
+     * \see sqlInsertPointsCoverage
      */
     QString getTextInfo() const { return mTextInfo; };
     /**
      * setTextInfo()
      *  - Formatted String to be used as Meta-Data when creating a point from a GCP-Master entry
      *  -> UPDATE and INSERT Sql created will use these values
-     * @note
+     * \note
      * Positions devided by 'mParseString':
      *  0: id_gcp
      *  1: id_gcp_coverage
@@ -125,71 +125,71 @@ class QgsGeorefDataPoint : public QObject
      *  4: notes
      *  5: transformparm
      *  6: gcp_text
-     * @see sqlInsertPointsCoverage
-     * @see QgsGeorefPluginGui::fetchGcpMasterPointsExtent
+     * \see sqlInsertPointsCoverage
+     * \see QgsGeorefPluginGui::fetchGcpMasterPointsExtent
      */
-    void setTextInfo( QString s_TextInfo ) {mTextInfo = s_TextInfo;};
+    void setTextInfo( QString sTextInfo ) {mTextInfo = sTextInfo;};
     /**
      * AsEWKT
      *  - Format point a EWKT for INSERT / UPDATE Sql-Statements
      *  -> using the set Srid of the point
-     * @note
-     * Expected values for i_point_type  pixel:
+     * \note
+     * Expected values for iPointType  pixel:
      *  0: Pixel-Value
      *  1: Map-Value
      *  2: reversed Pixel-Value
      *  3: reversed Map-Value
-     * @note
+     * \note
      * Gcp-Master : when contains another srid:
      * - the srid of the master is given and transformed into the srid of the project
-     * @see GeomFromEWKT
-     * @param i_point_type  pixel Pixel/Map/Reversed
-     * @param i_srid srid to use for ST_Transform
-     * @return  Spatialite specific formated String as EWKT of point
+     * \see GeomFromEWKT
+     * \param iPointType  pixel Pixel/Map/Reversed
+     * \param i_srid srid to use for ST_Transform
+     * \return  Spatialite specific formated String as EWKT of point
      */
-    QString AsEWKT( int i_point_type = 1, int i_srid = -1 ) const;
+    QString AsEWKT( int iPointType = 1, int i_srid = -1 ) const;
     /**
      * sqlInsertPointsCoverage
      *  - Depending on how point is being used
      *  -> UPDATE and INSERT should only be used on copys of the GCPListWidget entries
-     * @note
+     * \note
      * Used values of mResultType:
      *  2: is being used to UPDATE the Database with the present values
      *  3: is being used to INSERT into the Database with the present values
-     * @see getResultType
-     * @see setResultType
-     * @see getTextInfo
-     * @see AsEWKT
-     * @see QgsGeorefPluginGui::bulkGcpPointsInsert
-     * @param i_srid srid to use for ST_Transform during AsEWKT
-     * @return valid SQL to UPDATE or INSERT the point
+     * \see getResultType
+     * \see setResultType
+     * \see getTextInfo
+     * \see AsEWKT
+     * \see QgsGeorefPluginGui::bulkGcpPointsInsert
+     * \param i_srid srid to use for ST_Transform during AsEWKT
+     * \return valid SQL to UPDATE or INSERT the point
      */
     QString sqlInsertPointsCoverage(int i_srid = -1) const;
     /**
      * GeomFromEWKT
      *  - Format point a EWKT for INSERT / UPDATE Sql-Statements
      *  -> using the set Srid of the point
-     * @note
+     * \note
      * Expected values:
      *  0: Pixel-Value
      *  1: Map-Value
      *  2: reversed Pixel-Value
      *  3: reversed Map-Value
-     * @see AsEWKT
-     * @param i_point_type  pixel Pixel/Map/Reversed
-     * @param i_srid srid to use for ST_Transform
-     * @return  Spatialite specific GeomFromEWKT command, with formated String as EWKT of point
+     * \see AsEWKT
+     * \param iPointType  pixel Pixel/Map/Reversed
+     * \param i_srid srid to use for ST_Transform
+     * \return  Spatialite specific GeomFromEWKT command, with formated String as EWKT of point
      */
-    QString GeomFromEWKT( int i_point_type = 1, int i_srid = -1 ) const { return QString( "GeomFromEWKT('%1')" ).arg( AsEWKT( i_point_type,i_srid ) ); };
+    QString GeomFromEWKT( int iPointType = 1, int i_srid = -1 ) const { return QString( "GeomFromEWKT('%1')" ).arg( AsEWKT( iPointType,i_srid ) ); };
     bool contains( QPoint p, bool isMapPlugin );
     /**
      * Returns pixel (Georeferencer) Canvas
-     * @return mSrcCanvas pixel (Georeferencer) Canvas
+     * \return mSrcCanvas pixel (Georeferencer) Canvas
      */
     QgsMapCanvas *srcCanvas() const { return mSrcCanvas; }
     /**
      * Returns map (QGis) Canvas
-     * @return mDstCanvas map (QGis) Canvas
+     * \return mDstCanvas map (QGis) Canvas
      */
     QgsMapCanvas *dstCanvas() const { return mDstCanvas; }
 
@@ -204,26 +204,26 @@ class QgsGeorefDataPoint : public QObject
     /**
      * Pixel (Georeferencer) Canvas
      */
-    QgsMapCanvas *mSrcCanvas;
+    QgsMapCanvas *mSrcCanvas = nullptr;
     /**
      * Pixel (Georeferencer) Canvas
      */
-    QgsMapCanvas *mDstCanvas;
-    QgsGCPCanvasItem *mGCPSourceItem;
-    QgsGCPCanvasItem *mGCPDestinationItem;
+    QgsMapCanvas *mDstCanvas = nullptr;
+    QgsGCPCanvasItem *mGCPSourceItem = nullptr;
+    QgsGCPCanvasItem *mGCPDestinationItem = nullptr;
     QgsPoint mPixelCoords;
     QgsPoint mMapCoords;
-    QgsPoint mPixelCoords_reverse;
+    QgsPoint mPixelCoordsReverse;
     QgsPoint mMapCoords_reverse;
 
-    int mId;
-    bool mEnabled;
-    int mLegacyMode;
+    int mId = 0;
+    bool mEnabled = false;
+    int mLegacyMode = 0;
     QPointF mResidual;
     QString mTextInfo;
-    int mIdMaster;
-    int mResultType;
-    int mSrid;
+    int mIdMaster = 0;
+    int mResultType = 0;
+    int mSrid = -1;
     QString mParseString;
 };
 

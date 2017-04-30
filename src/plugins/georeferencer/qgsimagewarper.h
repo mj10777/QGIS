@@ -45,11 +45,11 @@ class QgsImageWarper
 
     /**
      * Warp the file specified by "input" and write the resulting raster to the file "output".
-     * @param georefTransform Specified the warp transformation which should be applied to "input".
-     * @param resampling Specifies image resampling algorithm to use.
-     * @param useZeroAsTrans Specifies whether to mark transparent areas with a value of "zero".
-     * @param destResX The desired horizontal resolution of the output file, in target georeferenced units. A value of zero means automatic selection.
-     * @param destResY The desired vertical resolution of the output file, in target georeferenced units. A value of zero means automatic selection.
+     * \param georefTransform Specified the warp transformation which should be applied to "input".
+     * \param resampling Specifies image resampling algorithm to use.
+     * \param useZeroAsTrans Specifies whether to mark transparent areas with a value of "zero".
+     * \param destResX The desired horizontal resolution of the output file, in target georeferenced units. A value of zero means automatic selection.
+     * \param destResY The desired vertical resolution of the output file, in target georeferenced units. A value of zero means automatic selection.
      */
     int warpFile( const QString& input,
                   const QString& output,
@@ -73,12 +73,12 @@ class QgsImageWarper
                                     double *x, double *y, double *z, int *panSuccess );
 
     /**
-     * @brief Appends a transform from geocoordinates to pixel/line coordinates to the given GDAL transformer.
+     * \brief Appends a transform from geocoordinates to pixel/line coordinates to the given GDAL transformer.
      *
      * The resulting transform is the functional composition of the given GDAL transformer and the
      * inverse geo transform.
-     * @sa destroyGeoToPixelTransform
-     * @returns Argument to use with the static GDAL callback \ref GeoToPixelTransform
+     * \sa destroyGeoToPixelTransform
+     * \returns Argument to use with the static GDAL callback \ref GeoToPixelTransform
      */
     void *addGeoToPixelTransform( GDALTransformerFunc GDALTransformer, void *GDALTransformerArg, double *padfGeotransform ) const;
     void destroyGeoToPixelTransform( void *GeoToPixelTransfomArg ) const;

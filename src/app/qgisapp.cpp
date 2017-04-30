@@ -3959,7 +3959,7 @@ void QgisApp::askUserForOGRSublayers( QgsVectorLayer *layer )
     }
 
     if ( elements.count() == 5 )
-    {
+    { //  layer_id:layer_name:feature_count:geometry_type:geometry_name:field_geometry_id:ogr_get_type
       QgsSublayersDialog::LayerDefinition def;
       def.layerId = elements[0].toInt();
       def.layerName = elements[1];

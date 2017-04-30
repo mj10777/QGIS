@@ -17,26 +17,19 @@
 
 QgsGCPList::QgsGCPList()
     : QList<QgsGeorefDataPoint *>()
-    , mIsDirty( true )
-    , mHasChanged( false )
-    , mGcpDbData( nullptr )
-    , bAvoidUnneededUpdates( false )
 {
 }
 
 QgsGCPList::QgsGCPList( const QgsGCPList &list )
     : QList<QgsGeorefDataPoint *>()
-    , mIsDirty( true )
     , mHasChanged( true )
-    , mGcpDbData( nullptr )
-    , bAvoidUnneededUpdates( false )
 {
   clear();
   QgsGCPList::const_iterator it = list.constBegin();
   for ( ; it != list.constEnd(); ++it )
   {
-    QgsGeorefDataPoint *data_point = new QgsGeorefDataPoint( **it );
-    append( data_point );
+    QgsGeorefDataPoint *dataPoint = new QgsGeorefDataPoint( **it );
+    append( dataPoint );
   }
 }
 
@@ -46,11 +39,11 @@ void QgsGCPList::createGCPVectors( QVector<QgsPoint> &mapCoords, QVector<QgsPoin
   pixelCoords = QVector<QgsPoint>( size() );
   for ( int i = 0, j = 0; i < sizeAll(); i++ )
   {
-    QgsGeorefDataPoint *data_point = at( i );
-    if ( data_point->isEnabled() )
+    QgsGeorefDataPoint *dataPoint = at( i );
+    if ( dataPoint->isEnabled() )
     {
-      mapCoords[j] = data_point->mapCoords();
-      pixelCoords[j] = data_point->pixelCoords();
+      mapCoords[j] = dataPoint->mapCoords();
+      pixelCoords[j] = dataPoint->pixelCoords();
       j++;
     }
   }
@@ -59,17 +52,17 @@ QgsGeorefDataPoint* QgsGCPList::getDataPoint( int id_gcp )
 {
   for ( int i = 0; i < sizeAll(); i++ )
   {
-    QgsGeorefDataPoint *data_point = at( i );
-    if ( data_point->id() == id_gcp )
+    QgsGeorefDataPoint *dataPoint = at( i );
+    if ( dataPoint->id() == id_gcp )
     {
-      return data_point;
+      return dataPoint;
     }
   }
   return nullptr;
 }
-bool QgsGCPList::addDataPoint( QgsGeorefDataPoint* data_point )
+bool QgsGCPList::addDataPoint( QgsGeorefDataPoint* dataPoint )
 {
-  append( data_point );
+  append( dataPoint );
   return setDirty();
 }
 bool QgsGCPList::removeDataPoint( int id_gcp )
@@ -78,8 +71,8 @@ bool QgsGCPList::removeDataPoint( int id_gcp )
   bool b_hit = false;
   for ( int i = 0; i < sizeAll(); i++ )
   {
-    QgsGeorefDataPoint *data_point = at( i );
-    if ( data_point->id() == id_gcp )
+    QgsGeorefDataPoint *dataPoint = at( i );
+    if ( dataPoint->id() == id_gcp )
     {
       i_position_at = i;
       break;
@@ -93,27 +86,27 @@ bool QgsGCPList::removeDataPoint( int id_gcp )
   }
   return b_hit;
 }
-bool QgsGCPList::updateDataPoint( int id_gcp, bool b_point_map, QgsPoint update_point )
-{ // i_point_type: 0=pixel ; 1 = map
+bool QgsGCPList::updateDataPoint( int id_gcp, bool bPointMap, QgsPoint updatePoint )
+{ // iPointType: 0=pixel ; 1 = map
   bool b_hit = false;
-  QgsGeorefDataPoint *update_data_point = getDataPoint( id_gcp );
-  if ( update_data_point )
+  QgsGeorefDataPoint *update_dataPoint = getDataPoint( id_gcp );
+  if ( update_dataPoint )
   {
-    if ( b_point_map )
+    if ( bPointMap )
     {
-      update_data_point->setMapCoords( update_point );
+      update_dataPoint->setMapCoords( updatePoint );
     }
     else
     {
-      update_data_point->setPixelCoords( update_point );
+      update_dataPoint->setPixelCoords( updatePoint );
     }
     b_hit = true;
     setDirty();
   }
   return b_hit;
 }
-bool QgsGCPList::searchDataPoint( QgsPoint search_point, bool b_point_map, double epsilon, int *id_gcp, double *distance, int *i_result_type )
-{ // i_point_type: 0=pixel ; 1 = map
+bool QgsGCPList::searchDataPoint( QgsPoint searchPoint, bool bPointMap, double epsilon, int *id_gcp, double *distance, int *iResultType )
+{ // iPointType: 0=pixel ; 1 = map
   bool b_hit = false;
   int i_search_id_gcp = 0;
   double search_distance = DBL_MAX;
@@ -122,20 +115,20 @@ bool QgsGCPList::searchDataPoint( QgsPoint search_point, bool b_point_map, doubl
   int i_search_result_type = 0; // 0=not found ; 1=exact ; 2: inside area ; 3=outside area
   for ( int i = 0; i < sizeAll(); i++ )
   {
-    QgsGeorefDataPoint *data_point = at( i );
+    QgsGeorefDataPoint *dataPoint = at( i );
     QgsPoint check_point;
-    int i_check_id = data_point->id();
+    int i_check_id = dataPoint->id();
     int i_check_result_type = 0;
-    if ( b_point_map )
+    if ( bPointMap )
     {
-      check_point = data_point->mapCoords();
+      check_point = dataPoint->mapCoords();
     }
     else
     {
-      check_point = data_point->pixelCoords();
+      check_point = dataPoint->pixelCoords();
     }
-    double check_distance = check_point.distance( search_point );
-    if ( check_point == search_point )
+    double check_distance = check_point.distance( searchPoint );
+    if ( check_point == searchPoint )
     {
       i_check_result_type = 1;
       b_hit = true;
@@ -143,7 +136,7 @@ bool QgsGCPList::searchDataPoint( QgsPoint search_point, bool b_point_map, doubl
     else
     {
       i_check_result_type = 3;
-      if ( check_point.compare( search_point, epsilon ) )
+      if ( check_point.compare( searchPoint, epsilon ) )
       {
         i_check_result_type = 3;
       }
@@ -166,9 +159,9 @@ bool QgsGCPList::searchDataPoint( QgsPoint search_point, bool b_point_map, doubl
   {
     *distance = search_distance;
   }
-  if ( i_result_type )
+  if ( iResultType )
   {
-    *i_result_type = i_search_result_type;
+    *iResultType = i_search_result_type;
   }
   return b_hit;
 }
@@ -177,22 +170,22 @@ int QgsGCPList::size()
 {
   if ( QList<QgsGeorefDataPoint *>::isEmpty() )
   {
-    i_count_enabled = 0;
-    return i_count_enabled;
+    mCountEnabled = 0;
+    return mCountEnabled;
   }
   if ( !mIsDirty )
   { //  no need to be recalulated since 'mIsDirty' is not true
-    return i_count_enabled;
+    return mCountEnabled;
   }
-  i_count_enabled = 0;
+  mCountEnabled = 0;
   const_iterator it = begin();
   while ( it != end() )
   {
     if (( *it )->isEnabled() )
-      i_count_enabled++;
+      mCountEnabled++;
     ++it;
   }
-  return i_count_enabled;
+  return mCountEnabled;
 }
 
 int QgsGCPList::sizeAll() const
@@ -206,8 +199,8 @@ QgsGCPList &QgsGCPList::operator =( const QgsGCPList & list )
   QgsGCPList::const_iterator it = list.constBegin();
   for ( ; it != list.constEnd(); ++it )
   {
-    QgsGeorefDataPoint *data_point = new QgsGeorefDataPoint( **it );
-    append( data_point );
+    QgsGeorefDataPoint *dataPoint = new QgsGeorefDataPoint( **it );
+    append( dataPoint );
   }
   setDirty();
   return *this;

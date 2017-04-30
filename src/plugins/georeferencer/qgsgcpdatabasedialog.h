@@ -32,27 +32,27 @@ class QgsGcpDatabaseDialog : public QDialog, private Ui::QgsGcpDatabaseDialog
     ~QgsGcpDatabaseDialog();
     /**
      * A QFileInfo built out of mDatabaseDir and mDatabaseFile
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * New for ( mLegacyMode == 1 )
      *  - therefore is needed
-     * @note
+     * \note
      *  -> will be used to build the QFileInfo that the Dialog will return
-     * @see mDatabaseDir
-     * @see mDatabaseFile
-     * @see database_file
+     * \see mDatabaseDir
+     * \see mDatabaseFile
+     * \see database_file
      */
     QFileInfo GcpDatabaseFile() { return database_file; }
     /**
      * Which type of Gcp Database should be created
      *  -> will determine which function will be called
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * New for ( mLegacyMode == 1 )
      *  - therefore is needed
-     * @note
+     * \note
      *  -> will be used to the srid of the Database
-     * @see QgsGeorefPluginGui::createGcpCoverageDb
-     * @see QgsGeorefPluginGui::createGcpMasterDb
-     * @see gcp_db_type
+     * \see QgsGeorefPluginGui::createGcpCoverageDb
+     * \see QgsGeorefPluginGui::createGcpMasterDb
+     * \see gcp_db_type
      */
     QgsSpatiaLiteProviderGcpUtils::GcpDatabases GcpDatabaseType() { return gcp_db_type; }
     /**
@@ -60,25 +60,25 @@ class QgsGcpDatabaseDialog : public QDialog, private Ui::QgsGcpDatabaseDialog
      *  ->default value will be the present setting of the QGIS-Application
      * -> the srid will be extracted from the authid()
      * -> 2nd value of authid.split( ":" );
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * New for ( mLegacyMode == 1 )
      *  - therefore is needed
-     * @note
+     * \note
      *  -> will be used to the srid of the Database
-     * @see mGcpSrid
+     * \see mGcpSrid
      */
     int GcpDatabaseSrid() { return mGcpSrid; }
     /**
      * Create a Sql-Dump of the Database
      *  -> during creation
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * New for ( mLegacyMode == 1 )
      *  - therefore is needed
-     * @note
+     * \note
      *  -> will be used to the srid of the Database
-     * @see QgsGeorefPluginGui::createGcpCoverageDb
-     * @see QgsGeorefPluginGui::createGcpMasterDb
-     * @see GcpDatabaseDump()
+     * \see QgsGeorefPluginGui::createGcpCoverageDb
+     * \see QgsGeorefPluginGui::createGcpMasterDb
+     * \see GcpDatabaseDump()
      */
     bool GcpDatabaseDump() { return b_create_sqldump; }
 
@@ -87,20 +87,20 @@ class QgsGcpDatabaseDialog : public QDialog, private Ui::QgsGcpDatabaseDialog
     /**
      * The final values will be prepaired for the results of the dialog
      *  -> the suffix/file extetion will be enforsed of the File-Name
-     * @note
+     * \note
      *  - 'gcp_coverage'
      *  -> should have the 'gcp.db' suffix/file-extention to be recognised by this application
-     * @note
+     * \note
      *  - 'gcp_master'
      *  -> should have the 'db' suffix/file-extention to be recognised by this application
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * New for ( mLegacyMode == 1 )
      *  - therefore is needed
-     * @see GcpDatabaseFile
-     * @see GcpDatabaseType
-     * @see GcpDatabaseSrid
-     * @see GcpDatabaseDump
-     * @see QgsGeorefPluginGui::createGcpDatabaseDialog
+     * \see GcpDatabaseFile
+     * \see GcpDatabaseType
+     * \see GcpDatabaseSrid
+     * \see GcpDatabaseDump
+     * \see QgsGeorefPluginGui::createGcpDatabaseDialog
      */
     void accept() override;
 
@@ -112,74 +112,74 @@ class QgsGcpDatabaseDialog : public QDialog, private Ui::QgsGcpDatabaseDialog
   private:
     /**
      * Query an default name for the Gcp-Database (Coverage/Master)
-     * @note
+     * \note
      *  - 'gcp_coverage'
      *  -> should have the 'gcp.db' suffix/file-extention to be recognised by this application
-     * @note
+     * \note
      *  - 'gcp_master'
      *  -> should start with 'gcp_master' to be recognised by this application
      *  -> should also have the 'db' suffix/file-extention to be recognised by this application
-     * @note
+     * \note
      *  -> setGcpDatabaseName will call this to see if the User has renamed the input
      *  --> if NOT, it will setGcpDatabaseName replace the value of mOutputDatabaseFileEdit with the returned value
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * New for ( mLegacyMode == 1 )
      *  - therefore is needed
-     * @see setGcpDatabaseName
-     * @return mDatabaseFile the default name for mOutputDatabaseFileEdit
+     * \see setGcpDatabaseName
+     * \return mDatabaseFile the default name for mOutputDatabaseFileEdit
      */
     QString defaultGcpDatabaseName() { if ( gcp_db_type == QgsSpatiaLiteProviderGcpUtils::GcpCoverages ) return QString( "gcp_coverages.%1.%2" ).arg( mGcpSrid ).arg( mDbSuffic ); else return QString( "gcp_master.%1.%2" ).arg( mGcpSrid ).arg( mDbSuffic ); }
     /**
      * Create an default name for the Gcp-Database (Coverage/Master)
-     * @note
+     * \note
      *  - 'gcp_coverage'
      *  -> should have the 'gcp.db' suffix/file-extention to be recognised by this application
-     * @note
+     * \note
      *  - 'gcp_master'
      *  -> should start with 'gcp_master' to be recognised by this application
      *  -> should also have the 'db' suffix/file-extention to be recognised by this application
-     * @note
+     * \note
      *  -> Adding the srid is only intended as a convenience for creating default empty Databases
      *  --> it is NOT needed to be recognised by this application
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * New for ( mLegacyMode == 1 )
      *  - therefore is needed
-     * @see defaultGcpDatabaseName
-     * @param text if QString::null: will be read from  mOutputDatabaseFileEdit->text()
-     * @param i_srid if not INT_MIN: will set the member mGcpSrid
-     * @return mDatabaseFile at its present setting (not used)
+     * \see defaultGcpDatabaseName
+     * \param text if QString::null: will be read from  mOutputDatabaseFileEdit->text()
+     * \param i_srid if not INT_MIN: will set the member mGcpSrid
+     * \return mDatabaseFile at its present setting (not used)
      */
     QString setGcpDatabaseName( QString text = QString::null, int i_srid = INT_MIN );
     /**
      * The Directory to store the Database
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * New for ( mLegacyMode == 1 )
      *  - therefore is needed
-     * @note
+     * \note
      *  -> will be used to build the QFileInfo that the Dialog will return
-     * @see GcpDatabaseFile
+     * \see GcpDatabaseFile
      */
     QString mDatabaseDir;
     /**
      * The Filename of the Database
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * New for ( mLegacyMode == 1 )
      *  - therefore is needed
-     * @note
+     * \note
      *  -> will be used to build the QFileInfo that the Dialog will return
-     * @see GcpDatabaseFile
+     * \see GcpDatabaseFile
      */
     QString mDatabaseFile;
     /**
      * A QFileInfo built out of mDatabaseDir and mDatabaseFile
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * New for ( mLegacyMode == 1 )
      *  - therefore is needed
-     * @note
+     * \note
      *  -> will be used to build the QFileInfo that the Dialog will return
-     * @see mDatabaseDir
-     * @see mDatabaseFile
-     * @see GcpDatabaseFile
+     * \see mDatabaseDir
+     * \see mDatabaseFile
+     * \see GcpDatabaseFile
      */
     QFileInfo database_file;
     /**
@@ -187,25 +187,25 @@ class QgsGcpDatabaseDialog : public QDialog, private Ui::QgsGcpDatabaseDialog
      *  - default value will be the present setting of the QGIS-Application
      * -> the srid will be extracted from the authid()
      * -> 2nd value of authid.split( ":" );
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * New for ( mLegacyMode == 1 )
      *  - therefore is needed
-     * @note
+     * \note
      *  -> will be used to the srid of the Database
-     * @see GcpDatabaseSrid()
+     * \see GcpDatabaseSrid()
      */
     QgsCoordinateReferenceSystem mDestCRS;
     /**
      * Create a Sql-Dump of the Database
      *  -> during creation
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * New for ( mLegacyMode == 1 )
      *  - therefore is needed
-     * @note
+     * \note
      *  -> will be used to the srid of the Database
-     * @see QgsGeorefPluginGui::createGcpCoverageDb
-     * @see QgsGeorefPluginGui::createGcpMasterDb
-     * @see GcpDatabaseDump()
+     * \see QgsGeorefPluginGui::createGcpCoverageDb
+     * \see QgsGeorefPluginGui::createGcpMasterDb
+     * \see GcpDatabaseDump()
      */
     bool b_create_sqldump;
     /**
@@ -213,33 +213,33 @@ class QgsGcpDatabaseDialog : public QDialog, private Ui::QgsGcpDatabaseDialog
      *  ->default value will be the present setting of the QGIS-Application
      * -> the srid will be extracted from the authid()
      * -> 2nd value of authid.split( ":" );
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * New for ( mLegacyMode == 1 )
      *  - therefore is needed
-     * @note
+     * \note
      *  -> will be used to the srid of the Database
-     * @see GcpDatabaseSrid()
+     * \see GcpDatabaseSrid()
      */
     int mGcpSrid;
     /**
      * Which type of Gcp Database should be created
      *  -> will determine which function will be called
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * New for ( mLegacyMode == 1 )
      *  - therefore is needed
-     * @note
+     * \note
      *  -> will be used to the srid of the Database
-     * @see GcpDatabaseType()
-     * @see QgsGeorefPluginGui::createGcpCoverageDb
-     * @see QgsGeorefPluginGui::createGcpMasterDb
+     * \see GcpDatabaseType()
+     * \see QgsGeorefPluginGui::createGcpCoverageDb
+     * \see QgsGeorefPluginGui::createGcpMasterDb
      */
     QgsSpatiaLiteProviderGcpUtils::GcpDatabases gcp_db_type;
     /**
      * Store the default suffix/File extention based on the Gcp-Database Type
-     * @note
+     * \note
      *  - 'gcp_coverage'
      *  -> should have the 'gcp.db' suffix/file-extention to be recognised by this application
-     * @note
+     * \note
      *  - 'gcp_master'
      *  -> should also have the 'db' suffix/file-extention to be recognised by this application
      */

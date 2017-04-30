@@ -55,7 +55,7 @@ class QgsTransformSettingsDialog : public QDialog, private Ui::QgsTransformSetti
 
     QString mSourceRasterFile;
 
-    int mCountGCPpoints;
+    int mCountGCPpoints = 0;
 
     QStringList mListCompression;
 };

@@ -812,7 +812,6 @@ class GUI_EXPORT QgsMapCanvas : public QGraphicsView
      * @note added in QGIS 2.16
      */
     void endZoomRect( QPoint pos );
-
     friend class TestQgsMapCanvas;
 
 }; // class QgsMapCanvas

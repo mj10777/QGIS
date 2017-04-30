@@ -575,7 +575,6 @@ void QgsMapCanvas::setDestinationCrs( const QgsCoordinateReferenceSystem &crs )
       QgsDebugMsg( QString( "Transform error caught: %1" ).arg( e.what() ) );
     }
   }
-
   if ( !mSettings.hasCrsTransformEnabled() )
   {
     mSettings.setMapUnits( crs.mapUnits() );

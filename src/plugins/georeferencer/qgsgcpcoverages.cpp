@@ -35,15 +35,15 @@
 #include <QDebug>
 
 #ifdef Q_OS_MACX
-QgsGcpCoveragesDialog::QgsGcpCoveragesDialog( QWidget *parent, QgsSpatiaLiteProviderGcpUtils::GcpDbData* parms_GcpDbData )
+QgsGcpCoveragesDialog::QgsGcpCoveragesDialog( QWidget *parent, QgsSpatiaLiteProviderGcpUtils::GcpDbData* parmsGcpDbData )
     : QMainWindow( parent, Qt::WindowSystemMenuHint )  // Modeless dialog with close button only
 #else
-QgsGcpCoveragesDialog::QgsGcpCoveragesDialog( QWidget *parent, QgsSpatiaLiteProviderGcpUtils::GcpDbData* parms_GcpDbData )
+QgsGcpCoveragesDialog::QgsGcpCoveragesDialog( QWidget *parent, QgsSpatiaLiteProviderGcpUtils::GcpDbData* parmsGcpDbData )
     : QMainWindow( parent )
 #endif
 {
-  mGcpDbData = parms_GcpDbData;
-  i_selected_gcp_coverage = mGcpDbData->mId_gcp_coverage;
+  mGcpDbData = parmsGcpDbData;
+  i_selected_gcp_coverage = mGcpDbData->mIdGcpCoverage;
   item_selected_gcp_coverage = nullptr;
   setupUi( this );
   buttonBox->button( QDialogButtonBox::Reset )->setText( "Load Raster" );
@@ -68,7 +68,7 @@ QgsGcpCoveragesDialog::~QgsGcpCoveragesDialog()
 
 void QgsGcpCoveragesDialog::load_selected_coverage()
 {
-  if ( mGcpDbData->mId_gcp_coverage != i_selected_gcp_coverage )
+  if ( mGcpDbData->mIdGcpCoverage != i_selected_gcp_coverage )
   { // Do not load a raster that is already loaded
     QString s_value = mGcpDbData->gcp_coverages.value( i_selected_gcp_coverage );
     QStringList sa_fields = s_value.split( mGcpDbData->mParseString );
@@ -142,10 +142,10 @@ QTreeWidgetItem * QgsGcpCoveragesDialog::createTreeItemGcpCoverage()
   root_Item->setData( 0, Qt::DisplayRole, "Gcp Coverages" );
   return root_Item;
 }
-QTreeWidgetItem * QgsGcpCoveragesDialog::createTreeItemCoverages( QgsSpatiaLiteProviderGcpUtils::GcpDbData* parms_GcpDbData )
+QTreeWidgetItem * QgsGcpCoveragesDialog::createTreeItemCoverages( QgsSpatiaLiteProviderGcpUtils::GcpDbData* parmsGcpDbData )
 {
   bool b_reinit = false;
-  mGcpDbData = parms_GcpDbData;
+  mGcpDbData = parmsGcpDbData;
   QTreeWidgetItem *root_Item = treeWidget->topLevelItem( 0 );
   if (( !root_Item ) || ( root_Item->type() != 7777 ) )
   {
@@ -157,7 +157,7 @@ QTreeWidgetItem * QgsGcpCoveragesDialog::createTreeItemCoverages( QgsSpatiaLiteP
     { // remove the old coverages, which are children of root
       b_reinit = true;
       // Joy will not fall upon you, if the following are not done ....
-      i_selected_gcp_coverage = mGcpDbData->mId_gcp_coverage;
+      i_selected_gcp_coverage = mGcpDbData->mIdGcpCoverage;
       item_selected_gcp_coverage = nullptr;
       s_selected_gcp_coverage_text = "";
       qDeleteAll( root_Item->takeChildren() );
@@ -166,13 +166,13 @@ QTreeWidgetItem * QgsGcpCoveragesDialog::createTreeItemCoverages( QgsSpatiaLiteP
   QFileInfo database_file( mGcpDbData->mGcpDatabaseFileName );
   // Set the Database file-name [path]
   mGcpCoveragesDatabase->setText( QString( "%1 [%2]" ).arg( database_file.fileName() ).arg( database_file.canonicalPath() ) );
-  QMap<int, QString>::iterator it_map_coverages;
-  for ( it_map_coverages = mGcpDbData->gcp_coverages.begin(); it_map_coverages != mGcpDbData->gcp_coverages.end(); ++it_map_coverages )
+  QMap<int, QString>::iterator itMapCoverages;
+  for ( itMapCoverages = mGcpDbData->gcp_coverages.begin(); itMapCoverages != mGcpDbData->gcp_coverages.end(); ++itMapCoverages )
   {
-    int id_gcp_coverage = it_map_coverages.key();
-    QString s_value = it_map_coverages.value();
+    int mIdGcpCoverage = itMapCoverages.key();
+    QString s_value = itMapCoverages.value();
     QStringList sa_fields = s_value.split( mGcpDbData->mParseString );
-    QTreeWidgetItem *coverage_Item = createTreeItemCoverage( id_gcp_coverage + 1000, sa_fields );
+    QTreeWidgetItem *coverage_Item = createTreeItemCoverage( mIdGcpCoverage + 1000, sa_fields );
     root_Item->addChild( coverage_Item );
   }
   if ( b_reinit )
@@ -181,19 +181,19 @@ QTreeWidgetItem * QgsGcpCoveragesDialog::createTreeItemCoverages( QgsSpatiaLiteP
   }
   return root_Item;
 }
-QTreeWidgetItem * QgsGcpCoveragesDialog::createTreeItemCoverage( int id_gcp_coverage, QStringList sa_fields )
+QTreeWidgetItem * QgsGcpCoveragesDialog::createTreeItemCoverage( int mIdGcpCoverage, QStringList sa_fields )
 {
   // myHeaders << tr( "Coverage Name" ) << tr( "Title" ) << tr( "Abstract" );
   QStringList coverage_data;
-  QString s_id_gcp_coverage = QString( "id_gcp_coverage=%1" ).arg( sa_fields.at( 0 ) );
-  QString s_coverage_name = sa_fields.at( 1 ); // coverage_name
+  QString s_mIdGcpCoverage = QString( "mIdGcpCoverage=%1" ).arg( sa_fields.at( 0 ) );
+  QString sCoverageName = sa_fields.at( 1 ); // coverage_name
   QString s_map_date = QString( "map_date=%1" ).arg( sa_fields.at( 2 ) );
   QString s_raster_file = QString( "raster_file=%1" ).arg( sa_fields.at( 3 ) );
   QString s_raster_gtif = QString( "raster_gtif=%1" ).arg( sa_fields.at( 4 ) );
   QString s_title = sa_fields.at( 5 ); // title
   QString s_abstract = sa_fields.at( 6 ); // abstract
-  coverage_data << s_coverage_name << s_title << s_abstract;
-  QTreeWidgetItem *coverage_Item = new QTreeWidgetItem( coverage_data, id_gcp_coverage );
+  coverage_data << sCoverageName << s_title << s_abstract;
+  QTreeWidgetItem *coverage_Item = new QTreeWidgetItem( coverage_data, mIdGcpCoverage );
   QString s_copyright = QString( "copyright=%1" ).arg( sa_fields.at( 7 ) );
   QString s_scale = QString( "scale=%1" ).arg( sa_fields.at( 8 ) );
   QString s_nodata = QString( "nodata=%1" ).arg( sa_fields.at( 9 ) );
@@ -226,7 +226,7 @@ QTreeWidgetItem * QgsGcpCoveragesDialog::createTreeItemCoverage( int id_gcp_cove
     switch ( i )
     {
       case 0:
-        item_data << s_id_gcp_coverage << s_map_date << s_copyright ;
+        item_data << s_mIdGcpCoverage << s_map_date << s_copyright ;
         break;
       case 1:
         item_data << s_srid << s_scale << s_nodata ;
@@ -241,10 +241,10 @@ QTreeWidgetItem * QgsGcpCoveragesDialog::createTreeItemCoverage( int id_gcp_cove
         item_data << s_raster_file << s_raster_gtif << s_raster_path;
         break;
     }
-    QTreeWidgetItem *field_Item = new QTreeWidgetItem( item_data, id_gcp_coverage );
+    QTreeWidgetItem *field_Item = new QTreeWidgetItem( item_data, mIdGcpCoverage );
     coverage_Item->addChild( field_Item );
   }
-  if (( mGcpDbData->mId_gcp_coverage == ( id_gcp_coverage - 1000 ) ) ||
+  if (( mGcpDbData->mIdGcpCoverage == ( mIdGcpCoverage - 1000 ) ) ||
       ( i_selected_gcp_coverage < 0 ) )
   {
     QString s_text = sa_fields.at( 5 ); // title
@@ -252,7 +252,7 @@ QTreeWidgetItem * QgsGcpCoveragesDialog::createTreeItemCoverage( int id_gcp_cove
       s_text = sa_fields.at( 1 ); // coverage_name
     if ( i_selected_gcp_coverage < 0 )
     { // first timed called, before any Raster was loaded [will take first]
-      i_selected_gcp_coverage = id_gcp_coverage - 1000;
+      i_selected_gcp_coverage = mIdGcpCoverage - 1000;
       s_selected_gcp_coverage_text = QString( "Load Raster: '%1'" ).arg( s_text );
     }
     else
@@ -266,7 +266,7 @@ QTreeWidgetItem * QgsGcpCoveragesDialog::createTreeItemCoverage( int id_gcp_cove
     QString s_text = sa_fields.at( 5 ); // title
     if ( s_text.isEmpty() )
       s_text = sa_fields.at( 1 ); // coverage_name
-    i_selected_gcp_coverage = id_gcp_coverage - 1000;
+    i_selected_gcp_coverage = mIdGcpCoverage - 1000;
     s_selected_gcp_coverage_text = QString( "Load Raster: '%1'" ).arg( s_text );
     item_selected_gcp_coverage = coverage_Item;
   }
@@ -296,7 +296,7 @@ void QgsGcpCoveragesDialog::tree_coverage_clicked( QTreeWidgetItem *item, int co
       item_selected_gcp_coverage = item->parent();
     }
     item_selected_gcp_coverage->setSelected( true );
-    if ( mGcpDbData->mId_gcp_coverage != i_selected_gcp_coverage )
+    if ( mGcpDbData->mIdGcpCoverage != i_selected_gcp_coverage )
     {
       s_selected_gcp_coverage_text = QString( "Load Raster: '%1'" ).arg( s_text );
     }
@@ -319,10 +319,7 @@ QgsGcpCoverages *QgsGcpCoverages::instance()
 }
 
 QgsGcpCoverages::QgsGcpCoverages()
-    : pDialog( nullptr )
-    , mGcpDbData( nullptr )
 {
-  id_gcp_coverage = -1;
 }
 
 QgsGcpCoverages::~QgsGcpCoverages()
@@ -331,10 +328,10 @@ QgsGcpCoverages::~QgsGcpCoverages()
   pDialog = nullptr;
 }
 
-void QgsGcpCoverages::openDialog( QWidget *parent,  QgsSpatiaLiteProviderGcpUtils::GcpDbData* parms_GcpDbData )
+void QgsGcpCoverages::openDialog( QWidget *parent,  QgsSpatiaLiteProviderGcpUtils::GcpDbData* parmsGcpDbData )
 { // Check if anything has changed, which needs a reloading
   bool b_valid = true;
-  if ( !parms_GcpDbData )
+  if ( !parmsGcpDbData )
   {
     return;
   }
@@ -346,12 +343,12 @@ void QgsGcpCoverages::openDialog( QWidget *parent,  QgsSpatiaLiteProviderGcpUtil
   { // different pointer, amount of coverages or Database-patch has changed
     if ( mGcpDbData )
     {
-      if (( parms_GcpDbData != mGcpDbData ) ||
-          ( parms_GcpDbData->gcp_coverages.count() != mGcpDbData->gcp_coverages.count() ) ||
-          ( parms_GcpDbData->mGcpDatabaseFileName != mGcpDbData->mGcpDatabaseFileName ) )
+      if (( parmsGcpDbData != mGcpDbData ) ||
+          ( parmsGcpDbData->gcp_coverages.count() != mGcpDbData->gcp_coverages.count() ) ||
+          ( parmsGcpDbData->mGcpDatabaseFileName != mGcpDbData->mGcpDatabaseFileName ) )
       { // then rebuild the dialog
         b_valid = false;
-        mGcpDbData = parms_GcpDbData;
+        mGcpDbData = parmsGcpDbData;
         if ( pDialog->createTreeItemCoverages( mGcpDbData ) )
         {
           b_valid = true;
@@ -361,8 +358,8 @@ void QgsGcpCoverages::openDialog( QWidget *parent,  QgsSpatiaLiteProviderGcpUtil
   }
   if ( !b_valid )
   {
-    mGcpDbData = parms_GcpDbData;
-    pDialog = new QgsGcpCoveragesDialog( parent, parms_GcpDbData );
+    mGcpDbData = parmsGcpDbData;
+    pDialog = new QgsGcpCoveragesDialog( parent, parmsGcpDbData );
     connect( pDialog, SIGNAL( selectedRasterCoverage( int ) ), this, SLOT( load_selected_coverage( int ) ) );
   }
   // I am trying too enable switching widget status by clicking in main app, so I need non modal
@@ -371,7 +368,7 @@ void QgsGcpCoverages::openDialog( QWidget *parent,  QgsSpatiaLiteProviderGcpUtil
 
 void QgsGcpCoverages::load_selected_coverage( int id_selected_coverage )
 {
-  if ( mGcpDbData->mId_gcp_coverage != id_selected_coverage )
+  if ( mGcpDbData->mIdGcpCoverage != id_selected_coverage )
   { // Do not load a raster that is already loaded
     QString s_value = mGcpDbData->gcp_coverages.value( id_selected_coverage );
     QStringList sa_fields = s_value.split( mGcpDbData->mParseString );

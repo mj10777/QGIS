@@ -25,15 +25,13 @@
 #include "qgsgcplistwidget.h"
 #include "qgsgcplistmodel.h"
 
-QgsGCPListWidget::QgsGCPListWidget( QWidget *parent, int i_LegacyMode )
+QgsGCPListWidget::QgsGCPListWidget( QWidget *parent, int iLegacyMode )
     : QTableView( parent )
-    , mGCPListModel( new QgsGCPListModel( this, i_LegacyMode ) )
+    , mGCPListModel( new QgsGCPListModel( this, iLegacyMode ) )
     , mNonEditableDelegate( new QgsNonEditableDelegate( this ) )
     , mDmsAndDdDelegate( new QgsDmsAndDdDelegate( this ) )
     , mCoordDelegate( new QgsCoordDelegate( this ) )
-    , mPrevRow( 0 )
-    , mPrevColumn( 0 )
-    , mLegacyMode( i_LegacyMode )
+    , mLegacyMode( iLegacyMode )
 {
   // Create a proxy model, which will handle dynamic sorting
   QSortFilterProxyModel *proxyModel = new QSortFilterProxyModel( this );
@@ -81,9 +79,9 @@ QgsGCPListWidget::QgsGCPListWidget( QWidget *parent, int i_LegacyMode )
            this, SLOT( updateItemCoords( QWidget* ) ) );
 }
 
-void QgsGCPListWidget::setLegacyMode( int i_LegacyMode )
+void QgsGCPListWidget::setLegacyMode( int iLegacyMode )
 {
-  mLegacyMode = i_LegacyMode;
+  mLegacyMode = iLegacyMode;
   if ( mGCPListModel )
   {
     mGCPListModel->setLegacyMode( mLegacyMode );
@@ -146,18 +144,18 @@ void QgsGCPListWidget::itemClicked( QModelIndex index )
   QStandardItem *item = mGCPListModel->item( index.row(), index.column() );
   if ( item->isCheckable() )
   {
-    QgsGeorefDataPoint *data_point = getGCPList()->at( index.row() );
+    QgsGeorefDataPoint *dataPoint = getGCPList()->at( index.row() );
     if ( item->checkState() == Qt::Checked )
     {
-      data_point->setEnabled( true );
+      dataPoint->setEnabled( true );
     }
     else // Qt::Unchecked
     {
-      data_point->setEnabled( false );
+      dataPoint->setEnabled( false );
     }
 
     mGCPListModel->updateModel();
-    emit pointEnabled( data_point, index.row() );
+    emit pointEnabled( dataPoint, index.row() );
     adjustTableContent();
   }
 
@@ -168,12 +166,12 @@ void QgsGCPListWidget::itemClicked( QModelIndex index )
 void QgsGCPListWidget::updateItemCoords( QWidget *editor )
 {
   QLineEdit *lineEdit = qobject_cast<QLineEdit *>( editor );
-  QgsGeorefDataPoint *data_point = getGCPList()->at( mPrevRow );
+  QgsGeorefDataPoint *dataPoint = getGCPList()->at( mPrevRow );
   if ( lineEdit )
   {
     double value = lineEdit->text().toDouble();
-    QgsPoint newMapCoords( data_point->mapCoords() );
-    QgsPoint newPixelCoords( data_point->pixelCoords() );
+    QgsPoint newMapCoords( dataPoint->mapCoords() );
+    QgsPoint newPixelCoords( dataPoint->pixelCoords() );
     if ( mPrevColumn == 2 ) // srcX
     {
       newPixelCoords.setX( value );
@@ -195,11 +193,11 @@ void QgsGCPListWidget::updateItemCoords( QWidget *editor )
       return;
     }
 
-    data_point->setPixelCoords( newPixelCoords );
-    data_point->setMapCoords( newMapCoords );
+    dataPoint->setPixelCoords( newPixelCoords );
+    dataPoint->setMapCoords( newMapCoords );
   }
 
-  data_point->updateCoords();
+  dataPoint->updateCoords();
   updateGCPList();
 }
 

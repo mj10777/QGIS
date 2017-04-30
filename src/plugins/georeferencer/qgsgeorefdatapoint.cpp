@@ -21,19 +21,17 @@
 
 QgsGeorefDataPoint::QgsGeorefDataPoint( QgsMapCanvas* srcCanvas, QgsMapCanvas *dstCanvas,
                                         const QgsPoint& pixelCoords, const QgsPoint& mapCoords, int i_srid, int id_gcp,
-                                        bool enable, int i_LegacyMode )
+                                        bool enable, int iLegacyMode )
     : mSrcCanvas( srcCanvas )
     , mDstCanvas( dstCanvas )
     , mPixelCoords( pixelCoords )
     , mMapCoords( mapCoords )
-    , mPixelCoords_reverse( QgsPoint( 0.0, 0.0 ) )
+    , mPixelCoordsReverse( QgsPoint( 0.0, 0.0 ) )
     , mMapCoords_reverse( QgsPoint( 0.0, 0.0 ) )
     , mId( id_gcp )
     , mEnabled( enable )
-    , mLegacyMode( i_LegacyMode )
+    , mLegacyMode( iLegacyMode )
     , mTextInfo( "" )
-    , mIdMaster( 0 )
-    , mResultType( 0 )
     , mSrid( i_srid )
     , mParseString( ";#;#" )
 {
@@ -58,7 +56,7 @@ QgsGeorefDataPoint::QgsGeorefDataPoint( QgsMapCanvas* srcCanvas, QgsMapCanvas *d
 }
 
 QgsGeorefDataPoint::QgsGeorefDataPoint( const QgsPoint& pixelCoords, const QgsPoint& mapCoords, int i_srid, int id_gcp,
-                                        int id_gcp_master, int i_ResultType, QString s_TextInfo )
+                                        int id_gcp_master, int iResultType, QString sTextInfo )
     : QObject()
     , mSrcCanvas( nullptr )
     , mDstCanvas( nullptr )
@@ -66,14 +64,13 @@ QgsGeorefDataPoint::QgsGeorefDataPoint( const QgsPoint& pixelCoords, const QgsPo
     , mGCPDestinationItem( nullptr )
     , mPixelCoords( pixelCoords )
     , mMapCoords( mapCoords )
-    , mPixelCoords_reverse( QgsPoint( 0.0, 0.0 ) )
+    , mPixelCoordsReverse( QgsPoint( 0.0, 0.0 ) )
     , mMapCoords_reverse( QgsPoint( 0.0, 0.0 ) )
     , mId( id_gcp )
-    , mEnabled( false )
     , mLegacyMode( 1 )
-    , mTextInfo( s_TextInfo )
+    , mTextInfo( sTextInfo )
     , mIdMaster( id_gcp_master )
-    , mResultType( i_ResultType )
+    , mResultType( iResultType )
     , mSrid( i_srid )
     , mParseString( ";#;#" )
 {
@@ -83,30 +80,23 @@ QgsGeorefDataPoint::QgsGeorefDataPoint( const QgsPoint& pixelCoords, const QgsPo
   }
 }
 
-QgsGeorefDataPoint::QgsGeorefDataPoint( const QgsGeorefDataPoint &data_point )
+QgsGeorefDataPoint::QgsGeorefDataPoint( const QgsGeorefDataPoint &dataPoint )
     : QObject()
-    , mSrcCanvas( nullptr )
-    , mDstCanvas( nullptr )
-    , mGCPSourceItem( nullptr )
-    , mGCPDestinationItem( nullptr )
     , mTextInfo( "" )
-    , mIdMaster( 0 )
-    , mResultType( 0 )
-    , mSrid( 0 )
     , mParseString( ";#;#" )
 {
-  Q_UNUSED( data_point );
+  Q_UNUSED( dataPoint );
   // we share item representation on canvas between all points
 //  mGCPSourceItem = new QgsGCPCanvasItem(p.srcCanvas(), p.pixelCoords(), p.mapCoords(), p.isEnabled());
 //  mGCPDestinationItem = new QgsGCPCanvasItem(p.dstCanvas(), p.pixelCoords(), p.mapCoords(), p.isEnabled());
-  mPixelCoords = data_point.pixelCoords();
-  mPixelCoords_reverse = data_point.pixelCoordsReverse();
-  mMapCoords = data_point.mapCoords();
-  mMapCoords_reverse = data_point.mapCoordsReverse();
-  mEnabled = data_point.isEnabled();
-  mResidual = data_point.residual();
-  mId = data_point.id();
-  mSrid = data_point.getSrid();
+  mPixelCoords = dataPoint.pixelCoords();
+  mPixelCoordsReverse = dataPoint.pixelCoordsReverse();
+  mMapCoords = dataPoint.mapCoords();
+  mMapCoords_reverse = dataPoint.mapCoordsReverse();
+  mEnabled = dataPoint.isEnabled();
+  mResidual = dataPoint.residual();
+  mId = dataPoint.id();
+  mSrid = dataPoint.getSrid();
 }
 
 QgsGeorefDataPoint::~QgsGeorefDataPoint()
@@ -115,9 +105,9 @@ QgsGeorefDataPoint::~QgsGeorefDataPoint()
   delete mGCPDestinationItem;
 }
 
-void QgsGeorefDataPoint::setPixelCoords( const QgsPoint &pixel_point )
+void QgsGeorefDataPoint::setPixelCoords( const QgsPoint &pixelPoint )
 {
-  mPixelCoords = pixel_point;
+  mPixelCoords = pixelPoint;
   if ( mGCPSourceItem )
   {
     mGCPSourceItem->update();
@@ -186,20 +176,20 @@ void QgsGeorefDataPoint::updateCoords()
   }
 }
 
-bool QgsGeorefDataPoint::contains( QPoint search_point, bool isMapPlugin )
+bool QgsGeorefDataPoint::contains( QPoint searchPoint, bool isMapPlugin )
 {
   if ( ! mGCPSourceItem )
     return false;
   if ( isMapPlugin )
   {
-    QPointF pnt = mGCPSourceItem->mapFromScene( search_point );
+    QPointF pnt = mGCPSourceItem->mapFromScene( searchPoint );
     return mGCPSourceItem->shape().contains( pnt );
   }
   else
   {
     if ( ! mGCPDestinationItem )
       return false;
-    QPointF pnt = mGCPDestinationItem->mapFromScene( search_point );
+    QPointF pnt = mGCPDestinationItem->mapFromScene( searchPoint );
     return mGCPDestinationItem->shape().contains( pnt );
   }
 }
@@ -229,16 +219,16 @@ void QgsGeorefDataPoint::moveTo( QPoint p, bool isMapPlugin )
   updateCoords();
 }
 
-QString QgsGeorefDataPoint::AsEWKT( int i_point_type, int i_srid ) const
+QString QgsGeorefDataPoint::AsEWKT( int iPointType, int i_srid ) const
 {
   QString s_EWKT = QString( "SRID=%1;%2" );
-  switch ( i_point_type )
+  switch ( iPointType )
   {
     case 0:
       s_EWKT = QString( s_EWKT ).arg( -1 ).arg( mPixelCoords.wellKnownText() );
       break;
     case 2:
-      s_EWKT = QString( s_EWKT ).arg( -1 ).arg( mPixelCoords_reverse.wellKnownText() );
+      s_EWKT = QString( s_EWKT ).arg( -1 ).arg( mPixelCoordsReverse.wellKnownText() );
       break;
     case 3:
     {
@@ -274,11 +264,11 @@ QString QgsGeorefDataPoint::sqlInsertPointsCoverage( int i_srid ) const
   QStringList sa_fields = getTextInfo().split( mParseString ); // 10
   if ( sa_fields.count() == 7 )
   { // SELECT id_gcp, id_gcp_coverage, name, notes, pixel_x, pixel_y, srid, point_x, point_y, order_selected, gcp_enable, gcp_text, gcp_pixel, gcp_point
-    QString s_points_table_name = sa_fields.at( 2 );
+    QString sPointsTableName = sa_fields.at( 2 );
     switch ( getResultType() )
     {
       case 3: // INSERT
-        s_sql_insert  = QString( "INSERT INTO \"%1\"\n(id_gcp_coverage,name,notes,srid,gcp_enable,order_selected,gcp_text,gcp_pixel,gcp_point)\n " ).arg( s_points_table_name );
+        s_sql_insert  = QString( "INSERT INTO \"%1\"\n(id_gcp_coverage,name,notes,srid,gcp_enable,order_selected,gcp_text,gcp_pixel,gcp_point)\n " ).arg( sPointsTableName );
         s_sql_insert += QString( "SELECT %1 AS id_gcp_coverage," ).arg( sa_fields.at( 1 ) );
         s_sql_insert += QString( "'%1' AS name," ).arg( sa_fields.at( 3 ) );
         s_sql_insert += QString( "'%1' AS notes," ).arg( sa_fields.at( 4 ) );
@@ -290,7 +280,7 @@ QString QgsGeorefDataPoint::sqlInsertPointsCoverage( int i_srid ) const
         s_sql_insert += QString( "%1 AS gcp_point" ).arg( GeomFromEWKT( 1, i_srid ) );
         break;
       case 2: // UPDATE
-        s_sql_insert  = QString( "UPDATE \"%1\" SET gcp_point=%2,name='%3', notes='%4', gcp_text='%5' WHERE (id_gcp=%6);" ).arg( s_points_table_name ).arg( GeomFromEWKT( 1 , i_srid) ).arg( sa_fields.at( 3 ) ).arg( sa_fields.at( 4 ) ).arg( sa_fields.at( 6 ) ).arg( sa_fields.at( 0 ) );
+        s_sql_insert  = QString( "UPDATE \"%1\" SET gcp_point=%2,name='%3', notes='%4', gcp_text='%5' WHERE (id_gcp=%6);" ).arg( sPointsTableName ).arg( GeomFromEWKT( 1 , i_srid) ).arg( sa_fields.at( 3 ) ).arg( sa_fields.at( 4 ) ).arg( sa_fields.at( 6 ) ).arg( sa_fields.at( 0 ) );
         break;
     }
   }

@@ -71,7 +71,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
   protected:
     /**
      * closeEvent
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * Common for both  ( mLegacyMode == 0+1 )
      *  - therefore is needed
      *  - TODO: document
@@ -82,7 +82,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     // file
     /**
      * reset
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * Common for both  ( mLegacyMode == 0+1 )
      *  - therefore is needed
      *  - TODO: document
@@ -94,12 +94,12 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
      *  - reads settings for last raster Directory and file filter
      *  - calls QFileDialog::getOpenFileName
      *  -> calls 'openRaster' with QFileInfo raster_file
-     * @see openRaster
+     * \see openRaster
      */
     void openRasterDialog();
     /**
      * doGeoreference
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * Common for both  ( mLegacyMode == 0+1 )
      *  - therefore is needed
      *  - TODO: document
@@ -107,7 +107,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     void doGeoreference();
     /**
      * generateGDALScript
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * Common for both  ( mLegacyMode == 0+1 )
      *  - therefore is needed
      *  - TODO: document
@@ -118,14 +118,14 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
      *  - generates a script base on POLYGONs found in 'create_mercator_polygon'
      * Script will create images out of the source image based on the cutline
      *  - Goal is to cutout portions of Maps with folds into single images without the Fold portions
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * New for ( mLegacyMode == 1 )
      *  - therefore is needed
      */
     QString generateGDALMercatorScript();
     /**
      * getTransformSettings
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * Common for both  ( mLegacyMode == 0+1 )
      *  - therefore is needed
      *  - TODO: document
@@ -135,7 +135,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     // edit
     /**
      * setAddPointTool
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * Common for both  ( mLegacyMode == 0+1 )
      *  - therefore is needed
      *  - TODO: document
@@ -143,7 +143,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     void setAddPointTool();
     /**
      * setNodePointTool
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * Common for both  ( mLegacyMode == 0+1 )
      *  - therefore is needed
      *  - TODO: document
@@ -151,7 +151,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     void setNodePointTool();
     /**
      * setMovePointTool
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * Not needed, used only in ( mLegacyMode == 0 )
      *  - therefore is not needed
      */
@@ -159,7 +159,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     /**
      * setSpatialiteGcpUsage
      *  - turn Spatialite Gcp Logic on/off
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * Common for both  ( mLegacyMode == 0+1 )
      *  - therefore is needed
      *  - TODO: document
@@ -169,17 +169,17 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
      * Fetch from the GcpMaster Database, Gcp-Point within the present MapExtent
      *  - assumes Active GcpMaster and Coverge
      *  -> also using Spatialite Gcp-Logic
-     * @note
+     * \note
      *  - will query QGis-Map-Extent
      *  -- search for Gcp-Points inside that extent that are NOT contained in the Coverage-Gcps
      *  --> add these Points using Spatialite Gcp-Logic, when NOT turned off or if NOT available
-     * @note
+     * \note
      * Gcp-Master Point correctoons of existing Gcp-Points
      *  - when a existing Gcp-Points is within the 'mGcpMasterArea' Circle
      *  -> the existing Gcp-Map point will be replaced with the Gcp-Master Point
      *  --> this functionality is available, when the Spatialite Gcp-Logic has been NOT turned off or if NOT available
      *  --> this combination also allows for the corrections of Gcp-Points WITHOUT the fetching of other Gcp-Master Points
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * New for ( mLegacyMode == 1 )
      *  - therefore is needed
      */
@@ -189,7 +189,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     void setZoomInTool();
     /**
      * setZoomOutTool
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * Common for both  ( mLegacyMode == 0+1 )
      *  - therefore is needed
      *  - TODO: document
@@ -197,7 +197,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     void setZoomOutTool();
     /**
      * zoomToLayerTool
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * Common for both  ( mLegacyMode == 0+1 )
      *  - therefore is needed
      *  - TODO: document
@@ -205,7 +205,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     void zoomToLayerTool();
     /**
      * zoomToLast
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * Common for both  ( mLegacyMode == 0+1 )
      *  - therefore is needed
      *  - TODO: document
@@ -213,7 +213,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     void zoomToLast();
     /**
      * zoomToNext
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * Common for both  ( mLegacyMode == 0+1 )
      *  - therefore is needed
      *  - TODO: document
@@ -221,7 +221,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     void zoomToNext();
     /**
      * setPanTool
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * Common for both  ( mLegacyMode == 0+1 )
      *  - therefore is needed
      *  - TODO: document
@@ -229,7 +229,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     void setPanTool();
     /**
      * linkGeorefToQGis
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * Common for both  ( mLegacyMode == 0+1 )
      *  - therefore is needed
      *  - TODO: document
@@ -237,7 +237,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     void linkGeorefToQGis( bool link );
     /**
      * linkQGisToGeoref
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * Common for both  ( mLegacyMode == 0+1 )
      *  - therefore is needed
      *  - TODO: document
@@ -245,7 +245,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     void linkQGisToGeoref( bool link );
     /**
      * zoomMercatorPolygonExtent
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * New for ( mLegacyMode == 1 )
      *  - therefore is needed
      *  - TODO: document
@@ -254,32 +254,32 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     /**
      * Changes the Selection of a Layer
      *  - MapTools will then react to these Layers
-     * @note
+     * \note
      * QgsMapCanvasLayer displayed in Georeferencer
      *  - needed to store the visibility status of the Layers
      *  Contains 3 Layers
-     *  - layer_gcp_pixels [pixel gcp]
-     *  - layer_mercator_polygons [possible cutlines for raster ]
+     *  - mLayerGcpPixels [pixel gcp]
+     *  - mLayerMercatorPolygons [possible cutlines for raster ]
      *  - mCanvas [raster being shown]
      *  -> must be last of list
-     * @note
-     *  - only the first 2 are contained in 'group_cutline_mercator'
+     * \note
+     *  - only the first 2 are contained in 'mTreeGroupCutlineMercator'
      *  -> to be turned on/off as needed
     * @see mMapCanvasLayers
      */
     void activeLayerTreeViewChanged( QgsMapLayer *layer );
     /**
      * Changes the Visablity of a Layer
-     * @note
+     * \note
      * QgsMapCanvasLayer displayed in Georeferencer
      *  - needed to store the visibility status of the Layers
      *  Contains 3 Layers
-     *  - layer_gcp_pixels [pixel gcp]
-     *  - layer_mercator_polygons [possible cutlines for raster ]
+     *  - mLayerGcpPixels [pixel gcp]
+     *  - mLayerMercatorPolygons [possible cutlines for raster ]
      *  - mCanvas [raster being shown]
      *  -> must be last of list
-     * @note
-     *  - only the first 2 are contained in 'group_cutline_mercator'
+     * \note
+     *  - only the first 2 are contained in 'mTreeGroupCutlineMercator'
      *  -> to be turned on/off as needed
     * @see mMapCanvasLayers
      */
@@ -288,128 +288,128 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     /**
      * Adding a Point
      *  - reaction to emit pointAdded
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      *  - the 'if (mLegacyMode == 1)' portion is needed
      *  -> when the Spatialite-Gcp-Logic is not active
      *  --> not enough Points or Spatialite is not compiled with Gcp-Logic
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      *  - the 'if (mLegacyMode == 0)' portion can be removed
-     * @see showCoordDialog
-     * @see featureAdded_gcp
+     * \see showCoordDialog
+     * \see featureAdded_gcp
      */
     void addPoint( const QgsPoint& pixelCoords, const QgsPoint& mapCoords, int id_gcp = -1, bool b_PixelMap = true,
                    bool enable = true, bool refreshCanvas = true );
     /**
      * Delete Data-Point
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * Only when ( mLegacyMode == 0 )
      *  - therefore not needed if mLegacyMode is not supported
-     * @param QPoint
+     * \param QPoint
      */
     void deleteDataPoint( QPoint pixelCoords );
     /**
      * Delete Data-Point
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * Only when ( mLegacyMode == 0 )
      *  - therefore not needed if mLegacyMode is not supported
-     * @param id_gcp
+     * \param id_gcp
      */
     void deleteDataPoint( int id_gcp );
     /**
      * Show CoordDialog
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * Only when ( mLegacyMode == 0 )
      *  - therefore not needed if mLegacyMode is not supported
-     * @param QgsPoint
+     * \param QgsPoint
      */
     void showCoordDialog( const QgsPoint &pixelCoords );
     /**
      * Select Data-Point
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * Only when ( mLegacyMode == 0 )
      *  - therefore not needed if mLegacyMode is not supported
-     * @param QPoint
+     * \param QPoint
      */
     void selectPoint( QPoint coords );
     /**
      * Move Data-Point
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * Only when ( mLegacyMode == 0 )
      *  - therefore not needed if mLegacyMode is not supported
-     * @param QPoint
+     * \param QPoint
      */
     void movePoint( QPoint coords );
     /**
      * Move Data-Point
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * Only when ( mLegacyMode == 0 )
      *  - therefore not needed if mLegacyMode is not supported
-     * @param QPoint
+     * \param QPoint
      */
     void releasePoint( QPoint coords );
     /**
      * Reacts to a Spatialite-Database storing the Gcp-Points [gcp_point, gcp_pixel]
      *  - the TRIGGER will create an empty POINT (0,0) if not set
      *  -- which is what happens here
-     * @note both geometries are in one TABLE
+     * \note both geometries are in one TABLE
      *  an INSERT can therefor only be done once, the other must be UPDATEd if 'SELECT HasGCP()' returns true
      *  and enough gcp-points exist to make a calculation
      *  For this the primary key is needed for the INSERTed record, so that the POINT in the other Layer can be retrieved and UPDATEd
-     * - this causes the Event to called during 'commitChanges' (the used 'fid' will be stored in 'mEvent_gcp_status')
-     *  -- after 'commitChanges' has compleated, the value in 'mEvent_gcp_status' will be used to retrive the inserted primary-key
+     * - this causes the Event to called during 'commitChanges' (the used 'fid' will be stored in 'mEventGcpStatus')
+     *  -- after 'commitChanges' has compleated, the value in 'mEventGcpStatus' will be used to retrive the inserted primary-key
      * -- the record from the other gcp-layer will be retrieved with the primary-key and UPDATEd
-     * @note 'mEvent_point_status' will be set to 1 (for 'Map-Point to Pixel-Point') and 2  (for 'Pixel-Point to Map-Point')
+     * \note 'mEventPointStatus' will be set to 1 (for 'Map-Point to Pixel-Point') and 2  (for 'Pixel-Point to Map-Point')
      * - this value will be read in the featureDeleted_gcp and geometryChanged_gcp and will return if > 0
-     * @note the added geometry is added immediately to the Database
+     * \note the added geometry is added immediately to the Database
      * - which will also save any new position that were not commited after 'geometryChanged_gcp'
-     * @see getGcpConvert
-     * @see jumpToGcpConvert
-     * @see saveEditsGcp
-     * @param fid (a minus number when inserting to the database, a positive number when adding to a layer)
+     * \see getGcpConvert
+     * \see jumpToGcpConvert
+     * \see saveEditsGcp
+     * \param fid (a minus number when inserting to the database, a positive number when adding to a layer)
      */
     void featureAdded_gcp( QgsFeatureId fid );
     /**
      * Reacts to a Spatialite-Database storing the Gcp-Points [gcp_point, gcp_pixel]
      *  - any change in the position will only effect the calling gcp-layer
      *  -- any activity should then only be done once
-     * @note all 'fid' < 0 will be ignored
+     * \note all 'fid' < 0 will be ignored
      *  - the changed position in NOT saved to the database
-     * @see saveEditsGcp
-     * @param fid (a minus number when inserting to the database, a positive number when adding to a layer)
-     * @param changed_geometry the changed geometry value must be updated in the gcp-list
+     * \see saveEditsGcp
+     * \param fid (a minus number when inserting to the database, a positive number when adding to a layer)
+     * \param changed_geometry the changed geometry value must be updated in the gcp-list
      */
     void geometryChanged_gcp( QgsFeatureId fid, QgsGeometry& changed_geometry );
     /**
      * Reacts to a Spatialite-Database storing a cutline [cutline_points, linestrings, polygons and mecator_polygons]
      *  - save edit after each change
      *  -- so that the geometries can bee seen in the Canvos while moving around
-     * @note some default values will be stored
+     * \note some default values will be stored
      *  - id_gcp_coverage of the active coverage in georeferencer
      *  - belongs_to_01 the name of the active coverage in georeferencer
      *  - belongs_to_02 the raster_name of the active coverage in georeferencer
-     * @see saveEditsGcp
-     * @param fid (a minus number when inserting to the database, a positive number when adding to a layer)
+     * \see saveEditsGcp
+     * \param fid (a minus number when inserting to the database, a positive number when adding to a layer)
      */
     void featureAdded_cutline( QgsFeatureId fid );
     /**
      * Reacts to a Spatialite-Database storing a cutline [cutline_points, linestrings, polygons and mecator_polygons]
      *  - save edit after each change
      *  -- so that the geometries can bee seen in the Canvos while moving around
-     * @see saveEditsGcp
-     * @param fis (a minus number when inserting to the database, a positive number when adding to a layer)
-     * @param changed_geometry the changed geometry value must be updated in the gcp-list
+     * \see saveEditsGcp
+     * \param fis (a minus number when inserting to the database, a positive number when adding to a layer)
+     * \param changed_geometry the changed geometry value must be updated in the gcp-list
      */
     void geometryChanged_cutline( QgsFeatureId fid, QgsGeometry& changed_geometry );
     /**
      * loadGCPsDialog
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * Only when ( mLegacyMode == 0 )
      *  - therefore not needed if mLegacyMode is not supported
      */
     void loadGCPsDialog();
     /**
      * saveGCPsDialog(
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * Only when ( mLegacyMode == 0 )
      *  - therefore not needed if mLegacyMode is not supported
      */
@@ -418,7 +418,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     // settings
     /**
      * showRasterPropertiesDialog
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * Common for both  ( mLegacyMode == 0+1 )
      *  - therefore is needed
      *  - TODO: document
@@ -426,7 +426,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     void showRasterPropertiesDialog();
     /**
      * showMercatorPolygonPropertiesDialog
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * New for ( mLegacyMode == 1 )
      *  - therefore is needed
      *  - TODO: document
@@ -436,39 +436,39 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
      * createGcpDatabaseDialog
      *  - create an empty Gcp-Database
      *  -> option will be offered to create a Sql-Dump of the created Database
-     * @note
+     * \note
      *  - 'gcp_coverage'
      *  -> should have the 'gcp.db' suffix/file-extention to be recognised by this application
-     * @note
+     * \note
      *  - 'gcp_master'
      *  -> should have the 'db' suffix/file-extention to be recognised by this application
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * New for ( mLegacyMode == 1 )
      *  - therefore is needed
-     * @see QgsGcpDatabaseDialog::accept
-     * @see createGcpCoverageDb
-     * @see createGcpMasterDb
+     * \see QgsGcpDatabaseDialog::accept
+     * \see createGcpCoverageDb
+     * \see createGcpMasterDb
      */
     void createGcpDatabaseDialog();
     /**
      * createSqlDumpGcpCoverage
      *  -> Create a Sql-Dump of the active Gcp-Coverages Database
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * New for ( mLegacyMode == 1 )
-     * @see createGcpCoverageDb
+     * \see createGcpCoverageDb
      */
     void createSqlDumpGcpCoverage();
     /**
      * createSqlDumpGcpMaster
      *  -> Create a Sql-Dump of the active Gcp-Master Database
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * New for ( mLegacyMode == 1 )
-     * @see createGcpMasterDb
+     * \see createGcpMasterDb
      */
     void createSqlDumpGcpMaster();
     /**
      * showGeorefConfigDialog
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * Common for both  ( mLegacyMode == 0+1 )
      *  - therefore is needed
      *  - TODO: document
@@ -477,14 +477,14 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     // GcpDatabase
     /**
      * setLegacyMode
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * Only when ( mLegacyMode == 0 )
      *  - therefore not needed if mLegacyMode is not supported
      */
     void setLegacyMode();
     /**
      * setLegacyMode
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * New for ( mLegacyMode == 1 )
      *  - therefore is needed
      *  - TODO: document
@@ -492,7 +492,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     void setPointsPolygon();
     /**
      * listGcpCoverages
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * New for ( mLegacyMode == 1 )
      *  - therefore is needed
      *  - TODO: document
@@ -503,8 +503,8 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
      * Result of QgsGcpCoveragesDialog
      *  - selection of Gcp-Coverage
      *  -> calls 'openRaster' with QFileInfo raster_file
-     * @see openRaster
-     * @param id_selected_coverage id of coverage from GcpDb
+     * \see openRaster
+     * \param id_selected_coverage id of coverage from GcpDb
      */
     void loadGcpCoverage( int id_selected_coverage );
     /**
@@ -519,16 +519,16 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
      *  - prepairs auxiliary file names (.point etc)
      *  - calls addRaster
      *  - set Canvas extents and QgsMapTool settings
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      *  - the 'if (mLegacyMode == 0)' portion can be removed
-     * @see openRasterDialog
-     * @see loadGcpCoverage
-     * @see addRaster
+     * \see openRasterDialog
+     * \see loadGcpCoverage
+     * \see addRaster
      */
     void openRaster( QFileInfo raster_file );
     /**
      * openGcpCoveragesDb
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * New for ( mLegacyMode == 1 )
      *  - therefore is needed
      *  - TODO: document
@@ -536,7 +536,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     void openGcpCoveragesDb();
     /**
      * openGcpCMasterDb
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * New for ( mLegacyMode == 1 )
      *  - therefore is needed
      *  - TODO: document
@@ -546,7 +546,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     // plugin info
     /**
      * contextHelp
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * Common for both  ( mLegacyMode == 0+1 )
      *  - therefore is needed
      *  - TODO: document
@@ -556,7 +556,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     // comfort
     /**
      * jumpToGCP
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * Common for both  ( mLegacyMode == 0+1 )
      *  - therefore is needed
      *  - TODO: document
@@ -564,7 +564,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     void jumpToGCP( uint theGCPIndex );
     /**
      * extentsChangedGeorefCanvas
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * Common for both  ( mLegacyMode == 0+1 )
      *  - therefore is needed
      *  - TODO: document
@@ -572,17 +572,18 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     void extentsChangedGeorefCanvas();
     /**
      * extentsChangedQGisCanvas
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * Common for both  ( mLegacyMode == 0+1 )
      *  - therefore is needed
      *  - TODO: document
      */
     void extentsChangedQGisCanvas();
+    void onQGisCanvasCrsC2R();
 
     // canvas info
     /**
      * showMouseCoords
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * Common for both  ( mLegacyMode == 0+1 )
      *  - therefore is needed
      *  - TODO: document
@@ -590,7 +591,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     void showMouseCoords( const QgsPoint &pt );
     /**
      * updateMouseCoordinatePrecision
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * Common for both  ( mLegacyMode == 0+1 )
      *  - therefore is needed
      *  - TODO: document
@@ -600,7 +601,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     // Histogram stretch
     /**
      * localHistogramStretch
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * Common for both  ( mLegacyMode == 0+1 )
      *  - therefore is needed
      *  - TODO: document
@@ -608,7 +609,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     void localHistogramStretch();
     /**
      * fullHistogramStretch
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * Common for both  ( mLegacyMode == 0+1 )
      *  - therefore is needed
      *  - TODO: document
@@ -618,7 +619,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     // when one Layer is removed
     /**
      * layerWillBeRemoved
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * Common for both  ( mLegacyMode == 0+1 )
      *  - therefore is needed
      *  - TODO: document
@@ -626,7 +627,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     void layerWillBeRemoved( const QString& theLayerId );
     /**
      * extentsChanged
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * Common for both  ( mLegacyMode == 0+1 )
      *  - therefore is needed
      *  - TODO: document
@@ -636,16 +637,16 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
      * Update Modell
      *  - calls createGCPVectors to recreate List of enabled Points
      *  - rebuilds List calculating residual value
-     * @note this is also done in updateModel
+     * \note this is also done in updateModel
      *  - then calls updateTransformParamLabel to set summery of results
-     * @see updateTransformParamLabel
-     * @see QgsGCPListWidget::updateModel
-     * @return true if the id was found, otherwise false
+     * \see updateTransformParamLabel
+     * \see QgsGCPListWidget::updateModel
+     * \return true if the id was found, otherwise false
      */
     bool updateGeorefTransform();
     /**
      * updateIconTheme
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * Common for both  ( mLegacyMode == 0+1 )
      *  - therefore is needed
      *  - TODO: document
@@ -655,7 +656,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
   private:
     /**
      * SaveGCPs
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * Possibly not needed for ( mLegacyMode == 1 )
      *  - to be determined
      *  - TODO: document
@@ -671,7 +672,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     // gui
     /**
      * createActions
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * Common for both  ( mLegacyMode == 0+1 )
      *  - therefore is needed
      *  - TODO: document
@@ -679,7 +680,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     void createActions();
     /**
      * createActionGroups
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * Common for both  ( mLegacyMode == 0+1 )
      *  - therefore is needed
      *  - TODO: document
@@ -687,7 +688,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     void createActionGroups();
     /**
      * createMapCanvas
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * Common for both  ( mLegacyMode == 0+1 )
      *  - therefore is needed
      *  - TODO: document
@@ -695,7 +696,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     void createMapCanvas();
     /**
      * createMenus
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * Common for both  ( mLegacyMode == 0+1 )
      *  - therefore is needed
      *  - TODO: document
@@ -703,7 +704,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     void createMenus();
     /**
      * createDockWidgets
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * Common for both  ( mLegacyMode == 0+1 )
      *  - therefore is needed
      *  - TODO: document
@@ -711,7 +712,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     void createDockWidgets();
     /**
      * createBaseLabelStatus
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * Common for both  ( mLegacyMode == 0+1 )
      *  - therefore is needed
      *  - TODO: document
@@ -719,7 +720,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     QLabel* createBaseLabelStatus();
     /**
      * createStatusBar
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * Common for both  ( mLegacyMode == 0+1 )
      *  - therefore is needed
      *  - TODO: document
@@ -727,7 +728,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     void createStatusBar();
     /**
      * setupConnections
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * Common for both  ( mLegacyMode == 0+1 )
      *  - therefore is needed
      *  - TODO: document
@@ -735,7 +736,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     void setupConnections();
     /**
      * removeOldLayer
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * Common for both  ( mLegacyMode == 0+1 )
      *  - therefore is needed
      *  - TODO: document
@@ -748,15 +749,15 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
      *  - creates QgsRasterLayer
      *  -> calls 'loadGCPs' with QFileInfo raster_file
      *  - adds created QgsRasterLayer to Canvas
-     * @see openRaster
-     * @see extentsChanged
-     * @see loadGCPs
-     * @param file name as string
+     * \see openRaster
+     * \see extentsChanged
+     * \see loadGCPs
+     * \param file name as string
      */
     void addRaster( const QString& file );
     /**
      * loadGTifInQgis
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * Common for both  ( mLegacyMode == 0+1 )
      *  - therefore is needed
      *  - TODO: document
@@ -766,7 +767,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     // settings
     /**
      * readSettings
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * Common for both  ( mLegacyMode == 0+1 )
      *  - therefore is needed
      *  - TODO: document
@@ -774,7 +775,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     void readSettings();
     /**
      * writeSettings
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * Common for both  ( mLegacyMode == 0+1 )
      *  - therefore is needed
      *  - TODO: document
@@ -787,7 +788,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
      * - clears Gcp-Points when needed
      * - calls createGcpDb
      * -> will return false when 'mLegacyMode == 0'
-     * @note
+     * \note
      *  - LegacyMode
      *  -> when a Gcp-Database has been read (createGcpDb returns true)
      *  --> Gcp-Points will read from the OGR-Datasource
@@ -796,24 +797,24 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
      * - both methods will:
      * -> add the QgsGeorefDataPoint
      * - calls 'setGCPList' AFTER all points have been added
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      *  - the 'if (mLegacyMode == 0)' portion can be removed
      *  -> reading of the .points file
      *  --> the Gcp-Database will still read an existing '.points' file upon creation if the gcp_points TABLE does not exist
-     * @see openRaster
-     * @see extentsChanged
-     * @see createGcpDb
-     * @see QgsGCPListWidget::setGCPList
-     * @see QgsSpatiaLiteProviderGcpUtils::createGcpDb
-     * @param file name as string
+     * \see openRaster
+     * \see extentsChanged
+     * \see createGcpDb
+     * \see QgsGCPListWidget::setGCPList
+     * \see QgsSpatiaLiteProviderGcpUtils::createGcpDb
+     * \param file name as string
      */
     bool loadGCPs( /*bool verbose = true*/ );
     /**
      * saveGCPs
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      *  - the 'if (mLegacyMode == 1)' portion is needed
      *  -> update extent of Database
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      *  - the 'if (mLegacyMode == 0)' portion can be removed
      *  -> .points file is save when needed
      */
@@ -821,13 +822,13 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     /**
      * SaveGCPs and checkNeedGCPSave
      *  ->  ?? weird construction ??
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      *  - for 'if (mLegacyMode == 1)'
      *  -> not really needed
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      *  - the 'if (mLegacyMode == 0)' portion can be removed
      *  -> based on enum SaveGCPs how to save ,points file
-     * @see SaveGCPs
+     * \see SaveGCPs
      */
     QgsGeorefPluginGui::SaveGCPs checkNeedGCPSave();
 
@@ -835,7 +836,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     /**
      * mGcpSrid
      *  - srid of Gcp (to be stored or retrieved from Gcp-Database
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * New for ( mLegacyMode == 1 )
      *  - therefore is needed
      */
@@ -843,7 +844,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     /**
      * Srid of read MasterDB
      *  - srid of Gcp (to be stored or retrieved from Gcp-Database
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * New for ( mLegacyMode == 1 )
      *  - therefore is needed
      */
@@ -851,139 +852,136 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     /**
      * Circle around MasterDB Gcp-Point
      *  - default: 5.0 (2.5 Map-Units [meters] around (left/right/top/bottom of point)
-     * @note
+     * \note
      *  - Assumption
      *  -> the Gcp-Master Point is a precise position that is valid for all maps
      *  -> checking is done (from older projects) during fetchGcpMasterPointsExtent
      *  --> if existing Gcp-Points exist within the given  Circle
      *  ---> if found, the former Gcp-Point will be replaced with the Gcp-Master Point
      *  ----> the Pixel-Value will NOT be changed
-     * @note
+     * \note
      *  The User can change this value, which will be retrieved before being used in fetchGcpMasterPointsExtent
      *  - a (possibly changed) value is NOT stored in the QSettings
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * New for ( mLegacyMode == 1 )
      *  - therefore is needed
-     * @see setCutlineGcpMasterArea
-     * @see fetchGcpMasterPointsExtent
+     * \see setCutlineGcpMasterArea
+     * \see fetchGcpMasterPointsExtent
      */
     double mGcpMasterArea;
     /**
      * Circle around MasterDB Gcp-Point
      *  - default: 2.0 (1.0 Map-Units [meters] around (left/right/top/bottom of point)
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * New for ( mLegacyMode == 1 )
      *  - therefore is needed
-     * @see setCutlineGcpMasterArea
-     * @see fetchGcpMasterPointsExtent
+     * \see setCutlineGcpMasterArea
+     * \see fetchGcpMasterPointsExtent
      */
     double mGcpPointArea;
     /**
      * Map-Point Unit based on 1 meter
      *  - 1.0 meters Map-Unit based on srid being used in QGIS
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * New for ( mLegacyMode == 1 )
      *  - therefore is needed
-     * @see setCutlineGcpMasterArea
-     * @see fetchGcpMasterPointsExtent
+     * \see setCutlineGcpMasterArea
+     * \see fetchGcpMasterPointsExtent
      */
     double mMapPointUnit;
     /**
-     * s_gcp_authid
-     *  -
-     * @note QGIS 3.0
-     * New for ( mLegacyMode == 1 )
-     *  - therefore is needed
-     *  - TODO: document
+     * Project projection being used
+     *  - from mIface->mapCanvas()->mapSettings().destinationCrs()
+     * \since QGIS 3.0
      */
-    QString s_gcp_authid;
-    QString s_gcp_description;
-    QString mGcp_coverage_name;
-    QString mGcp_coverage_name_base;
-    QString mGcp_points_table_name;
-    int mId_gcp_coverage;
-    int mId_gcp_cutline;
+    QString mGcpAuthid;
+    /**
+     * Project projection being used
+     *  - from mIface->mapCanvas()->mapSettings().destinationCrs()
+     * \since QGIS 3.0
+     */
+    QString mGcpDescription;
     /**
      * jumpToGcpConvert
      *  - After adding a new Point to canvas_X
      *  -> move canvas_Y to the point created by the Spatialite-Gcp-logic
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * New for ( mLegacyMode == 1 )
      *  - therefore is needed
      */
-    void jumpToGcpConvert( QgsPoint input_point, bool b_toPixel = false );
+    void jumpToGcpConvert( QgsPoint inputPoint, bool bToPixel = false );
     /**
      * Translate QgsGeorefTransform::TransformParametrisation numbering to Spatialite numbering
      * use when calling getGcpConvert
-     * @see getGcpConvert
+     * \see getGcpConvert
      * Note only ThinPlateSpline, PolynomialOrder1, PolynomialOrder2, PolynomialOrder3 and  are supported
-     * @param mTransformParam: as used in project
-     * @return 0-3, otherwise 0 for ThinPlateSpline
+     * \param mTransformParam: as used in project
+     * \return 0-3, otherwise 0 for ThinPlateSpline
      */
-    int getGcpTransformParam( QgsGeorefTransform::TransformParametrisation i_TransformParam );
+    int getGcpTransformParam( QgsGeorefTransform::TransformParametrisation iTransformParam );
     /**
      * Translate QgsGeorefTransform::TransformParametrisation numbering to Spatialite numbering
      * use when calling getGcpConvert
-     * @see getGcpConvert
+     * \see getGcpConvert
      * Note only ThinPlateSpline, PolynomialOrder1, PolynomialOrder2, PolynomialOrder3 and  are supported
-     * @param mTransformParam: as used in project
-     * @return 0-3, otherwise 0 for ThinPlateSpline
+     * \param mTransformParam: as used in project
+     * \return 0-3, otherwise 0 for ThinPlateSpline
      */
-    QgsGeorefTransform::TransformParametrisation setGcpTransformParam( int i_TransformParam );
+    QgsGeorefTransform::TransformParametrisation setGcpTransformParam( int iTransformParam );
     /**
      * Translate to and from a readable form for the gcp_points Database
      * - GRA_NearestNeighbour, GRA_Bilinear, GRA_Cubic, GRA_CubicSpline and GRA_Lanczos are supported
-     * @see getGcpConvert
+     * \see getGcpConvert
      * Note only ThinPlateSpline, PolynomialOrder1, PolynomialOrder2, PolynomialOrder3 and  are supported
-     * @param mResamplingMethod: as used in project
-     * @return  above, otherwise 'Lanczos' for GRA_Lanczos
+     * \param mResamplingMethod: as used in project
+     * \return  above, otherwise 'Lanczos' for GRA_Lanczos
      */
     QString getGcpResamplingMethod( QgsImageWarper::ResamplingMethod i_ResamplingMethod );
     /**
      * Translate to and from a readable form for the gcp_points Database
      * - GRA_NearestNeighbour, GRA_Bilinear, GRA_Cubic, GRA_CubicSpline and GRA_Lanczos are supported
-     * @param s_ResamplingMethod: as used in project
-     * @return above, otherwise 'Lanczos' for GRA_Lanczos
+     * \param sResamplingMethod: as used in project
+     * \return above, otherwise 'Lanczos' for GRA_Lanczos
      */
-    QgsImageWarper::ResamplingMethod setGcpResamplingMethod( QString s_ResamplingMethod );
+    QgsImageWarper::ResamplingMethod setGcpResamplingMethod( QString sResamplingMethod );
     /**
      * mSpatialite_gcp_enabled
      *  - Has the Spatialite being used been compiled with the Gcp-Logic
      *  -> if not the Legacy QgsMapCoordsDialog will be called
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * New for ( mLegacyMode == 1 )
      *  - therefore is needed
-     * @see SaveGCPs
+     * \see SaveGCPs
      */
     bool mSpatialite_gcp_enabled;
     /**
      * isGcpEnabled
      *  - Has the Spatialite being used been compiled with the Gcp-Logic
      *  -> if not the Legacy QgsMapCoordsDialog will be called
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * New for ( mLegacyMode == 1 )
      *  - therefore is needed
-     * @see mSpatialite_gcp_enabled
-     * @return  mSpatialite_gcp_enabled
+     * \see mSpatialite_gcp_enabled
+     * \return  mSpatialite_gcp_enabled
      */
     bool isGcpEnabled() { return mSpatialite_gcp_enabled; }
     /**
      * isGcpOff
      *  - Has the User turned off the Spatialite the Gcp-Logic ?
      *  -> if yes the Legacy QgsMapCoordsDialog will be called
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * New for ( mLegacyMode == 1 )
      *  - therefore is needed
-     * @see mSpatialite_gcp_enabled
-     * @return  mSpatialite_gcp_enabled
+     * \see mSpatialite_gcp_enabled
+     * \return  mSpatialite_gcp_enabled
      */
-    bool isGcpOff() { if ( isGcpEnabled() ) return mSpatialite_gcp_off; else return false; }
+    bool isGcpOff() { if ( isGcpEnabled() ) return mSpatialiteGcpOff; else return false; }
     // mj10777: add gui logic for this and store in setting
-    bool b_gdalscript_or_gcp_list;
+    bool mGdalScriptOrGcpList;
     // mj10777: add gui logic for this and store in setting
-    bool b_points_or_spatialite_gcp;
+    bool mPointOrSpatialiteGcp;
     // mj10777: Prevent usage of Spatialite-Gcp logic when desired
-    bool mSpatialite_gcp_off;
+    bool mSpatialiteGcpOff;
     QString mError;
     QgsGeorefTransform mTransformType;
     QString mGcpLabelExpression;
@@ -1013,39 +1011,39 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     /**
      * generateGcpList
      *  - for gdal_translate or as seperate list
-     * @note
+     * \note
      * Based on settings in QgsGeorefConfigDialog
-     *  - b_gdalscript_or_gcp_list will be set
+     *  - mGdalScriptOrGcpList will be set
      *  - false: Full Gdal-Script will be returned
      *  - true : Only Gcp-List will be returned
-     * @see generateGDALtranslateCommand
-     * @see generateGDALScript()
-     * @return  QString with Gcp-List
+     * \see generateGDALtranslateCommand
+     * \see generateGDALScript()
+     * \return  QString with Gcp-List
      */
     QString generateGDALGcpList();
     /**
      * generateGDALTifftags
      *  - for gdal_translate or gdalwarp
-     * @note
+     * \note
      * Following TIFFTAGS are supported
      *  - TIFFTAG_DOCUMENTNAME [gcp_coverages.title]
      *  - TIFFTAG_IMAGEDESCRIPTION [gcp_coverages.abstract]
      *  - TIFFTAG_COPYRIGHT [gcp_coverages.copyright]
      *  - TIFFTAG_DATETIME [gcp_coverages.map_date]
      *  - TIFFTAG_ARTIST
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * New for ( mLegacyMode == 1 )
      *  - therefore is needed
-     * @param i_gdal_command : 0=gdal_translate, 1=gdalwarp
-     * @see generateGDALtranslateCommand
-     * @see generateGDALwarpCommand
-     * @return  QString with -to or -mo parameters
+     * \param i_gdal_command : 0=gdal_translate, 1=gdalwarp
+     * \see generateGDALtranslateCommand
+     * \see generateGDALwarpCommand
+     * \return  QString with -to or -mo parameters
      */
     QString generateGDALTifftags( int i_gdal_command );
     /**
      * generateGDALNodataCutlineParms
      *  - for gdalwarp
-     * @note
+     * \note
      * Nodata value stored in [gcp_coverages.nodata]
      *  - TODO: add Diealog to set value
      * Cutline, stored in create_cutline_polygon
@@ -1055,9 +1053,9 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
      *  - will create a Statement that looks like this:
      *  -> -crop_to_cutline -cutline /abosult_directory/Berlin_Straube.maps.gcp.db -csql "SELECT cutline_polygon FROM create_cutline_polygons WHERE (id_cutline = 20);"
      *  - The id_cutline will be searched for and set when the gcp_coverages is updated
-     * @see generateGDALScript()
-     * @see QgsSpatiaLiteProviderGcpUtils::updateGcpDb
-     * @return  QString with Gdal-Parameters
+     * \see generateGDALScript()
+     * \see QgsSpatiaLiteProviderGcpUtils::updateGcpDb
+     * \return  QString with Gdal-Parameters
      */
     QString generateGDALNodataCutlineParms();
 
@@ -1079,26 +1077,26 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
      * - this function will be called:
      * -> when a new Raster is loaded
      * -> when the Georeferencer ends
-     * @note
+     * \note
      * - the order of removal is important
      * -> disconnect SLOT/SIGNAL
      * -> save Layer-Data when needed
      * -> remove layer from group
      * -> remove layer from MapLayerRegistry
      * -> set layer-pointer to nullptr
-     * @note Display in QGIS-Cavas: group_georeferencer
-     * - group_gcp_cutlines
-     * -> layer_cutline_points/linestrings/polygons
-     * - group_gcp_points
-     * -> layer_gcp_points
-     * - group_gtif_rasters
-     * -> mLayer_gtif_raster
-     * - group_gcp_master
-     * -> layer_gcp_master
-     * @note Display in Georeferencer-Canvas: group_cutline_mercator
-     * -> layer_gcp_pixels
-     * -> layer_mercator_polygons
-     * @note GCPListWidget
+     * \note Display in QGIS-Cavas: mTreeGroupGeoreferencer
+     * - mTreeGroupGcpCutlines
+     * -> mLayerCutlinePoints/linestrings/polygons
+     * - mTreeGroupGcpPoints
+     * -> mLayerGcpPoints
+     * - mTreeGroupGtifRasters
+     * -> mLayerGtifRaster
+     * - mTreeGroupGcpMaster
+     * -> mLayerGcpMaster
+     * \note Display in Georeferencer-Canvas: mTreeGroupCutlineMercator
+     * -> mLayerGcpPixels
+     * -> mLayerMercatorPolygons
+     * \note GCPListWidget
      * - Data-Points will be cleared
      * - Georeferencer-Canvas will be removed and refreshed
      */
@@ -1107,63 +1105,63 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
      * Gcp-Layers: Gcp-Points
      *  - Settiing of Labels and Symbols:
      *  -> which will be loaded in the corresponding QgsLayerTreeGroup
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * New for ( mLegacyMode == 1 )
      *  - therefore is needed
-     * @see loadGCPs
-     * @return  true íf usable result have been made
+     * \see loadGCPs
+     * \return  true íf usable result have been made
      */
     bool setGcpLayerSettings( QgsVectorLayer *layer_gcp );
     /**
      * Gcp-Layers: Gcp-Master and Cutline
      *  - Settiing of Labels and Symbols:
      *  -> which will be loaded in the corresponding QgsLayerTreeGroup
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * New for ( mLegacyMode == 1 )
      *  - therefore is needed
-     * @see loadGCPs
-     * @see loadGcpMaster
-     * @return  true íf usable result have been made
+     * \see loadGCPs
+     * \see loadGcpMaster
+     * \return  true íf usable result have been made
      */
     bool setCutlineLayerSettings( QgsVectorLayer *layer_cutline );
     /**
      * Retrieve value used for Circle around MasterDB Gcp-Point
      *  - default: 5.0 (2.5 meter around (lef/right/top/bottom point)
-     * @note
+     * \note
      * The User may change this value befor calling 'fetchGcpMasterPointsExtent'
      *  - therefore the, possibly changed value, must be retrieved befor first usage
-     * @see mGcpMasterArea
-     * @see fetchGcpMasterPointsExtent
+     * \see mGcpMasterArea
+     * \see fetchGcpMasterPointsExtent
      */
     double getCutlineGcpMasterArea( QgsVectorLayer *layer_cutline = nullptr );
     /**
      * Set value used for Circle around MasterDB Gcp-Point
      *  - default: 5.0 (2.5 meter around (lef/right/top/bottom point)
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * New for ( mLegacyMode == 1 )
      *  - therefore is needed
-     * @see mGcpMasterArea
+     * \see mGcpMasterArea
      */
     bool setCutlineGcpMasterArea( double d_area = 2.0, QgsVectorLayer *layer_cutline = nullptr );
     /**
      * createSvgColors
-     * @param i_method  filling logic to use
-     * @param b_reverse  use Dark to Light instead of Light to Dark
-     * @param b_grey_black  include Color-Groups White, Grey and Black
-     * @returns  list_SvgColors QStringList list containing distinct list of svg color names for use with QColor
-     * @note
+     * \param i_method  filling logic to use
+     * \param b_reverse  use Dark to Light instead of Light to Dark
+     * \param b_grey_black  include Color-Groups White, Grey and Black
+     * \returns  list_SvgColors QStringList list containing distinct list of svg color names for use with QColor
+     * \note
      *
      *  SVG color keyword names, of which there are 146 (138 unique colors)
      * <a href="https://www.w3.org/TR/SVG/types.html#ColorKeywords </a>
      *
      * X11 color names, listed by color groups, of which there are 11
      * <a href="https://en.wikipedia.org/wiki/Web_colors#Css_colors">Colors listed by Color-Groups </a>
-     * @note
+     * \note
      * Gray/Grey are interchnagable (7 colors) 'grey' will be used
      * Alternative names: 2 colors) 'aqua / cyan' and 'magenta / fuchsia',   cyan and magenta will be used
      *
      * Used to create QgsCategorizedSymbolRendererV2 Symbols for Polygons
-    * @see setCutlineLayerSettings
+     * \see setCutlineLayerSettings
      */
     QStringList createSvgColors( int i_method = 0, bool b_reverse = false, bool b_grey_black = false );
 
@@ -1172,28 +1170,28 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
      * ground control points and transform method.
      * Note that the RMSE measure is adjusted for the degrees of freedom of the
      * used polynomial transform.
-     * @param error out: the mean error
-     * @return true in case of success
+     * \param error out: the mean error
+     * \return true in case of success
      */
     bool calculateMeanError( double& error ) const { return mGCPListWidget->calculateMeanError( error ); }
 
-    /** Docks / undocks this window*/
+    //! Docks / undocks this window
     void dockThisWindow( bool dock );
 
-    QGridLayout* mCentralLayout;
+    QGridLayout* mCentralLayout = nullptr;
 
-    QgsMessageBar* mMessageBar;
-    QMenu *mPanelMenu;
-    QMenu *mToolbarMenu;
+    QgsMessageBar* mMessageBar = nullptr;
+    QMenu *mPanelMenu = nullptr;
+    QMenu *mToolbarMenu = nullptr;
 
-    QAction *mActionHelp;
+    QAction *mActionHelp = nullptr;
 
-    QgsGCPListWidget *mGCPListWidget;
-    QLineEdit *mScaleEdit;
-    QLabel *mScaleLabel;
-    QLabel *mCoordsLabel;
-    QLabel *mTransformParamLabel;
-    QLabel *mEPSG;
+    QgsGCPListWidget *mGCPListWidget = nullptr;
+    QLineEdit *mScaleEdit = nullptr;
+    QLabel *mScaleLabel = nullptr;
+    QLabel *mCoordsLabel = nullptr;
+    QLabel *mTransformParamLabel = nullptr;
+    QLabel *mEPSG = nullptr;
     unsigned int mMousePrecisionDecimalPlaces;
 
     QString mRasterFilePath; // Path to the file
@@ -1228,179 +1226,414 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     QgsGeorefTransform mGeorefTransform;
     QString mCompressionMethod;
 
-    QgisInterface *mIface;
+    QgisInterface *mIface = nullptr;
 
     QgsGCPList* getGCPList() { return mGCPListWidget->getGCPList(); }
     // QgsGCPList* mInitialPoints;
-    QgsMapCanvas *mCanvas;
-    QgsRasterLayer *mLayer;
-    bool mAgainAddRaster;
+    QgsMapCanvas *mCanvas = nullptr;
+    QgsRasterLayer *mLayer = nullptr;
+    bool mAgainAddRaster = false;
 
     // mj10777
 
-    int mEvent_gcp_status;
-    int mEvent_point_status;
-    int mEvent_pixel_status;
+    int mEventGcpStatus = 0;
+    int mEventPointStatus = 0;
+    int mEventPixelStatus = 0;
 
     /**
      * Simplify the commit of the gcp-layers, with checking and commiting as needed
-     * @note
+     * \note
      * For the Spatialite Gcp-Logic to work correctly
      * - added, changed or deleted data must be saved by OGR to the Database-Source
      * ->  since the 'GCP_Compute' reads the stored data to create the needed matrix
      * --> uncommited data in the 'VectorLayerEditBuffer' cannot be evaluated
      * this is the main reason for commiting the data after each change
      * - which is contrary to the normal behavour in the QGIS-Application
-     * @note
+     * \note
      * The compleate process is
      * - After loading the Data: startEditing()
      * -> After any Adding, Changing of Delete: editBuffer()->commitChanges
      * --> During unloading: endEditCommand()
-     * @note
+     * \note
      * - used during events and Gcp-Layer unloading in clearGCPData()
      * -> triggerRepaint will be called after commit
-     * @note
+     * \note
      * - this function cause Appllication crashes in its intiallial form
      * ->  'gcp_layer->commitChanges' instead of 'editBuffer()->commitChanges'
      * --> Warning: QUndoStack::endMacro(): no matching beginMacro()
      * ---> possibly from QgsVectorLayer::endEditCommand() : undoStack()->endMacro();
-     * @param gcp_layer either gcp_points or gcp_pixels
-     * @param leaveEditable to call startEditing() and set set proper QgsVectorLayerEditBuffer member
-     * @return true in case of success of commitChanges()
+     * \param gcp_layer either gcp_points or gcp_pixels
+     * \param leaveEditable to call startEditing() and set set proper QgsVectorLayerEditBuffer member
+     * \return true in case of success of commitChanges()
      */
     bool saveEditsGcp( QgsVectorLayer *gcp_layer, bool leaveEditable );
     /**
      * Georeferencer LayerTreeGroup displayed in QGIS-Application
-     * @note
+     * \note
      *  Contains 3 Sub-Groups:
-     *  - group_gcp_points
-     *  -> layer_gcp_points [Map-Points of active Gcp-Points]
-     *  - group_gcp_cutlines [Helper ceometries for Georeferencing]
-     *  -> layer_cutline_points
-     *  -> layer_cutline_linestrings
-     *  -> layer_cutline_polygons [for gdal cutlines 'cutline_type=77' of id_gcp_coverage]
-     * - group_gtif_rasters [for loadGTifInQgis]
-     *  -- group_gtif_raster [to store georeferenced result (if exists)]
-     *  --> mLayer_gtif_raster
+     *  - mTreeGroupGcpPoints
+     *  -> mLayerGcpPoints [Map-Points of active Gcp-Points]
+     *  - mTreeGroupGcpCutlines [Helper ceometries for Georeferencing]
+     *  -> mLayerCutlinePoints
+     *  -> mLayerCutlineLinestrings
+     *  -> mLayerCutlinePolygons [for gdal cutlines 'cutline_type=77' of id_gcp_coverage]
+     * - mTreeGroupGtifRasters [for loadGTifInQgis]
+     *  -- mTreeLayerGtifRaster [to store georeferenced result (if exists)]
+     *  --> mLayerGtifRaster
      */
-    QgsLayerTreeGroup *group_georeferencer;
-    QgsLayerTreeGroup *group_gcp_points;
-    // Pixel-Points of active Gcp-Points
-    QString mGcp_points_layername;
-    QgsVectorLayer *layer_gcp_points;
-    // group_gcp_cutlines
-    // - contains cutline_points, linestrings and polygons
-    QgsLayerTreeGroup *group_gcp_cutlines;
-    QString mCutline_points_layername;
-    QgsVectorLayer *layer_cutline_points;
-    QString mCutline_linestrings_layername;
-    QgsVectorLayer *layer_cutline_linestrings;
-    QString mCutline_polygons_layername;
-    QgsVectorLayer *layer_cutline_polygons;
-    QgsLayerTreeGroup *group_gtif_rasters;
-    QgsLayerTreeLayer *group_gtif_raster;
-    QgsRasterLayer *mLayer_gtif_raster;
-    QgsLayerTreeGroup *group_gcp_master;
-    QString mGcp_master_layername;
-    QgsVectorLayer *layer_gcp_master;
+    QgsLayerTreeGroup *mTreeGroupGeoreferencer = nullptr;
+    QgsLayerTreeGroup *mTreeGroupGcpPoints = nullptr;
+    //! Raster file without extention Lower-Case from Database since QGIS 3.0
+    QString mGcpCoverageName;
+    //! Original Spelling of mGcpCoverageName from Database since QGIS 3.0
+    QString mGcpCoverageNameBase;
     /**
-     * Load Gcp-Master Database as LayerTreeGroup to be displayed in QGIS
-     * @note
-     *  Contains 1 Sub-Group:
-     *  - group_cutline_mercator
-     *  -> layer_mercator_polygons [for gdal cutlines 'cutline_type=77' of id_gcp_coverage]
-     *  --> for use with non-georeference images [sample: maps with folds]
-     * @note
-     *  - layer_gcp_pixels [Pixel-Points of active Gcp-Points]
-     *  -> Does not belong to a group [should not be seen in the Layer Panel]
+     * Gcp-Points/Pixel selected name from Database
+     * \see mGcpDbData->mGcpPointsTableName;
+     * \since QGIS 3.0
      */
-    bool loadGcpMaster( QString  s_database_filename = QString::null );
+    QString mGcpPointsTableName;
+    /**
+     * Gcp-Points Geometry-Name from Gcp-Points/Pixel Table
+     * \since QGIS 3.0
+     */
+    const QString mGcpPointsGeometryName = "gcp_point";
+    /**
+     * Gcp-Pixel Geometry-Name from Gcp-Points/Pixel Table
+     * \since QGIS 3.0
+     */
+    const QString mGcpPixelGeometryName = "gcp_pixel";
+    //! id of Gcp-Points/Pixel selected GcpPointsTable from Database since QGIS 3.0
+    int mIdGcpCoverage;
+    //! id of Cutline selected GcpPointsTable from Database since QGIS 3.0
+    int mIdGcpCutline;
+    /**
+     * Active GcpPoints Layername as used in the TreeGroup
+     *  - Format: tablename(geometryname)
+     * \since QGIS 3.0
+     */
+    QString mGcpPointsLayername;
+    /**
+     * Active GcpPoints VectorLayer
+     * \since QGIS 3.0
+     */
+    QgsVectorLayer *mLayerGcpPoints = nullptr;
+    /**
+     * Active GcpPixels Layername as used in the TreeGroup
+     *  - Format: tablename(geometryname)
+     * \since QGIS 3.0
+     */
+    QString mGcpPixelLayername;
+    /**
+     * Active GcpPixels VectorLayer
+     * \since QGIS 3.0
+     */
+    QgsVectorLayer *mLayerGcpPixels = nullptr;
+    /**
+     * TreeGroup in QGIS
+     *  - contains cutline_points, linestrings and polygons
+     * \since QGIS 3.0
+     * \see mLayerCutlinePoints
+     * \see mLayerCutlineLinestrings
+     * \see mLayerCutlinePolygons
+     */
+    QgsLayerTreeGroup *mTreeGroupGcpCutlines = nullptr;
+    /**
+     * Cutline-Points Table from Database
+     * \since QGIS 3.0
+     */
+    const QString mCutlinePointsTableName = "create_cutline_points";
+    /**
+     * Cutline-Points Geometry-Name from Database
+     * \since QGIS 3.0
+     */
+    const QString mCutlinePointsGeometryName = "cutline_point";
+    /**
+     * Active Cutline-Points Layername as used in the TreeGroup
+     *  - Format: tablename(geometryname)
+     * \since QGIS 3.0
+     * \see mCutlinePointsTableName
+     * \see mCutlinePointsGeometryName
+     */
+    QString mCutlinePointsLayername = QString::null;
+    /**
+     * Active Cutline-Points VectorLayer
+     * \since QGIS 3.0
+     */
+    QgsVectorLayer *mLayerCutlinePoints = nullptr;
+    /**
+     * Cutline-Linestrings Table from Database
+     * \since QGIS 3.0
+     */
+    const QString mCutlineLinestringsTableName = "create_cutline_linestrings";
+    /**
+     * Cutline-Points Geometry-Name from Database
+     * \since QGIS 3.0
+     */
+    const QString mCutlineLinestringsGeometryName = "cutline_linestring";
+    /**
+     * Active Cutline-Linestrings Layername as used in the TreeGroup
+     *  - Format: tablename(geometryname)
+     * \since QGIS 3.0
+     * \see mCutlineLinestringsTableName
+     * \see mCutlineLinestringsGeometryName
+     */
+    QString mCutlineLinestringsLayername = QString::null;
+    /**
+     * Active Cutline-Linestrings VectorLayer
+     * \since QGIS 3.0
+     */
+    QgsVectorLayer *mLayerCutlineLinestrings = nullptr;
+    /**
+     * Cutline-Polygons Table from Database
+     * \since QGIS 3.0
+     */
+    const QString mCutlinePolygonsTableName = "create_cutline_polygons";
+    /**
+     * Cutline-Polygons Geometry-Name from Database
+     * \since QGIS 3.0
+     */
+    const QString mCutlinePolygonsGeometryName = "cutline_polygon";
+    /**
+     * Active Cutline-Polygons Layername as used in the TreeGroup
+     *  - Format: tablename(geometryname)
+     * \since QGIS 3.0
+     * \see mCutlinePolygonsTableName
+     * \see mCutlinePolygonsGeometryName
+     */
+    QString mCutlinePolygonsLayername = QString::null;
+    /**
+     * Active Cutline-Polygons VectorLayer
+     * \since QGIS 3.0
+     */
+    QgsVectorLayer *mLayerCutlinePolygons = nullptr;
+    /**
+     * TreeGroup in QGIS
+     *  - contains georeferenced RasterLayer
+     * \since QGIS 3.0
+     * \see mTreeLayerGtifRaster
+     * \see mLayerGtifRaster
+     */
+    QgsLayerTreeGroup *mTreeGroupGtifRasters = nullptr;
+    /**
+     * TreeLayer in QGIS
+     *  - contains georeferenced RasterLayer
+     * \since QGIS 3.0
+     * \see mTreeLayerGtifRaster
+     * \see mLayerGtifRaster
+     */
+    QgsLayerTreeLayer *mTreeLayerGtifRaster = nullptr;
+    /**
+     * Active georeferenced RasterLayer
+     * \since QGIS 3.0
+     */
+    QgsRasterLayer *mLayerGtifRaster = nullptr;
+    /**
+     * TreeGroup in QGIS
+     *  - contains GcpMaster VectorLayer
+     * \since QGIS 3.0
+     * \see mLayerGcpMaster
+     */
+    QgsLayerTreeGroup *mTreeGroupGcpMaster = nullptr;
+    /**
+     * Gcp-Master Points Table from Database
+     * \since QGIS 3.0
+     */
+    const QString mGcpMasterTableName = "gcp_master";
+    /**
+     * Gcp-Master Points Geometry-Name from Database
+     * \since QGIS 3.0
+     */
+    const QString mGcpMasterGeometryName = "gcp_point";
+    /**
+     * Active Gcp-Master Layername as used in the TreeGroup
+     *  - Format: tablename(geometryname)
+     * \since QGIS 3.0
+     * \see mGcpMasterTableName
+     * \see mGcpMasterGeometryName
+     */
+    QString mGcpMasterLayername = QString::null;
+    /**
+     * Active GcpMater-Points VectorLayer
+     * \since QGIS 3.0
+     */
+    QgsVectorLayer *mLayerGcpMaster = nullptr;
     /**
      * Georeferencer LayerTreeGroup displayed in Georeferencer
-     * @note
+     * \note
      *  Contains 1 Sub-Group:
-     *  - group_cutline_mercator
-     *  -> layer_mercator_polygons [for gdal cutlines 'cutline_type=77' of id_gcp_coverage]
+     *  - mTreeGroupCutlineMercator
+     *  -> mLayerMercatorPolygons [for gdal cutlines 'cutline_type=77' of id_gcp_coverage]
      *  --> for use with non-georeference images [sample: maps with folds]
-     * @note
-     *  - layer_gcp_pixels [Pixel-Points of active Gcp-Points]
+     * \note
+     *  - mLayerGcpPixels [Pixel-Points of active Gcp-Points]
+     *  -> Does not belong to a group [should not be seen in the Layer Panel]
+     * \since QGIS 3.0
+     */
+    QgsLayerTreeGroup *mTreeGroupCutlineMercator = nullptr;
+    /**
+     * Mercator Polygons Table from Database
+     * \since QGIS 3.0
+     */
+    const QString mMercatorPolygonsTableName = "create_mercator_polygons";
+    /**
+     * Mercator Polygons Map-Points Geometry-Name from Database
+     * \since QGIS 3.0
+     */
+    const QString mMercatorCutlinePolygonsGeometryName = "cutline_polygon";
+    /**
+     * Active Gcp-Master Layername as used in the TreeGroup
+     *  - Format: tablename(geometryname)
+     * \since QGIS 3.0
+     * \see mMercatorPolygonsTablename
+     * \see mMercatorCutlinePolygonsGeometryName
+     */
+    QString mMercatorCutlinePolygonsLayername = QString::null;
+    /**
+     * Mercator Polygons Pixel-Points Geometry-Name from Database
+     * \since QGIS 3.0
+     */
+    const QString mMercatorPolygonsGeometryName = "mercator_polygon";
+    /**
+     * Active Gcp-Master Layername as used in the TreeGroup
+     *  - Format: tablename(geometryname)
+     * \since QGIS 3.0
+     * \see mMercatorPolygonsTablename
+     * \see mMercatorPolygonsGeometryName
+     */
+    QString mMercatorPolygonsLayername = QString::null;
+    /**
+     * Active Mercator-Polygons VectorLayer
+     * \since QGIS 3.0
+     */
+    QgsVectorLayer *mLayerMercatorPolygons = nullptr;
+    /**
+     * Active Mercator-Transform-Polygons VectorLayer
+     * \since QGIS 3.0
+     */
+    QgsVectorLayer *mLayerMercatorCutlinePolygons = nullptr;
+    /**
+     * Provider to use
+     *  - 'spatialite': default
+     *  - 'ogr'
+     * \note
+     *  Until QgsOgrProvider supports Spatialite with tables that containe more than 1 geometry properly
+     *  - 'ogr' cannot be used.
+     * \since QGIS 3.0
+     */
+    QString mLayerProviderType;
+    /**
+     * Connection string to use, depending on Provider to use
+     *  - 'spatialite': 'dbname=%1 table=%2 (%3)'
+     *  - 'ogr': '%1|layername=%2|geometryname=%3'
+     * \note
+     *  Until QgsOgrProvider supports Spatialite with tables that containe more than 1 geometry properly
+     *  - 'ogr' cannot be used.
+     * \since QGIS 3.0
+     * \see formatUrl
+     */
+    QString mFormatUrl;
+    /**
+     * Create Connection string to use, depending on Provider to use
+     *  - 'spatialite': 'dbname=%1 table=%2 (%3)'
+     *  - 'ogr': '%1|layername=%2|geometryname=%3'
+     * \note
+     *  When first used, mFormatUrl and the Layername strings will be set.
+     * \since QGIS 3.0
+     * \see mFormatUrl
+     * \see mCutlinePointsLayername
+     * \see mCutlineLinestringsLayername
+     * \see mCutlinePolygonsLayername
+     * \see mGcpMasterLayername
+     * \see mMercatorPolygonsLayername
+     * \see mMercatorCutlinePolygonsLayername
+     */
+    QString formatUrl( const QString &sGcpDatabaseFileName, const QString &sGcpTableName, const QString &sGcpGeometryName );
+    /**
+     * Load Gcp-Master Database as LayerTreeGroup to be displayed in QGIS
+     * \note
+     *  Contains 1 Sub-Group:
+     *  - mTreeGroupCutlineMercator
+     *  -> mLayerMercatorPolygons [for gdal cutlines 'cutline_type=77' of id_gcp_coverage]
+     *  --> for use with non-georeference images [sample: maps with folds]
+     * \note
+     *  - mLayerGcpPixels [Pixel-Points of active Gcp-Points]
      *  -> Does not belong to a group [should not be seen in the Layer Panel]
      */
-    QgsLayerTreeGroup *group_cutline_mercator;
-    QString mMercator_polygons_layername;
-    QgsVectorLayer *layer_mercator_polygons;
-    QString mMercator_polygons_transform_layername;
-    QgsVectorLayer *layer_mercator_polygons_transform;
-    // Pixel-Points of active Gcp-Points]
-    QString mGcp_pixel_layername;
-    QgsVectorLayer *layer_gcp_pixels;
+    bool loadGcpMaster( QString  sDatabaseFilename = QString::null );
     /**
      * QgsMapCanvasLayer displayed in Georeferencer
      *  - needed to store the visibility status of the Layers
-     * @note
+     * \note
      *  Contains 3 Layers
-     *  - layer_gcp_pixels [pixel gcp]
-     *  - layer_mercator_polygons [possible cutlines for raster ]
+     *  - mLayerGcpPixels [pixel gcp]
+     *  - mLayerMercatorPolygons [possible cutlines for raster ]
      *  - mCanvas [raster being shown]
      *  -> must be last of list
-     * @note
-     *  - only the first 2 are contained in 'group_cutline_mercator'
+     * \note
+     *  - only the first 2 are contained in 'mTreeGroupCutlineMercator'
      *  -> to be turned on/off as needed
     * @see visibilityLayerTreeViewChanged
      */
     QList<QgsMapCanvasLayer> mMapCanvasLayers;
-
+    /**
+     * Create list of unique colors
+     *  - used for cutline polygons
+     * \since QGIS 3.0
+    * @see createSvgColors
+    * @see setCutlineLayerSettings
+     */
     QStringList mSvgColors;
 
-    QgsMapTool *mToolZoomIn;
-    QgsMapTool *mToolZoomOut;
-    QgsMapTool *mToolPan;
-    QgsMapTool *mToolAddPoint;
-    QgsMapTool *mToolNodePoint;
-    QgsMapTool *mToolMovePoint;
-    QgsMapTool *mToolMovePointQgis;
+    QgsMapTool *mToolZoomIn = nullptr;
+    QgsMapTool *mToolZoomOut = nullptr;
+    QgsMapTool *mToolPan = nullptr;
+    QgsMapTool *mToolAddPoint = nullptr;
+    QgsMapTool *mToolNodePoint = nullptr;
+    QgsMapTool *mToolMovePoint = nullptr;
+    QgsMapTool *mToolMovePointQgis = nullptr;
 
-    QgsGeorefDataPoint *mMovingPoint;
-    QgsGeorefDataPoint *mMovingPointQgis;
-    QPointer<QgsMapCoordsDialog> mMapCoordsDialog;
+    QgsGeorefDataPoint *mMovingPoint = nullptr;
+    QgsGeorefDataPoint *mMovingPointQgis = nullptr;
+    QPointer<QgsMapCoordsDialog> mMapCoordsDialog = nullptr;
 
     bool mUseZeroForTrans;
     bool mExtentsChangedRecursionGuard;
     bool mLoadInQgis;
 
-    QgsDockWidget* mDock;
+    QgsDockWidget* mDock = nullptr;
     int messageTimeout();
     /**
      * Project interaction with static Functions to
      *  - create, read and administer Gcp-Coverage Tables
      *  -> also using Spatialite Gcp-Logic
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * New for ( mLegacyMode == 1 )
      *  - therefore is needed
-     * @see QgsSpatiaLiteProviderGcpUtils::GcpDbData
+     * \see QgsSpatiaLiteProviderGcpUtils::GcpDbData
      */
-    QgsSpatiaLiteProviderGcpUtils::GcpDbData* mGcpDbData;
+    QgsSpatiaLiteProviderGcpUtils::GcpDbData* mGcpDbData = nullptr;
     /**
      * isGcpDb
      *  - Has the Spatialite been made and is usable
      *  -> true Gcp-Points have been read
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * New for ( mLegacyMode == 1 )
      *  - therefore is needed
-     * @see layer_gcp_pixels
-     * @return  true íf usable result have been made
+     * \see mLayerGcpPixels
+     * \return  true íf usable result have been made
      */
-    bool isGcpDb() {if ( layer_gcp_pixels != nullptr ) return true; else return false;};
+    bool isGcpDb() {if ( mLayerGcpPixels != nullptr ) return true; else return false;};
     /**
      * Project Functions to interact with
      *  - create, read and administer Gcp-Coverage Tables
      *  -> also using Spatialite Gcp-Logic
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * New for ( mLegacyMode == 1 )
      *  - therefore is needed
-     * @see QgsSpatiaLiteProviderGcpUtils::GcpDbData
+     * \see QgsSpatiaLiteProviderGcpUtils::GcpDbData
      */
-    bool readGcpDb( QString  s_database_filename, bool b_DatabaseDump = false );
+    bool readGcpDb( QString  sDatabaseFilename, bool b_DatabaseDump = false );
     /**
      * Create or read a points TABLE for a Gcp-Coverage Database
      *  - using the 'Add Raster' Dialog
@@ -1413,31 +1646,61 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
      *  The column 'coverage_name' is based on the lowercase (original) file-name WITHOUT path and and extention
      *  The created  'gcp_points' TABLE is based on 'gcp_points_'+'coverage_name'
      *  - TODO: continue documentation
-     * @note
+     * \note
      *  -> see Function documentation for more details
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * New for ( mLegacyMode == 1 )
      *  - therefore is needed
-     * @see QgsSpatiaLiteProviderGcpUtils::createGcpDb
-     * @param s_database_filename Database file name to create [can exist]
-     * @param b_dump create and '.sql' file with the used Sql-Statements that can be run as a script
+     * \see QgsSpatiaLiteProviderGcpUtils::createGcpDb
+     * \param sDatabaseFilename Database file name to create [can exist]
+     * \param b_dump create and '.sql' file with the used Sql-Statements that can be run as a script
      */
     bool createGcpDb( bool b_DatabaseDump = false );
-    bool updateGcpDb( QString s_coverage_name );
-    bool updateGcpCompute( QString s_coverage_name );
-    bool updateGcpTranslate( QString s_coverage_name );
-    QgsPoint getGcpConvert( QString s_coverage_name, QgsPoint input_point, bool b_toPixel = false, int i_order = 0, bool b_reCompute = true, int id_gcp = -1 );
+    /**
+     * Update a points TABLE for a Gcp-Coverage Database
+     * \param sCoverageName Gcp-Points TABLE to update
+     * \see QgsSpatiaLiteProviderGcpUtils::updateGcpDb
+     * \since QGIS 3.0
+     */
+    bool updateGcpDb( QString sCoverageName );
+    /**
+     * Update a Gcp-Compute TABLE for a Gcp-Coverage points TABLE
+     * \param sCoverageName Gcp-Points TABLE to update
+     * \since QGIS 3.0
+     * \see QgsSpatiaLiteProviderGcpUtils::updateGcpCompute
+     */
+    bool updateGcpCompute( QString sCoverageName );
+    /**
+     * Update a Gcp-Translate TABLE for a Gcp-Coverage points TABLE
+     * \param sCoverageName Gcp-Points TABLE to update
+     * \since QGIS 3.0
+     * \see QgsSpatiaLiteProviderGcpUtils::updateGcpTranslate
+     */
+    bool updateGcpTranslate( QString sCoverageName );
+    /**
+     * Converts a Pixel or Map-Point to Map or Pixel-Point
+     * \param sCoverageName name of map to search for
+     * \param inputPoint point to convert [not used when id_gcp > 0]
+     * \param bToPixel true=convert Map-Point to Pixel Point ; false: Convert Pixel-Point to Map-Point
+     * \param i_order 0-3 [ThinPlateSpline, PolynomialOrder1, PolynomialOrder2, PolynomialOrder3]
+     * \param bReCompute re-calculate value by reading all enable points, othewise read stored values in gcp_convert.
+     * \param id_gcp read value from specific gcp point [inputPoint will be ignored]
+     * \return QgsPoint of result (0,0 when invalid)
+     * \since QGIS 3.0
+     * \see QgsSpatiaLiteProviderGcpUtils::getGcpConvert
+     */
+    QgsPoint getGcpConvert( QString sCoverageName, QgsPoint inputPoint, bool bToPixel = false, int i_order = 0, bool bReCompute = true, int id_gcp = -1 );
     /**
      * Given a meters Map-Unit value
      *  - a realistic Map-Unit value for the srid used will be returned
-     * meters value: parms_GcpDbData->mGcpMasterArea
-     * srid value:  parms_GcpDbData->mGcpSrid
-     * @note 
+     * meters value: parmsGcpDbData->mGcpMasterArea
+     * srid value:  parmsGcpDbData->mGcpSrid
+     * \note
      *  - for Degrees a start position must be set
-     *  -> parms_GcpDbData->mInputPoint
-     * @see spatialiteInitEx
-     * @param parms_GcpDbData  to store Database file-name, count, handle and cache
-     * @return Map-Unit for the given srid
+     *  -> parmsGcpDbData->mInputPoint
+     * \see spatialiteInitEx
+     * \param parmsGcpDbData  to store Database file-name, count, handle and cache
+     * \return Map-Unit for the given srid
      */
     double getMetersToMapPoint( double d_GcpMasterArea=5.0, int i_srid=-1,  QgsPoint inputPoint= QgsPoint( 0.0, 0.0 ));
     /**
@@ -1445,70 +1708,70 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
      *  - a Database to be used to reference POINTs to assist while Georeferencing
      *  -> all POINTs must be of the same srid
      *  --> that are listed in the central 'gcp_coverages' table
-     * @note
+     * \note
      *  - this can also be used to test if the Database is valid
      *  -> i.e. contains a 'gcp_master' TABLE
      *  --> Warning: test that the file exist beforehand, otherwise the Database will be created !
      *  --> srid being used will be returned if valid, othewise INT_MIN
-     * @note
+     * \note
      *  -> see Function documentation for more details
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * New for ( mLegacyMode == 1 )
      *  - therefore is needed
-     * @see QgsSpatiaLiteProviderGcpUtils::createGcpDb
-     * @param s_database_filename Database file name to create [can exist]
-     * @param srid to use for cutline TABLEs that will be created
-     * @param b_dump create and '.sql' file with the used Sql-Statements that can be run as a script
-     * @return return_srid INT_MIN if invalid, otherwise the srid being used will be returned
+     * \see QgsSpatiaLiteProviderGcpUtils::createGcpDb
+     * \param sDatabaseFilename Database file name to create [can exist]
+     * \param srid to use for cutline TABLEs that will be created
+     * \param b_dump create and '.sql' file with the used Sql-Statements that can be run as a script
+     * \return return_srid INT_MIN if invalid, otherwise the srid being used will be returned
      */
-    int createGcpMasterDb( QString  s_database_filename,  int i_srid = 3068, bool b_dump = false );
+    int createGcpMasterDb( QString  sDatabaseFilename,  int i_srid = 3068, bool b_dump = false );
     /**
      * Create an empty Gcp-Coverage Database
      *  - a Database to be used to add Rasters that will be Georeferenced
      *  -> containing 'gcp_points_*' for each Raster
      *  --> that are listed in the central 'gcp_coverages' table
-     * @note
-     *  - the 'GcpDbData->mGcp_coverage_name' MUST be set to
+     * \note
+     *  - the 'GcpDbData->mGcpCoverageName' MUST be set to
      *  -> 'gcp_coverage' for the createGcpDb Function to know that a new, empty Database shouöld be created
      *  --> if the given Database-File exist: the function will return false
-     * @note
+     * \note
      *  -> see Function documentation for more details
-     * @note QGIS 3.0
+     * \since QGIS 3.0
      * New for ( mLegacyMode == 1 )
      *  - therefore is needed
-     * @see QgsSpatiaLiteProviderGcpUtils::createGcpDb
-     * @param s_database_filename Database file name to create (must not exist)
-     * @param srid to use for cutline TABLEs that will be created
-     * @param b_dump create and '.sql' file with the used Sql-Statements that can be run as a script
-     * @return return_srid INT_MIN if invalid, otherwise the srid being used will be returned
+     * \see QgsSpatiaLiteProviderGcpUtils::createGcpDb
+     * \param sDatabaseFilename Database file name to create (must not exist)
+     * \param srid to use for cutline TABLEs that will be created
+     * \param b_dump create and '.sql' file with the used Sql-Statements that can be run as a script
+     * \return return_srid INT_MIN if invalid, otherwise the srid being used will be returned
      */
-    int createGcpCoverageDb( QString  s_database_filename, int i_srid = 3068, bool b_dump = false );
+    int createGcpCoverageDb( QString  sDatabaseFilename, int i_srid = 3068, bool b_dump = false );
     /**
      * Bulk INSERT (or UPDATE) of Gcp-coverages Points TABLE
      *  - execute INSERT (or UPDATE)   commands stored in
      *  -- retrieving created id_gcp [INSERT only]
-     * @note
-     * QMap<int, QString> gcp_coverages of the parms_GcpDbData structure
+     * \note
+     * QMap<int, QString> gcp_coverages of the parmsGcpDbData structure
      *  - the QString will contain the sql-command
      *  -- it will be replaced with the returned id_gcp
      *  - the 'int' will be used by the calling function
      *  -- to identify to what the created id_gcp belongs to
-     * @note
-     * mOrder of the parms_GcpDbData structure
+     * \note
+     * mOrder of the parmsGcpDbData structure
      *  - will contain what type of Sql-Command will be used
      *  -- 1=INSERT (will call getSqliteSequence after each INSERT)
      *  -- 2=UPDATE (will not call SqliteSequence)
-     * @see getSqliteSequence
-     * @param parms_GcpDbData  which will contain a spatialite connection (with mParseString to use and if Spatialite Gcp-logic is active)
-     * @return true if all commands where executed correctly
+     * \see getSqliteSequence
+     * \param parmsGcpDbData  which will contain a spatialite connection (with mParseString to use and if Spatialite Gcp-logic is active)
+     * \return true if all commands where executed correctly
      */
     int bulkGcpPointsInsert( QgsGCPList* master_GcpList );
     // docks ------------------------------------------
-    QgsLayerTreeGroup* mRootLayerTreeGroup;
-    QgsDockWidget *mLayerTreeDock;
-    QgsLayerTreeView* mLayerTreeView;
+    QgsLayerTreeGroup* mRootLayerTreeGroup = nullptr;
+    QgsDockWidget *mLayerTreeDock = nullptr;
+    QgsLayerTreeView* mLayerTreeView = nullptr;
     void initLayerTreeView();
-    bool bAvoidUnneededUpdates;
+    bool mAvoidUnneededUpdates = false;
 };
 
 #endif

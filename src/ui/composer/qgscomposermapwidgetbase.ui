@@ -629,7 +629,7 @@
               <widget class="QComboBox" name="mMapGridUnitComboBox">
                <item>
                 <property name="text">
-                 <string>Map unit</string>
+                 <string>Map unit 77</string>
                 </property>
                </item>
                <item>

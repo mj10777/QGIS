@@ -105,6 +105,8 @@ class CORE_EXPORT QgsRenderContext
     const QgsMapToPixel& mapToPixel() const {return mMapToPixel;}
 
     double scaleFactor() const {return mScaleFactor;}
+    double meterAsMapUnit() const {return mMeterAsMapUnit;}
+
 
     double rasterScaleFactor() const {return mRasterScaleFactor;}
 
@@ -151,6 +153,7 @@ class CORE_EXPORT QgsRenderContext
 
     void setRenderingStopped( bool stopped ) {mRenderingStopped = stopped;}
     void setScaleFactor( double factor ) {mScaleFactor = factor;}
+    void setMeterAsMapUnit( double meterAsMapUnit ) {mMeterAsMapUnit = meterAsMapUnit;}
     void setRasterScaleFactor( double factor ) {mRasterScaleFactor = factor;}
     void setRendererScale( double scale ) {mRendererScale = scale;}
     void setPainter( QPainter* p ) {mPainter = p;}
@@ -253,6 +256,8 @@ class CORE_EXPORT QgsRenderContext
 
     /** Factor to scale line widths and point marker sizes*/
     double mScaleFactor;
+    /** 1 meter in Map-Unit*/
+    double mMeterAsMapUnit;
 
     /** Factor to scale rasters*/
     double mRasterScaleFactor;

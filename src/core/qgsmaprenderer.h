@@ -514,6 +514,8 @@ class CORE_EXPORT QgsMapRenderer : public QObject
 
   private:
     void readDefaultDatumTransformations();
+    /** 1 meter in Map-Unit*/
+    double mMeterAsMapUnit;
 };
 
 #endif
