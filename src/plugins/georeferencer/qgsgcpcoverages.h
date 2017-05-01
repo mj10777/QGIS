@@ -38,7 +38,7 @@ class QgsGcpCoveragesDialog : public QMainWindow, private Ui::QgsGcpCoveragesDia
 {
     Q_OBJECT
   public:
-    QgsGcpCoveragesDialog( QWidget *parent,  QgsSpatiaLiteProviderGcpUtils::GcpDbData* parmsGcpDbData );
+    QgsGcpCoveragesDialog( QWidget *parent,  QgsSpatiaLiteProviderGcpUtils::GcpDbData *parmsGcpDbData );
     ~QgsGcpCoveragesDialog();
   signals:
     void selectedRasterCoverage( int id_selected_coverage );
@@ -55,17 +55,17 @@ class QgsGcpCoveragesDialog : public QMainWindow, private Ui::QgsGcpCoveragesDia
     void on_actionCollapseAll_triggered( bool checked );
   protected:
     // Create all Coverages
-    QTreeWidgetItem * createTreeItemCoverages( QgsSpatiaLiteProviderGcpUtils::GcpDbData* parmsGcpDbData );
+    QTreeWidgetItem *createTreeItemCoverages( QgsSpatiaLiteProviderGcpUtils::GcpDbData *parmsGcpDbData );
   private:
     void init();
     // Create all Gcp-Coverage [root]
-    QTreeWidgetItem * createTreeItemGcpCoverage();
+    QTreeWidgetItem *createTreeItemGcpCoverage();
     // Formatting Tree after adding or rebuilding Coverages
     void init_TreeWidget();
     // Fill specific Coverage, parsing Information of column-Data
-    QTreeWidgetItem * createTreeItemCoverage( int mIdGcpCoverage, QStringList sa_fields );
+    QTreeWidgetItem *createTreeItemCoverage( int mIdGcpCoverage, QStringList sa_fields );
     // Coverage-Information sent by caller
-    QgsSpatiaLiteProviderGcpUtils::GcpDbData* mGcpDbData = nullptr;
+    QgsSpatiaLiteProviderGcpUtils::GcpDbData *mGcpDbData = nullptr;
     // Last selected Coverage
     int i_selected_gcp_coverage;
     QTreeWidgetItem *item_selected_gcp_coverage = nullptr;
@@ -79,8 +79,8 @@ class QgsGcpCoverages : public QObject
     Q_OBJECT
   public:
     //! Returns the instance pointer, creating the object on the first call
-    static QgsGcpCoverages* instance();
-    void openDialog( QWidget *parent,  QgsSpatiaLiteProviderGcpUtils::GcpDbData* parmsGcpDbData );
+    static QgsGcpCoverages *instance();
+    void openDialog( QWidget *parent,  QgsSpatiaLiteProviderGcpUtils::GcpDbData *parmsGcpDbData );
   public slots:
     // Load selected coverage, when not alread loaded
     void load_selected_coverage( int id_selected_coverage );
@@ -91,10 +91,10 @@ class QgsGcpCoverages : public QObject
     ~QgsGcpCoverages();
     QgsGcpCoveragesDialog *pDialog = nullptr;
     int mIdGcpCoverage = -1;
-    QgsSpatiaLiteProviderGcpUtils::GcpDbData* mGcpDbData = nullptr;
+    QgsSpatiaLiteProviderGcpUtils::GcpDbData *mGcpDbData = nullptr;
   private slots:
   private:
-    static QgsGcpCoverages* pinstance;
+    static QgsGcpCoverages *pinstance;
 };
 #endif // QGSGCPCOVERAGES_H
 

@@ -19,21 +19,21 @@
 
 #include "qgsgeorefdatapoint.h"
 
-QgsGeorefDataPoint::QgsGeorefDataPoint( QgsMapCanvas* srcCanvas, QgsMapCanvas *dstCanvas,
-                                        const QgsPoint& pixelCoords, const QgsPoint& mapCoords, int i_srid, int id_gcp,
+QgsGeorefDataPoint::QgsGeorefDataPoint( QgsMapCanvas *srcCanvas, QgsMapCanvas *dstCanvas,
+                                        const QgsPoint &pixelCoords, const QgsPoint &mapCoords, int i_srid, int id_gcp,
                                         bool enable, int iLegacyMode )
-    : mSrcCanvas( srcCanvas )
-    , mDstCanvas( dstCanvas )
-    , mPixelCoords( pixelCoords )
-    , mMapCoords( mapCoords )
-    , mPixelCoordsReverse( QgsPoint( 0.0, 0.0 ) )
-    , mMapCoords_reverse( QgsPoint( 0.0, 0.0 ) )
-    , mId( id_gcp )
-    , mEnabled( enable )
-    , mLegacyMode( iLegacyMode )
-    , mTextInfo( "" )
-    , mSrid( i_srid )
-    , mParseString( ";#;#" )
+  : mSrcCanvas( srcCanvas )
+  , mDstCanvas( dstCanvas )
+  , mPixelCoords( pixelCoords )
+  , mMapCoords( mapCoords )
+  , mPixelCoordsReverse( QgsPoint( 0.0, 0.0 ) )
+  , mMapCoords_reverse( QgsPoint( 0.0, 0.0 ) )
+  , mId( id_gcp )
+  , mEnabled( enable )
+  , mLegacyMode( iLegacyMode )
+  , mTextInfo( "" )
+  , mSrid( i_srid )
+  , mParseString( ";#;#" )
 {
   mGCPSourceItem = nullptr;
   mGCPDestinationItem = nullptr;
@@ -55,24 +55,24 @@ QgsGeorefDataPoint::QgsGeorefDataPoint( QgsMapCanvas* srcCanvas, QgsMapCanvas *d
   }
 }
 
-QgsGeorefDataPoint::QgsGeorefDataPoint( const QgsPoint& pixelCoords, const QgsPoint& mapCoords, int i_srid, int id_gcp,
+QgsGeorefDataPoint::QgsGeorefDataPoint( const QgsPoint &pixelCoords, const QgsPoint &mapCoords, int i_srid, int id_gcp,
                                         int id_gcp_master, int iResultType, QString sTextInfo )
-    : QObject()
-    , mSrcCanvas( nullptr )
-    , mDstCanvas( nullptr )
-    , mGCPSourceItem( nullptr )
-    , mGCPDestinationItem( nullptr )
-    , mPixelCoords( pixelCoords )
-    , mMapCoords( mapCoords )
-    , mPixelCoordsReverse( QgsPoint( 0.0, 0.0 ) )
-    , mMapCoords_reverse( QgsPoint( 0.0, 0.0 ) )
-    , mId( id_gcp )
-    , mLegacyMode( 1 )
-    , mTextInfo( sTextInfo )
-    , mIdMaster( id_gcp_master )
-    , mResultType( iResultType )
-    , mSrid( i_srid )
-    , mParseString( ";#;#" )
+  : QObject()
+  , mSrcCanvas( nullptr )
+  , mDstCanvas( nullptr )
+  , mGCPSourceItem( nullptr )
+  , mGCPDestinationItem( nullptr )
+  , mPixelCoords( pixelCoords )
+  , mMapCoords( mapCoords )
+  , mPixelCoordsReverse( QgsPoint( 0.0, 0.0 ) )
+  , mMapCoords_reverse( QgsPoint( 0.0, 0.0 ) )
+  , mId( id_gcp )
+  , mLegacyMode( 1 )
+  , mTextInfo( sTextInfo )
+  , mIdMaster( id_gcp_master )
+  , mResultType( iResultType )
+  , mSrid( i_srid )
+  , mParseString( ";#;#" )
 {
   if ( mResultType == 1 )
   {
@@ -81,9 +81,9 @@ QgsGeorefDataPoint::QgsGeorefDataPoint( const QgsPoint& pixelCoords, const QgsPo
 }
 
 QgsGeorefDataPoint::QgsGeorefDataPoint( const QgsGeorefDataPoint &dataPoint )
-    : QObject()
-    , mTextInfo( "" )
-    , mParseString( ";#;#" )
+  : QObject()
+  , mTextInfo( "" )
+  , mParseString( ";#;#" )
 {
   Q_UNUSED( dataPoint );
   // we share item representation on canvas between all points
@@ -232,9 +232,9 @@ QString QgsGeorefDataPoint::AsEWKT( int iPointType, int i_srid ) const
       break;
     case 3:
     {
-      if (( i_srid > 0 ) && ( i_srid != getSrid() ) )
+      if ( ( i_srid > 0 ) && ( i_srid != getSrid() ) )
       {
-        s_EWKT = QString("ST_Transform(%1,%2)").arg(QString( s_EWKT ).arg( i_srid ).arg( mMapCoords_reverse.wellKnownText() )).arg(getSrid());
+        s_EWKT = QString( "ST_Transform(%1,%2)" ).arg( QString( s_EWKT ).arg( i_srid ).arg( mMapCoords_reverse.wellKnownText() ) ).arg( getSrid() );
       }
       else
       {
@@ -245,9 +245,9 @@ QString QgsGeorefDataPoint::AsEWKT( int iPointType, int i_srid ) const
     case 1:
     default:
     {
-      if (( i_srid > 0 ) && ( i_srid != getSrid() ) )
+      if ( ( i_srid > 0 ) && ( i_srid != getSrid() ) )
       {
-        s_EWKT = QString("ST_Transform(%1,%2)").arg(QString( s_EWKT ).arg( i_srid ).arg( mMapCoords.wellKnownText() )).arg(getSrid());
+        s_EWKT = QString( "ST_Transform(%1,%2)" ).arg( QString( s_EWKT ).arg( i_srid ).arg( mMapCoords.wellKnownText() ) ).arg( getSrid() );
       }
       else
       {
@@ -263,7 +263,8 @@ QString QgsGeorefDataPoint::sqlInsertPointsCoverage( int i_srid ) const
   QString s_sql_insert = "";
   QStringList sa_fields = getTextInfo().split( mParseString ); // 10
   if ( sa_fields.count() == 7 )
-  { // SELECT id_gcp, id_gcp_coverage, name, notes, pixel_x, pixel_y, srid, point_x, point_y, order_selected, gcp_enable, gcp_text, gcp_pixel, gcp_point
+  {
+    // SELECT id_gcp, id_gcp_coverage, name, notes, pixel_x, pixel_y, srid, point_x, point_y, order_selected, gcp_enable, gcp_text, gcp_pixel, gcp_point
     QString sPointsTableName = sa_fields.at( 2 );
     switch ( getResultType() )
     {
@@ -273,14 +274,14 @@ QString QgsGeorefDataPoint::sqlInsertPointsCoverage( int i_srid ) const
         s_sql_insert += QString( "'%1' AS name," ).arg( sa_fields.at( 3 ) );
         s_sql_insert += QString( "'%1' AS notes," ).arg( sa_fields.at( 4 ) );
         s_sql_insert += QString( "%1 AS srid," ).arg( getSrid() );
-        s_sql_insert += QString( "%1 AS gcp_enable," ).arg(( int )isEnabled() );
+        s_sql_insert += QString( "%1 AS gcp_enable," ).arg( ( int )isEnabled() );
         s_sql_insert += QString( "%1 AS order_selected," ).arg( sa_fields.at( 5 ) );
         s_sql_insert += QString( "'%1' AS gcp_text," ).arg( sa_fields.at( 6 ) );
         s_sql_insert += QString( "%1 AS gcp_pixel," ).arg( GeomFromEWKT( 0 ) );
         s_sql_insert += QString( "%1 AS gcp_point" ).arg( GeomFromEWKT( 1, i_srid ) );
         break;
       case 2: // UPDATE
-        s_sql_insert  = QString( "UPDATE \"%1\" SET gcp_point=%2,name='%3', notes='%4', gcp_text='%5' WHERE (id_gcp=%6);" ).arg( sPointsTableName ).arg( GeomFromEWKT( 1 , i_srid) ).arg( sa_fields.at( 3 ) ).arg( sa_fields.at( 4 ) ).arg( sa_fields.at( 6 ) ).arg( sa_fields.at( 0 ) );
+        s_sql_insert  = QString( "UPDATE \"%1\" SET gcp_point=%2,name='%3', notes='%4', gcp_text='%5' WHERE (id_gcp=%6);" ).arg( sPointsTableName ).arg( GeomFromEWKT( 1, i_srid ) ).arg( sa_fields.at( 3 ) ).arg( sa_fields.at( 4 ) ).arg( sa_fields.at( 6 ) ).arg( sa_fields.at( 0 ) );
         break;
     }
   }

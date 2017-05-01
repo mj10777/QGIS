@@ -20,7 +20,7 @@
 #include <cfloat>
 #include <cmath>
 
-QgsResidualPlotItem::QgsResidualPlotItem( QgsComposition* c ): QgsComposerItem( c )
+QgsResidualPlotItem::QgsResidualPlotItem( QgsComposition *c ): QgsComposerItem( c )
 {
 
 }
@@ -30,7 +30,7 @@ QgsResidualPlotItem::~QgsResidualPlotItem()
 
 }
 
-void QgsResidualPlotItem::paint( QPainter* painter, const QStyleOptionGraphicsItem* itemStyle, QWidget* pWidget )
+void QgsResidualPlotItem::paint( QPainter *painter, const QStyleOptionGraphicsItem *itemStyle, QWidget *pWidget )
 {
   Q_UNUSED( itemStyle );
   Q_UNUSED( pWidget );
@@ -147,7 +147,7 @@ void QgsResidualPlotItem::paint( QPainter* painter, const QStyleOptionGraphicsIt
   }
 }
 
-double QgsResidualPlotItem::maxMMToPixelRatioForGCP( const QgsGeorefDataPoint* dataPoint, double pixelXMM, double pixelYMM )
+double QgsResidualPlotItem::maxMMToPixelRatioForGCP( const QgsGeorefDataPoint *dataPoint, double pixelXMM, double pixelYMM )
 {
   if ( !dataPoint )
   {
@@ -208,14 +208,14 @@ double QgsResidualPlotItem::maxMMToPixelRatioForGCP( const QgsGeorefDataPoint* d
   }
 }
 
-bool QgsResidualPlotItem::writeXML( QDomElement& elem, QDomDocument & doc ) const
+bool QgsResidualPlotItem::writeXML( QDomElement &elem, QDomDocument &doc ) const
 {
   Q_UNUSED( elem );
   Q_UNUSED( doc );
   return false;
 }
 
-bool QgsResidualPlotItem::readXML( const QDomElement& itemElem, const QDomDocument& doc )
+bool QgsResidualPlotItem::readXML( const QDomElement &itemElem, const QDomDocument &doc )
 {
   Q_UNUSED( itemElem );
   Q_UNUSED( doc );

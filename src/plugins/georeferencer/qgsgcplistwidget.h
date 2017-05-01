@@ -64,20 +64,22 @@ class QgsGCPListWidget : public QTableView
     void setLegacyMode( int iLegacyMode );
     void setGCPList( QgsGCPList *theGCPList );
     void setGeorefTransform( QgsGeorefTransform *theGeorefTransform );
-    // QgsGCPList *gcpList() { return mGCPList; }
-    QgsGCPList* getGCPList() { return mGCPListModel->getGCPList(); }
+    QgsGCPList *getGCPList() { return mGCPListModel->getGCPList(); }
     void updateGCPList();
     void closeEditors();
+
     /**
      * Informs the caller if any Update, Adding or Delete have been made since the last Update.
      * \return true or false (value of mIsDirty)
      */
     bool isDirty() { return mGCPListModel->isDirty(); }
+
     /**
      * Informs the caller if any changes have been made since the Initial loading of Point-Pairs.
      * \return true or false (value of mHasChanged)
      */
     bool hasChanged() { return mGCPListModel->hasChanged(); }
+
     /**
      * Informs QgsGCPList (when true) that the Initial loading of Point-Pairs has been compleated
      * \param true or false
@@ -85,6 +87,7 @@ class QgsGCPListWidget : public QTableView
     void setChanged( bool bChanged ) { mGCPListModel->setChanged( bChanged ); }
     bool transformUpdated() { return mGCPListModel->transformUpdated(); }
     bool mapUnitsPossible() { return mGCPListModel->mapUnitsPossible(); }
+
     /**
      * Builds List of Map/Pixel Point in List that are enabled
      * \param mapCoords to store the Map-points
@@ -92,19 +95,22 @@ class QgsGCPListWidget : public QTableView
      * \return nullptr if the id was not found, otherwise Point of the fiven id
      */
     void createGCPVectors( QVector<QgsPoint> &mapCoords, QVector<QgsPoint> &pixelCoords ) { return  mGCPListModel->createGCPVectors( mapCoords, pixelCoords ); }
+
     /**
      * Retrieve Data-Point pair in List
      *  - added to insure that a specific Point can be retrieved
      * \param id_gcp (either id_gcp of the database OR a count whlie loading .points file) to search for and update
      * \return nullptr if the id was not found, otherwise Point of the given id
      */
-    QgsGeorefDataPoint* getDataPoint( int id_gcp )   { return mGCPListModel->getDataPoint( id_gcp ); }
+    QgsGeorefDataPoint *getDataPoint( int id_gcp )   { return mGCPListModel->getDataPoint( id_gcp ); }
+
     /**
      * Add a Data-Point pair to the List
      * \param dataPoint
      * \return truealways
      */
-    bool addDataPoint( QgsGeorefDataPoint* dataPoint ) { return mGCPListModel->addDataPoint( dataPoint ); }
+    bool addDataPoint( QgsGeorefDataPoint *dataPoint ) { return mGCPListModel->addDataPoint( dataPoint ); }
+
     /**
      * Update Data-Point pait in List
      *  - added to avoid reloading all the points again
@@ -114,6 +120,7 @@ class QgsGCPListWidget : public QTableView
      * \return true if the id was found, otherwise false
      */
     bool updateDataPoint( int id_gcp, bool bPointMap, QgsPoint updatePoint )  { return  mGCPListModel->updateDataPoint( id_gcp, bPointMap, updatePoint ); }
+
     /**
      * Remove Data-Point pair in List
      *  - added to avoid reloading all the points again
@@ -121,6 +128,7 @@ class QgsGCPListWidget : public QTableView
      * \return true if the id was found, otherwise false
      */
     bool removeDataPoint( int id_gcp )  { return  mGCPListModel->removeDataPoint( id_gcp ); }
+
     /**
      * Calculates root mean squared error for the currently active
      * ground control points and transform method.
@@ -129,38 +137,45 @@ class QgsGCPListWidget : public QTableView
      * \param error out: the mean error
      * \return true in case of success
      */
-    bool calculateMeanError( double& error ) const { return mGCPListModel->calculateMeanError( error ); }
+    bool calculateMeanError( double &error ) const { return mGCPListModel->calculateMeanError( error ); }
+
     /**
      * Set mGcpDbData for Spatialite Gcp-Support
      * \param parmsGcpDbData which contains all needed information to use Spatialite Gcp-Support
      * \param bClear clear the list
      */
-    void setGcpDbData( QgsSpatiaLiteProviderGcpUtils::GcpDbData* parmsGcpDbData, bool bClear ) { mGCPListModel->setGcpDbData( parmsGcpDbData, bClear ); };
+    void setGcpDbData( QgsSpatiaLiteProviderGcpUtils::GcpDbData *parmsGcpDbData, bool bClear ) { mGCPListModel->setGcpDbData( parmsGcpDbData, bClear ); };
+
     /**
      * Return mGcpDbData for Spatialite Gcp-Support
      * \return mGcpDbDatawhich contains all needed information to use Spatialite Gcp-Support
      */
-    QgsSpatiaLiteProviderGcpUtils::GcpDbData* getGcpDbData() { return mGCPListModel->getGcpDbData(); }
+    QgsSpatiaLiteProviderGcpUtils::GcpDbData *getGcpDbData() { return mGCPListModel->getGcpDbData(); }
+
     /**
      * Remove all Data-Points
      *  - set to isDirty
      */
     void clearDataPoints() {mGCPListModel->clearDataPoints(); };
+
     /**
      * Return amount of DataPoints
      *  - Enabled and Disabled
      */
     int countDataPoints() {return mGCPListModel->countDataPoints(); };
+
     /**
      * Return amount of enabled DataPoints
      *  - Enabled only
      */
     int countDataPointsEnabled() {return mGCPListModel->countDataPointsEnabled(); };
+
     /**
      * Return amount of disabled DataPoints
      *  - Disabled only
      */
     int countDataPointsDisabled() {return mGCPListModel->countDataPointsDisabled(); };
+
     /**
      * Search Point in List
      *  - find a QPoint inside the List
@@ -183,7 +198,7 @@ class QgsGCPListWidget : public QTableView
      */
     bool searchDataPoint( QgsPoint searchPoint, bool bPointMap = true, double epsilon = 0.5, int *id_gcp = nullptr, double *distance = nullptr, int *iResultType = nullptr )  {return mGCPListModel->searchDataPoint( searchPoint, bPointMap, epsilon, id_gcp, distance, iResultType ); };
     bool avoidUnneededUpdates() {return mGCPListModel->avoidUnneededUpdates();};
-    void setAvoidUnneededUpdates(bool bAvoidUnneededUpdates) {mGCPListModel->setAvoidUnneededUpdates(bAvoidUnneededUpdates);};
+    void setAvoidUnneededUpdates( bool bAvoidUnneededUpdates ) {mGCPListModel->setAvoidUnneededUpdates( bAvoidUnneededUpdates );};
   public slots:
     // This slot is called by the list view if an item is double-clicked
     void itemDoubleClicked( QModelIndex index );

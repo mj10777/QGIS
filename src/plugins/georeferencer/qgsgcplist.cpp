@@ -16,13 +16,13 @@
 #include "qgsgcplist.h"
 
 QgsGCPList::QgsGCPList()
-    : QList<QgsGeorefDataPoint *>()
+  : QList<QgsGeorefDataPoint *>()
 {
 }
 
 QgsGCPList::QgsGCPList( const QgsGCPList &list )
-    : QList<QgsGeorefDataPoint *>()
-    , mHasChanged( true )
+  : QList<QgsGeorefDataPoint *>()
+  , mHasChanged( true )
 {
   clear();
   QgsGCPList::const_iterator it = list.constBegin();
@@ -48,7 +48,7 @@ void QgsGCPList::createGCPVectors( QVector<QgsPoint> &mapCoords, QVector<QgsPoin
     }
   }
 }
-QgsGeorefDataPoint* QgsGCPList::getDataPoint( int id_gcp )
+QgsGeorefDataPoint *QgsGCPList::getDataPoint( int id_gcp )
 {
   for ( int i = 0; i < sizeAll(); i++ )
   {
@@ -60,7 +60,7 @@ QgsGeorefDataPoint* QgsGCPList::getDataPoint( int id_gcp )
   }
   return nullptr;
 }
-bool QgsGCPList::addDataPoint( QgsGeorefDataPoint* dataPoint )
+bool QgsGCPList::addDataPoint( QgsGeorefDataPoint *dataPoint )
 {
   append( dataPoint );
   return setDirty();
@@ -87,7 +87,8 @@ bool QgsGCPList::removeDataPoint( int id_gcp )
   return b_hit;
 }
 bool QgsGCPList::updateDataPoint( int id_gcp, bool bPointMap, QgsPoint updatePoint )
-{ // iPointType: 0=pixel ; 1 = map
+{
+  // iPointType: 0=pixel ; 1 = map
   bool b_hit = false;
   QgsGeorefDataPoint *update_dataPoint = getDataPoint( id_gcp );
   if ( update_dataPoint )
@@ -106,7 +107,8 @@ bool QgsGCPList::updateDataPoint( int id_gcp, bool bPointMap, QgsPoint updatePoi
   return b_hit;
 }
 bool QgsGCPList::searchDataPoint( QgsPoint searchPoint, bool bPointMap, double epsilon, int *id_gcp, double *distance, int *iResultType )
-{ // iPointType: 0=pixel ; 1 = map
+{
+  // iPointType: 0=pixel ; 1 = map
   bool b_hit = false;
   int i_search_id_gcp = 0;
   double search_distance = DBL_MAX;
@@ -142,9 +144,11 @@ bool QgsGCPList::searchDataPoint( QgsPoint searchPoint, bool bPointMap, double e
       }
     }
     if ( check_distance < search_distance )
-    { // The shortest distance will be returned
+    {
+      // The shortest distance will be returned
       if ( i_search_result_type != 1 )
-      { // the first exact match will be returned
+      {
+        // the first exact match will be returned
         search_distance = check_distance;
         i_search_result_type = i_check_result_type;
         i_search_id_gcp = i_check_id;
@@ -174,14 +178,15 @@ int QgsGCPList::size()
     return mCountEnabled;
   }
   if ( !mIsDirty )
-  { //  no need to be recalulated since 'mIsDirty' is not true
+  {
+    //  no need to be recalulated since 'mIsDirty' is not true
     return mCountEnabled;
   }
   mCountEnabled = 0;
   const_iterator it = begin();
   while ( it != end() )
   {
-    if (( *it )->isEnabled() )
+    if ( ( *it )->isEnabled() )
       mCountEnabled++;
     ++it;
   }
@@ -193,7 +198,7 @@ int QgsGCPList::sizeAll() const
   return QList<QgsGeorefDataPoint *>::size();
 }
 
-QgsGCPList &QgsGCPList::operator =( const QgsGCPList & list )
+QgsGCPList &QgsGCPList::operator =( const QgsGCPList &list )
 {
   clear();
   QgsGCPList::const_iterator it = list.constBegin();

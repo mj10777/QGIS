@@ -55,6 +55,7 @@ class QgsRasterLayer;
 class QgsSpatiaLiteProviderGcpUtils
 {
   public:
+
     /**
      * ConvertUnits [Length unit conversion]
      *  - based in valued used in Spatialite [gg_const.h]
@@ -63,35 +64,36 @@ class QgsSpatiaLiteProviderGcpUtils
      */
     enum ConvertUnits
     {
-      Kilometer=0,
-      Meter=1,
-      Decimeter=2,
-      Centimeter=3,
-      Millimeter=4,
-      International_Nautical_Mile=5,
-      Inch=6,
-      Feet=7,
-      Yard=8,
-      Mile=9,
-      Fathom=10,
-      Chain=11,
-      Link=12,
-      US_Inch=13,
-      US_Feet=14,
-      US_Yard=15,
-      US_Chain=16,
-      US_Mile=17,
-      Indian_Yard=18,
-      Indian_Feet=19,
-      Indian_Chain=20
+      Kilometer = 0,
+      Meter = 1,
+      Decimeter = 2,
+      Centimeter = 3,
+      Millimeter = 4,
+      International_Nautical_Mile = 5,
+      Inch = 6,
+      Feet = 7,
+      Yard = 8,
+      Mile = 9,
+      Fathom = 10,
+      Chain = 11,
+      Link = 12,
+      US_Inch = 13,
+      US_Feet = 14,
+      US_Yard = 15,
+      US_Chain = 16,
+      US_Mile = 17,
+      Indian_Yard = 18,
+      Indian_Feet = 19,
+      Indian_Chain = 20
     };
+
     /**
      * ConvertLenth [converting length from one unit to another]
      *  - based on Spatialite function gaiaConvertLength [gg_geodesic.c]
      * \see ConvertUnits
      * \since QGIS 3.0
      */
-    static bool ConvertLength(double inputValue, QgsSpatiaLiteProviderGcpUtils::ConvertUnits unitFrom, QgsSpatiaLiteProviderGcpUtils::ConvertUnits unitTo, double* outputValue );
+    static bool ConvertLength( double inputValue, QgsSpatiaLiteProviderGcpUtils::ConvertUnits unitFrom, QgsSpatiaLiteProviderGcpUtils::ConvertUnits unitTo, double *outputValue );
 
     /**
      * Structure to transfer Data between an using application and the static functions
@@ -110,90 +112,90 @@ class QgsSpatiaLiteProviderGcpUtils
     struct GcpDbData
     {
       GcpDbData( QString sDatabaseFilename, QString sCoverageName = QString::null, int i_srid = INT_MIN )
-          : mGcpDatabaseFileName( sDatabaseFilename )
-          , mGcpMasterDatabaseFileName( QString::null )
-          , mGcpCoverageName( sCoverageName )
-          , mGcpSrid( i_srid )
-          , mGcpMasterSrid( -1 )
-          , mGcpCoverageTitle( "" )
-          , mGcpCoverageAbstract( "" )
-          , mGcpCoverageCopyright( "" )
-          , mGcpCoverageMapDate( "" )
-          , mGcpPointsTableName( QString::null )
-          , mLayer( nullptr )
-          , mGcpEnabled( false )
-          , mInputPoint( QgsPoint( 0.0, 0.0 ) )
-          , mToPixel( false )
-          , mOrder( 0 )
-          , mReCompute( true )
-          , mIdGcp( -1 )
-          , mIdGcpCoverage( -1 )
-          , mIdGcpCutline( -1 )
-          , mTransformParam( -1 )
-          , mResamplingMethod( "Lanczos" )
-          , mRasterYear( 0 )
-          , mRasterScale( 0 )
-          , mRasterNodata( -1 )
-          , mCompressionMethod( "DEFLATE" )
-          , mGcpPointsFileName( QString::null )
-          , mGcpBaseFileName( QString::null )
-          , mRasterFilePath( QString::null )
-          , mRasterFileName( QString::null )
-          , mModifiedRasterFileName( QString::null )
-          , mGcpCoverageNameBase( QString::null )
-          , mError( QString::null )
-          , mSqlDump( false )
-          , mDatabaseDump( false )
-          , mDatabaseValid( false )
-          , mParseString( ";#;#" )
-          , spatialite_cache( nullptr )
-          , db_handle( nullptr )
-          , mUsedDatabaseFilename( QString::null )
-          , mUsedDatabaseFilenameCount( 0 )
-          , mGcpMasterArea( 5 )
+        : mGcpDatabaseFileName( sDatabaseFilename )
+        , mGcpMasterDatabaseFileName( QString::null )
+        , mGcpCoverageName( sCoverageName )
+        , mGcpSrid( i_srid )
+        , mGcpMasterSrid( -1 )
+        , mGcpCoverageTitle( "" )
+        , mGcpCoverageAbstract( "" )
+        , mGcpCoverageCopyright( "" )
+        , mGcpCoverageMapDate( "" )
+        , mGcpPointsTableName( QString::null )
+        , mLayer( nullptr )
+        , mGcpEnabled( false )
+        , mInputPoint( QgsPoint( 0.0, 0.0 ) )
+        , mToPixel( false )
+        , mOrder( 0 )
+        , mReCompute( true )
+        , mIdGcp( -1 )
+        , mIdGcpCoverage( -1 )
+        , mIdGcpCutline( -1 )
+        , mTransformParam( -1 )
+        , mResamplingMethod( "Lanczos" )
+        , mRasterYear( 0 )
+        , mRasterScale( 0 )
+        , mRasterNodata( -1 )
+        , mCompressionMethod( "DEFLATE" )
+        , mGcpPointsFileName( QString::null )
+        , mGcpBaseFileName( QString::null )
+        , mRasterFilePath( QString::null )
+        , mRasterFileName( QString::null )
+        , mModifiedRasterFileName( QString::null )
+        , mGcpCoverageNameBase( QString::null )
+        , mError( QString::null )
+        , mSqlDump( false )
+        , mDatabaseDump( false )
+        , mDatabaseValid( false )
+        , mParseString( ";#;#" )
+        , spatialite_cache( nullptr )
+        , db_handle( nullptr )
+        , mUsedDatabaseFilename( QString::null )
+        , mUsedDatabaseFilenameCount( 0 )
+        , mGcpMasterArea( 5 )
       {}
       GcpDbData( QString sDatabaseFilename, QString sCoverageName, int i_srid, QString sPointsTableName,  QgsRasterLayer *rasterLayer, bool bGcpEnabled = false )
-          : mGcpDatabaseFileName( sDatabaseFilename )
-          , mGcpMasterDatabaseFileName( QString::null )
-          , mGcpCoverageName( sCoverageName )
-          , mGcpSrid( i_srid )
-          , mGcpMasterSrid( -1 )
-          , mGcpCoverageTitle( "" )
-          , mGcpCoverageAbstract( "" )
-          , mGcpCoverageCopyright( "" )
-          , mGcpCoverageMapDate( "" )
-          , mGcpPointsTableName( sPointsTableName )
-          , mLayer( rasterLayer )
-          , mGcpEnabled( bGcpEnabled )
-          , mInputPoint( QgsPoint( 0.0, 0.0 ) )
-          , mToPixel( false )
-          , mOrder( 0 )
-          , mReCompute( true )
-          , mIdGcp( -1 )
-          , mIdGcpCoverage( -1 )
-          , mIdGcpCutline( -1 )
-          , mTransformParam( -1 )
-          , mResamplingMethod( "Lanczos" )
-          , mRasterYear( 0 )
-          , mRasterScale( 0 )
-          , mRasterNodata( -1 )
-          , mCompressionMethod( "DEFLATE" )
-          , mGcpPointsFileName( QString::null )
-          , mGcpBaseFileName( QString::null )
-          , mRasterFilePath( QString::null )
-          , mRasterFileName( QString::null )
-          , mModifiedRasterFileName( QString::null )
-          , mGcpCoverageNameBase( QString::null )
-          , mError( QString::null )
-          , mSqlDump( false )
-          , mDatabaseDump( false )
-          , mDatabaseValid( false )
-          , mParseString( ";#;#" )
-          , spatialite_cache( nullptr )
-          , db_handle( nullptr )
-          , mUsedDatabaseFilename( QString::null )
-          , mUsedDatabaseFilenameCount( 0 )
-          , mGcpMasterArea( 5 )
+        : mGcpDatabaseFileName( sDatabaseFilename )
+        , mGcpMasterDatabaseFileName( QString::null )
+        , mGcpCoverageName( sCoverageName )
+        , mGcpSrid( i_srid )
+        , mGcpMasterSrid( -1 )
+        , mGcpCoverageTitle( "" )
+        , mGcpCoverageAbstract( "" )
+        , mGcpCoverageCopyright( "" )
+        , mGcpCoverageMapDate( "" )
+        , mGcpPointsTableName( sPointsTableName )
+        , mLayer( rasterLayer )
+        , mGcpEnabled( bGcpEnabled )
+        , mInputPoint( QgsPoint( 0.0, 0.0 ) )
+        , mToPixel( false )
+        , mOrder( 0 )
+        , mReCompute( true )
+        , mIdGcp( -1 )
+        , mIdGcpCoverage( -1 )
+        , mIdGcpCutline( -1 )
+        , mTransformParam( -1 )
+        , mResamplingMethod( "Lanczos" )
+        , mRasterYear( 0 )
+        , mRasterScale( 0 )
+        , mRasterNodata( -1 )
+        , mCompressionMethod( "DEFLATE" )
+        , mGcpPointsFileName( QString::null )
+        , mGcpBaseFileName( QString::null )
+        , mRasterFilePath( QString::null )
+        , mRasterFileName( QString::null )
+        , mModifiedRasterFileName( QString::null )
+        , mGcpCoverageNameBase( QString::null )
+        , mError( QString::null )
+        , mSqlDump( false )
+        , mDatabaseDump( false )
+        , mDatabaseValid( false )
+        , mParseString( ";#;#" )
+        , spatialite_cache( nullptr )
+        , db_handle( nullptr )
+        , mUsedDatabaseFilename( QString::null )
+        , mUsedDatabaseFilenameCount( 0 )
+        , mGcpMasterArea( 5 )
       {}
 
       QString mGcpDatabaseFileName;
@@ -234,12 +236,13 @@ class QgsSpatiaLiteProviderGcpUtils
       QString mParseString;
       QMap<int, QString> gcp_coverages;
       void *spatialite_cache;
-      sqlite3* db_handle;
+      sqlite3 *db_handle;
       QString mUsedDatabaseFilename;
       int mUsedDatabaseFilenameCount;
       QMap<QString, QString> map_providertags;
       double mGcpMasterArea;
     };
+
     /**
      * Creates a Spatialite-Database storing the Gcp-Points
      *  A 'gcp_convert' TABLE can also be created to use the Spatialite GCP_Transform/Compute logic
@@ -260,7 +263,8 @@ class QgsSpatiaLiteProviderGcpUtils
      * \return true if database exists
      * \since QGIS 3.0
      */
-    static bool createGcpDb( GcpDbData* parmsGcpDbData );
+    static bool createGcpDb( GcpDbData *parmsGcpDbData );
+
     /**
      * Updates the gcp_coverage TABLE
      *  - General Data about the coverage will be stored
@@ -283,7 +287,8 @@ class QgsSpatiaLiteProviderGcpUtils
      * \return true if database exists
      * \since QGIS 3.0
      */
-    static bool updateGcpDb( GcpDbData* parmsGcpDbData );
+    static bool updateGcpDb( GcpDbData *parmsGcpDbData );
+
     /**
      * Stores the Thin Plate Spline/Polynomial Coefficients of the Gcp-Points
      *  using Spatialite GCP_Transform/Compute
@@ -298,7 +303,8 @@ class QgsSpatiaLiteProviderGcpUtils
      * \return true if database exists
      * \since QGIS 3.0
      */
-    static bool updateGcpCompute( GcpDbData* parmsGcpDbData );
+    static bool updateGcpCompute( GcpDbData *parmsGcpDbData );
+
     /**
      * Converts a Geometry based on the values given by Polynomial Coefficients of the Gcp-Points
      *  using Spatialite GCP_Transform/Compute
@@ -313,7 +319,8 @@ class QgsSpatiaLiteProviderGcpUtils
      * \return true if database exists
      * \since QGIS 3.0
      */
-    static bool updateGcpTranslate( GcpDbData* parmsGcpDbData );
+    static bool updateGcpTranslate( GcpDbData *parmsGcpDbData );
+
     /**
      * Convert Pixel/Map value to Map/Pixel value
      *  using Spatialite GCP_Transform/Compute
@@ -333,7 +340,8 @@ class QgsSpatiaLiteProviderGcpUtils
      * \return QgsPoint of result (0,0 when invalid)
      * \since QGIS 3.0
      */
-    static QgsPoint getGcpConvert( GcpDbData* parmsGcpDbData );
+    static QgsPoint getGcpConvert( GcpDbData *parmsGcpDbData );
+
     /**
      * Create an empty Gcp-Master Database
      *  - a Database to be used to reference POINTs to assist while Georeferencing
@@ -374,7 +382,8 @@ class QgsSpatiaLiteProviderGcpUtils
      * \return true if database exists
      * \since QGIS 3.0
      */
-    static bool createGcpMasterDb( GcpDbData* parmsGcpDbData );
+    static bool createGcpMasterDb( GcpDbData *parmsGcpDbData );
+
     /**
      * Bulk INSERT (or UPDATE) of Gcp-coverages Points TABLE
      *  - execute INSERT (or UPDATE)   commands stored in
@@ -395,7 +404,8 @@ class QgsSpatiaLiteProviderGcpUtils
      * \return true if all commands where executed correctly
      * \since QGIS 3.0
      */
-    static bool bulkGcpPointsInsert( GcpDbData* parmsGcpDbData );
+    static bool bulkGcpPointsInsert( GcpDbData *parmsGcpDbData );
+
     /**
      * Given a meters Map-Unit value
      *  - a realistic Map-Unit value for the srid used will be returned
@@ -409,8 +419,9 @@ class QgsSpatiaLiteProviderGcpUtils
      * \return Map-Unit for the given srid
      * \since QGIS 3.0
      */
-    static double metersToMapPoint( GcpDbData* parmsGcpDbData );
+    static double metersToMapPoint( GcpDbData *parmsGcpDbData );
   private:
+
     /**
      * Creates sql to CREATE a 'gcp_points_||gcp_coverage' TABLE, TRIGGERS and VIEWs for the coresponding gcp_coverage entry
      *  - goal is the maintainence of the field-name syntax is in one place
@@ -422,7 +433,8 @@ class QgsSpatiaLiteProviderGcpUtils
      * \return sa_sql_commands QStringList of all sql-commands to be executed
      * \since QGIS 3.0
      */
-    static QStringList createGcpSqlPointsCommands( GcpDbData* parmsGcpDbData, QStringList listTables );
+    static QStringList createGcpSqlPointsCommands( GcpDbData *parmsGcpDbData, QStringList listTables );
+
     /**
      * Creates sql for gcp_coverage, gcp_compute and cutline TABLEs
      *  - goal is the maintainence of the field-name syntax is in one place
@@ -455,7 +467,8 @@ class QgsSpatiaLiteProviderGcpUtils
      * \return sa_sql_commands QStringList of all sql-commands to be executed
      * \since QGIS 3.0
      */
-    static QStringList createGcpSqlCoveragesCommands( GcpDbData* parmsGcpDbData, QStringList listTables );
+    static QStringList createGcpSqlCoveragesCommands( GcpDbData *parmsGcpDbData, QStringList listTables );
+
     /**
      * Creates sql for gcp_coverage, gcp_compute and cutline TABLEs
      *  - goal is the maintainence of the field-name syntax is in one place
@@ -468,7 +481,8 @@ class QgsSpatiaLiteProviderGcpUtils
      * \return sa_sql_commands QStringList of all sql-commands to be executed
      * \since QGIS 3.0
      */
-    static QStringList createGcpSqlMasterCommands( GcpDbData* parmsGcpDbData, QStringList listTables );
+    static QStringList createGcpSqlMasterCommands( GcpDbData *parmsGcpDbData, QStringList listTables );
+
     /**
      * Write Sql-Script to file
      *  - dealing with common errors that may occur
@@ -490,6 +504,7 @@ class QgsSpatiaLiteProviderGcpUtils
      * \since QGIS 3.0
      */
     static QFile::FileError writeGcpSqlDump( QString sSourceFilename, QString sSqlOutput = QString::null, QString sFileExtention = "sql" );
+
     /**
      * Retrieve last use Segquence Number of TABLE
      *  - retrieve last used Primary-Key value after INSERT
@@ -499,7 +514,8 @@ class QgsSpatiaLiteProviderGcpUtils
      * \return id_seq  last used Primary-Key value for the given TABLE
      * \since QGIS 3.0
      */
-    static int getSqliteSequence( GcpDbData* parmsGcpDbData, QString sTablename );
+    static int getSqliteSequence( GcpDbData *parmsGcpDbData, QString sTablename );
+
     /**
      * Creates a new Spatialite-Database connection to a specific Database
      *  - opens sqlite3 connection with OPEN READWRITE and CREATE
@@ -528,7 +544,8 @@ class QgsSpatiaLiteProviderGcpUtils
      * \return SQLITE_OK or SQLITE_MISUSE see above
      * \since QGIS 3.0
      */
-    static int spatialiteInitEx( GcpDbData* parmsGcpDbData, QString sDatabaseFilename );
+    static int spatialiteInitEx( GcpDbData *parmsGcpDbData, QString sDatabaseFilename );
+
     /**
      * Closes a Spatialite-Database connection to a specific Database
      *  - close sqlite3 connection will be called
@@ -546,7 +563,8 @@ class QgsSpatiaLiteProviderGcpUtils
      * \return true when  parmsGcpDbData is not NULL
      * \since QGIS 3.0
      */
-    static bool spatialiteShutdown( GcpDbData* parmsGcpDbData );
+    static bool spatialiteShutdown( GcpDbData *parmsGcpDbData );
+
     /**
      * Retrieve TIFFTAG Information from a tiff file and can store the result
      *  TIFFTAG_DOCUMENTNAME, IMAGEDESCRIPTION and COPYWRITE

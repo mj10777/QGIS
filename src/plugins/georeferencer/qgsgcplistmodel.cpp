@@ -25,7 +25,7 @@
 class QgsStandardItem : public QStandardItem
 {
   public:
-    explicit QgsStandardItem( const QString& text ) : QStandardItem( text )
+    explicit QgsStandardItem( const QString &text ) : QStandardItem( text )
     {
       // In addition to the DisplayRole, also set the user role, which is used for sorting.
       // This is needed for numerical sorting to work correctly (otherwise sorting is lexicographic).
@@ -54,9 +54,9 @@ class QgsStandardItem : public QStandardItem
 };
 
 QgsGCPListModel::QgsGCPListModel( QObject *parent, int iLegacyMode )
-    : QStandardItemModel( parent )
-    , mGCPList( new QgsGCPList() )
-    , mLegacyMode( iLegacyMode )
+  : QStandardItemModel( parent )
+  , mGCPList( new QgsGCPList() )
+  , mLegacyMode( iLegacyMode )
 {
   // Use data provided by Qt::UserRole as sorting key (needed for numerical sorting).
   setSortRole( Qt::UserRole );
@@ -111,20 +111,20 @@ void QgsGCPListModel::updateModel()
   }
 
   itemLabels << tr( "Visible" )
-  << tr( "ID" )
-  << tr( "Source X" )
-  << tr( "Source Y" )
-  << tr( "Dest. X" )
-  << tr( "Dest. Y" )
-  << tr( "dX (%1)" ).arg( unitType )
-  << tr( "dY (%1)" ).arg( unitType )
-  << tr( "Residual (%1)" ).arg( unitType )
-  << tr( "distance (%1)" ).arg( "pixels" )
-  << tr( "azimuth (%1)" ).arg( "pixels" )
-  << tr( "WKT (%1)" ).arg( "pixels" )
-  << tr( "distance (%1)" ).arg( "map" )
-  << tr( "azimuth (%1)" ).arg( "map" )
-  << tr( "WKT (%1)" ).arg( "map" );
+             << tr( "ID" )
+             << tr( "Source X" )
+             << tr( "Source Y" )
+             << tr( "Dest. X" )
+             << tr( "Dest. Y" )
+             << tr( "dX (%1)" ).arg( unitType )
+             << tr( "dY (%1)" ).arg( unitType )
+             << tr( "Residual (%1)" ).arg( unitType )
+             << tr( "distance (%1)" ).arg( "pixels" )
+             << tr( "azimuth (%1)" ).arg( "pixels" )
+             << tr( "WKT (%1)" ).arg( "pixels" )
+             << tr( "distance (%1)" ).arg( "map" )
+             << tr( "azimuth (%1)" ).arg( "map" )
+             << tr( "WKT (%1)" ).arg( "map" );
 
   setHorizontalHeaderLabels( itemLabels );
   setRowCount( mGCPList->size() );
@@ -234,7 +234,7 @@ void QgsGCPListModel::updateModel()
     setClean();
   }
 }
-bool QgsGCPListModel::calculateMeanError( double& error ) const
+bool QgsGCPListModel::calculateMeanError( double &error ) const
 {
   if ( mGeorefTransform->transformParametrisation() == QgsGeorefTransform::InvalidTransform )
   {
@@ -267,7 +267,7 @@ bool QgsGCPListModel::calculateMeanError( double& error ) const
 
   // Calculate the root mean square error, adjusted for degrees of freedom of the transform
   // Caveat: The number of DoFs is assumed to be even (as each control point fixes two degrees of freedom).
-  error = sqrt(( sumVxSquare + sumVySquare ) / ( nPointsEnabled - mGeorefTransform->getMinimumGCPCount() ) );
+  error = sqrt( ( sumVxSquare + sumVySquare ) / ( nPointsEnabled - mGeorefTransform->getMinimumGCPCount() ) );
   return true;
 }
 

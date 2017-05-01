@@ -21,13 +21,14 @@
 //-----------------------------------------------------------
 //  QgsSpatiaLiteProviderGcpUtils functions
 //-----------------------------------------------------------
-bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData* parmsGcpDbData )
+bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData *parmsGcpDbData )
 {
   if ( !parmsGcpDbData )
     return false;
   parmsGcpDbData->mDatabaseValid = false;
-  if (( parmsGcpDbData->mGcpDatabaseFileName.isEmpty() ) && ( !parmsGcpDbData->mRasterFileName.isEmpty() ) )
-  { // if no Gcp-Database is given, use the Parent-Directory-Name of the Raster as the default name and store it in that Directory
+  if ( ( parmsGcpDbData->mGcpDatabaseFileName.isEmpty() ) && ( !parmsGcpDbData->mRasterFileName.isEmpty() ) )
+  {
+    // if no Gcp-Database is given, use the Parent-Directory-Name of the Raster as the default name and store it in that Directory
     QFileInfo raster_file( parmsGcpDbData->mRasterFileName );
     parmsGcpDbData->mGcpDatabaseFileName = QString( "%1/%2.maps.gcp.db" ).arg( raster_file.canonicalPath() ).arg( raster_file.absoluteDir().dirName() );
   }
@@ -35,10 +36,12 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData* parmsGcpDbData )
   QString sCoverageName = parmsGcpDbData->mGcpCoverageName;
   bool b_create_empty_database = false;
   bool bDatabaseExists = QFile( sDatabaseFilename ).exists();
-  if (( sCoverageName.isNull() ) || ( sCoverageName == "gcp_coverage" ) )
-  { // Read existing Database and collect all coverages
+  if ( ( sCoverageName.isNull() ) || ( sCoverageName == "gcp_coverage" ) )
+  {
+    // Read existing Database and collect all coverages
     if ( !bDatabaseExists )
-    { // Create new Database
+    {
+      // Create new Database
       b_create_empty_database = true;
     }
     sCoverageName = QString::null;
@@ -67,7 +70,7 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData* parmsGcpDbData )
   // qDebug() << QString( "-I-> QgsSpatiaLiteProviderGcpUtils::createGcpDb -0- GCPdatabaseFileName[%1] " ).arg( sDatabaseFilename );
   // After being opened (with CREATE), the file will exist, so store if it exist now
   //qDebug() << QString( "-I-> QgsSpatiaLiteProviderGcpUtils::createGcpDb[%6] dump[%1] empty[%2] create[%3] coverage[%4] database[%5]" ).arg( parmsGcpDbData->mDatabaseDump ).arg( b_create_empty_database ).arg( bDatabaseExists ).arg( sCoverageName ).arg( sDatabaseFilename ).arg( i_srid );
-  if (( bDatabaseExists ) && ( b_create_empty_database ) )
+  if ( ( bDatabaseExists ) && ( b_create_empty_database ) )
   {
     parmsGcpDbData->mError = QString( "Failed to create database [file exists]: rc=%1 database[%2]" ).arg( 1 ).arg( sDatabaseFilename );
     return false;
@@ -93,7 +96,8 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData* parmsGcpDbData )
   double d_extent_maxx = 0.0;
   double d_extent_maxy = 0.0;
   if ( !sCoverageName.isNull() )
-  { // Reading a gcp_points TABLE
+  {
+    // Reading a gcp_points TABLE
     sPointsTableName = QString( "gcp_points_%1" ).arg( sCoverageName );
     points_file.setFileName( sGcpPointsFileName );
     if ( rasterLayer )
@@ -131,7 +135,8 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData* parmsGcpDbData )
     }
   }
   else
-  { // Reading only the Database gcp-coverages
+  {
+    // Reading only the Database gcp-coverages
     if ( !b_create_empty_database )
     {
       sPointsTableName = QString::null;
@@ -147,16 +152,18 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData* parmsGcpDbData )
       sCompressionMethod = QString::null;
     }
     if ( !bDatabaseExists )
-    { // Database will be created
+    {
+      // Database will be created
       // return bDatabaseExists;
     }
   }
-  if (( !b_create_empty_database ) && ( !bDatabaseExists ) && ( parmsGcpDbData->mDatabaseDump ) )
-  { // Cannot dump a Databse that does not exist
+  if ( ( !b_create_empty_database ) && ( !bDatabaseExists ) && ( parmsGcpDbData->mDatabaseDump ) )
+  {
+    // Cannot dump a Databse that does not exist
     return bDatabaseExists;
   }
   // base on code found in 'QgsOSMDatabase::createSpatialTable'
-  sqlite3* db_handle;
+  sqlite3 *db_handle;
   char *errMsg = nullptr;
   // open database
   int ret = QgsSpatiaLiteProviderGcpUtils::spatialiteInitEx( parmsGcpDbData, sDatabaseFilename );
@@ -164,14 +171,15 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData* parmsGcpDbData )
   {
     parmsGcpDbData->mError = QString( "Failed to open database: rc=%1 database[%2]" ).arg( ret ).arg( sDatabaseFilename );
     if ( ret != SQLITE_MISUSE )
-    { // 'SQLITE_MISUSE': in use with another file, do not close
+    {
+      // 'SQLITE_MISUSE': in use with another file, do not close
       QgsSpatiaLiteProviderGcpUtils::spatialiteShutdown( parmsGcpDbData );
     }
     return false;
   }
   // To simplfy the useage.
   db_handle = parmsGcpDbData->db_handle;
-  sqlite3_stmt* stmt;
+  sqlite3_stmt *stmt;
   // Start TRANSACTION
   ret = sqlite3_exec( db_handle, "BEGIN", NULL, NULL, 0 );
   Q_ASSERT( ret == SQLITE_OK );
@@ -183,7 +191,8 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData* parmsGcpDbData )
   s_sql += QString( " (SELECT count(name) FROM sqlite_master WHERE ((type='table') AND (name='spatial_ref_sys'))) AS has_spatial_ref_sys" );
   ret = sqlite3_prepare_v2( db_handle, s_sql.toUtf8().constData(), -1, &stmt, NULL );
   if ( ret != SQLITE_OK )
-  { //  rc=1 [no such function: HasGCP] is not an error [older spatialite version]
+  {
+    //  rc=1 [no such function: HasGCP] is not an error [older spatialite version]
     if ( QString( "no such function: HasGCP" ).compare( QString( "%1" ).arg( sqlite3_errmsg( db_handle ) ) ) != 0 )
     {
       parmsGcpDbData->mError = QString( "Unable to SELECT HasGCP(): rc=%1 [%2] sql[%3]\n" ).arg( ret ).arg( QString::fromUtf8( sqlite3_errmsg( db_handle ) ) ).arg( s_sql );
@@ -221,7 +230,8 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData* parmsGcpDbData )
     b_spatial_ref_sys_create = true;
   parmsGcpDbData->mGcpEnabled = bGcpEnabled;
   if ( !b_spatial_ref_sys_create )
-  { // no spatial_ref_sys, call InitSpatialMetadata
+  {
+    // no spatial_ref_sys, call InitSpatialMetadata
     s_sql = QString( "SELECT InitSpatialMetadata(0)" );
     ret = sqlite3_exec( db_handle, s_sql.toUtf8().constData(), NULL, NULL, &errMsg );
     if ( ret != SQLITE_OK )
@@ -243,7 +253,8 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData* parmsGcpDbData )
   Q_ASSERT( ret == SQLITE_OK );
   Q_UNUSED( ret );
   if ( !b_gcp_coverage )
-  { // TABLE gcp_coverage does not exist, create it
+  {
+    // TABLE gcp_coverage does not exist, create it
     QStringList listTables; // Format: CREATE_COVERAGE;#;#i_srid
     listTables.append( QString( "%2%1%3" ).arg( parmsGcpDbData->mParseString ).arg( "CREATE_COVERAGE" ).arg( i_srid ) );
     if ( listTables.size() > 0 )
@@ -254,8 +265,9 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData* parmsGcpDbData )
         ret = sqlite3_exec( db_handle, "BEGIN", NULL, NULL, 0 );
         Q_ASSERT( ret == SQLITE_OK );
         Q_UNUSED( ret );
-        for ( int i_list = 0;i_list < sa_sql_commands.size();i_list++ )
-        { // raster entry has been added to gcp_covarage, create corresponding tables
+        for ( int i_list = 0; i_list < sa_sql_commands.size(); i_list++ )
+        {
+          // raster entry has been added to gcp_covarage, create corresponding tables
           s_sql = sa_sql_commands.at( i_list );
           if ( parmsGcpDbData->mSqlDump )
           {
@@ -289,13 +301,16 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData* parmsGcpDbData )
     }
   }
   else
-  { // gcp_coverages exists, check for for raster entry [gcp_compute should exist]
+  {
+    // gcp_coverages exists, check for for raster entry [gcp_compute should exist]
     if ( parmsGcpDbData->mSqlDump )
-    { // Should only run when creating a new Database
+    {
+      // Should only run when creating a new Database
       parmsGcpDbData->mSqlDump = false;
     }
-    if (( bGcpEnabled ) && ( !b_gcp_compute ) )
-    { // Database was created without gcp_compute, turn off support
+    if ( ( bGcpEnabled ) && ( !b_gcp_compute ) )
+    {
+      // Database was created without gcp_compute, turn off support
       bGcpEnabled = false;
     }
     // If a gcp_coverage exists, the Database is considered Valid
@@ -308,7 +323,8 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData* parmsGcpDbData )
       Q_UNUSED( ret );
       ret = sqlite3_prepare_v2( db_handle, s_sql.toUtf8().constData(), -1, &stmt, NULL );
       if ( ret != SQLITE_OK )
-      { //  rc=1 [no such table: vector_layers_statistics or gcp_points, 'no such column' for gcp_pixel and gcp_ppoint] is an error
+      {
+        //  rc=1 [no such table: vector_layers_statistics or gcp_points, 'no such column' for gcp_pixel and gcp_ppoint] is an error
         parmsGcpDbData->mError = QString( "Unable to retrieve id_gcp_covarage: rc=%1 [%2] sql[%3]\n" ).arg( ret ).arg( QString::fromUtf8( sqlite3_errmsg( db_handle ) ) ).arg( s_sql );
         qDebug() << QString( "QgsSpatiaLiteProviderGcpUtils::createGcpDb -5- [%1] " ).arg( parmsGcpDbData->mError );
         // End TRANSACTION
@@ -327,9 +343,9 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData* parmsGcpDbData )
         if ( sqlite3_column_type( stmt, 2 ) != SQLITE_NULL )
           iTransformParam = sqlite3_column_int( stmt, 2 );
         if ( sqlite3_column_type( stmt, 3 ) != SQLITE_NULL )
-          sResamplingMethod = QString::fromUtf8(( const char * ) sqlite3_column_text( stmt, 3 ) );
+          sResamplingMethod = QString::fromUtf8( ( const char * ) sqlite3_column_text( stmt, 3 ) );
         if ( sqlite3_column_type( stmt, 4 ) != SQLITE_NULL )
-          sCompressionMethod = QString::fromUtf8(( const char * ) sqlite3_column_text( stmt, 4 ) );
+          sCompressionMethod = QString::fromUtf8( ( const char * ) sqlite3_column_text( stmt, 4 ) );
         if ( sqlite3_column_type( stmt, 5 ) != SQLITE_NULL )
           iRasterNoData = sqlite3_column_int( stmt, 5 );
         if ( sqlite3_column_type( stmt, 6 ) != SQLITE_NULL )
@@ -343,13 +359,15 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData* parmsGcpDbData )
     }
   }
   if ( !sCoverageName.isNull() )
-  { // reading a specific gcp_points TABLE
+  {
+    // reading a specific gcp_points TABLE
     // qDebug() << QString( "-I-> QgsSpatiaLiteProviderGcpUtils::createGcpDb -01- id_gcp_coverage[%2] b_gcp_coverage_create[%3] gcp_points_table_name[%1] " ).arg( sPointsTableName ).arg( id_gcp_coverage ).arg( b_gcp_coverage_create );
     ret = sqlite3_exec( db_handle, "BEGIN", NULL, NULL, 0 );
     Q_ASSERT( ret == SQLITE_OK );
     Q_UNUSED( ret );
     if ( id_gcp_coverage < 0 )
-    { // INSERT raster entry [title, abstract and copyright are taken from the TIFFTAGS (if they exist)]
+    {
+      // INSERT raster entry [title, abstract and copyright are taken from the TIFFTAGS (if they exist)]
       b_import_points = true; // import of .points file only when first created
       s_map_date = QString( "%1-01-01" ).arg( parmsGcpDbData->mRasterYear, 4, 10, QChar( '0' ) );
       s_sql_select_coverages  = QString( "INSERT_COVERAGE%1%2" ).arg( parmsGcpDbData->mParseString ).arg( "VALUES(" );
@@ -383,8 +401,9 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData* parmsGcpDbData )
         QStringList sa_sql_commands = QgsSpatiaLiteProviderGcpUtils::createGcpSqlCoveragesCommands( parmsGcpDbData, listTables );
         if ( sa_sql_commands.size() > 0 )
         {
-          for ( int i_list = 0;i_list < sa_sql_commands.size();i_list++ )
-          { // raster entry is being added to gcp_covarage, create corresponding tables
+          for ( int i_list = 0; i_list < sa_sql_commands.size(); i_list++ )
+          {
+            // raster entry is being added to gcp_covarage, create corresponding tables
             s_sql = sa_sql_commands.at( i_list );
             if ( parmsGcpDbData->mSqlDump )
             {
@@ -405,7 +424,8 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData* parmsGcpDbData )
       s_sql = QString( "SELECT id_gcp_coverage, srid FROM gcp_coverages WHERE (coverage_name='%1')" ).arg( sCoverageName );
       ret = sqlite3_prepare_v2( db_handle, s_sql.toUtf8().constData(), -1, &stmt, NULL );
       if ( ret != SQLITE_OK )
-      { //  rc=1 [no such table: vector_layers_statistics or gcp_points, 'no such column' for gcp_pixel and gcp_ppoint] is an error
+      {
+        //  rc=1 [no such table: vector_layers_statistics or gcp_points, 'no such column' for gcp_pixel and gcp_ppoint] is an error
         parmsGcpDbData->mError = QString( "Unable to retrieve id_gcp_covarage: rc=%1 [%2] sql[%3]\n" ).arg( ret ).arg( QString::fromUtf8( sqlite3_errmsg( db_handle ) ) ).arg( s_sql );
         qDebug() << QString( "QgsSpatiaLiteProviderGcpUtils::createGcpDb -7a- [%1] " ).arg( parmsGcpDbData->mError );
         // End TRANSACTION
@@ -430,11 +450,13 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData* parmsGcpDbData )
       sqlite3_finalize( stmt );
     }
     else
-    { // the gcp_coverages exists, retrieve metadata and update the layer.
+    {
+      // the gcp_coverages exists, retrieve metadata and update the layer.
       s_sql = QString( "SELECT id_gcp_coverage,srid, title, abstract, copyright, map_date FROM gcp_coverages WHERE (coverage_name='%1')" ).arg( sCoverageName );
       ret = sqlite3_prepare_v2( db_handle, s_sql.toUtf8().constData(), -1, &stmt, NULL );
       if ( ret != SQLITE_OK )
-      { //  rc=1 [no such table: vector_layers_statistics or gcp_points, 'no such column' for gcp_pixel and gcp_ppoint] is an error
+      {
+        //  rc=1 [no such table: vector_layers_statistics or gcp_points, 'no such column' for gcp_pixel and gcp_ppoint] is an error
         parmsGcpDbData->mError = QString( "Unable to retrieve id_gcp_covarage: rc=%1 [%2] sql[%3]\n" ).arg( ret ).arg( QString::fromUtf8( sqlite3_errmsg( db_handle ) ) ).arg( s_sql );
         qDebug() << QString( "QgsSpatiaLiteProviderGcpUtils::createGcpDb -7b- [%1] " ).arg( parmsGcpDbData->mError );
         // End TRANSACTION
@@ -451,13 +473,13 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData* parmsGcpDbData )
         if ( sqlite3_column_type( stmt, 1 ) != SQLITE_NULL )
           i_srid = sqlite3_column_int( stmt, 1 );
         if ( sqlite3_column_type( stmt, 2 ) != SQLITE_NULL )
-          s_coverage_title = QString::fromUtf8(( const char * ) sqlite3_column_text( stmt, 2 ) );
+          s_coverage_title = QString::fromUtf8( ( const char * ) sqlite3_column_text( stmt, 2 ) );
         if ( sqlite3_column_type( stmt, 3 ) != SQLITE_NULL )
-          s_coverage_abstract = QString::fromUtf8(( const char * ) sqlite3_column_text( stmt, 3 ) );
+          s_coverage_abstract = QString::fromUtf8( ( const char * ) sqlite3_column_text( stmt, 3 ) );
         if ( sqlite3_column_type( stmt, 4 ) != SQLITE_NULL )
-          s_coverage_copyright = QString::fromUtf8(( const char * ) sqlite3_column_text( stmt, 4 ) );
+          s_coverage_copyright = QString::fromUtf8( ( const char * ) sqlite3_column_text( stmt, 4 ) );
         if ( sqlite3_column_type( stmt, 5 ) != SQLITE_NULL )
-          s_map_date = QString::fromUtf8(( const char * ) sqlite3_column_text( stmt, 5 ) );
+          s_map_date = QString::fromUtf8( ( const char * ) sqlite3_column_text( stmt, 5 ) );
       }
       sqlite3_finalize( stmt );
       if ( rasterLayer )
@@ -471,8 +493,9 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData* parmsGcpDbData )
     ret = sqlite3_exec( db_handle, "COMMIT", NULL, NULL, 0 );
     Q_ASSERT( ret == SQLITE_OK );
     Q_UNUSED( ret );
-    if (( b_gcp_coverage_create ) && ( id_gcp_coverage > 0 ) )
-    { // raster entry has been added to gcp_covarage, create corresponding tables
+    if ( ( b_gcp_coverage_create ) && ( id_gcp_coverage > 0 ) )
+    {
+      // raster entry has been added to gcp_covarage, create corresponding tables
       qDebug() << QString( "-I-> QgsSpatiaLiteProviderGcpUtils::createGcpDb creating gcp tables and views for[%1] seid[%2]" ).arg( sPointsTableName ).arg( i_srid );
       // Start TRANSACTION
       QStringList listTables; // Format: id_gcp_coverage;#;#i_srid;#;#sCoverageName
@@ -483,8 +506,9 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData* parmsGcpDbData )
         ret = sqlite3_exec( db_handle, "BEGIN", NULL, NULL, 0 );
         Q_ASSERT( ret == SQLITE_OK );
         Q_UNUSED( ret );
-        for ( int i_list = 0;i_list < sa_sql_commands.size();i_list++ )
-        { // raster entry has been added to gcp_covarage, create corresponding tables
+        for ( int i_list = 0; i_list < sa_sql_commands.size(); i_list++ )
+        {
+          // raster entry has been added to gcp_covarage, create corresponding tables
           s_sql = sa_sql_commands.at( i_list );
           if ( parmsGcpDbData->mSqlDump )
           {
@@ -518,12 +542,14 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData* parmsGcpDbData )
       }
     }
     if ( id_gcp_coverage <= 0 )
-    { // We have not found the requested Coverage, assume the Database is invalid
+    {
+      // We have not found the requested Coverage, assume the Database is invalid
       parmsGcpDbData->mDatabaseValid = false;
     }
   }
-  if (( bDatabaseExists ) && ( b_gcp_coverage ) )
-  { // if the database already exists, check that '"gcp_pixel' and 'gcp_point' geometries in 'gcp_points' exist and correct the statistics if needed
+  if ( ( bDatabaseExists ) && ( b_gcp_coverage ) )
+  {
+    // if the database already exists, check that '"gcp_pixel' and 'gcp_point' geometries in 'gcp_points' exist and correct the statistics if needed
     // Sanity checks to insure that this is a table we can work with, otherwise return 'db' not found
     // Start TRANSACTION
     ret = sqlite3_exec( db_handle, "BEGIN", NULL, NULL, 0 );
@@ -540,7 +566,8 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData* parmsGcpDbData )
     s_sql += QString( "(SELECT count(id_gcp_coverage) FROM '%1' WHERE gcp_count > 0) AS count_gcp" ).arg( "gcp_coverages" );
     ret = sqlite3_prepare_v2( db_handle, s_sql.toUtf8().constData(), -1, &stmt, NULL );
     if ( ret != SQLITE_OK )
-    { //  rc=1 [no such table: vector_layers_statistics or gcp_points, 'no such column' for gcp_pixel and gcp_ppoint] is an error
+    {
+      //  rc=1 [no such table: vector_layers_statistics or gcp_points, 'no such column' for gcp_pixel and gcp_ppoint] is an error
       parmsGcpDbData->mError = QString( "Unable to check vector_layers_statistics, table gcp_points or geometries: gcp_pixel and gcp_point: rc=%1 [%2] sql[%3]\n" ).arg( ret ).arg( QString::fromUtf8( sqlite3_errmsg( db_handle ) ) ).arg( s_sql );
       qDebug() << QString( "QgsSpatiaLiteProviderGcpUtils::createGcpDb -22- [%1] " ).arg( parmsGcpDbData->mError );
       // End TRANSACTION
@@ -561,12 +588,14 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData* parmsGcpDbData )
     }
     sqlite3_finalize( stmt );
     if ( i_gcp_coverages < 1 )
-    { // gcp_points is empty, don't bother about the statistics
+    {
+      // gcp_points is empty, don't bother about the statistics
       i_pixel_statistics = 1;
       i_point_statistics = 1;
     }
     if ( i_pixel_statistics == 0 )
-    { // should be 1, if not empty
+    {
+      // should be 1, if not empty
       s_sql = QString( "SELECT UpdateLayerStatistics('%1','gcp_pixel')" ).arg( sPointsTableName );
       ret = sqlite3_exec( db_handle, s_sql.toUtf8().constData(), NULL, NULL, &errMsg );
       if ( ret != SQLITE_OK )
@@ -583,7 +612,8 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData* parmsGcpDbData )
       }
     }
     if ( i_point_statistics == 0 )
-    {  // should be 1, if not empty
+    {
+      // should be 1, if not empty
       s_sql = QString( "SELECT UpdateLayerStatistics('%1','gcp_point')" ).arg( sPointsTableName );
       ret = sqlite3_exec( db_handle, s_sql.toUtf8().constData(), NULL, NULL, &errMsg );
       if ( ret != SQLITE_OK )
@@ -607,7 +637,8 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData* parmsGcpDbData )
       s_sql = sa_sql_commands.at( 0 );
       ret = sqlite3_prepare_v2( db_handle, s_sql.toUtf8().constData(), -1, &stmt, NULL );
       if ( ret != SQLITE_OK )
-      { //  rc=1 [no such table: vector_layers_statistics or gcp_points, 'no such column' for gcp_pixel and gcp_point] is an error
+      {
+        //  rc=1 [no such table: vector_layers_statistics or gcp_points, 'no such column' for gcp_pixel and gcp_point] is an error
         parmsGcpDbData->mError = QString( "Unable to query gcp_coverages: rc=%1 [%2] sql[%3]\n" ).arg( ret ).arg( QString::fromUtf8( sqlite3_errmsg( db_handle ) ) ).arg( s_sql );
         qDebug() << QString( "QgsSpatiaLiteProviderGcpUtils::createGcpDb -22- [%1] " ).arg( parmsGcpDbData->mError );
         // End TRANSACTION
@@ -620,10 +651,10 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData* parmsGcpDbData )
       parmsGcpDbData->gcp_coverages.clear();
       while ( sqlite3_step( stmt ) == SQLITE_ROW )
       {
-        if (( sqlite3_column_type( stmt, 0 ) != SQLITE_NULL ) && ( sqlite3_column_type( stmt, 1 ) != SQLITE_NULL ) )
+        if ( ( sqlite3_column_type( stmt, 0 ) != SQLITE_NULL ) && ( sqlite3_column_type( stmt, 1 ) != SQLITE_NULL ) )
         {
           int i_id = sqlite3_column_int( stmt, 0 );
-          QString s_value = QString::fromUtf8(( const char * ) sqlite3_column_text( stmt, 1 ) );
+          QString s_value = QString::fromUtf8( ( const char * ) sqlite3_column_text( stmt, 1 ) );
           parmsGcpDbData->gcp_coverages.insert( i_id, s_value );
         }
       }
@@ -644,8 +675,9 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData* parmsGcpDbData )
     Q_UNUSED( ret );
   }
   // --- Cutline common sql for TABLE creation
-  if (( !b_cutline_geometries_create ) )
-  { // no cutline geometries, create them
+  if ( ( !b_cutline_geometries_create ) )
+  {
+    // no cutline geometries, create them
     // qDebug() << QString( "-I-> QgsSpatiaLiteProviderGcpUtils::createGcpDb creating cutline geomtries for[%1] " ).arg( "points, linestrings, polygons" );
     // Start TRANSACTION
     QStringList listTables; // Format: CREATE_CUTLINES;#;#i_srid
@@ -658,8 +690,9 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData* parmsGcpDbData )
         ret = sqlite3_exec( db_handle, "BEGIN", NULL, NULL, 0 );
         Q_ASSERT( ret == SQLITE_OK );
         Q_UNUSED( ret );
-        for ( int i_list = 0;i_list < sa_sql_commands.size();i_list++ )
-        { // raster entry has been added to gcp_covarage, create corresponding tables
+        for ( int i_list = 0; i_list < sa_sql_commands.size(); i_list++ )
+        {
+          // raster entry has been added to gcp_covarage, create corresponding tables
           s_sql = sa_sql_commands.at( i_list );
           if ( s_sql.contains( QString( "SELECT AddGeometryColumn(" ) ) )
           {
@@ -694,10 +727,12 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData* parmsGcpDbData )
     }
   }
   if ( !sCoverageName.isNull() )
-  { // reading a specific gcp_points TABLE
+  {
+    // reading a specific gcp_points TABLE
     // qDebug() << QString( "-I-> QgsSpatiaLiteProviderGcpUtils::createGcpDb[%1,%2,%3] sGcpPointsFileName[%4] " ).arg( id_gcp_coverage ).arg( b_import_points ).arg( points_file.exists() ).arg( sGcpPointsFileName );
-    if ((( b_import_points ) && ( points_file.exists() ) ) && ( id_gcp_coverage >= 0 ) )
-    { // Reading of '.points' file [for QGIS 3.0: this should NOT not removed]
+    if ( ( ( b_import_points ) && ( points_file.exists() ) ) && ( id_gcp_coverage >= 0 ) )
+    {
+      // Reading of '.points' file [for QGIS 3.0: this should NOT not removed]
       // qDebug() << QString( "-I-> QgsSpatiaLiteProviderGcpUtils::createGcpDb sGcpPointsFileName[%1] " ).arg( sGcpPointsFileName );
       if ( points_file.open( QIODevice::ReadOnly ) )
       {
@@ -712,11 +747,13 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData* parmsGcpDbData )
           line = stream_points.readLine();
           QStringList ls;
           if ( line.contains( QRegExp( "," ) ) ) // in previous format "\t" is delimiter of points in new - ","
-          {  // points from new georeferencer
+          {
+            // points from new georeferencer
             ls = line.split( "," );
           }
           else
-          {  // points from prev georeferencer
+          {
+            // points from prev georeferencer
             ls = line.split( "\t" );
           }
           // QgsPoint mapCoords( ls.at( 0 ).toDouble(), ls.at( 1 ).toDouble() ); // map x,y
@@ -826,8 +863,9 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData* parmsGcpDbData )
       }
     }
   }
-  if (( b_gcp_coverage ) && ( parmsGcpDbData->mDatabaseDump ) && ( parmsGcpDbData->mDatabaseValid ) )
-  { // Dump Database after creation, when requested
+  if ( ( b_gcp_coverage ) && ( parmsGcpDbData->mDatabaseDump ) && ( parmsGcpDbData->mDatabaseValid ) )
+  {
+    // Dump Database after creation, when requested
     // Prevent both DatabaseDump and SqlDump running
     sSqlOutput = QString::null;
     parmsGcpDbData->mSqlDump = false;
@@ -864,7 +902,7 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData* parmsGcpDbData )
     {
       if ( sqlite3_column_type( stmt, 0 ) != SQLITE_NULL )
       {
-        s_sql = QString::fromUtf8(( const char * ) sqlite3_column_text( stmt, 0 ) );
+        s_sql = QString::fromUtf8( ( const char * ) sqlite3_column_text( stmt, 0 ) );
         listTables.append( s_sql );
       }
     }
@@ -874,8 +912,9 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData* parmsGcpDbData )
       sa_sql_commands = QgsSpatiaLiteProviderGcpUtils::createGcpSqlCoveragesCommands( parmsGcpDbData, listTables );
       if ( sa_sql_commands.size() > 0 )
       {
-        for ( int i_list = 0;i_list < sa_sql_commands.size();i_list++ )
-        { // We have no other fields to UPDATE, so fill with an empty string [every 2nd command has no formatting needs]
+        for ( int i_list = 0; i_list < sa_sql_commands.size(); i_list++ )
+        {
+          // We have no other fields to UPDATE, so fill with an empty string [every 2nd command has no formatting needs]
           if ( sa_sql_commands.at( i_list ).contains( "%1" ) )
             s_sql = QString( "%1" ).arg( QString( sa_sql_commands.at( i_list ) ).arg( "" ) );
           else
@@ -907,8 +946,9 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData* parmsGcpDbData )
       sa_sql_commands = QgsSpatiaLiteProviderGcpUtils::createGcpSqlCoveragesCommands( parmsGcpDbData, listTables );
       if ( sa_sql_commands.size() > 0 )
       {
-        for ( int i_list = 0;i_list < sa_sql_commands.size();i_list++ )
-        { // raster entry has been added to gcp_covarage, create corresponding tables
+        for ( int i_list = 0; i_list < sa_sql_commands.size(); i_list++ )
+        {
+          // raster entry has been added to gcp_covarage, create corresponding tables
           s_sql = sa_sql_commands.at( i_list );
           sSqlOutput += QString( "%1\n%2\n" ).arg( s_sql ).arg( s_sql_newline );
         }
@@ -923,8 +963,9 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData* parmsGcpDbData )
       sa_sql_commands = QgsSpatiaLiteProviderGcpUtils::createGcpSqlCoveragesCommands( parmsGcpDbData, listTables );
       if ( sa_sql_commands.size() > 0 )
       {
-        for ( int i_list = 0;i_list < sa_sql_commands.size();i_list++ )
-        { // raster entry has been added to gcp_covarage, create corresponding tables
+        for ( int i_list = 0; i_list < sa_sql_commands.size(); i_list++ )
+        {
+          // raster entry has been added to gcp_covarage, create corresponding tables
           s_sql = sa_sql_commands.at( i_list );
           if ( s_sql.contains( QString( "SELECT AddGeometryColumn(" ) ) )
           {
@@ -977,7 +1018,8 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData* parmsGcpDbData )
     ret = sqlite3_prepare_v2( db_handle, s_sql_select_coverages.toUtf8().constData(), -1, &stmt, NULL );
     // qDebug() << QString( "sql_select_coverages[%1] " ).arg( s_sql_select_coverages );
     if ( ret != SQLITE_OK )
-    { //  rc=1 [no such table: vector_layers_statistics or gcp_points, 'no such column' for gcp_pixel and gcp_ppoint] is an error
+    {
+      //  rc=1 [no such table: vector_layers_statistics or gcp_points, 'no such column' for gcp_pixel and gcp_ppoint] is an error
       parmsGcpDbData->mError = QString( "Unable to retrieve gcp_coverages: rc=%1 [%2] sql[%3]\n" ).arg( ret ).arg( QString::fromUtf8( sqlite3_errmsg( db_handle ) ) ).arg( s_sql_select_coverages );
       qDebug() << QString( "QgsSpatiaLiteProviderGcpUtils::createGcpDb -22- [%1] " ).arg( parmsGcpDbData->mError );
       // End TRANSACTION
@@ -989,27 +1031,29 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData* parmsGcpDbData )
     }
     while ( sqlite3_step( stmt ) == SQLITE_ROW )
     {
-      if (( sqlite3_column_type( stmt, 0 ) != SQLITE_NULL ) && ( sqlite3_column_type( stmt, 1 ) != SQLITE_NULL ) && ( sqlite3_column_type( stmt, 2 ) != SQLITE_NULL ) && ( sqlite3_column_type( stmt, 3 ) != SQLITE_NULL ) )
+      if ( ( sqlite3_column_type( stmt, 0 ) != SQLITE_NULL ) && ( sqlite3_column_type( stmt, 1 ) != SQLITE_NULL ) && ( sqlite3_column_type( stmt, 2 ) != SQLITE_NULL ) && ( sqlite3_column_type( stmt, 3 ) != SQLITE_NULL ) )
       {
-        s_sql = QString::fromUtf8(( const char * ) sqlite3_column_text( stmt, 0 ) );
+        s_sql = QString::fromUtf8( ( const char * ) sqlite3_column_text( stmt, 0 ) );
         sa_points_tables.append( s_sql );
-        s_sql = QString::fromUtf8(( const char * ) sqlite3_column_text( stmt, 1 ) );
+        s_sql = QString::fromUtf8( ( const char * ) sqlite3_column_text( stmt, 1 ) );
         sa_create_points_tables.append( s_sql );
-        s_sql = QString::fromUtf8(( const char * ) sqlite3_column_text( stmt, 2 ) );
+        s_sql = QString::fromUtf8( ( const char * ) sqlite3_column_text( stmt, 2 ) );
         listTables.append( s_sql );
-        s_sql = QString::fromUtf8(( const char * ) sqlite3_column_text( stmt, 3 ) );
+        s_sql = QString::fromUtf8( ( const char * ) sqlite3_column_text( stmt, 3 ) );
         sa_gcp_compute.append( s_sql );
       }
     }
     sqlite3_finalize( stmt );
     if ( listTables.size() > 0 )
-    { // gcp_coverage
+    {
+      // gcp_coverage
       sa_sql_commands = QgsSpatiaLiteProviderGcpUtils::createGcpSqlCoveragesCommands( parmsGcpDbData, listTables );
       if ( sa_sql_commands.size() > 0 )
       {
         sSqlOutput += QString( "-- adding coverage entries into '%2'\n%1\n" ).arg( "---------------" ).arg( "gcp_coverage" );
-        for ( int i_list = 0;i_list < sa_sql_commands.size();i_list++ )
-        { // raster entry has been added to gcp_covarage, create corresponding tables
+        for ( int i_list = 0; i_list < sa_sql_commands.size(); i_list++ )
+        {
+          // raster entry has been added to gcp_covarage, create corresponding tables
           s_sql = sa_sql_commands.at( i_list );
           sSqlOutput += QString( "%1\n%2\n" ).arg( s_sql ).arg( s_sql_newline );
         }
@@ -1027,8 +1071,9 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData* parmsGcpDbData )
       if ( sa_sql_commands.size() > 0 )
       {
         sSqlOutput += QString( "-- adding compute entries into '%2'\n%1\n" ).arg( "---------------" ).arg( "gcp_compute" );
-        for ( int i_list = 0;i_list < sa_sql_commands.size();i_list++ )
-        { // raster entry has been added to gcp_covarage, create corresponding tables
+        for ( int i_list = 0; i_list < sa_sql_commands.size(); i_list++ )
+        {
+          // raster entry has been added to gcp_covarage, create corresponding tables
           s_sql = sa_sql_commands.at( i_list );
           sSqlOutput += QString( "%1\n%2\n" ).arg( s_sql ).arg( s_sql_newline );
         }
@@ -1046,7 +1091,7 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData* parmsGcpDbData )
       sa_sql_commands = QgsSpatiaLiteProviderGcpUtils::createGcpSqlPointsCommands( parmsGcpDbData, sa_create_points_tables );
       if ( sa_sql_commands.size() > 0 )
       {
-        for ( int i_list = 0;i_list < sa_sql_commands.size();i_list++ )
+        for ( int i_list = 0; i_list < sa_sql_commands.size(); i_list++ )
         {
           s_sql = sa_sql_commands.at( i_list );
           if ( s_sql.contains( QString( "CREATE TABLE IF NOT EXISTS" ) ) )
@@ -1074,13 +1119,14 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData* parmsGcpDbData )
       QString s_values = QString( "'('||id_gcp||','||id_gcp_coverage||','''||name||''','''|| notes||''','||pixel_x||','|| pixel_y||','||srid||','||point_x||','||point_y||','||order_selected||','||gcp_enable||','''||gcp_text||''','" );
       s_values += QString( "||'\n  GeomFromEWKT('''||AsEWKT(%1)||'''),'" ).arg( "gcp_pixel" );
       s_values += QString( "||'\n  GeomFromEWKT('''||AsEWKT(%1)||'''))'" ).arg( "gcp_point" );
-      for ( int i_list = 0;i_list < sa_points_tables.size();i_list++ )
+      for ( int i_list = 0; i_list < sa_points_tables.size(); i_list++ )
       {
         QString s_point_table = sa_points_tables.at( i_list );
         s_sql = QString( "SELECT\n %1 AS row_value\nFROM '%2'\nORDER BY %3" ).arg( s_values ).arg( s_point_table ).arg( "id_gcp" );
         ret = sqlite3_prepare_v2( db_handle, s_sql.toUtf8().constData(), -1, &stmt, NULL );
         if ( ret != SQLITE_OK )
-        { //  rc=1 [no such table: vector_layers_statistics or gcp_points, 'no such column' for gcp_pixel and gcp_ppoint] is an error
+        {
+          //  rc=1 [no such table: vector_layers_statistics or gcp_points, 'no such column' for gcp_pixel and gcp_ppoint] is an error
           parmsGcpDbData->mError = QString( "Unable to check vector_layers_statistics, table gcp_points or geometries: gcp_pixel and gcp_point: rc=%1 [%2] sql[%3]\n" ).arg( ret ).arg( QString::fromUtf8( sqlite3_errmsg( db_handle ) ) ).arg( s_sql );
           qDebug() << QString( "QgsSpatiaLiteProviderGcpUtils::createGcpDb -22- [%1] " ).arg( parmsGcpDbData->mError );
           // End TRANSACTION
@@ -1098,7 +1144,7 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData* parmsGcpDbData )
         {
           if ( sqlite3_column_type( stmt, 0 ) != SQLITE_NULL )
           {
-            s_sql = QString::fromUtf8(( const char * ) sqlite3_column_text( stmt, 0 ) );
+            s_sql = QString::fromUtf8( ( const char * ) sqlite3_column_text( stmt, 0 ) );
             s_sql_insert += QString( "%1%2" ).arg( s_new_line ).arg( s_sql );
             if ( i_count == 0 )
             {
@@ -1119,8 +1165,9 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData* parmsGcpDbData )
     if ( sa_sql_commands.size() > 0 )
     {
       sSqlOutput += QString( "-- updating coverage entries into '%2'\n%1\n" ).arg( "---------------" ).arg( "gcp_compute" );
-      for ( int i_list = 0;i_list < sa_sql_commands.size();i_list++ )
-      { // raster entry has been added to gcp_covarage, create corresponding tables
+      for ( int i_list = 0; i_list < sa_sql_commands.size(); i_list++ )
+      {
+        // raster entry has been added to gcp_covarage, create corresponding tables
         s_sql = sa_sql_commands.at( i_list );
         if ( s_sql.contains( QString( "SELECT GCP_Compute(gcp_point, gcp_pixel, 0 ) FROM" ) ) )
         {
@@ -1157,7 +1204,8 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData* parmsGcpDbData )
     ret = sqlite3_prepare_v2( db_handle, s_sql_select_coverages.toUtf8().constData(), -1, &stmt, NULL );
     // qDebug() << QString( "sql_select_coverages[%1] " ).arg( s_sql_select_coverages );
     if ( ret != SQLITE_OK )
-    { //  rc=1 [no such table: vector_layers_statistics or gcp_points, 'no such column' for gcp_pixel and gcp_ppoint] is an error
+    {
+      //  rc=1 [no such table: vector_layers_statistics or gcp_points, 'no such column' for gcp_pixel and gcp_ppoint] is an error
       parmsGcpDbData->mError = QString( "Unable to retrieve create_cutline_points: rc=%1 [%2] sql[%3]\n" ).arg( ret ).arg( QString::fromUtf8( sqlite3_errmsg( db_handle ) ) ).arg( s_sql_select_coverages );
       qDebug() << QString( "QgsSpatiaLiteProviderGcpUtils::createGcpDb -cutline_points- [%1] " ).arg( parmsGcpDbData->mError );
       // End TRANSACTION
@@ -1171,7 +1219,7 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData* parmsGcpDbData )
     {
       if ( sqlite3_column_type( stmt, 0 ) != SQLITE_NULL )
       {
-        s_sql = QString::fromUtf8(( const char * ) sqlite3_column_text( stmt, 0 ) );
+        s_sql = QString::fromUtf8( ( const char * ) sqlite3_column_text( stmt, 0 ) );
         sa_cutline_tables.append( s_sql );
       }
     }
@@ -1179,8 +1227,9 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData* parmsGcpDbData )
     if ( sa_cutline_tables.size() > 0 )
     {
       sSqlOutput += QString( "-- adding %3 cutline entries into '%2'\n%1\n" ).arg( "---------------" ).arg( "create_cutline_points" ).arg( sa_cutline_tables.size() );
-      for ( int i_list = 0;i_list < sa_cutline_tables.size();i_list++ )
-      { // raster entry has been added to gcp_covarage, create corresponding tables
+      for ( int i_list = 0; i_list < sa_cutline_tables.size(); i_list++ )
+      {
+        // raster entry has been added to gcp_covarage, create corresponding tables
         s_sql = sa_cutline_tables.at( i_list );
         sSqlOutput += QString( "%1\n%2\n" ).arg( s_sql ).arg( s_sql_newline );
       }
@@ -1197,7 +1246,8 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData* parmsGcpDbData )
     ret = sqlite3_prepare_v2( db_handle, s_sql_select_coverages.toUtf8().constData(), -1, &stmt, NULL );
     // qDebug() << QString( "sql_select_coverages[%1] " ).arg( s_sql_select_coverages );
     if ( ret != SQLITE_OK )
-    { //  rc=1 [no such table: vector_layers_statistics or gcp_points, 'no such column' for gcp_pixel and gcp_ppoint] is an error
+    {
+      //  rc=1 [no such table: vector_layers_statistics or gcp_points, 'no such column' for gcp_pixel and gcp_ppoint] is an error
       parmsGcpDbData->mError = QString( "Unable to retrieve create_cutline_linestrings: rc=%1 [%2] sql[%3]\n" ).arg( ret ).arg( QString::fromUtf8( sqlite3_errmsg( db_handle ) ) ).arg( s_sql_select_coverages );
       qDebug() << QString( "QgsSpatiaLiteProviderGcpUtils::createGcpDb -cutline_linestrings- [%1] " ).arg( parmsGcpDbData->mError );
       // End TRANSACTION
@@ -1211,7 +1261,7 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData* parmsGcpDbData )
     {
       if ( sqlite3_column_type( stmt, 0 ) != SQLITE_NULL )
       {
-        s_sql = QString::fromUtf8(( const char * ) sqlite3_column_text( stmt, 0 ) );
+        s_sql = QString::fromUtf8( ( const char * ) sqlite3_column_text( stmt, 0 ) );
         sa_cutline_tables.append( s_sql );
       }
       s_sql = QString( "%1 " ).arg( QString( s_update_layerstatistics ).arg( "linestring" ) );
@@ -1221,8 +1271,9 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData* parmsGcpDbData )
     if ( sa_cutline_tables.size() > 0 )
     {
       sSqlOutput += QString( "-- adding %3 cutline entries into '%2'\n%1\n" ).arg( "---------------" ).arg( "create_cutline_linestrings" ).arg( sa_cutline_tables.size() );
-      for ( int i_list = 0;i_list < sa_cutline_tables.size();i_list++ )
-      { // raster entry has been added to gcp_covarage, create corresponding tables
+      for ( int i_list = 0; i_list < sa_cutline_tables.size(); i_list++ )
+      {
+        // raster entry has been added to gcp_covarage, create corresponding tables
         s_sql = sa_cutline_tables.at( i_list );
         sSqlOutput += QString( "%1\n%2\n" ).arg( s_sql ).arg( s_sql_newline );
       }
@@ -1238,7 +1289,8 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData* parmsGcpDbData )
     ret = sqlite3_prepare_v2( db_handle, s_sql_select_coverages.toUtf8().constData(), -1, &stmt, NULL );
     // qDebug() << QString( "sql_select_coverages[%1] " ).arg( s_sql_select_coverages );
     if ( ret != SQLITE_OK )
-    { //  rc=1 [no such table: vector_layers_statistics or gcp_points, 'no such column' for gcp_pixel and gcp_ppoint] is an error
+    {
+      //  rc=1 [no such table: vector_layers_statistics or gcp_points, 'no such column' for gcp_pixel and gcp_ppoint] is an error
       parmsGcpDbData->mError = QString( "Unable to retrieve create_cutline_polygons: rc=%1 [%2] sql[%3]\n" ).arg( ret ).arg( QString::fromUtf8( sqlite3_errmsg( db_handle ) ) ).arg( s_sql_select_coverages );
       qDebug() << QString( "QgsSpatiaLiteProviderGcpUtils::createGcpDb -cutline_polygons- [%1] " ).arg( parmsGcpDbData->mError );
       // End TRANSACTION
@@ -1252,7 +1304,7 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData* parmsGcpDbData )
     {
       if ( sqlite3_column_type( stmt, 0 ) != SQLITE_NULL )
       {
-        s_sql = QString::fromUtf8(( const char * ) sqlite3_column_text( stmt, 0 ) );
+        s_sql = QString::fromUtf8( ( const char * ) sqlite3_column_text( stmt, 0 ) );
         sa_cutline_tables.append( s_sql );
       }
     }
@@ -1260,8 +1312,9 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData* parmsGcpDbData )
     if ( sa_cutline_tables.size() > 0 )
     {
       sSqlOutput += QString( "-- adding %3 cutline entries into '%2'\n%1\n" ).arg( "---------------" ).arg( "create_cutline_polygons" ).arg( sa_cutline_tables.size() );
-      for ( int i_list = 0;i_list < sa_cutline_tables.size();i_list++ )
-      { // raster entry has been added to gcp_covarage, create corresponding tables
+      for ( int i_list = 0; i_list < sa_cutline_tables.size(); i_list++ )
+      {
+        // raster entry has been added to gcp_covarage, create corresponding tables
         s_sql = sa_cutline_tables.at( i_list );
         sSqlOutput += QString( "%1\n%2\n" ).arg( s_sql ).arg( s_sql_newline );
       }
@@ -1281,7 +1334,8 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData* parmsGcpDbData )
     ret = sqlite3_prepare_v2( db_handle, s_sql_select_coverages.toUtf8().constData(), -1, &stmt, NULL );
     // qDebug() << QString( "sql_select_coverages[%1] " ).arg( s_sql_select_coverages );
     if ( ret != SQLITE_OK )
-    { //  rc=1 [no such table: vector_layers_statistics or gcp_points, 'no such column' for gcp_pixel and gcp_ppoint] is an error
+    {
+      //  rc=1 [no such table: vector_layers_statistics or gcp_points, 'no such column' for gcp_pixel and gcp_ppoint] is an error
       parmsGcpDbData->mError = QString( "Unable to retrieve create_mercator_polygons: rc=%1 [%2] sql[%3]\n" ).arg( ret ).arg( QString::fromUtf8( sqlite3_errmsg( db_handle ) ) ).arg( s_sql_select_coverages );
       qDebug() << QString( "QgsSpatiaLiteProviderGcpUtils::createGcpDb -mercator_polygons- [%1] " ).arg( parmsGcpDbData->mError );
       // End TRANSACTION
@@ -1295,7 +1349,7 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData* parmsGcpDbData )
     {
       if ( sqlite3_column_type( stmt, 0 ) != SQLITE_NULL )
       {
-        s_sql = QString::fromUtf8(( const char * ) sqlite3_column_text( stmt, 0 ) );
+        s_sql = QString::fromUtf8( ( const char * ) sqlite3_column_text( stmt, 0 ) );
         sa_cutline_tables.append( s_sql );
       }
     }
@@ -1303,8 +1357,9 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData* parmsGcpDbData )
     if ( sa_cutline_tables.size() > 0 )
     {
       sSqlOutput += QString( "-- adding %3 mercator_polygon cutline entries into '%2'\n%1\n" ).arg( "---------------" ).arg( "create_mercator_polygons" ).arg( sa_cutline_tables.size() );
-      for ( int i_list = 0;i_list < sa_cutline_tables.size();i_list++ )
-      { // raster entry has been added to gcp_covarage, create corresponding tables
+      for ( int i_list = 0; i_list < sa_cutline_tables.size(); i_list++ )
+      {
+        // raster entry has been added to gcp_covarage, create corresponding tables
         s_sql = sa_cutline_tables.at( i_list );
         sSqlOutput += QString( "%1\n%2\n" ).arg( s_sql ).arg( s_sql_newline );
       }
@@ -1329,8 +1384,9 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData* parmsGcpDbData )
     sa_sql_commands = QgsSpatiaLiteProviderGcpUtils::createGcpSqlCoveragesCommands( parmsGcpDbData, sa_transform_compute );
     if ( sa_sql_commands.size() > 0 )
     {
-      for ( int i_list = 0;i_list < sa_sql_commands.size();i_list++ )
-      { // raster entry has been added to gcp_covarage, create corresponding tables
+      for ( int i_list = 0; i_list < sa_sql_commands.size(); i_list++ )
+      {
+        // raster entry has been added to gcp_covarage, create corresponding tables
         s_sql = sa_sql_commands.at( i_list );
         sSqlOutput += QString( "%1\n%2\n" ).arg( s_sql ).arg( s_sql_newline );
       }
@@ -1343,7 +1399,8 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData* parmsGcpDbData )
     Q_ASSERT( ret == SQLITE_OK );
     Q_UNUSED( ret );
     if ( !sSqlOutput.isNull() )
-    { // writing of Sql-Dump
+    {
+      // writing of Sql-Dump
       QFile::FileError file_result = QgsSpatiaLiteProviderGcpUtils::writeGcpSqlDump( sDatabaseFilename, sSqlOutput, "sql" );
       if ( file_result != QFile::NoError )
       {
@@ -1360,7 +1417,8 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData* parmsGcpDbData )
       sSqlOutput = QString::null;
     }
     else
-    { // Dump failed, set as error
+    {
+      // Dump failed, set as error
       b_gcp_coverage = false;
       parmsGcpDbData->mError = QString( "Failed to create Gcp-Coverage Sql-Dump [file exists]: rc=%1 database[%2]" ).arg( 1 ).arg( sDatabaseFilename );
       QgsSpatiaLiteProviderGcpUtils::spatialiteShutdown( parmsGcpDbData );
@@ -1383,7 +1441,8 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData* parmsGcpDbData )
     parmsGcpDbData->mGcpCoverageMapDate = s_map_date;
   }
   else
-  { // when dumping the Database, no need for Update
+  {
+    // when dumping the Database, no need for Update
     parmsGcpDbData->mGcpSrid = i_srid;
     QgsSpatiaLiteProviderGcpUtils::spatialiteShutdown( parmsGcpDbData );
     return bDatabaseExists;
@@ -1391,7 +1450,8 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData* parmsGcpDbData )
   if ( parmsGcpDbData->mSqlDump )
   {
     if ( !sSqlOutput.isNull() )
-    { // writing of Sql-Dump
+    {
+      // writing of Sql-Dump
       QFile::FileError file_result = QgsSpatiaLiteProviderGcpUtils::writeGcpSqlDump( sDatabaseFilename, sSqlOutput, "sql" );
       if ( file_result != QFile::NoError )
       {
@@ -1403,7 +1463,8 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData* parmsGcpDbData )
       sSqlOutput = QString::null;
     }
     else
-    { // Dump failed, set as error
+    {
+      // Dump failed, set as error
       b_gcp_coverage = false;
       parmsGcpDbData->mError = QString( "Failed to create Gcp-Coverage Sql-Dump [file exists]: rc=%1 database[%2]" ).arg( 1 ).arg( sDatabaseFilename );
       return b_gcp_coverage;
@@ -1415,15 +1476,16 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpDb( GcpDbData* parmsGcpDbData )
   QgsSpatiaLiteProviderGcpUtils::spatialiteShutdown( parmsGcpDbData );
   return bDatabaseExists;
 }
-bool QgsSpatiaLiteProviderGcpUtils::updateGcpDb( GcpDbData* parmsGcpDbData )
+bool QgsSpatiaLiteProviderGcpUtils::updateGcpDb( GcpDbData *parmsGcpDbData )
 {
   if ( !parmsGcpDbData )
     return false;
   QString  sDatabaseFilename = parmsGcpDbData->mGcpDatabaseFileName;
   bool bDatabaseExists = QFile( sDatabaseFilename ).exists();
   QString sCoverageName = parmsGcpDbData->mGcpCoverageName;
-  if (( sCoverageName.isEmpty() ) || ( sCoverageName.isNull() ) )
-  { // The Database is being opened to only to retrieve a list of coverages.
+  if ( ( sCoverageName.isEmpty() ) || ( sCoverageName.isNull() ) )
+  {
+    // The Database is being opened to only to retrieve a list of coverages.
     return bDatabaseExists;
   }
   int i_srid = parmsGcpDbData->mGcpSrid;
@@ -1456,7 +1518,7 @@ bool QgsSpatiaLiteProviderGcpUtils::updateGcpDb( GcpDbData* parmsGcpDbData )
     QString s_result_case = QString( "CASE WHEN result_cutline.result_id IS NULL OR result_cutline.result_id < 0 THEN -1 ELSE NEW.result_cutline.result_id END id_result" );
     QString s_query_id_cutline = QString( "\n(\n SELECT\n  %1\n%2\n)" ).arg( s_result_case ).arg( s_result_cutline );
     //----
-    sqlite3* db_handle;
+    sqlite3 *db_handle;
     char *errMsg = nullptr;
     // open database
     // Note: this will not repopen the connection when called from another function such as createGcpDb
@@ -1465,7 +1527,8 @@ bool QgsSpatiaLiteProviderGcpUtils::updateGcpDb( GcpDbData* parmsGcpDbData )
     {
       parmsGcpDbData->mError = QString( "Failed to open database: rc=%1 database[%2]" ).arg( ret ).arg( sDatabaseFilename );
       if ( ret != SQLITE_MISUSE )
-      { // 'SQLITE_MISUSE': in use with another file, do not close
+      {
+        // 'SQLITE_MISUSE': in use with another file, do not close
         QgsSpatiaLiteProviderGcpUtils::spatialiteShutdown( parmsGcpDbData );
       }
       return false;
@@ -1512,7 +1575,8 @@ bool QgsSpatiaLiteProviderGcpUtils::updateGcpDb( GcpDbData* parmsGcpDbData )
     // Creates UPDATE command with Subqueries to external table [avoiding creation of the same Subqueries in different functions]
     sa_sql_commands = QgsSpatiaLiteProviderGcpUtils::createGcpSqlCoveragesCommands( parmsGcpDbData, listTables );
     if ( sa_sql_commands.size() == 2 )
-    { // UPDATE extent with gcp-points count
+    {
+      // UPDATE extent with gcp-points count
       QString s_sql_commands = sa_sql_commands.at( 0 );
       QString s_sql = QString( s_sql_commands ).arg( s_sql_fields );
       ret = sqlite3_exec( db_handle, s_sql.toUtf8().constData(), NULL, NULL, &errMsg );
@@ -1542,7 +1606,7 @@ bool QgsSpatiaLiteProviderGcpUtils::updateGcpDb( GcpDbData* parmsGcpDbData )
   }
   return bDatabaseExists;
 }
-bool QgsSpatiaLiteProviderGcpUtils::updateGcpCompute( GcpDbData* parmsGcpDbData )
+bool QgsSpatiaLiteProviderGcpUtils::updateGcpCompute( GcpDbData *parmsGcpDbData )
 {
   if ( !parmsGcpDbData )
     return false;
@@ -1556,16 +1620,17 @@ bool QgsSpatiaLiteProviderGcpUtils::updateGcpCompute( GcpDbData* parmsGcpDbData 
   QString s_MapPoint_to_PixelPoint = "Map-Point to Pixel-Point";
   if ( bDatabaseExists )
   {
-    sqlite3* db_handle;
+    sqlite3 *db_handle;
     char *errMsg = nullptr;
-    sqlite3_stmt* stmt;
+    sqlite3_stmt *stmt;
     // open database
     int ret = QgsSpatiaLiteProviderGcpUtils::spatialiteInitEx( parmsGcpDbData, sDatabaseFilename );
     if ( ret != SQLITE_OK )
     {
       parmsGcpDbData->mError = QString( "Failed to open database: rc=%1 database[%2]" ).arg( ret ).arg( sDatabaseFilename );
       if ( ret != SQLITE_MISUSE )
-      { // 'SQLITE_MISUSE': in use with another file, do not close
+      {
+        // 'SQLITE_MISUSE': in use with another file, do not close
         QgsSpatiaLiteProviderGcpUtils::spatialiteShutdown( parmsGcpDbData );
       }
       return false;
@@ -1579,7 +1644,8 @@ bool QgsSpatiaLiteProviderGcpUtils::updateGcpCompute( GcpDbData* parmsGcpDbData 
     s_sql += QString( " (SELECT srid FROM gcp_coverages WHERE (coverage_name='%1')) AS id_coverage_srid" ).arg( sCoverageName );
     ret = sqlite3_prepare_v2( db_handle, s_sql.toUtf8().constData(), -1, &stmt, NULL );
     if ( ret != SQLITE_OK )
-    { //  rc=1 [no such function: HasGCP] is not an error [older spatialite version]
+    {
+      //  rc=1 [no such function: HasGCP] is not an error [older spatialite version]
       parmsGcpDbData->mError = QString( "Unable to execute reading of gcp_coverages for '%1': rc=%2 [%3] sql[%4]\n" ).arg( sCoverageName ).arg( ret ).arg( QString::fromUtf8( sqlite3_errmsg( db_handle ) ) ).arg( s_sql );
       qDebug() << QString( "QgsSpatiaLiteProviderGcpUtils::updateGcpCompute -metadata- [%1] " ).arg( parmsGcpDbData->mError );
     }
@@ -1618,14 +1684,16 @@ bool QgsSpatiaLiteProviderGcpUtils::updateGcpCompute( GcpDbData* parmsGcpDbData 
     s_gcp_compute += QString( "%1%2" ).arg( parmsGcpDbData->mParseString ).arg( iImageMaxX );
     s_gcp_compute += QString( "%1%2" ).arg( parmsGcpDbData->mParseString ).arg( iImageMaxY );
     QStringList sa_gcp_compute;
-    if (( i_gcp_compute < 1 ) && ( i_gcp_coverage > 0 ) )
-    { //  "INSERT_COMPUTE;#;#1;#;#3068;#;#1909.straube_blatt_i_a.4000;#;#5629;#;#4472"
+    if ( ( i_gcp_compute < 1 ) && ( i_gcp_coverage > 0 ) )
+    {
+      //  "INSERT_COMPUTE;#;#1;#;#3068;#;#1909.straube_blatt_i_a.4000;#;#5629;#;#4472"
       sa_gcp_compute.append( s_gcp_compute );
       QStringList sa_sql_commands = QgsSpatiaLiteProviderGcpUtils::createGcpSqlCoveragesCommands( parmsGcpDbData, sa_gcp_compute );
       if ( sa_sql_commands.size() > 0 )
       {
-        for ( int i_list = 0;i_list < sa_sql_commands.size();i_list++ )
-        { // raster entry has been added to gcp_covarage, create corresponding tables
+        for ( int i_list = 0; i_list < sa_sql_commands.size(); i_list++ )
+        {
+          // raster entry has been added to gcp_covarage, create corresponding tables
           s_sql = sa_sql_commands.at( i_list );
           ret = sqlite3_exec( db_handle, s_sql.toUtf8().constData(), NULL, NULL, &errMsg );
           if ( ret != SQLITE_OK )
@@ -1644,8 +1712,9 @@ bool QgsSpatiaLiteProviderGcpUtils::updateGcpCompute( GcpDbData* parmsGcpDbData 
     QStringList sa_sql_commands = QgsSpatiaLiteProviderGcpUtils::createGcpSqlCoveragesCommands( parmsGcpDbData, sa_gcp_compute );
     if ( sa_sql_commands.size() > 0 )
     {
-      for ( int i_list = 0;i_list < sa_sql_commands.size();i_list++ )
-      { // raster entry has been added to gcp_covarage, create corresponding tables
+      for ( int i_list = 0; i_list < sa_sql_commands.size(); i_list++ )
+      {
+        // raster entry has been added to gcp_covarage, create corresponding tables
         s_sql = sa_sql_commands.at( i_list );
         ret = sqlite3_exec( db_handle, s_sql.toUtf8().constData(), NULL, NULL, &errMsg );
         if ( ret != SQLITE_OK )
@@ -1663,7 +1732,7 @@ bool QgsSpatiaLiteProviderGcpUtils::updateGcpCompute( GcpDbData* parmsGcpDbData 
   }
   return bDatabaseExists;
 }
-bool QgsSpatiaLiteProviderGcpUtils::updateGcpTranslate( GcpDbData* parmsGcpDbData )
+bool QgsSpatiaLiteProviderGcpUtils::updateGcpTranslate( GcpDbData *parmsGcpDbData )
 {
   if ( !parmsGcpDbData )
     return false;
@@ -1676,16 +1745,17 @@ bool QgsSpatiaLiteProviderGcpUtils::updateGcpTranslate( GcpDbData* parmsGcpDbDat
   QString s_MapPoint_to_PixelPoint = "Map-Point to Pixel-Point";
   if ( bDatabaseExists )
   {
-    sqlite3* db_handle;
+    sqlite3 *db_handle;
     char *errMsg = nullptr;
-    sqlite3_stmt* stmt;
+    sqlite3_stmt *stmt;
     // open database
     int ret = QgsSpatiaLiteProviderGcpUtils::spatialiteInitEx( parmsGcpDbData, sDatabaseFilename );
     if ( ret != SQLITE_OK )
     {
       parmsGcpDbData->mError = QString( "Failed to open database: rc=%1 database[%2]" ).arg( ret ).arg( sDatabaseFilename );
       if ( ret != SQLITE_MISUSE )
-      { // 'SQLITE_MISUSE': in use with another file, do not close
+      {
+        // 'SQLITE_MISUSE': in use with another file, do not close
         QgsSpatiaLiteProviderGcpUtils::spatialiteShutdown( parmsGcpDbData );
       }
       return false;
@@ -1699,7 +1769,8 @@ bool QgsSpatiaLiteProviderGcpUtils::updateGcpTranslate( GcpDbData* parmsGcpDbDat
     s_sql += QString( " (SELECT srid FROM gcp_coverages WHERE (coverage_name='%1')) AS id_coverage_srid" ).arg( sCoverageName );
     ret = sqlite3_prepare_v2( db_handle, s_sql.toUtf8().constData(), -1, &stmt, NULL );
     if ( ret != SQLITE_OK )
-    { //  rc=1 [no such function: HasGCP] is not an error [older spatialite version]
+    {
+      //  rc=1 [no such function: HasGCP] is not an error [older spatialite version]
       parmsGcpDbData->mError = QString( "Unable to execute reading of gcp_coverages for '%1': rc=%2 [%3] sql[%4]\n" ).arg( sCoverageName ).arg( ret ).arg( QString::fromUtf8( sqlite3_errmsg( db_handle ) ) ).arg( s_sql );
       qDebug() << QString( "QgsSpatiaLiteProviderGcpUtils::updateGcpTranslate -metadata- [%1] " ).arg( parmsGcpDbData->mError );
     }
@@ -1719,7 +1790,7 @@ bool QgsSpatiaLiteProviderGcpUtils::updateGcpTranslate( GcpDbData* parmsGcpDbDat
         i_gcp_coverage_srid = sqlite3_column_int( stmt, 3 );
     }
     sqlite3_finalize( stmt );
-    if (( i_gcp_compute > 0 ) && ( i_gcp_coverage > 0 ) )
+    if ( ( i_gcp_compute > 0 ) && ( i_gcp_coverage > 0 ) )
     {
       // "TRANSFORM_COMPUTE;#;#create_mercator_polygons;#;#mercator_polygon;#;#cutline_polygon#;#i_gcp_coverage_id#;#i_gcp_coverage_srid"
       QString s_transform_compute = QString( "TRANSFORM_COMPUTE%1%2" ).arg( parmsGcpDbData->mParseString ).arg( "create_mercator_polygons" );
@@ -1732,8 +1803,9 @@ bool QgsSpatiaLiteProviderGcpUtils::updateGcpTranslate( GcpDbData* parmsGcpDbDat
       QStringList sa_sql_commands = QgsSpatiaLiteProviderGcpUtils::createGcpSqlCoveragesCommands( parmsGcpDbData, sa_transform_compute );
       if ( sa_sql_commands.size() > 0 )
       {
-        for ( int i_list = 0;i_list < sa_sql_commands.size();i_list++ )
-        { // raster entry has been added to gcp_covarage, create corresponding tables
+        for ( int i_list = 0; i_list < sa_sql_commands.size(); i_list++ )
+        {
+          // raster entry has been added to gcp_covarage, create corresponding tables
           s_sql = sa_sql_commands.at( i_list );
           // qDebug() << QString( "updateGcpTranslate : fgcp_coverage_id  [%1] srid[%3] sql[%2]" ).arg( i_gcp_coverage_id ).arg( s_sql ).arg( i_gcp_coverage_srid );
           ret = sqlite3_exec( db_handle, s_sql.toUtf8().constData(), NULL, NULL, &errMsg );
@@ -1753,7 +1825,7 @@ bool QgsSpatiaLiteProviderGcpUtils::updateGcpTranslate( GcpDbData* parmsGcpDbDat
   }
   return bDatabaseExists;
 }
-QgsPoint QgsSpatiaLiteProviderGcpUtils::getGcpConvert( GcpDbData* parmsGcpDbData )
+QgsPoint QgsSpatiaLiteProviderGcpUtils::getGcpConvert( GcpDbData *parmsGcpDbData )
 {
   double point_x = 0;
   double point_y = 0;
@@ -1775,15 +1847,16 @@ QgsPoint QgsSpatiaLiteProviderGcpUtils::getGcpConvert( GcpDbData* parmsGcpDbData
   if ( bDatabaseExists )
   {
     // qDebug() << QString( "QgsSpatiaLiteProviderGcpUtils::getGcpConvert start - 01 - toPixel[%3] point[%1,%2]  " ).arg( inputPoint.x() ).arg( inputPoint.y() ).arg( bToPixel );
-    sqlite3* db_handle;
-    sqlite3_stmt* stmt;
+    sqlite3 *db_handle;
+    sqlite3_stmt *stmt;
     // open database
     int ret = QgsSpatiaLiteProviderGcpUtils::spatialiteInitEx( parmsGcpDbData, sDatabaseFilename );
     if ( ret != SQLITE_OK )
     {
       parmsGcpDbData->mError = QString( "Failed to open database: rc=%1 database[%2]" ).arg( ret ).arg( sDatabaseFilename );
       if ( ret != SQLITE_MISUSE )
-      { // 'SQLITE_MISUSE': in use with another file, do not close
+      {
+        // 'SQLITE_MISUSE': in use with another file, do not close
         QgsSpatiaLiteProviderGcpUtils::spatialiteShutdown( parmsGcpDbData );
       }
       return convertPoint;
@@ -1792,10 +1865,11 @@ QgsPoint QgsSpatiaLiteProviderGcpUtils::getGcpConvert( GcpDbData* parmsGcpDbData
     db_handle = parmsGcpDbData->db_handle;
     QString s_srid_request = QString( "srid=-1" );
     if ( bToPixel )
-    { // QgsPoint contains no srid information
+    {
+      // QgsPoint contains no srid information
       s_srid_request = QString( "srid<>-1" );
     }
-    if (( i_order < 0 ) || ( i_order > 3 ) )
+    if ( ( i_order < 0 ) || ( i_order > 3 ) )
     {
       i_order = 0;
     }
@@ -1807,7 +1881,8 @@ QgsPoint QgsSpatiaLiteProviderGcpUtils::getGcpConvert( GcpDbData* parmsGcpDbData
     s_sql += QString( " (SELECT count(id_gcp) FROM \"%1\" WHERE (gcp_enable=1)) AS count_gcp" ).arg( sGcpPointsTablename );
     ret = sqlite3_prepare_v2( db_handle, s_sql.toUtf8().constData(), -1, &stmt, NULL );
     if ( ret != SQLITE_OK )
-    { //  rc=1 [no such function: HasGCP] is not an error [older spatialite version]
+    {
+      //  rc=1 [no such function: HasGCP] is not an error [older spatialite version]
       parmsGcpDbData->mError = QString( "Unable to execute reading of gcp_coverages for '%1': rc=%2 [%3] sql[%4]\n" ).arg( sCoverageName ).arg( ret ).arg( QString::fromUtf8( sqlite3_errmsg( db_handle ) ) ).arg( s_sql );
       qDebug() << QString( "QgsSpatiaLiteProviderGcpUtils::getGcpConvert -metadata- [%1] " ).arg( parmsGcpDbData->mError );
     }
@@ -1833,20 +1908,22 @@ QgsPoint QgsSpatiaLiteProviderGcpUtils::getGcpConvert( GcpDbData* parmsGcpDbData
     }
     sqlite3_finalize( stmt );
     if ( i_spatialite_gcp_enabled == 1 )
-    { // https://www.gaia-gis.it/fossil/libspatialite/wiki?name=Ground+Control+Points
+    {
+      // https://www.gaia-gis.it/fossil/libspatialite/wiki?name=Ground+Control+Points
       // 0: the GCP problem will be solved by applying the Thin Plate Spline (aka TPS) method.
       // 1: (default) the GCP problem will be solved by applying the RMSE regression method and will return a set of polynomial coefficients of the 1st order.
       // 2: the GCP problem will be solved by applying the RMSE regression method and will return a set of polynomial coefficients of the 2nd order.
       // 3: the GCP problem will be solved by applying the RMSE regression method and will return a set of polynomial coefficients of the 3rd order.
       bool b_valid = true;
-      if (( i_gcp_count < 4 ) || ( i_gcp_coverage <= 0 ) || ( i_gcp_coverage_id <= 0 ) )
+      if ( ( i_gcp_count < 4 ) || ( i_gcp_coverage <= 0 ) || ( i_gcp_coverage_id <= 0 ) )
       {
         b_valid = false;
       }
       if ( b_valid )
       {
         if ( i_gcp_compute != 1 )
-        { // Either: no gcp_convert TABLE was found OR no row for this map with srid and order was found [TABLE cannot be queried]
+        {
+          // Either: no gcp_convert TABLE was found OR no row for this map with srid and order was found [TABLE cannot be queried]
           bReCompute = true;
         }
         QString s_PixelPoint_to_MapPoint = "Pixel-Point to Map-Point";
@@ -1855,7 +1932,8 @@ QgsPoint QgsSpatiaLiteProviderGcpUtils::getGcpConvert( GcpDbData* parmsGcpDbData
         // A postion is being requested (not yet in the gcp-list) ['id_gcp' is ignored]
         QString s_sql_base = QString( "SELECT \n TRANSFORM\nFROM\n COMPUTE\nLIMIT 1;" );
         if ( id_gcp >= 0 )
-        { // A specific gcp is being requested ['inputPoint' is ignored]
+        {
+          // A specific gcp is being requested ['inputPoint' is ignored]
           s_sql_base = QString( "SELECT \n TRANSFORM\nFROM\n \"%1\" AS gcp, \n COMPUTE\nWHERE (id_gcp=%2);" ).arg( sGcpPointsTablename ).arg( id_gcp );
         }
         QString s_sql_transform_base = "";
@@ -1864,39 +1942,47 @@ QgsPoint QgsSpatiaLiteProviderGcpUtils::getGcpConvert( GcpDbData* parmsGcpDbData
         // Thin Plate Spline will fail if any of the points are 0
         QString s_recompute_where = "((gcp_enable=1) AND (((ST_X(gcp_point)<>0) AND (ST_Y(gcp_point)<>0)) AND ((ST_X(gcp_pixel)<>0) AND (ST_Y(gcp_pixel)<>0))))";
         if ( bToPixel )
-        { // Map-Point to Pixel-Point
+        {
+          // Map-Point to Pixel-Point
           s_transform_type += s_MapPoint_to_PixelPoint;
           if ( id_gcp >= 0 )
-          { // A specific gcp is being requested ['inputPoint' is ignored]
+          {
+            // A specific gcp is being requested ['inputPoint' is ignored]
             s_sql_transform_base = QString( "GCP_Transform(gcp.gcp_point , g_pixel.matrix,-1)" );
             s_sql_transform   = QString( "ST_X(%1) AS gcp_pixel_x,\n " ).arg( s_sql_transform_base );
             s_sql_transform += QString( "ST_Y(%1) AS gcp_pixel_y" ).arg( s_sql_transform_base );
           }
           else
-          { // A postion is being requested (not yet in the gcp-list) ['id_gcp' is ignored]
+          {
+            // A postion is being requested (not yet in the gcp-list) ['id_gcp' is ignored]
             s_sql_transform_base = QString( "GCP_Transform(MakePoint(%1,%2,%3) , g_pixel.matrix,-1)" ).arg( inputPoint.x() ).arg( inputPoint.y() ).arg( i_gcp_coverage_srid );
           }
           s_sql_transform   = QString( "ST_X(%1) AS gcp_pixel_x,\n " ).arg( s_sql_transform_base );
           s_sql_transform += QString( "ST_Y(%1) AS gcp_pixel_y," ).arg( s_sql_transform_base );
           s_sql_transform += QString( "GCP_IsValid(g_pixel.matrix) AS valid_matrix" );
           if ( bReCompute )
-          { // If there is no TABLE 'gcp_compute' OR requested directly, then calculate directly from the POINTs
+          {
+            // If there is no TABLE 'gcp_compute' OR requested directly, then calculate directly from the POINTs
             s_sql_compute = QString( "(SELECT GCP_Compute(gcp_point,gcp_pixel,%1) AS matrix FROM  \"%2\"  WHERE %3) AS g_pixel" ).arg( i_order ).arg( sGcpPointsTablename ).arg( s_recompute_where );
           }
           else
-          { // The stored 'Affine Transformation Matrix' in TABLE 'gcp_compute' will be read [should be swifter than recalulating]
+          {
+            // The stored 'Affine Transformation Matrix' in TABLE 'gcp_compute' will be read [should be swifter than recalulating]
             s_sql_compute = QString( "(SELECT gcp_compute AS matrix FROM \"%1\"  WHERE ((coverage_name='%1') AND (srid=%3) AND (id_order=%4))) AS g_pixel" ).arg( "gcp_compute" ).arg( sCoverageName ).arg( -1 ).arg( i_order ).arg( sGcpPointsTablename );
           }
         }
         else
-        { // Pixel-Point to Map-Point
+        {
+          // Pixel-Point to Map-Point
           s_transform_type += s_PixelPoint_to_MapPoint;
           if ( id_gcp >= 0 )
-          { // A specific gcp is being requested ['inputPoint' is ignored]
+          {
+            // A specific gcp is being requested ['inputPoint' is ignored]
             s_sql_transform_base = QString( "GCP_Transform(gcp.gcp_pixel , g_point.matrix,-1)" );
           }
           else
-          { // A postion is being requested (not yet in the gcp-list) ['id_gcp' is ignored]
+          {
+            // A postion is being requested (not yet in the gcp-list) ['id_gcp' is ignored]
             s_sql_transform_base = QString( "GCP_Transform(MakePoint(%1,%2,-1) , g_point.matrix,%3)" ).arg( inputPoint.x() ).arg( inputPoint.y() ).arg( i_gcp_coverage_srid );
           }
           s_sql_transform   = QString( "ST_X(%1) AS gcp_map_x,\n " ).arg( s_sql_transform_base );
@@ -1904,19 +1990,22 @@ QgsPoint QgsSpatiaLiteProviderGcpUtils::getGcpConvert( GcpDbData* parmsGcpDbData
           // GCP_IsValid(g_pixel.matrix) AS valid_matrix
           s_sql_transform += QString( "GCP_IsValid(g_point.matrix) AS valid_matrix" );
           if ( bReCompute )
-          { // If there is no TABLE 'gcp_compute' OR requested directly, then calculate directly from the POINTs
+          {
+            // If there is no TABLE 'gcp_compute' OR requested directly, then calculate directly from the POINTs
             QString s_where_condition = " (gcp_enable=1)";
             s_sql_compute = QString( "(SELECT GCP_Compute(gcp_pixel,gcp_point,%1) AS matrix FROM  \"%2\"  WHERE %3) AS g_point" ).arg( i_order ).arg( sGcpPointsTablename ).arg( s_recompute_where );
           }
           else
-          { // The stored 'Affine Transformation Matrix' in TABLE 'gcp_compute' will be read [should be swifter than recalulating]
+          {
+            // The stored 'Affine Transformation Matrix' in TABLE 'gcp_compute' will be read [should be swifter than recalulating]
             s_sql_compute = QString( "(SELECT gcp_compute AS matrix FROM \"%1\"  WHERE ((coverage_name='%1') AND (srid=%3) AND (id_order=%4))) AS g_point" ).arg( "gcp_compute" ).arg( sCoverageName ).arg( i_gcp_coverage_srid ).arg( i_order ).arg( sGcpPointsTablename );
           }
         }
         s_sql = QString( s_sql_base ).replace( "TRANSFORM", s_sql_transform ).replace( "COMPUTE", s_sql_compute );
         ret = sqlite3_prepare_v2( db_handle, s_sql.toUtf8().constData(), -1, &stmt, NULL );
         if ( ret != SQLITE_OK )
-        { //  typically: too few GCP pairs were passed, or the GCP pairs are of a so poor quality that finding any valid solution was impossible
+        {
+          //  typically: too few GCP pairs were passed, or the GCP pairs are of a so poor quality that finding any valid solution was impossible
           parmsGcpDbData->mError = QString( "Unable to execute %1 for '%2': rc=%3 [%4] sql[%5]\n" ).arg( s_transform_type ).arg( sGcpPointsTablename ).arg( ret ).arg( QString::fromUtf8( sqlite3_errmsg( db_handle ) ) ).arg( s_sql );
           qDebug() << QString( "QgsSpatiaLiteProviderGcpUtils::getGcpConvert - GCP_Transform/Compute - [%1] " ).arg( parmsGcpDbData->mError );
           // -- src/control_points/gaia_control_points.c
@@ -1953,7 +2042,7 @@ QgsPoint QgsSpatiaLiteProviderGcpUtils::getGcpConvert( GcpDbData* parmsGcpDbData
   }
   return convertPoint;
 }
-bool QgsSpatiaLiteProviderGcpUtils::createGcpMasterDb( GcpDbData* parmsGcpDbData )
+bool QgsSpatiaLiteProviderGcpUtils::createGcpMasterDb( GcpDbData *parmsGcpDbData )
 {
   if ( !parmsGcpDbData )
     return false;
@@ -1962,7 +2051,7 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpMasterDb( GcpDbData* parmsGcpDbData
   QString s_gcp_master = parmsGcpDbData->mGcpCoverageName.toLower();
   bool b_create_empty_database = false;
   bool bDatabaseExists = QFile( sDatabaseFilename ).exists();
-  if (( s_gcp_master.isEmpty() ) || ( s_gcp_master.isNull() ) )
+  if ( ( s_gcp_master.isEmpty() ) || ( s_gcp_master.isNull() ) )
   {
     s_gcp_master = "gcp_master";
     if ( !bDatabaseExists )
@@ -1976,13 +2065,14 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpMasterDb( GcpDbData* parmsGcpDbData
   int i_sql_counter = 1;
   QString s_sql_newline = QString( "---------------" );
   QString sSqlOutput = QString::null;
-  if (( !b_create_empty_database ) && ( !bDatabaseExists ) && ( parmsGcpDbData->mDatabaseDump ) )
-  { // Cannot dump a Database that does not exist
+  if ( ( !b_create_empty_database ) && ( !bDatabaseExists ) && ( parmsGcpDbData->mDatabaseDump ) )
+  {
+    // Cannot dump a Database that does not exist
     parmsGcpDbData->mError = QString( "Failed to create database [file exists]: rc=%1 database[%2]" ).arg( 1 ).arg( sDatabaseFilename );
     return bDatabaseExists;
   }
   // base on code found in 'QgsOSMDatabase::createSpatialTable'
-  sqlite3* db_handle;
+  sqlite3 *db_handle;
   char *errMsg = nullptr;
   // open database
   int ret = QgsSpatiaLiteProviderGcpUtils::spatialiteInitEx( parmsGcpDbData, sDatabaseFilename );
@@ -1990,14 +2080,15 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpMasterDb( GcpDbData* parmsGcpDbData
   {
     parmsGcpDbData->mError = QString( "Failed to open database: rc=%1 database[%2]" ).arg( ret ).arg( sDatabaseFilename );
     if ( ret != SQLITE_MISUSE )
-    { // 'SQLITE_MISUSE': in use with another file, do not close
+    {
+      // 'SQLITE_MISUSE': in use with another file, do not close
       QgsSpatiaLiteProviderGcpUtils::spatialiteShutdown( parmsGcpDbData );
     }
     return false;
   }
   // To simplfy the useage.
   db_handle = parmsGcpDbData->db_handle;
-  sqlite3_stmt* stmt;
+  sqlite3_stmt *stmt;
   // Start TRANSACTION
   ret = sqlite3_exec( db_handle, "BEGIN", NULL, NULL, 0 );
   Q_ASSERT( ret == SQLITE_OK );
@@ -2007,7 +2098,8 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpMasterDb( GcpDbData* parmsGcpDbData
   s_sql += QString( " (SELECT count(name) FROM sqlite_master WHERE ((type='table') AND (name='spatial_ref_sys'))) AS has_spatial_ref_sys" );
   ret = sqlite3_prepare_v2( db_handle, s_sql.toUtf8().constData(), -1, &stmt, NULL );
   if ( ret != SQLITE_OK )
-  { //  rc=1 [no such function: HasGCP] is not an error [older spatialite version]
+  {
+    //  rc=1 [no such function: HasGCP] is not an error [older spatialite version]
     if ( QString( "no such function: HasGCP" ).compare( QString( "%1" ).arg( sqlite3_errmsg( db_handle ) ) ) != 0 )
     {
       parmsGcpDbData->mError = QString( "Unable to SELECT HasGCP(): rc=%1 [%2] sql[%3]\n" ).arg( ret ).arg( QString::fromUtf8( sqlite3_errmsg( db_handle ) ) ).arg( s_sql );
@@ -2032,7 +2124,8 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpMasterDb( GcpDbData* parmsGcpDbData
   if ( i_spatial_ref_sys_create > 0 )
     b_spatial_ref_sys_create = true;
   if ( !b_spatial_ref_sys_create )
-  { // no spatial_ref_sys, call InitSpatialMetadata
+  {
+    // no spatial_ref_sys, call InitSpatialMetadata
     s_sql = QString( "SELECT InitSpatialMetadata(0)" );
     ret = sqlite3_exec( db_handle, s_sql.toUtf8().constData(), NULL, NULL, &errMsg );
     if ( ret != SQLITE_OK )
@@ -2062,7 +2155,7 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpMasterDb( GcpDbData* parmsGcpDbData
         QStringList sa_sql_commands = QgsSpatiaLiteProviderGcpUtils::createGcpSqlMasterCommands( parmsGcpDbData, listTables );
         if ( sa_sql_commands.size() > 0 )
         {
-          for ( int i_list = 0;i_list < sa_sql_commands.size();i_list++ )
+          for ( int i_list = 0; i_list < sa_sql_commands.size(); i_list++ )
           {
             s_sql = sa_sql_commands.at( i_list );
             if ( parmsGcpDbData->mSqlDump )
@@ -2097,7 +2190,8 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpMasterDb( GcpDbData* parmsGcpDbData
     s_sql += QString( " (SELECT count(id_gcp) FROM '%1') AS count_gcp_master" ).arg( s_gcp_master );
     ret = sqlite3_prepare_v2( db_handle, s_sql.toUtf8().constData(), -1, &stmt, NULL );
     if ( ret != SQLITE_OK )
-    { //  typically: too few GCP pairs were passed, or the GCP pairs are of a so poor quality that finding any valid solution was impossible
+    {
+      //  typically: too few GCP pairs were passed, or the GCP pairs are of a so poor quality that finding any valid solution was impossible
       parmsGcpDbData->mError = QString( "Unable to retrieve %1 for '%2': rc=%3 [%4] sql[%5]\n" ).arg( "srid" ).arg( s_gcp_master ).arg( ret ).arg( QString::fromUtf8( sqlite3_errmsg( db_handle ) ) ).arg( s_sql );
       qDebug() << QString( "QgsSpatiaLiteProviderGcpUtils::createGcpMasterDb -%1- [%2] " ).arg( i_sql_counter ).arg( parmsGcpDbData->mError );
     }
@@ -2116,8 +2210,9 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpMasterDb( GcpDbData* parmsGcpDbData
     sqlite3_finalize( stmt );
     i_sql_counter++;
   }
-  if (( b_gcp_master ) && ( parmsGcpDbData->mDatabaseDump ) )
-  { // Dump Database after creation, when requested
+  if ( ( b_gcp_master ) && ( parmsGcpDbData->mDatabaseDump ) )
+  {
+    // Dump Database after creation, when requested
     // Prevent both DatabaseDump and SqlDump running
     sSqlOutput = QString::null;
     parmsGcpDbData->mSqlDump = false;
@@ -2128,7 +2223,7 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpMasterDb( GcpDbData* parmsGcpDbData
       QStringList sa_sql_commands = QgsSpatiaLiteProviderGcpUtils::createGcpSqlMasterCommands( parmsGcpDbData, listTables );
       if ( sa_sql_commands.size() > 0 )
       {
-        for ( int i_list = 0;i_list < sa_sql_commands.size();i_list++ )
+        for ( int i_list = 0; i_list < sa_sql_commands.size(); i_list++ )
         {
           s_sql = sa_sql_commands.at( i_list );
           if ( s_sql.contains( QString( "SELECT AddGeometryColumn(" ) ) )
@@ -2153,13 +2248,16 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpMasterDb( GcpDbData* parmsGcpDbData
       listTables.clear();
     }
     if ( i_gcp_count > 0 )
-    { // Only if rows exist, otherwise message
+    {
+      // Only if rows exist, otherwise message
       listTables.append( QString( "%2%1%3" ).arg( parmsGcpDbData->mParseString ).arg( "SELECT_MASTER" ).arg( s_gcp_master ) );
       if ( listTables.size() > 0 )
-      { // Format: SELECT_MASTER;#;#gcp_master
+      {
+        // Format: SELECT_MASTER;#;#gcp_master
         QStringList sa_sql_commands = QgsSpatiaLiteProviderGcpUtils::createGcpSqlMasterCommands( parmsGcpDbData, listTables );
         if ( sa_sql_commands.size() == 3 )
-        { // 3 results: select_insert (with select_fields),select_values, UpdateLayerStatistics
+        {
+          // 3 results: select_insert (with select_fields),select_values, UpdateLayerStatistics
           QString s_sql_select_insert = sa_sql_commands.at( 0 );
           s_sql = sa_sql_commands.at( 1 );
           int i_rows_counter = 0;
@@ -2170,7 +2268,8 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpMasterDb( GcpDbData* parmsGcpDbData
           sSqlOutput += QString( "-- adding %2 rows into '%3' \n%1\n" ).arg( s_sql_newline ).arg( i_gcp_count ).arg( s_gcp_master );
           ret = sqlite3_prepare_v2( db_handle, s_sql.toUtf8().constData(), -1, &stmt, NULL );
           if ( ret != SQLITE_OK )
-          { //  rc=1 [no such table: vector_layers_statistics or gcp_points, 'no such column' for gcp_pixel and gcp_ppoint] is an error
+          {
+            //  rc=1 [no such table: vector_layers_statistics or gcp_points, 'no such column' for gcp_pixel and gcp_ppoint] is an error
             parmsGcpDbData->mError = QString( "Unable to retrieve gcp_master rows : rc=%1 [%2] sql[%3]\n" ).arg( ret ).arg( QString::fromUtf8( sqlite3_errmsg( db_handle ) ) ).arg( s_sql );
             qDebug() << QString( "QgsSpatiaLiteProviderGcpUtils::createGcpMasterDb -gcp_master- [%1] " ).arg( parmsGcpDbData->mError );
             // End TRANSACTION
@@ -2184,18 +2283,21 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpMasterDb( GcpDbData* parmsGcpDbData
           {
             if ( sqlite3_column_type( stmt, 0 ) != SQLITE_NULL )
             {
-              s_sql = QString::fromUtf8(( const char * ) sqlite3_column_text( stmt, 0 ) );
+              s_sql = QString::fromUtf8( ( const char * ) sqlite3_column_text( stmt, 0 ) );
               if ( i_rows_compound == 0 )
-              { // start the INSERT Statement ... VALUES
+              {
+                // start the INSERT Statement ... VALUES
                 sSqlOutput += QString( s_sql_select_insert ).arg( s_sql );
                 i_rows_compound++;
               }
               else
-              { // continue the INSERT Statement  ( ... )
+              {
+                // continue the INSERT Statement  ( ... )
                 i_rows_compound++;
                 s_value_insert = QString( ",\n %1" ).arg( s_sql );
                 if ( i_rows_compound > i_max_compound )
-                { // close the INSERT Statement
+                {
+                  // close the INSERT Statement
                   i_rows_compound = 0;
                   s_value_insert += QString( ";\n%1\n" ).arg( s_sql_newline );
                 }
@@ -2222,7 +2324,8 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpMasterDb( GcpDbData* parmsGcpDbData
       sSqlOutput += QString( "%2\n%1\n" ).arg( s_sql_newline ).arg( s_message );
     }
     if ( !sSqlOutput.isNull() )
-    { // writing of Sql-Dump
+    {
+      // writing of Sql-Dump
       QFile::FileError file_result = QgsSpatiaLiteProviderGcpUtils::writeGcpSqlDump( sDatabaseFilename, sSqlOutput, "sql" );
       if ( file_result != QFile::NoError )
       {
@@ -2234,7 +2337,8 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpMasterDb( GcpDbData* parmsGcpDbData
       sSqlOutput = QString::null;
     }
     else
-    { // Dump failed, set as error
+    {
+      // Dump failed, set as error
       b_gcp_master = false;
       parmsGcpDbData->mError = QString( "Failed to create Gcp-Master Sql-Dump [file exists]: rc=%1 database[%2]" ).arg( 1 ).arg( sDatabaseFilename );
       return b_gcp_master;
@@ -2242,14 +2346,16 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpMasterDb( GcpDbData* parmsGcpDbData
   }
   QgsSpatiaLiteProviderGcpUtils::spatialiteShutdown( parmsGcpDbData );
   if ( b_gcp_master )
-  { // If we arrive here, a gcp_master TABLE exist and the used srid is known - thus valid
+  {
+    // If we arrive here, a gcp_master TABLE exist and the used srid is known - thus valid
     parmsGcpDbData->mDatabaseValid = true;
     parmsGcpDbData->mGcpSrid = i_srid;
     parmsGcpDbData->mGcpEnabled = i_gcp_enabled;
     if ( parmsGcpDbData->mSqlDump )
     {
       if ( !sSqlOutput.isNull() )
-      { // writing of Sql-Dump
+      {
+        // writing of Sql-Dump
         QFile::FileError file_result = QgsSpatiaLiteProviderGcpUtils::writeGcpSqlDump( sDatabaseFilename, sSqlOutput, "sql" );
         if ( file_result != QFile::NoError )
         {
@@ -2261,7 +2367,8 @@ bool QgsSpatiaLiteProviderGcpUtils::createGcpMasterDb( GcpDbData* parmsGcpDbData
         sSqlOutput = QString::null;
       }
       else
-      { // Dump failed, set as error
+      {
+        // Dump failed, set as error
         b_gcp_master = false;
         parmsGcpDbData->mError = QString( "Failed to create Gcp-Master Sql-Dump [file exists]: rc=%1 database[%2]" ).arg( 1 ).arg( sDatabaseFilename );
         return b_gcp_master;
@@ -2279,13 +2386,15 @@ QFile::FileError QgsSpatiaLiteProviderGcpUtils::writeGcpSqlDump( QString sSource
 {
   QFile::FileError file_result = QFile::NoError;
   if ( !sSqlOutput.isNull() )
-  { // writing of Sql-Dump
+  {
+    // writing of Sql-Dump
     QFileInfo db_file( sSourceFilename );
     QString s_db_name = db_file.fileName(); // file-name without path
     QString s_sql_name = db_file.fileName().replace( db_file.suffix(), sFileExtention );
     QString s_db_path = db_file.canonicalPath();
     if ( s_db_path.isEmpty() )
-    { // File does not exist, use absolutePath [synlinks and relative paths may not be resolved]
+    {
+      // File does not exist, use absolutePath [synlinks and relative paths may not be resolved]
       s_db_path = db_file.absolutePath();
     }
     QString s_sql_filename = QString( "%1/%2" ).arg( s_db_path ).arg( s_sql_name );
@@ -2310,20 +2419,23 @@ QFile::FileError QgsSpatiaLiteProviderGcpUtils::writeGcpSqlDump( QString sSource
       // qDebug() << QString( "-I-> QgsSpatiaLiteProviderGcpUtils::QgsSpatiaLiteProviderGcpUtils::writeGcpSqlDump writing sql-script sql_file[%1] error[%2]" ).arg( s_sql_filename ).arg( sql_file.error() );
     }
     else
-    { // QFile::OpenError [5] : Directory contained a '.db', thus was also replaced [Directory did not exist]
+    {
+      // QFile::OpenError [5] : Directory contained a '.db', thus was also replaced [Directory did not exist]
     }
   }
   return file_result;
 }
-QStringList QgsSpatiaLiteProviderGcpUtils::createGcpSqlPointsCommands( GcpDbData* parmsGcpDbData, QStringList listTables )
-{ // Format: id_gcp_coverage;#;#i_srid;#;#sCoverageName
+QStringList QgsSpatiaLiteProviderGcpUtils::createGcpSqlPointsCommands( GcpDbData *parmsGcpDbData, QStringList listTables )
+{
+  // Format: id_gcp_coverage;#;#i_srid;#;#sCoverageName
   QStringList sa_sql_commands;
   if ( !parmsGcpDbData )
   {
     return sa_sql_commands;
   }
-  for ( int i_list = 0;i_list < listTables.size();i_list++ )
-  { // raster entry has been added to gcp_covarage, create corresponding tables
+  for ( int i_list = 0; i_list < listTables.size(); i_list++ )
+  {
+    // raster entry has been added to gcp_covarage, create corresponding tables
     QStringList sa_fields = listTables.at( i_list ).split( parmsGcpDbData->mParseString );
     QString sCoverageName = QString::null;
     QString sPointsTableName = QString::null;
@@ -2338,7 +2450,8 @@ QStringList QgsSpatiaLiteProviderGcpUtils::createGcpSqlPointsCommands( GcpDbData
       sPointsTableName = QString( "%1_%2" ).arg( "gcp_points" ).arg( sCoverageName );
     }
     else
-    { // Entry is invalid, skip
+    {
+      // Entry is invalid, skip
       continue;
     }
     if ( !sPointsTableName.isNull() )
@@ -2452,15 +2565,17 @@ QStringList QgsSpatiaLiteProviderGcpUtils::createGcpSqlPointsCommands( GcpDbData
   }
   return sa_sql_commands;
 }
-QStringList QgsSpatiaLiteProviderGcpUtils::createGcpSqlCoveragesCommands( GcpDbData* parmsGcpDbData, QStringList listTables )
-{ // Format: id_gcp_coverage;#;#i_srid;#;#sCoverageName
+QStringList QgsSpatiaLiteProviderGcpUtils::createGcpSqlCoveragesCommands( GcpDbData *parmsGcpDbData, QStringList listTables )
+{
+  // Format: id_gcp_coverage;#;#i_srid;#;#sCoverageName
   QStringList sa_sql_commands;
   if ( !parmsGcpDbData )
   {
     return sa_sql_commands;
   }
-  for ( int i_list = 0;i_list < listTables.size();i_list++ )
-  { // raster entry has been added to gcp_covarage, create corresponding tables
+  for ( int i_list = 0; i_list < listTables.size(); i_list++ )
+  {
+    // raster entry has been added to gcp_covarage, create corresponding tables
     QStringList sa_fields = listTables.at( i_list ).split( parmsGcpDbData->mParseString );
     QString s_sql = QString::null;
     QString s_command_type = "";
@@ -2473,7 +2588,7 @@ QStringList QgsSpatiaLiteProviderGcpUtils::createGcpSqlCoveragesCommands( GcpDbD
     int iImageMaxY = -1;
     bool bToPixel = parmsGcpDbData->mToPixel;
     int i_order = parmsGcpDbData->mOrder;
-    if (( i_order < 0 ) || ( i_order > 3 ) )
+    if ( ( i_order < 0 ) || ( i_order > 3 ) )
     {
       i_order = 0;
     }
@@ -2489,7 +2604,8 @@ QStringList QgsSpatiaLiteProviderGcpUtils::createGcpSqlCoveragesCommands( GcpDbD
       if ( s_command_type.toUpper().startsWith( "INSERT_" ) )
       {
         if ( s_command_type.toUpper() ==  "INSERT_COMPUTE" )
-        { //  "INSERT_COMPUTE;#;#1;#;#3068;#;#1909.straube_blatt_i_a.4000;#;#5629;#;#4472"
+        {
+          //  "INSERT_COMPUTE;#;#1;#;#3068;#;#1909.straube_blatt_i_a.4000;#;#5629;#;#4472"
           if ( sa_fields.count() != 6 )
           {
             continue; // invalid input, avoid crash
@@ -2506,7 +2622,8 @@ QStringList QgsSpatiaLiteProviderGcpUtils::createGcpSqlCoveragesCommands( GcpDbD
         }
       }
       if ( s_command_type.toUpper() ==  "UPDATE_COMPUTE" )
-      { //  "UPDATE_COMPUTE;#;#1;#;#3068;#;#1909.straube_blatt_i_a.4000;#;#5629;#;#4472"
+      {
+        //  "UPDATE_COMPUTE;#;#1;#;#3068;#;#1909.straube_blatt_i_a.4000;#;#5629;#;#4472"
         if ( sa_fields.count() != 6 )
         {
           continue; // invalid input, avoid crash
@@ -2520,7 +2637,8 @@ QStringList QgsSpatiaLiteProviderGcpUtils::createGcpSqlCoveragesCommands( GcpDbD
         //qDebug() << QString( "-I-> UPDATE_COMPUTE[%1] points_table_name[%2] " ).arg( listTables.at( i_list ) ).arg(sPointsTableName);
       }
       if ( s_command_type.toUpper() ==  "UPDATE_COVERAGE_EXTENT" )
-      { //  "UPDATE_COVERAGE_EXTENT;#;#1;;#;#1909.straube_blatt_i_a.4000"
+      {
+        //  "UPDATE_COVERAGE_EXTENT;#;#1;;#;#1909.straube_blatt_i_a.4000"
         if ( sa_fields.count() != 3 )
         {
           continue; // invalid input, avoid crash
@@ -2531,11 +2649,13 @@ QStringList QgsSpatiaLiteProviderGcpUtils::createGcpSqlCoveragesCommands( GcpDbD
         //qDebug() << QString( "-I-> UPDATE_COMPUTE[%1] points_table_name[%2] " ).arg( listTables.at( i_list ) ).arg(sPointsTableName);
       }
       if ( s_command_type.toUpper().startsWith( "CREATE_" ) )
-      { // True for both 'COVERAGE' and 'CUTLINE'
+      {
+        // True for both 'COVERAGE' and 'CUTLINE'
         i_srid = sa_fields.at( 1 ).toInt();
       }
       if ( s_command_type.toUpper().startsWith( "SELECT_COVERAGES" ) )
-      { // id_gcp_coverage and All fields, if coverage_name is empty, all coverages, othewise with WHERE
+      {
+        // id_gcp_coverage and All fields, if coverage_name is empty, all coverages, othewise with WHERE
         if ( !sa_fields.at( 1 ).isEmpty() )
         {
           sCoverageName = sa_fields.at( 1 );
@@ -2544,7 +2664,8 @@ QStringList QgsSpatiaLiteProviderGcpUtils::createGcpSqlCoveragesCommands( GcpDbD
       if ( s_command_type.toUpper().startsWith( "TRANSFORM_COMPUTE" ) )
       {
         if ( sa_fields.count() != 6 )
-        { // "TRANSFORM_COMPUTE;#;#create_mercator_polygons;#;#mercator_polygon;#;#cutline_polygon#;#i_gcp_coverage_id#;#i_gcp_coverage_srid"
+        {
+          // "TRANSFORM_COMPUTE;#;#create_mercator_polygons;#;#mercator_polygon;#;#cutline_polygon#;#i_gcp_coverage_id#;#i_gcp_coverage_srid"
           continue; // invalid input, avoid crash
         }
         s_update_table = sa_fields.at( 1 );
@@ -2554,11 +2675,11 @@ QStringList QgsSpatiaLiteProviderGcpUtils::createGcpSqlCoveragesCommands( GcpDbD
         i_srid = sa_fields.at( 5 ).toInt();
         if ( s_update_table == "create_mercator_polygons" )
         {
-          if (( s_source_field == "mercator_polygon" ) && ( s_update_field == "cutline_polygon" ) )
+          if ( ( s_source_field == "mercator_polygon" ) && ( s_update_field == "cutline_polygon" ) )
           {
             bToPixel = false;
           }
-          if (( s_update_field == "mercator_polygon" ) && ( s_source_field == "cutline_polygon" ) )
+          if ( ( s_update_field == "mercator_polygon" ) && ( s_source_field == "cutline_polygon" ) )
           {
             bToPixel = true;
           }
@@ -2566,7 +2687,8 @@ QStringList QgsSpatiaLiteProviderGcpUtils::createGcpSqlCoveragesCommands( GcpDbD
       }
     }
     else
-    { // Entry is invalid, skip
+    {
+      // Entry is invalid, skip
       continue;
     }
     if ( s_command_type.toUpper() == "CREATE_COVERAGE" )
@@ -2640,7 +2762,8 @@ QStringList QgsSpatiaLiteProviderGcpUtils::createGcpSqlCoveragesCommands( GcpDbD
       sa_sql_commands.append( s_sql );
     }
     if ( s_command_type.toUpper() == "SELECT_COVERAGES" )
-    { // 2 fields: id_gcp_coverage and all Fields (including id_gcp_coverage)
+    {
+      // 2 fields: id_gcp_coverage and all Fields (including id_gcp_coverage)
       // s_sql += QString( "SELECT_COVERAGES%1'||%2" ).arg( parmsGcpDbData->mParseString ).arg( "" );
       s_sql = QString( "SELECT\n id_gcp_coverage," );
       s_sql += QString( "%1" ).arg( "id_gcp_coverage" );
@@ -2730,29 +2853,32 @@ QStringList QgsSpatiaLiteProviderGcpUtils::createGcpSqlCoveragesCommands( GcpDbD
       s_sql = QString( "SELECT CreateSpatialIndex('create_mercator_polygons','cutline_polygon');" );
       sa_sql_commands.append( s_sql );
     }
-    if (( s_command_type.toUpper() == "INSERT_COVERAGES" ) && ( !sCoverageValues.isNull() ) )
-    { // With 'id_gcp_coverage'
+    if ( ( s_command_type.toUpper() == "INSERT_COVERAGES" ) && ( !sCoverageValues.isNull() ) )
+    {
+      // With 'id_gcp_coverage'
       QString s_sql_fields = QString( "id_gcp_coverage,coverage_name,map_date,raster_file,raster_gtif,title,abstract,copyright," );
       s_sql_fields += QString( "scale,nodata,srid,id_cutline,gcp_count,transformtype, resampling, compression, image_max_x,image_max_y," );
       s_sql_fields += QString( "extent_minx,extent_miny,extent_maxx,extent_maxy,raster_path" );
       s_sql = QString( "INSERT INTO gcp_coverages\n(%1)\n%2" ).arg( s_sql_fields ).arg( sCoverageValues );
       sa_sql_commands.append( s_sql );
     }
-    if (( s_command_type.toUpper() == "INSERT_COVERAGE" ) && ( !sCoverageValues.isNull() ) )
-    { // Without 'id_gcp_coverage'
+    if ( ( s_command_type.toUpper() == "INSERT_COVERAGE" ) && ( !sCoverageValues.isNull() ) )
+    {
+      // Without 'id_gcp_coverage'
       QString s_sql_fields = QString( "coverage_name,map_date,raster_file,raster_gtif,title,abstract,copyright," );
       s_sql_fields += QString( "scale,nodata,srid,id_cutline,gcp_count,transformtype, resampling, compression, image_max_x,image_max_y," );
       s_sql_fields += QString( "extent_minx,extent_miny,extent_maxx,extent_maxy,raster_path" );
       s_sql = QString( "INSERT INTO gcp_coverages\n(%1)\n%2" ).arg( s_sql_fields ).arg( sCoverageValues );
       sa_sql_commands.append( s_sql );
     }
-    if (( s_command_type.toUpper() == "INSERT_COMPUTE" ) && ( !sCoverageName.isNull() ) )
+    if ( ( s_command_type.toUpper() == "INSERT_COMPUTE" ) && ( !sCoverageName.isNull() ) )
     {
       if ( parmsGcpDbData->mGcpEnabled )
       {
         QString s_sql = QString( "INSERT INTO '%1'\n (coverage_name,id_gcp_coverage, image_max_x, image_max_y, notes, srid, id_order)\n VALUES" ).arg( "gcp_compute" );
-        for ( int i_order = 0;i_order < 4;i_order++ )
-        { // Order 0-3 - Map-Point to Pixel-Point
+        for ( int i_order = 0; i_order < 4; i_order++ )
+        {
+          // Order 0-3 - Map-Point to Pixel-Point
           if ( i_order > 0 )
           {
             s_sql += QString( ",\n " );
@@ -2777,12 +2903,13 @@ QStringList QgsSpatiaLiteProviderGcpUtils::createGcpSqlCoveragesCommands( GcpDbD
         sa_sql_commands.append( s_sql );
       }
     }
-    if (( s_command_type.toUpper() == "UPDATE_COMPUTE" ) && ( !sCoverageName.isNull() ) )
+    if ( ( s_command_type.toUpper() == "UPDATE_COMPUTE" ) && ( !sCoverageName.isNull() ) )
     {
       if ( parmsGcpDbData->mGcpEnabled )
       {
-        for ( int i_order = 0;i_order < 4;i_order++ )
-        { // Order 0-3 - Map-Point to Pixel-Point
+        for ( int i_order = 0; i_order < 4; i_order++ )
+        {
+          // Order 0-3 - Map-Point to Pixel-Point
           s_sql = QString( "UPDATE '%1' SET gcp_compute=\n" ).arg( "gcp_compute" );
           s_sql += QString( " (SELECT GCP_Compute(gcp_point, gcp_pixel, %1 ) FROM '%2' WHERE ((gcp_point IS NOT NULL) AND (gcp_enable <> 0) AND (order_selected=%1)))\n" ).arg( i_order ).arg( sPointsTableName );
           s_sql += QString( "WHERE ((coverage_name='%1') AND (id_order=%2) AND (notes='%3'));" ).arg( sCoverageName ).arg( i_order ).arg( s_MapPoint_to_PixelPoint );
@@ -2796,10 +2923,12 @@ QStringList QgsSpatiaLiteProviderGcpUtils::createGcpSqlCoveragesCommands( GcpDbD
         }
       }
     }
-    if (( s_command_type.toUpper() == "TRANSFORM_COMPUTE" ) && ( !s_update_table.isNull() ) )
-    { //  "TRANSFORM_COMPUTE;#;#create_mercator_polygons;#;#mercator_polygon;#;#cutline_polygon#;#i_gcp_coverage_id#;#i_gcp_coverage_srid"
+    if ( ( s_command_type.toUpper() == "TRANSFORM_COMPUTE" ) && ( !s_update_table.isNull() ) )
+    {
+      //  "TRANSFORM_COMPUTE;#;#create_mercator_polygons;#;#mercator_polygon;#;#cutline_polygon#;#i_gcp_coverage_id#;#i_gcp_coverage_srid"
       if ( parmsGcpDbData->mGcpEnabled )
-      { // Update all of the Pixel-based Polygons to Polygongs of the Srid using the Polynomial Coefficients of the Gcp-Points
+      {
+        // Update all of the Pixel-based Polygons to Polygongs of the Srid using the Polynomial Coefficients of the Gcp-Points
         QString s_where_coverage_id = "";
         if ( i_gcp_coverage_id > 0 )
         {
@@ -2825,15 +2954,17 @@ QStringList QgsSpatiaLiteProviderGcpUtils::createGcpSqlCoveragesCommands( GcpDbD
   }
   return sa_sql_commands;
 }
-QStringList QgsSpatiaLiteProviderGcpUtils::createGcpSqlMasterCommands( GcpDbData* parmsGcpDbData, QStringList listTables )
-{ // Format: id_gcp_coverage;#;#i_srid;#;#sCoverageName
+QStringList QgsSpatiaLiteProviderGcpUtils::createGcpSqlMasterCommands( GcpDbData *parmsGcpDbData, QStringList listTables )
+{
+  // Format: id_gcp_coverage;#;#i_srid;#;#sCoverageName
   QStringList sa_sql_commands;
   if ( !parmsGcpDbData )
   {
     return sa_sql_commands;
   }
-  for ( int i_list = 0;i_list < listTables.size();i_list++ )
-  { // raster entry has been added to gcp_covarage, create corresponding tables
+  for ( int i_list = 0; i_list < listTables.size(); i_list++ )
+  {
+    // raster entry has been added to gcp_covarage, create corresponding tables
     QStringList sa_fields = listTables.at( i_list ).split( parmsGcpDbData->mParseString );
     QString s_sql = QString::null;
     QString s_command_type = "";
@@ -2850,18 +2981,21 @@ QStringList QgsSpatiaLiteProviderGcpUtils::createGcpSqlMasterCommands( GcpDbData
       if ( sa_fields.count() > 2 )
       {
         if ( s_command_type.toUpper().startsWith( "CREATE_MASTER" ) )
-        { //  "CREATE_MASTER;#;#gcp_master;#;#3068"
+        {
+          //  "CREATE_MASTER;#;#gcp_master;#;#3068"
           s_gcp_master = sa_fields.at( 1 );
           i_srid = sa_fields.at( 2 ).toInt();
         }
       }
       if ( s_command_type.toUpper() ==  "SELECT_MASTER" )
-      { //  "SELECT_MASTER;#;#gcp_master"
+      {
+        //  "SELECT_MASTER;#;#gcp_master"
         s_gcp_master = sa_fields.at( 1 );
       }
     }
     else
-    { // Entry is invalid, skip
+    {
+      // Entry is invalid, skip
       continue;
     }
     if ( s_command_type.toUpper() == "CREATE_MASTER" )
@@ -3058,7 +3192,8 @@ QStringList QgsSpatiaLiteProviderGcpUtils::createGcpSqlMasterCommands( GcpDbData
       }
     }
     if ( s_command_type.toUpper() == "SELECT_MASTER" )
-    { // 3 results: select_insert (with select_fields),select_values, UpdateLayerStatistics
+    {
+      // 3 results: select_insert (with select_fields),select_values, UpdateLayerStatistics
       QString s_select_fields = QString( "(id_gcp, name, notes, text, belongs_to_01, belongs_to_02, valid_since, valid_until,map_x,map_y,srid,gcp_type,order_selected,gcp_enable,gcp_text, gcp_point)" );
       s_sql = QString( "INSERT INTO '%1'\n" ).arg( s_gcp_master );
       s_sql += QString( "%1\n " ).arg( s_select_fields );
@@ -3095,7 +3230,7 @@ QStringList QgsSpatiaLiteProviderGcpUtils::createGcpSqlMasterCommands( GcpDbData
   }
   return sa_sql_commands;
 }
-bool QgsSpatiaLiteProviderGcpUtils::bulkGcpPointsInsert( GcpDbData* parmsGcpDbData )
+bool QgsSpatiaLiteProviderGcpUtils::bulkGcpPointsInsert( GcpDbData *parmsGcpDbData )
 {
   if ( !parmsGcpDbData )
     return false;
@@ -3106,8 +3241,9 @@ bool QgsSpatiaLiteProviderGcpUtils::bulkGcpPointsInsert( GcpDbData* parmsGcpDbDa
   if ( !bDatabaseExists )
     return false;
   int i_sql_command_type = parmsGcpDbData->mOrder;
-  if (( i_sql_command_type < 1 ) || ( i_sql_command_type > 2 ) )
-  { // 1=INSERT, 2=UPDATE
+  if ( ( i_sql_command_type < 1 ) || ( i_sql_command_type > 2 ) )
+  {
+    // 1=INSERT, 2=UPDATE
     return false;
   }
   parmsGcpDbData->mDatabaseValid = false;
@@ -3119,7 +3255,7 @@ bool QgsSpatiaLiteProviderGcpUtils::bulkGcpPointsInsert( GcpDbData* parmsGcpDbDa
   QString sGcpPointsTablename = QString( "gcp_points_%1" ).arg( sCoverageName );
   if ( bDatabaseExists )
   {
-    sqlite3* db_handle;
+    sqlite3 *db_handle;
     char *errMsg = nullptr;
     int i_sql_counter = 0;
     // open database
@@ -3128,7 +3264,8 @@ bool QgsSpatiaLiteProviderGcpUtils::bulkGcpPointsInsert( GcpDbData* parmsGcpDbDa
     {
       parmsGcpDbData->mError = QString( "Failed to open database: rc=%1 database[%2]" ).arg( ret ).arg( sDatabaseFilename );
       if ( ret != SQLITE_MISUSE )
-      { // 'SQLITE_MISUSE': in use with another file, do not close
+      {
+        // 'SQLITE_MISUSE': in use with another file, do not close
         QgsSpatiaLiteProviderGcpUtils::spatialiteShutdown( parmsGcpDbData );
       }
       return false;
@@ -3161,16 +3298,19 @@ bool QgsSpatiaLiteProviderGcpUtils::bulkGcpPointsInsert( GcpDbData* parmsGcpDbDa
       switch ( i_sql_command_type )
       {
         case 1:
-        { // INSERT
+        {
+          // INSERT
           int id_gcp = getSqliteSequence( parmsGcpDbData, sGcpPointsTablename );
           if ( id_gcp != SQLITE_ERROR )
-          { // Replace the Sql-Statement with the id_gcp or the INSERTEd row
+          {
+            // Replace the Sql-Statement with the id_gcp or the INSERTEd row
             parmsGcpDbData->gcp_coverages[id_gcp_master] = QString( "%1" ).arg( id_gcp );
           }
         }
         break;
         case 2:
-        { // UPDATE
+        {
+          // UPDATE
         }
         break;
       }
@@ -3186,14 +3326,15 @@ bool QgsSpatiaLiteProviderGcpUtils::bulkGcpPointsInsert( GcpDbData* parmsGcpDbDa
   parmsGcpDbData->mDatabaseValid = true;
   return bDatabaseExists;
 }
-int QgsSpatiaLiteProviderGcpUtils::getSqliteSequence( GcpDbData* parmsGcpDbData, QString sTablename )
+int QgsSpatiaLiteProviderGcpUtils::getSqliteSequence( GcpDbData *parmsGcpDbData, QString sTablename )
 {
   int id_sequence = SQLITE_ERROR;
   if ( parmsGcpDbData )
-  { // check if this is active
+  {
+    // check if this is active
     if ( parmsGcpDbData->db_handle )
     {
-      sqlite3_stmt* stmt;
+      sqlite3_stmt *stmt;
       QString s_sql = QString( "SELECT seq FROM sqlite_sequence WHERE (name='%1')" ).arg( sTablename );
       int ret = sqlite3_prepare_v2( parmsGcpDbData->db_handle, s_sql.toUtf8().constData(), -1, &stmt, NULL );
       if ( ret != SQLITE_OK )
@@ -3212,20 +3353,23 @@ int QgsSpatiaLiteProviderGcpUtils::getSqliteSequence( GcpDbData* parmsGcpDbData,
   }
   return id_sequence;
 }
-int QgsSpatiaLiteProviderGcpUtils::spatialiteInitEx( GcpDbData* parmsGcpDbData, QString sDatabaseFilename )
+int QgsSpatiaLiteProviderGcpUtils::spatialiteInitEx( GcpDbData *parmsGcpDbData, QString sDatabaseFilename )
 {
   int i_rc = SQLITE_ERROR;
   if ( parmsGcpDbData )
-  { // check if this is in use with the same file
+  {
+    // check if this is in use with the same file
     if ( parmsGcpDbData->db_handle )
     {
       if ( parmsGcpDbData->mUsedDatabaseFilename == sDatabaseFilename )
-      { // this is in use with the same file in a called function, do no reopen and close
+      {
+        // this is in use with the same file in a called function, do no reopen and close
         i_rc = SQLITE_OK;
         parmsGcpDbData->mUsedDatabaseFilenameCount++;
       }
       else
-      { // this is in use with another file
+      {
+        // this is in use with another file
         return SQLITE_MISUSE;
       }
     }
@@ -3233,7 +3377,8 @@ int QgsSpatiaLiteProviderGcpUtils::spatialiteInitEx( GcpDbData* parmsGcpDbData, 
     {
       i_rc = sqlite3_open_v2( sDatabaseFilename.toUtf8().data(), &parmsGcpDbData->db_handle, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, NULL );
       if ( i_rc == SQLITE_OK )
-      { // needed by spatialite_init_ex (multi-threading)
+      {
+        // needed by spatialite_init_ex (multi-threading)
         parmsGcpDbData->spatialite_cache = spatialite_alloc_connection();
         // load spatialite extension
         spatialite_init_ex( parmsGcpDbData->db_handle, parmsGcpDbData->spatialite_cache, 0 );
@@ -3244,7 +3389,7 @@ int QgsSpatiaLiteProviderGcpUtils::spatialiteInitEx( GcpDbData* parmsGcpDbData, 
   }
   return i_rc;
 }
-bool QgsSpatiaLiteProviderGcpUtils::spatialiteShutdown( GcpDbData* parmsGcpDbData )
+bool QgsSpatiaLiteProviderGcpUtils::spatialiteShutdown( GcpDbData *parmsGcpDbData )
 {
   bool b_rc = false;
   if ( parmsGcpDbData )
@@ -3265,7 +3410,8 @@ bool QgsSpatiaLiteProviderGcpUtils::spatialiteShutdown( GcpDbData* parmsGcpDbDat
         }
       }
       else
-      { // this is in use with the same file in a called function, do no reopen and close
+      {
+        // this is in use with the same file in a called function, do no reopen and close
         parmsGcpDbData->mUsedDatabaseFilenameCount--;
       }
     }
@@ -3273,15 +3419,12 @@ bool QgsSpatiaLiteProviderGcpUtils::spatialiteShutdown( GcpDbData* parmsGcpDbDat
   }
   return b_rc;
 }
-double QgsSpatiaLiteProviderGcpUtils::metersToMapPoint( GcpDbData* parmsGcpDbData )
+double QgsSpatiaLiteProviderGcpUtils::metersToMapPoint( GcpDbData *parmsGcpDbData )
 {
   int i_isDegree = 0;
   QString sCvtUnitName = "";
   //----
   QString  sDatabaseFilename = parmsGcpDbData->mGcpDatabaseFileName;
-  bool bDatabaseExists = QFile( sDatabaseFilename ).exists();
-  sqlite3* db_handle;
-  char *errMsg = nullptr;
   // open database
   // Note: this will not repopen the connection when called from another function such as createGcpDb
   int ret = QgsSpatiaLiteProviderGcpUtils::spatialiteInitEx( parmsGcpDbData, sDatabaseFilename );
@@ -3289,7 +3432,8 @@ double QgsSpatiaLiteProviderGcpUtils::metersToMapPoint( GcpDbData* parmsGcpDbDat
   {
     parmsGcpDbData->mError = QString( "Failed to open database: rc=%1 database[%2]" ).arg( ret ).arg( sDatabaseFilename );
     if ( ret != SQLITE_MISUSE )
-    { // 'SQLITE_MISUSE': in use with another file, do not close
+    {
+      // 'SQLITE_MISUSE': in use with another file, do not close
       QgsSpatiaLiteProviderGcpUtils::spatialiteShutdown( parmsGcpDbData );
     }
     return false;
@@ -3298,7 +3442,7 @@ double QgsSpatiaLiteProviderGcpUtils::metersToMapPoint( GcpDbData* parmsGcpDbDat
   {
     if ( parmsGcpDbData->db_handle )
     {
-      sqlite3_stmt* stmt;
+      sqlite3_stmt *stmt;
       QString s_sql = QString( "SELECT SridIsGeographic(%1), SridGetUnit(%1);" ).arg( parmsGcpDbData->mGcpSrid );
       // SELECT SridIsGeographic(3068), SridGetUnit(3068),SridIsGeographic(4326), SridGetUnit(4326); : 0 metre 1 degree
       int ret = sqlite3_prepare_v2( parmsGcpDbData->db_handle, s_sql.toUtf8().constData(), -1, &stmt, NULL );
@@ -3314,11 +3458,11 @@ double QgsSpatiaLiteProviderGcpUtils::metersToMapPoint( GcpDbData* parmsGcpDbDat
         if ( sqlite3_column_type( stmt, 0 ) != SQLITE_NULL )
           i_isDegree = sqlite3_column_int( stmt, 0 );
         if ( sqlite3_column_type( stmt, 1 ) != SQLITE_NULL )
-          sCvtUnitName = QString::fromUtf8(( const char * ) sqlite3_column_text( stmt, 1 ) ).toLower();
+          sCvtUnitName = QString::fromUtf8( ( const char * ) sqlite3_column_text( stmt, 1 ) ).toLower();
       }
       sqlite3_finalize( stmt );
       s_sql = "";
-      if (( i_isDegree == 0 ) && (( sCvtUnitName.contains( QString( "metre" ) ) || ( sCvtUnitName.contains( QString( "meter" ) ) ) ) ) )
+      if ( ( i_isDegree == 0 ) && ( ( sCvtUnitName.contains( QString( "metre" ) ) || ( sCvtUnitName.contains( QString( "meter" ) ) ) ) ) )
       {
         return parmsGcpDbData->mGcpMasterArea;
       }
@@ -3326,8 +3470,9 @@ double QgsSpatiaLiteProviderGcpUtils::metersToMapPoint( GcpDbData* parmsGcpDbDat
       {
         QString sCvtCommand = "";
         if ( i_isDegree == 1 )
-        { // SELECT ST_Transform(MakePoint(24250.41,21182.19,3068),4326); SRID=4326;POINT(13.3934162138589 52.51751576264239)
-          QString s_GeomFromEWKT = QString( "GeomFromEWKT('SRID=%1;%2')" ).arg( parmsGcpDbData->mGcpSrid).arg( parmsGcpDbData->mInputPoint.wellKnownText() );
+        {
+          // SELECT ST_Transform(MakePoint(24250.41,21182.19,3068),4326); SRID=4326;POINT(13.3934162138589 52.51751576264239)
+          QString s_GeomFromEWKT = QString( "GeomFromEWKT('SRID=%1;%2')" ).arg( parmsGcpDbData->mGcpSrid ).arg( parmsGcpDbData->mInputPoint.wellKnownText() );
           // SELECT ST_Transform(MakePoint(13.3934162138589,52.51751576264239,4326),3395)
           // SELECT ST_Length(MakeLine(MakePoint(13.3934162138589,52.51751576264239,4326),ST_Project(MakePoint(13.3934162138589,52.51751576264239,4326),5,PI()/2)))
           // 0.000074
@@ -3339,7 +3484,8 @@ double QgsSpatiaLiteProviderGcpUtils::metersToMapPoint( GcpDbData* parmsGcpDbDat
           s_sql = QString( "SELECT ST_Length(MakeLine(%1,ST_Project(%1,%2,PI()/2));" ).arg( s_GeomFromEWKT ).arg( parmsGcpDbData->mGcpMasterArea );
         }
         else
-        { // SELECT DISTINCT unit FROM spatial_ref_sys_aux
+        {
+          // SELECT DISTINCT unit FROM spatial_ref_sys_aux
           // foot, yard, chain,link and fathom
           if ( sCvtUnitName.contains( QString( "foot" ) ) )
           {
@@ -3412,44 +3558,46 @@ double QgsSpatiaLiteProviderGcpUtils::metersToMapPoint( GcpDbData* parmsGcpDbDat
   QgsSpatiaLiteProviderGcpUtils::spatialiteShutdown( parmsGcpDbData );
   return parmsGcpDbData->mGcpMasterArea;
 }
-bool QgsSpatiaLiteProviderGcpUtils::ConvertLength( double inputValue, ConvertUnits unitFrom, ConvertUnits unitTo, double* outputValue )
-{ // converting length from one unit to another
+bool QgsSpatiaLiteProviderGcpUtils::ConvertLength( double inputValue, ConvertUnits unitFrom, ConvertUnits unitTo, double *outputValue )
+{
+  // converting length from one unit to another
   double factors[] =
   {
-	1000.0, 1.0, 0.1, 0.01, 0.001, 1852.0, 0.0254, 0.3048, 0.9144,
-	1609.344, 1.8288, 20.1168, 0.201168, 1.0, 0.304800609601219,
-	0.914401828803658, 20.11684023368047, 1609.347218694437, 0.91439523,
-	0.30479841, 20.11669506
-   };
+    1000.0, 1.0, 0.1, 0.01, 0.001, 1852.0, 0.0254, 0.3048, 0.9144,
+    1609.344, 1.8288, 20.1168, 0.201168, 1.0, 0.304800609601219,
+    0.914401828803658, 20.11684023368047, 1609.347218694437, 0.91439523,
+    0.30479841, 20.11669506
+  };
   factors[QgsSpatiaLiteProviderGcpUtils::US_Inch] /= 39.37;
-  if ((unitFrom < QgsSpatiaLiteProviderGcpUtils::Kilometer) || (unitTo < QgsSpatiaLiteProviderGcpUtils::Kilometer) ||
-       (unitFrom > QgsSpatiaLiteProviderGcpUtils::Indian_Chain) || (unitTo > QgsSpatiaLiteProviderGcpUtils::Indian_Chain) ||
-       (outputValue == nullptr))
-  { // Sanity checks faild
-   return false;
-  }
-  if (unitFrom == unitTo)
+  if ( ( unitFrom < QgsSpatiaLiteProviderGcpUtils::Kilometer ) || ( unitTo < QgsSpatiaLiteProviderGcpUtils::Kilometer ) ||
+       ( unitFrom > QgsSpatiaLiteProviderGcpUtils::Indian_Chain ) || ( unitTo > QgsSpatiaLiteProviderGcpUtils::Indian_Chain ) ||
+       ( outputValue == nullptr ) )
   {
-   *outputValue=inputValue;
-   return true;
+    // Sanity checks faild
+    return false;
   }
-  if (unitFrom == QgsSpatiaLiteProviderGcpUtils::Meter)
+  if ( unitFrom == unitTo )
   {
-   *outputValue=inputValue / factors[unitTo];
-   return true;
+    *outputValue = inputValue;
+    return true;
   }
-  if (unitTo == QgsSpatiaLiteProviderGcpUtils::Meter)
+  if ( unitFrom == QgsSpatiaLiteProviderGcpUtils::Meter )
   {
-   *outputValue=inputValue * factors[unitFrom];
-   return true;
+    *outputValue = inputValue / factors[unitTo];
+    return true;
   }
- *outputValue = (inputValue * factors[unitFrom]) / factors[unitTo];
+  if ( unitTo == QgsSpatiaLiteProviderGcpUtils::Meter )
+  {
+    *outputValue = inputValue * factors[unitFrom];
+    return true;
+  }
+  *outputValue = ( inputValue * factors[unitFrom] ) / factors[unitTo];
   return true;
 }
 QMap<QString, QString> QgsSpatiaLiteProviderGcpUtils::readProvidertags( QgsRasterLayer *rasterLayer, bool bSetTags )
 {
   QMap<QString, QString> map_providertags;
-  if (( !rasterLayer ) || ( !rasterLayer->isValid() ) )
+  if ( ( !rasterLayer ) || ( !rasterLayer->isValid() ) )
   {
     return map_providertags;
   }
@@ -3464,23 +3612,28 @@ QMap<QString, QString> QgsSpatiaLiteProviderGcpUtils::readProvidertags( QgsRaste
     // Split the TIFTAG area at new-lines
     QStringList metadata = rasterLayerMetadata_split_2[0].split( "\n" );
     if ( metadata.length() > 0 )
-    { // filter out everything that startes with ''TIFFTAG_'
+    {
+      // filter out everything that startes with ''TIFFTAG_'
       QStringList tifftags = metadata.filter( QRegExp( QString( "^%1_" ).arg( "TIFFTAG" ), Qt::CaseInsensitive ) );
-      for ( int i = 0;i < tifftags.length();i++ )
-      { // Split in TIFFTAG-Parm and TIFFTAG-Value
+      for ( int i = 0; i < tifftags.length(); i++ )
+      {
+        // Split in TIFFTAG-Parm and TIFFTAG-Value
         QStringList tifftag = tifftags[i].split( "=" );
         if ( tifftag.length() > 0 )
-        { // tifftag[TIFFTAG_SOFTWARE=SELECT GeomFromEWKT("SRID=187900;POLYGON((0.0 1200.0,1600.0 1200.0,1600.0 0.0, 0.0 0.0,0.0 1200.0))");]
+        {
+          // tifftag[TIFFTAG_SOFTWARE=SELECT GeomFromEWKT("SRID=187900;POLYGON((0.0 1200.0,1600.0 1200.0,1600.0 0.0, 0.0 0.0,0.0 1200.0))");]
           // qDebug() << QString( "QgsRasterLayer::readProvidertags(%1) -1- tifftag[%2] tifftag_length[%3]  tifftag_name[%4] tifftag_value[%5]" ).arg( i ).arg(tifftags[i]).arg(tifftag.length()).arg(tifftags[i].section('=', 0, 0)).arg(tifftags[i].section('=', 1));
           map_providertags.insert( tifftags[i].section( '=', 0, 0 ), tifftags[i].section( '=', 1 ) );
         }
       }
       tifftags = metadata.filter( QRegExp( QString( "^%1_" ).arg( "GDAL" ), Qt::CaseInsensitive ) );
-      for ( int i = 0;i < tifftags.length();i++ )
-      { // Split in TIFFTAG-Parm and TIFFTAG-Value
+      for ( int i = 0; i < tifftags.length(); i++ )
+      {
+        // Split in TIFFTAG-Parm and TIFFTAG-Value
         QStringList tifftag = tifftags[i].split( "=" );
         if ( tifftag.length() > 0 )
-        { // tifftag[TIFFTAG_SOFTWARE=SELECT GeomFromEWKT("SRID=187900;POLYGON((0.0 1200.0,1600.0 1200.0,1600.0 0.0, 0.0 0.0,0.0 1200.0))");]
+        {
+          // tifftag[TIFFTAG_SOFTWARE=SELECT GeomFromEWKT("SRID=187900;POLYGON((0.0 1200.0,1600.0 1200.0,1600.0 0.0, 0.0 0.0,0.0 1200.0))");]
           // qDebug() << QString( "QgsRasterLayer::readProvidertags(%1) -1- tifftag[%2] tifftag_length[%3]  tifftag_name[%4] tifftag_value[%5]" ).arg( i ).arg(tifftags[i]).arg(tifftag.length()).arg(tifftags[i].section('=', 0, 0)).arg(tifftags[i].section('=', 1));
           map_providertags.insert( tifftags[i].section( '=', 0, 0 ), tifftags[i].section( '=', 1 ) );
         }
@@ -3507,11 +3660,13 @@ QMap<QString, QString> QgsSpatiaLiteProviderGcpUtils::readProvidertags( QgsRaste
     if ( fileInfo.isFile() )
     {
       if ( rasterLayer->name().isEmpty() )
-      { // Set a, non-empty, default name
+      {
+        // Set a, non-empty, default name
         rasterLayer->setName( fileInfo.fileName() );
       }
       if ( rasterLayer->shortName().isEmpty() )
-      { // Set a, non-empty, default name
+      {
+        // Set a, non-empty, default name
         rasterLayer->setShortName( fileInfo.completeBaseName() );
       }
     }

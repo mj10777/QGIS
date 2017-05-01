@@ -29,9 +29,9 @@
 
 QgsTransformSettingsDialog::QgsTransformSettingsDialog( const QString &raster, const QString &output,
     int countGCPpoints, QWidget *parent )
-    : QDialog( parent )
-    , mSourceRasterFile( raster )
-    , mCountGCPpoints( countGCPpoints )
+  : QDialog( parent )
+  , mSourceRasterFile( raster )
+  , mCountGCPpoints( countGCPpoints )
 {
   setupUi( this );
 
@@ -54,7 +54,7 @@ QgsTransformSettingsDialog::QgsTransformSettingsDialog( const QString &raster, c
   mListCompression.append( "PACKBITS" );
   mListCompression.append( "DEFLATE" );
   QStringList listCompressionTr;
-  Q_FOREACH ( const QString& item, mListCompression )
+  Q_FOREACH ( const QString &item, mListCompression )
   {
     listCompressionTr.append( tr( item.toAscii().data() ) );
   }
@@ -92,8 +92,8 @@ QgsTransformSettingsDialog::~QgsTransformSettingsDialog()
 void QgsTransformSettingsDialog::getTransformSettings( QgsGeorefTransform::TransformParametrisation &tp,
     QgsImageWarper::ResamplingMethod &rm,
     QString &comprMethod, QString &raster,
-    QgsCoordinateReferenceSystem &proj, QString& pdfMapFile, QString& pdfReportFile, bool &zt, bool &loadInQgis,
-    double& resX, double& resY )
+    QgsCoordinateReferenceSystem &proj, QString &pdfMapFile, QString &pdfReportFile, bool &zt, bool &loadInQgis,
+    double &resX, double &resY )
 {
   if ( cmbTransformType->currentIndex() == -1 )
     tp = QgsGeorefTransform::InvalidTransform;
@@ -247,7 +247,7 @@ void QgsTransformSettingsDialog::on_tbnReportFile_clicked()
   }
 }
 
-void QgsTransformSettingsDialog::on_cmbTransformType_currentIndexChanged( const QString& text )
+void QgsTransformSettingsDialog::on_cmbTransformType_currentIndexChanged( const QString &text )
 {
   if ( text == tr( "Linear" ) )
   {
@@ -276,7 +276,7 @@ void QgsTransformSettingsDialog::on_mWorldFileCheckBox_stateChanged( int state )
 bool QgsTransformSettingsDialog::checkGCPpoints( int count, int &minGCPpoints )
 {
   QgsGeorefTransform georefTransform;
-  georefTransform.selectTransformParametrisation(( QgsGeorefTransform::TransformParametrisation )count );
+  georefTransform.selectTransformParametrisation( ( QgsGeorefTransform::TransformParametrisation )count );
   minGCPpoints = georefTransform.getMinimumGCPCount();
   return ( mCountGCPpoints >= minGCPpoints );
 }
@@ -299,27 +299,27 @@ QString QgsTransformSettingsDialog::generateModifiedRasterFileName( const QStrin
 
 // Note this code is duplicated from qgisapp.cpp because
 // I didnt want to make plugins on qgsapplication [TS]
-QIcon QgsTransformSettingsDialog::getThemeIcon( const QString &theName )
+QIcon QgsTransformSettingsDialog::getThemeIcon( const QString &name )
 {
-  if ( QFile::exists( QgsApplication::activeThemePath() + theName ) )
+  if ( QFile::exists( QgsApplication::activeThemePath() + name ) )
   {
-    return QIcon( QgsApplication::activeThemePath() + theName );
+    return QIcon( QgsApplication::activeThemePath() + name );
   }
-  else if ( QFile::exists( QgsApplication::defaultThemePath() + theName ) )
+  else if ( QFile::exists( QgsApplication::defaultThemePath() + name ) )
   {
-    return QIcon( QgsApplication::defaultThemePath() + theName );
+    return QIcon( QgsApplication::defaultThemePath() + name );
   }
   else
   {
     QSettings settings;
-    QString themePath = ":/icons/" + settings.value( "/Themes" ).toString() + theName;
+    QString themePath = ":/icons/" + settings.value( "/Themes" ).toString() + name;
     if ( QFile::exists( themePath ) )
     {
       return QIcon( themePath );
     }
     else
     {
-      return QIcon( ":/icons/default" + theName );
+      return QIcon( ":/icons/default" + name );
     }
   }
 }

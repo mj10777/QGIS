@@ -27,9 +27,9 @@ class QgsGeorefDataPoint : public QObject
   public:
     //! constructor
     QgsGeorefDataPoint( QgsMapCanvas *srcCanvas, QgsMapCanvas *dstCanvas,
-                        const QgsPoint& pixelCoords, const QgsPoint& mapCoords, int i_srid, int id_gcp,
+                        const QgsPoint &pixelCoords, const QgsPoint &mapCoords, int i_srid, int id_gcp,
                         bool enable, int iLegacyMode );
-    QgsGeorefDataPoint( const QgsPoint& pixelCoords, const QgsPoint& mapCoords, int i_srid, int id_gcp,
+    QgsGeorefDataPoint( const QgsPoint &pixelCoords, const QgsPoint &mapCoords, int i_srid, int id_gcp,
                         int id_gcp_master, int iResultType, QString sTextInfo );
     QgsGeorefDataPoint( const QgsGeorefDataPoint &dataPoint );
     ~QgsGeorefDataPoint();
@@ -56,6 +56,7 @@ class QgsGeorefDataPoint : public QObject
 
     int id() const { return mId; }
     void setId( int id );
+
     /**
      * getSrid()
      *  - Retrieve the Srid of the point
@@ -63,6 +64,7 @@ class QgsGeorefDataPoint : public QObject
      * \return  srid of point
      */
     int getSrid() const { return mSrid; };
+
     /**
      * setSrid()
      *  - Set the Srid of the point
@@ -71,6 +73,7 @@ class QgsGeorefDataPoint : public QObject
     void setSrid( int i_srid ) {mSrid = i_srid;};
     void setIdMaster( int id_master ) {mIdMaster = id_master;};
     int getIdMaster() const { return mIdMaster; };
+
     /**
      * getResultType()
      *  - How the point is being used
@@ -86,6 +89,7 @@ class QgsGeorefDataPoint : public QObject
      * \return  0-3
      */
     int getResultType() const { return mResultType; };
+
     /**
      * setResultType()
      *  - How the point is to be used
@@ -100,6 +104,7 @@ class QgsGeorefDataPoint : public QObject
      * \return  0-3
      */
     void setResultType( int iResultType ) {mResultType = iResultType;};
+
     /**
      * getTextInfo()
      *  - Formatted String to be used as Meta-Data when creating a point from a GCP-Master entry
@@ -112,6 +117,7 @@ class QgsGeorefDataPoint : public QObject
      * \see sqlInsertPointsCoverage
      */
     QString getTextInfo() const { return mTextInfo; };
+
     /**
      * setTextInfo()
      *  - Formatted String to be used as Meta-Data when creating a point from a GCP-Master entry
@@ -129,6 +135,7 @@ class QgsGeorefDataPoint : public QObject
      * \see QgsGeorefPluginGui::fetchGcpMasterPointsExtent
      */
     void setTextInfo( QString sTextInfo ) {mTextInfo = sTextInfo;};
+
     /**
      * AsEWKT
      *  - Format point a EWKT for INSERT / UPDATE Sql-Statements
@@ -148,6 +155,7 @@ class QgsGeorefDataPoint : public QObject
      * \return  Spatialite specific formated String as EWKT of point
      */
     QString AsEWKT( int iPointType = 1, int i_srid = -1 ) const;
+
     /**
      * sqlInsertPointsCoverage
      *  - Depending on how point is being used
@@ -164,7 +172,8 @@ class QgsGeorefDataPoint : public QObject
      * \param i_srid srid to use for ST_Transform during AsEWKT
      * \return valid SQL to UPDATE or INSERT the point
      */
-    QString sqlInsertPointsCoverage(int i_srid = -1) const;
+    QString sqlInsertPointsCoverage( int i_srid = -1 ) const;
+
     /**
      * GeomFromEWKT
      *  - Format point a EWKT for INSERT / UPDATE Sql-Statements
@@ -180,13 +189,15 @@ class QgsGeorefDataPoint : public QObject
      * \param i_srid srid to use for ST_Transform
      * \return  Spatialite specific GeomFromEWKT command, with formated String as EWKT of point
      */
-    QString GeomFromEWKT( int iPointType = 1, int i_srid = -1 ) const { return QString( "GeomFromEWKT('%1')" ).arg( AsEWKT( iPointType,i_srid ) ); };
+    QString GeomFromEWKT( int iPointType = 1, int i_srid = -1 ) const { return QString( "GeomFromEWKT('%1')" ).arg( AsEWKT( iPointType, i_srid ) ); };
     bool contains( QPoint p, bool isMapPlugin );
+
     /**
      * Returns pixel (Georeferencer) Canvas
      * \return mSrcCanvas pixel (Georeferencer) Canvas
      */
     QgsMapCanvas *srcCanvas() const { return mSrcCanvas; }
+
     /**
      * Returns map (QGis) Canvas
      * \return mDstCanvas map (QGis) Canvas
@@ -201,10 +212,12 @@ class QgsGeorefDataPoint : public QObject
     void updateCoords();
 
   private:
+
     /**
      * Pixel (Georeferencer) Canvas
      */
     QgsMapCanvas *mSrcCanvas = nullptr;
+
     /**
      * Pixel (Georeferencer) Canvas
      */

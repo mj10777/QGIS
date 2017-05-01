@@ -30,6 +30,7 @@ class QgsGcpDatabaseDialog : public QDialog, private Ui::QgsGcpDatabaseDialog
     QgsGcpDatabaseDialog( const QgsCoordinateReferenceSystem &destCRS, QWidget *parent = nullptr );
 
     ~QgsGcpDatabaseDialog();
+
     /**
      * A QFileInfo built out of mDatabaseDir and mDatabaseFile
      * \since QGIS 3.0
@@ -42,6 +43,7 @@ class QgsGcpDatabaseDialog : public QDialog, private Ui::QgsGcpDatabaseDialog
      * \see database_file
      */
     QFileInfo GcpDatabaseFile() { return database_file; }
+
     /**
      * Which type of Gcp Database should be created
      *  -> will determine which function will be called
@@ -55,6 +57,7 @@ class QgsGcpDatabaseDialog : public QDialog, private Ui::QgsGcpDatabaseDialog
      * \see gcp_db_type
      */
     QgsSpatiaLiteProviderGcpUtils::GcpDatabases GcpDatabaseType() { return gcp_db_type; }
+
     /**
      * Srid of the Database
      *  ->default value will be the present setting of the QGIS-Application
@@ -68,6 +71,7 @@ class QgsGcpDatabaseDialog : public QDialog, private Ui::QgsGcpDatabaseDialog
      * \see mGcpSrid
      */
     int GcpDatabaseSrid() { return mGcpSrid; }
+
     /**
      * Create a Sql-Dump of the Database
      *  -> during creation
@@ -84,6 +88,7 @@ class QgsGcpDatabaseDialog : public QDialog, private Ui::QgsGcpDatabaseDialog
 
   protected:
     void changeEvent( QEvent *e ) override;
+
     /**
      * The final values will be prepaired for the results of the dialog
      *  -> the suffix/file extetion will be enforsed of the File-Name
@@ -106,10 +111,11 @@ class QgsGcpDatabaseDialog : public QDialog, private Ui::QgsGcpDatabaseDialog
 
   private slots:
     void on_tbnOutputDatabaseDir_clicked();
-    void on_cmbGcpDatabaseType_currentIndexChanged( const QString& text );
-    void on_mCrsSelector_crsChanged( const QgsCoordinateReferenceSystem & changed_Crs );
+    void on_cmbGcpDatabaseType_currentIndexChanged( const QString &text );
+    void on_mCrsSelector_crsChanged( const QgsCoordinateReferenceSystem &changed_Crs );
 
   private:
+
     /**
      * Query an default name for the Gcp-Database (Coverage/Master)
      * \note
@@ -129,6 +135,7 @@ class QgsGcpDatabaseDialog : public QDialog, private Ui::QgsGcpDatabaseDialog
      * \return mDatabaseFile the default name for mOutputDatabaseFileEdit
      */
     QString defaultGcpDatabaseName() { if ( gcp_db_type == QgsSpatiaLiteProviderGcpUtils::GcpCoverages ) return QString( "gcp_coverages.%1.%2" ).arg( mGcpSrid ).arg( mDbSuffic ); else return QString( "gcp_master.%1.%2" ).arg( mGcpSrid ).arg( mDbSuffic ); }
+
     /**
      * Create an default name for the Gcp-Database (Coverage/Master)
      * \note
@@ -150,6 +157,7 @@ class QgsGcpDatabaseDialog : public QDialog, private Ui::QgsGcpDatabaseDialog
      * \return mDatabaseFile at its present setting (not used)
      */
     QString setGcpDatabaseName( QString text = QString::null, int i_srid = INT_MIN );
+
     /**
      * The Directory to store the Database
      * \since QGIS 3.0
@@ -160,6 +168,7 @@ class QgsGcpDatabaseDialog : public QDialog, private Ui::QgsGcpDatabaseDialog
      * \see GcpDatabaseFile
      */
     QString mDatabaseDir;
+
     /**
      * The Filename of the Database
      * \since QGIS 3.0
@@ -170,6 +179,7 @@ class QgsGcpDatabaseDialog : public QDialog, private Ui::QgsGcpDatabaseDialog
      * \see GcpDatabaseFile
      */
     QString mDatabaseFile;
+
     /**
      * A QFileInfo built out of mDatabaseDir and mDatabaseFile
      * \since QGIS 3.0
@@ -182,6 +192,7 @@ class QgsGcpDatabaseDialog : public QDialog, private Ui::QgsGcpDatabaseDialog
      * \see GcpDatabaseFile
      */
     QFileInfo database_file;
+
     /**
      * CoordinateReferenceSystem to retrieve the desired srid of the Database
      *  - default value will be the present setting of the QGIS-Application
@@ -195,6 +206,7 @@ class QgsGcpDatabaseDialog : public QDialog, private Ui::QgsGcpDatabaseDialog
      * \see GcpDatabaseSrid()
      */
     QgsCoordinateReferenceSystem mDestCRS;
+
     /**
      * Create a Sql-Dump of the Database
      *  -> during creation
@@ -208,6 +220,7 @@ class QgsGcpDatabaseDialog : public QDialog, private Ui::QgsGcpDatabaseDialog
      * \see GcpDatabaseDump()
      */
     bool b_create_sqldump;
+
     /**
      * Srid of the Database
      *  ->default value will be the present setting of the QGIS-Application
@@ -221,6 +234,7 @@ class QgsGcpDatabaseDialog : public QDialog, private Ui::QgsGcpDatabaseDialog
      * \see GcpDatabaseSrid()
      */
     int mGcpSrid;
+
     /**
      * Which type of Gcp Database should be created
      *  -> will determine which function will be called
@@ -234,6 +248,7 @@ class QgsGcpDatabaseDialog : public QDialog, private Ui::QgsGcpDatabaseDialog
      * \see QgsGeorefPluginGui::createGcpMasterDb
      */
     QgsSpatiaLiteProviderGcpUtils::GcpDatabases gcp_db_type;
+
     /**
      * Store the default suffix/File extention based on the Gcp-Database Type
      * \note

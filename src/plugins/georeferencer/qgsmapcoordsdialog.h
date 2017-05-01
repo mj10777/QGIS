@@ -31,8 +31,8 @@ class QgsGeorefMapToolEmitPoint : public QgsMapTool
 
   public:
     explicit QgsGeorefMapToolEmitPoint( QgsMapCanvas *canvas )
-        : QgsMapTool( canvas )
-        , mSnappingMarker( nullptr )
+      : QgsMapTool( canvas )
+      , mSnappingMarker( nullptr )
     {
     }
 
@@ -64,7 +64,7 @@ class QgsGeorefMapToolEmitPoint : public QgsMapTool
       }
     }
 
-    void canvasPressEvent( QgsMapMouseEvent * e ) override
+    void canvasPressEvent( QgsMapMouseEvent *e ) override
     {
       MappedPoint mapped = mapPoint( e );
       emit canvasClicked( mapped.point, e->button() );
@@ -85,7 +85,7 @@ class QgsGeorefMapToolEmitPoint : public QgsMapTool
     }
 
   signals:
-    void canvasClicked( const QgsPoint& point, Qt::MouseButton button );
+    void canvasClicked( const QgsPoint &point, Qt::MouseButton button );
     void mouseReleased();
 
   private:
@@ -99,7 +99,7 @@ class QgsGeorefMapToolEmitPoint : public QgsMapTool
     MappedPoint mapPoint( QMouseEvent *e )
     {
       QgsPoint pnt = toMapCoordinates( e->pos() );
-      QgsSnappingUtils* snappingUtils = canvas()->snappingUtils();
+      QgsSnappingUtils *snappingUtils = canvas()->snappingUtils();
       QgsPointLocator::Match match = snappingUtils->snapToMap( pnt );
 
       MappedPoint ret;
@@ -108,7 +108,7 @@ class QgsGeorefMapToolEmitPoint : public QgsMapTool
       return ret;
     }
 
-    QgsVertexMarker* mSnappingMarker;
+    QgsVertexMarker *mSnappingMarker;
 };
 
 class QgsMapCoordsDialog : public QDialog, private Ui::QgsMapCoordsDialogBase
@@ -129,16 +129,16 @@ class QgsMapCoordsDialog : public QDialog, private Ui::QgsMapCoordsDialogBase
     void setPrevTool();
 
   signals:
-    void pointAdded( const QgsPoint &, const QgsPoint & , const int &, const bool & );
+    void pointAdded( const QgsPoint &, const QgsPoint &, const int &, const bool & );
 
   private:
-    double dmsToDD( const QString& dms );
+    double dmsToDD( const QString &dms );
 
     QPushButton *mPointFromCanvasPushButton;
 
-    QgsGeorefMapToolEmitPoint* mToolEmitPoint = nullptr;
-    QgsMapTool* mPrevMapTool = nullptr;
-    QgsMapCanvas* mQgisCanvas = nullptr;
+    QgsGeorefMapToolEmitPoint *mToolEmitPoint = nullptr;
+    QgsMapTool *mPrevMapTool = nullptr;
+    QgsMapCanvas *mQgisCanvas = nullptr;
 
     QgsPoint mPixelCoords;
     QgsPoint mMapCoords;

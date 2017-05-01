@@ -20,17 +20,18 @@
 #include "qgsgeorefvalidators.h"
 #include "qgsmapcoordsdialog.h"
 
-QgsMapCoordsDialog::QgsMapCoordsDialog( QgsMapCanvas* qgisCanvas, const QgsPoint &pixelCoords, int id_gcp, QWidget* parent, int iLegacyMode )
-    : QDialog( parent, Qt::Dialog )
-    , mQgisCanvas( qgisCanvas )
-    , mPixelCoords( pixelCoords )
-    , mIdGcp( id_gcp )
-    , mLegacyMode( iLegacyMode )
+QgsMapCoordsDialog::QgsMapCoordsDialog( QgsMapCanvas *qgisCanvas, const QgsPoint &pixelCoords, int id_gcp, QWidget *parent, int iLegacyMode )
+  : QDialog( parent, Qt::Dialog )
+  , mQgisCanvas( qgisCanvas )
+  , mPixelCoords( pixelCoords )
+  , mIdGcp( id_gcp )
+  , mLegacyMode( iLegacyMode )
 {
   mMapCoords.setX( 0.0 );
   mMapCoords.setY( 0.0 );
   if ( qgisCanvas->objectName() == "georefCanvas" )
-  { // Map-Point to Pixel-Point [recieving a Map-Point and a Pixel-Canvas to select a Pixel-Point from]
+  {
+    // Map-Point to Pixel-Point [recieving a Map-Point and a Pixel-Canvas to select a Pixel-Point from]
     mPixelMap = true;
     mMapCoords = mPixelCoords;
     mPixelCoords.setX( 0.0 );
@@ -64,12 +65,12 @@ QgsMapCoordsDialog::QgsMapCoordsDialog( QgsMapCanvas* qgisCanvas, const QgsPoint
 
   connect( mPointFromCanvasPushButton, SIGNAL( clicked( bool ) ), this, SLOT( setToolEmitPoint( bool ) ) );
 
-  connect( mToolEmitPoint, SIGNAL( canvasClicked( const QgsPoint&, Qt::MouseButton ) ),
-           this, SLOT( maybeSetXY( const QgsPoint&, Qt::MouseButton ) ) );
+  connect( mToolEmitPoint, SIGNAL( canvasClicked( const QgsPoint &, Qt::MouseButton ) ),
+           this, SLOT( maybeSetXY( const QgsPoint &, Qt::MouseButton ) ) );
   connect( mToolEmitPoint, SIGNAL( mouseReleased() ), this, SLOT( setPrevTool() ) );
 
-  connect( leXCoord, SIGNAL( textChanged( const QString& ) ), this, SLOT( updateOK() ) );
-  connect( leYCoord, SIGNAL( textChanged( const QString& ) ), this, SLOT( updateOK() ) );
+  connect( leXCoord, SIGNAL( textChanged( const QString & ) ), this, SLOT( updateOK() ) );
+  connect( leYCoord, SIGNAL( textChanged( const QString & ) ), this, SLOT( updateOK() ) );
   updateOK();
 }
 
@@ -118,7 +119,7 @@ void QgsMapCoordsDialog::on_buttonBox_accepted()
   close();
 }
 
-void QgsMapCoordsDialog::maybeSetXY( const QgsPoint & xy, Qt::MouseButton button )
+void QgsMapCoordsDialog::maybeSetXY( const QgsPoint &xy, Qt::MouseButton button )
 {
   // Only LeftButton should set point
   if ( Qt::LeftButton == button )
@@ -160,7 +161,7 @@ void QgsMapCoordsDialog::setToolEmitPoint( bool isEnable )
   }
 }
 
-double QgsMapCoordsDialog::dmsToDD( const QString& dms )
+double QgsMapCoordsDialog::dmsToDD( const QString &dms )
 {
   QStringList list = dms.split( ' ' );
   QString tmpStr = list.at( 0 );

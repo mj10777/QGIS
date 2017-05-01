@@ -27,11 +27,11 @@ class QgsLeastSquares
   public:
     static void linear( QVector<QgsPoint> mapCoords,
                         QVector<QgsPoint> pixelCoords,
-                        QgsPoint& origin, double& pixelXSize, double& pixelYSize );
+                        QgsPoint &origin, double &pixelXSize, double &pixelYSize );
 
     static void helmert( QVector<QgsPoint> mapCoords,
                          QVector<QgsPoint> pixelCoords,
-                         QgsPoint& origin, double& pixelSize, double& rotation );
+                         QgsPoint &origin, double &pixelSize, double &rotation );
 
     static void affine( QVector<QgsPoint> mapCoords,
                         QVector<QgsPoint> pixelCoords );
