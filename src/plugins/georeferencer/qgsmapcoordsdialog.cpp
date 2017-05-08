@@ -16,24 +16,42 @@
 #include <QPushButton>
 
 #include "qgsmapcanvas.h"
+
 #include "qgsgeorefvalidators.h"
 #include "qgsmapcoordsdialog.h"
 #include "qgssettings.h"
 
 QgsMapCoordsDialog::QgsMapCoordsDialog( QgsMapCanvas *qgisCanvas, const QgsPointXY &pixelCoords, QWidget *parent )
   : QDialog( parent, Qt::Dialog )
-  , mPrevMapTool( nullptr )
   , mQgisCanvas( qgisCanvas )
   , mPixelCoords( pixelCoords )
+  , mIdGcp( id_gcp )
 {
+  mMapCoords.setX( 0.0 );
+  mMapCoords.setY( 0.0 );
+  if ( qgisCanvas->objectName() == "georefCanvas" )
+  {
+    // Map-Point to Pixel-Point [receiving a Map-Point and a Pixel-Canvas to select a Pixel-Point from]
+    mPixelMap = true;
+    mMapCoords = mPixelCoords;
+    mPixelCoords.setX( 0.0 );
+    mPixelCoords.setY( 0.0 );
+  }
+  qDebug() << QString( "QgsMapCoordsDialog[%1]  dialog- mPixelMap[%2] " ).arg( qgisCanvas->objectName() ).arg( mPixelMap );
   setupUi( this );
 
   QgsSettings s;
   restoreGeometry( s.value( QStringLiteral( "/Plugin-GeoReferencer/MapCoordsWindow/geometry" ) ).toByteArray() );
 
   setAttribute( Qt::WA_DeleteOnClose );
-
-  mPointFromCanvasPushButton = new QPushButton( QIcon( ":/icons/default/mPushButtonPencil.png" ), tr( "From map canvas" ) );
+  if ( qgisCanvas->objectName() == "georefCanvas" )
+  {
+    mPointFromCanvasPushButton = new QPushButton( QIcon( ":/icons/default/mPushButtonPencil.png" ), tr( "From Georef canvas" ) );
+  }
+  else
+  {
+    mPointFromCanvasPushButton = new QPushButton( QIcon( ":/icons/default/mPushButtonPencil.png" ), tr( "From map canvas" ) );
+  }
   mPointFromCanvasPushButton->setCheckable( true );
   buttonBox->addButton( mPointFromCanvasPushButton, QDialogButtonBox::ActionRole );
 
@@ -86,8 +104,18 @@ void QgsMapCoordsDialog::on_buttonBox_accepted()
   double y = leYCoord->text().toDouble( &ok );
   if ( !ok )
     y = dmsToDD( leYCoord->text() );
+  if ( mPixelMap )
+  {
+    mPixelCoords.setX( x );
+    mPixelCoords.setY( y );
+  }
+  else
+  {
+    mMapCoords.setX( x );
+    mMapCoords.setY( y );
+  }
 
-  emit pointAdded( mPixelCoords, QgsPointXY( x, y ) );
+  emit pointAdded( mPixelCoords, mMapCoords, mIdGcp, mPixelMap );
   close();
 }
 

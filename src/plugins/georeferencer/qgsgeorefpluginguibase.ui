@@ -28,13 +28,10 @@
      <string>File</string>
     </property>
     <addaction name="mActionReset"/>
-    <addaction name="mActionOpenRaster"/>
+    <addaction name="menuLoadingRasters"/>
     <addaction name="separator"/>
     <addaction name="mActionStartGeoref"/>
     <addaction name="mActionGDALScript"/>
-    <addaction name="separator"/>
-    <addaction name="mActionLoadGCPpoints"/>
-    <addaction name="mActionSaveGCPpoints"/>
     <addaction name="separator"/>
     <addaction name="mActionQuit"/>
    </widget>
@@ -56,9 +53,13 @@
     <property name="title">
      <string>Edit</string>
     </property>
-    <addaction name="mActionAddPoint"/>
-    <addaction name="mActionDeletePoint"/>
-    <addaction name="mActionMoveGCPPoint"/>
+    <addaction name="mActionAddFeature"/>
+    <addaction name="mActionNodeFeature"/>
+    <addaction name="mActionMoveFeature"/>
+    <addaction name="separator"/>
+    <addaction name="mActionFetchMasterGcpExtent"/>
+    <addaction name="separator"/>
+    <addaction name="mActionSpatialiteGcp"/>
    </widget>
    <widget class="QMenu" name="menuSettings">
     <property name="title">
@@ -68,10 +69,70 @@
     <addaction name="mActionRasterProperties"/>
     <addaction name="mActionGeorefConfig"/>
    </widget>
+   <widget class="QMenu" name="menuLoadingRasters">
+     <property name="title">
+      <string>Loading Rasters ...</string>
+     </property>
+     <property name="toolTip">
+      <string>Open Raster directly or through Gcp-Database</string>
+     </property>
+    <addaction name="mOpenGcpCoverages"/>
+    <addaction name="separator"/>
+    <addaction name="mListGcpCoverages"/>
+    <addaction name="separator"/>
+    <addaction name="mActionOpenRaster"/>
+    <addaction name="separator"/>
+    <addaction name="mActionOpenGcpMaster"/>
+   </widget>
+   <widget class="QMenu" name="menuGcpDatabase">
+    <property name="title">
+     <string>Gcp-Database</string>
+    </property>
+     <widget class="QMenu" name="menuGcpDatabaseSetting">
+     <property name="title">
+      <string>Settings</string>
+     </property>
+     <addaction name="mActionGdalScriptType"/>
+     <addaction name="separator"/>
+    </widget>
+     <widget class="QMenu" name="menuGcpDbTasks">
+     <property name="title">
+      <string>Gcp-Database Tasks</string>
+     </property>
+     <addaction name="mActionCreateGcpDatabase"/>
+     <addaction name="separator"/>
+     <addaction name="mActionSqlDumpGcpCoverage"/>
+     <addaction name="separator"/>
+     <addaction name="mActionSqlDumpGcpMaster"/>
+    </widget>
+     <widget class="QMenu" name="menuGcpMercatorPolygons">
+     <property name="title">
+      <string>Mercator Polygons</string>
+     </property>
+     <addaction name="mActionMercatorPolygonProperties"/>
+     <addaction name="mActionMercatorPolygonExtent"/>
+    </widget>
+     <widget class="QMenu" name="menuGcpPixels">
+     <property name="title">
+      <string>Gcp Pixels</string>
+     </property>
+     <addaction name="mActionGcpPixelsProperties"/>
+     <addaction name="mActionGcpPixelsExtent"/>
+    </widget>
+    <addaction name="menuGcpDatabaseSetting"/>
+    <addaction name="separator"/>
+    <addaction name="menuGcpDbTasks"/>
+     <addaction name="separator"/>
+     <addaction name="mActionPointsPolygon"/>
+    <addaction name="separator"/>
+    <addaction name="menuGcpPixels"/>
+    <addaction name="menuGcpMercatorPolygons"/>
+   </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEdit"/>
    <addaction name="menuView"/>
    <addaction name="menuSettings"/>
+   <addaction name="menuGcpDatabase"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <widget class="QToolBar" name="toolBarFile">
@@ -90,6 +151,9 @@
    <attribute name="toolBarBreak">
     <bool>false</bool>
    </attribute>
+   <addaction name="mOpenGcpCoverages"/>
+   <addaction name="mListGcpCoverages"/>
+   <addaction name="separator"/>
    <addaction name="mActionOpenRaster"/>
    <addaction name="separator"/>
    <addaction name="mActionStartGeoref"/>
@@ -116,9 +180,13 @@
    <attribute name="toolBarBreak">
     <bool>false</bool>
    </attribute>
-   <addaction name="mActionAddPoint"/>
-   <addaction name="mActionDeletePoint"/>
-   <addaction name="mActionMoveGCPPoint"/>
+   <addaction name="mActionAddFeature"/>
+   <addaction name="mActionNodeFeature"/>
+   <addaction name="mActionMoveFeature"/>
+    <addaction name="separator"/>
+    <addaction name="mActionFetchMasterGcpExtent"/>
+    <addaction name="separator"/>
+    <addaction name="mActionSpatialiteGcp"/>
   </widget>
   <widget class="QToolBar" name="toolBarView">
    <property name="windowTitle">
@@ -176,17 +244,6 @@
    <addaction name="mActionFullHistogramStretch"/>
    <addaction name="mActionLocalHistogramStretch"/>
   </widget>
-  <action name="mActionOpenRaster">
-   <property name="text">
-    <string>Open Raster...</string>
-   </property>
-   <property name="statusTip">
-    <string>Open raster</string>
-   </property>
-   <property name="shortcut">
-    <string>Ctrl+O</string>
-   </property>
-  </action>
   <action name="mActionZoomIn">
    <property name="text">
     <string>Zoom In</string>
@@ -236,7 +293,7 @@
     <string>Transformation settings</string>
    </property>
   </action>
-  <action name="mActionAddPoint">
+  <action name="mActionAddFeature">
    <property name="text">
     <string>Add Point</string>
    </property>
@@ -247,15 +304,46 @@
     <string>Ctrl+A</string>
    </property>
   </action>
-  <action name="mActionDeletePoint">
+  <action name="mActionNodeFeature">
    <property name="text">
-    <string>Delete Point</string>
+    <string>Change Point</string>
    </property>
    <property name="statusTip">
-    <string>Delete point</string>
+    <string>Change point</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+D</string>
+   </property>
+  </action>
+  <action name="mActionSpatialiteGcp">
+   <property name="text">
+    <string>SpatialiteGcp</string>
+   </property>
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="toolTip">
+    <string>Turn Spatialite Gcp-Logic on or off when creating a new Gcp-Point</string>
+   </property>
+   <property name="statusTip">
+    <string>Turn Spatialite Gcp-Logic on or off when creating a new Gcp-Point</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+G</string>
+   </property>
+  </action>
+  <action name="mActionFetchMasterGcpExtent">
+   <property name="text">
+    <string>Fetch Master-Gcp(s) from Map Extent</string>
+   </property>
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="toolTip">
+    <string>Fetch Master-Gcp(s) from Map Extent and add as a new Gcp-Point</string>
+   </property>
+   <property name="statusTip">
+    <string>Fetch Master-Gcp(s) from Map Extent and add as a new Gcp-Point</string>
    </property>
   </action>
   <action name="mActionQuit">
@@ -313,28 +401,6 @@
     <string>Link QGIS to Georeferencer</string>
    </property>
   </action>
-  <action name="mActionSaveGCPpoints">
-   <property name="text">
-    <string>Save GCP Points as...</string>
-   </property>
-   <property name="statusTip">
-    <string>Save GCP points as...</string>
-   </property>
-   <property name="shortcut">
-    <string>Ctrl+S</string>
-   </property>
-  </action>
-  <action name="mActionLoadGCPpoints">
-   <property name="text">
-    <string>Load GCP Points...</string>
-   </property>
-   <property name="statusTip">
-    <string>Load GCP points</string>
-   </property>
-   <property name="shortcut">
-    <string>Ctrl+L</string>
-   </property>
-  </action>
   <action name="mActionGeorefConfig">
    <property name="text">
     <string>Configure Georeferencer...</string>
@@ -347,8 +413,11 @@
    <property name="text">
     <string>Raster Properties...</string>
    </property>
+   <property name="statusTip">
+    <string>View Raster Properties</string>
+   </property>
   </action>
-  <action name="mActionMoveGCPPoint">
+  <action name="mActionMoveFeature">
    <property name="text">
     <string>Move GCP Point</string>
    </property>
@@ -366,6 +435,113 @@
     <string>Zoom Last</string>
    </property>
   </action>
+  <action name="mActionGdalScriptType">
+   <property name="text">
+    <string>Switch Gdal-Script Type</string>
+   </property>
+  </action>
+  <action name="mActionPointsPolygon">
+   <property name="text">
+    <string>Switch between Gcp-Points and Cutline Polygons</string>
+   </property>
+  </action>
+  <action name="mActionOpenRaster">
+   <property name="text">
+    <string>Open Raster...</string>
+   </property>
+   <property name="toolTip">
+    <string>Open raster, adding to Gcp-Database - the Gcp-Database will be opened or created when not previously opened</string>
+   </property>
+    <property name="statusTip">
+     <string>Open Raster, adding to Gcp-Database</string>
+    </property>
+   <property name="shortcut">
+    <string>Ctrl+O</string>
+   </property>
+  </action>
+  <action name="mActionGcpPixelsProperties">
+   <property name="text">
+    <string>Gcp-Pixels Properties...</string>
+   </property>
+   <property name="statusTip">
+    <string>View Gcp-Pixels Properties</string>
+   </property>
+  </action>
+  <action name="mActionGcpPixelsExtent">
+   <property name="text">
+    <string>Zoom to Gcp-Pixels Extent</string>
+   </property>
+   <property name="statusTip">
+    <string>Zoom to Gcp-Pixels Extent</string>
+   </property>
+  </action>
+  <action name="mActionMercatorPolygonProperties">
+   <property name="text">
+    <string>MercatorPolygon Properties...</string>
+   </property>
+   <property name="statusTip">
+    <string>View MercatorPolygon Properties</string>
+   </property>
+  </action>
+  <action name="mActionMercatorPolygonExtent">
+   <property name="text">
+    <string>Zoom to MercatorPolygon Extent</string>
+   </property>
+   <property name="statusTip">
+    <string>Zoom to MercatorPolygon Extent</string>
+   </property>
+  </action>
+  <action name="mActionCreateGcpDatabase">
+   <property name="text">
+    <string>Create an empty Gcp-Database (Coverage / Master) with Srid</string>
+   </property>
+   <property name="statusTip">
+    <string>Create an empty Gcp-Database (Coverage / Master) with Srid</string>
+   </property>
+  </action>
+  <action name="mActionSqlDumpGcpCoverage">
+   <property name="text">
+    <string>Create an Sql-Dump of the active Gcp-Coverage Database</string>
+   </property>
+   <property name="statusTip">
+    <string>Create an Sql-Dump of  the active Gcp-Coverage Database</string>
+   </property>
+  </action>
+  <action name="mActionSqlDumpGcpMaster">
+   <property name="text">
+    <string>Create an Sql-Dump of the active Gcp-Master Database</string>
+   </property>
+   <property name="statusTip">
+    <string>Create an Sql-Dump of the active Gcp-Master Database</string>
+   </property>
+  </action>
+  <action name="mActionOpenGcpMaster">
+   <property name="text">
+    <string>Open Gcp_Master Database...</string>
+   </property>
+   <property name="toolTip">
+    <string>Open Gcp_Master Database</string>
+   </property>
+    <property name="statusTip">
+     <string>Open Gcp_Master Database</string>
+    </property>
+  </action>
+  <action name="mListGcpCoverages">
+   <property name="text">
+    <string>List Gcp-Coverages of Gcp-Database</string>
+   </property>
+  </action>
+  <action name="mOpenGcpCoverages">
+   <property name="text">
+    <string>Open Gcp-Database</string>
+   </property>
+    <property name="statusTip">
+     <string>Open Gcp-Database and list Gcp-Coverages</string>
+    </property>
+   <property name="toolTip">
+    <string>Open Gcp-Database and list Gcp-Coverages\nuse 'Open Raster' to create a new Gcp-Database</string>
+   </property>
+  </action>
   <action name="mActionLocalHistogramStretch">
    <property name="text">
     <string>Local Histogram Stretch</string>
@@ -377,10 +553,6 @@
    </property>
   </action>
   <action name="mActionReset">
-   <property name="icon">
-    <iconset resource="../../../images/images.qrc">
-     <normaloff>:/images/themes/default/mIconClearText.svg</normaloff>:/images/themes/default/mIconClearText.svg</iconset>
-   </property>
    <property name="text">
     <string>Reset Georeferencer</string>
    </property>

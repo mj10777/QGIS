@@ -20,7 +20,7 @@
 #include <cfloat>
 #include <cmath>
 
-QgsResidualPlotItem::QgsResidualPlotItem( QgsComposition *c ): QgsComposerItem( c ), mConvertScaleToMapUnits( false )
+QgsResidualPlotItem::QgsResidualPlotItem( QgsComposition *c ): QgsComposerItem( c )
 {
 
 }
@@ -34,7 +34,7 @@ void QgsResidualPlotItem::paint( QPainter *painter, const QStyleOptionGraphicsIt
 {
   Q_UNUSED( itemStyle );
   Q_UNUSED( pWidget );
-  if ( mGCPList.size() < 1 || !painter )
+  if ( mGCPList->countDataPointsEnabled() < 1 || !painter )
   {
     return;
   }
@@ -53,14 +53,14 @@ void QgsResidualPlotItem::paint( QPainter *painter, const QStyleOptionGraphicsIt
 
   painter->setRenderHint( QPainter::Antialiasing, true );
 
-  QgsGCPList::const_iterator gcpIt = mGCPList.constBegin();
-  for ( ; gcpIt != mGCPList.constEnd(); ++gcpIt )
+  for ( int i = 0; i < mGCPList->countDataPoints(); ++i )
   {
-    QgsPointXY gcpCoords = ( *gcpIt )->pixelCoords();
+    QgsGeorefDataPoint *dataPoint = mGCPList->at( i );
+    QgsPointXP gcpCoords = dataPoint->pixelCoords();
     double gcpItemMMX = ( gcpCoords.x() - mExtent.xMinimum() ) / mExtent.width() * widthMM;
     double gcpItemMMY = ( 1 - ( gcpCoords.y() - mExtent.yMinimum() ) / mExtent.height() ) * heightMM;
 
-    if ( ( *gcpIt )->isEnabled() )
+    if ( dataPoint->isEnabled() )
     {
       painter->setPen( enabledPen );
       painter->setBrush( enabledBrush );
@@ -71,9 +71,9 @@ void QgsResidualPlotItem::paint( QPainter *painter, const QStyleOptionGraphicsIt
       painter->setBrush( disabledBrush );
     }
     painter->drawRect( QRectF( gcpItemMMX - 0.5, gcpItemMMY - 0.5, 1, 1 ) );
-    QgsComposerUtils::drawText( painter, QPointF( gcpItemMMX + 2, gcpItemMMY + 2 ), QString::number( ( *gcpIt )->id() ), QFont() );
+    QgsComposerUtils::drawText( painter, QPointF( gcpItemMMX + 2, gcpItemMMY + 2 ), QString::number( dataPoint->id() ), QFont() );
 
-    mmPixelRatio = maxMMToPixelRatioForGCP( *gcpIt, gcpItemMMX, gcpItemMMY );
+    mmPixelRatio = maxMMToPixelRatioForGCP( dataPoint, gcpItemMMX, gcpItemMMY );
     if ( mmPixelRatio < minMMPixelRatio )
     {
       minMMPixelRatio = mmPixelRatio;
@@ -81,13 +81,13 @@ void QgsResidualPlotItem::paint( QPainter *painter, const QStyleOptionGraphicsIt
   }
 
   //draw residual arrows
-  gcpIt = mGCPList.constBegin();
-  for ( ; gcpIt != mGCPList.constEnd(); ++gcpIt )
+  for ( int i = 0; i < mGCPList->countDataPoints(); ++i )
   {
-    QgsPointXY gcpCoords = ( *gcpIt )->pixelCoords();
+    QgsGeorefDataPoint *dataPoint = mGCPList->at( i );
+    QgsPointXP gcpCoords = dataPoint->pixelCoords();
     double gcpItemMMX = ( gcpCoords.x() - mExtent.xMinimum() ) / mExtent.width() * widthMM;
     double gcpItemMMY = ( 1 - ( gcpCoords.y() - mExtent.yMinimum() ) / mExtent.height() ) * heightMM;
-    if ( ( *gcpIt )->isEnabled() )
+    if ( dataPoint->isEnabled() )
     {
       painter->setPen( enabledPen );
     }
@@ -97,7 +97,7 @@ void QgsResidualPlotItem::paint( QPainter *painter, const QStyleOptionGraphicsIt
     }
 
     QPointF p1( gcpItemMMX, gcpItemMMY );
-    QPointF p2( gcpItemMMX + ( *gcpIt )->residual().x() * minMMPixelRatio, gcpItemMMY + ( *gcpIt )->residual().y() * minMMPixelRatio );
+    QPointF p2( gcpItemMMX + dataPoint->residual().x() * minMMPixelRatio, gcpItemMMY + dataPoint->residual().y() * minMMPixelRatio );
     painter->drawLine( p1, p2 );
     painter->setBrush( QBrush( painter->pen().color() ) );
     QgsComposerUtils::drawArrowHead( painter, p2.x(), p2.y(), QgsComposerUtils::angle( p1, p2 ), 1 );
@@ -125,8 +125,6 @@ void QgsResidualPlotItem::paint( QPainter *painter, const QStyleOptionGraphicsIt
   }
   initialScaleBarWidth = scaleBarWidthUnits * minMMPixelRatio;
 
-
-
   painter->setPen( QColor( 0, 0, 0 ) );
   painter->drawLine( QPointF( 5, rect().height() - 5 ), QPointF( 5 + initialScaleBarWidth, rect().height() - 5 ) );
   painter->drawLine( QPointF( 5, rect().height() - 5 ), QPointF( 5, rect().height() - 7 ) );
@@ -135,11 +133,11 @@ void QgsResidualPlotItem::paint( QPainter *painter, const QStyleOptionGraphicsIt
   scaleBarFont.setPointSize( 9 );
   if ( mConvertScaleToMapUnits )
   {
-    QgsComposerUtils::drawText( painter, QPointF( 5, rect().height() - 4 + QgsComposerUtils::fontAscentMM( scaleBarFont ) ), QStringLiteral( "%1 map units" ).arg( scaleBarWidthUnits ), QFont() );
+    QgsComposerUtils::drawText( painter, QPointF( 5, rect().height() - 4 + QgsComposerUtils::fontAscentMM( scaleBarFont ) ), QString( "%1 map units" ).arg( scaleBarWidthUnits ), QFont() );
   }
   else
   {
-    QgsComposerUtils::drawText( painter, QPointF( 5, rect().height() - 4 + QgsComposerUtils::fontAscentMM( scaleBarFont ) ), QStringLiteral( "%1 pixels" ).arg( scaleBarWidthUnits ), QFont() );
+    QgsComposerUtils::drawText( painter, QPointF( 5, rect().height() - 4 + QgsComposerUtils::fontAscentMM( scaleBarFont ) ), QString( "%1 pixels" ).arg( scaleBarWidthUnits ), QFont() );
   }
 
   drawFrame( painter );
@@ -149,9 +147,9 @@ void QgsResidualPlotItem::paint( QPainter *painter, const QStyleOptionGraphicsIt
   }
 }
 
-double QgsResidualPlotItem::maxMMToPixelRatioForGCP( const QgsGeorefDataPoint *p, double pixelXMM, double pixelYMM )
+double QgsResidualPlotItem::maxMMToPixelRatioForGCP( const QgsGeorefDataPoint *dataPoint, double pixelXMM, double pixelYMM )
 {
-  if ( !p )
+  if ( !dataPoint )
   {
     return 0;
   }
@@ -160,7 +158,7 @@ double QgsResidualPlotItem::maxMMToPixelRatioForGCP( const QgsGeorefDataPoint *p
   double upDownDist = DBL_MAX; //distance to frame intersection with lower or upper frame
   double leftRightDist = DBL_MAX; //distance to frame intersection with left or right frame
 
-  QPointF residual = p->residual();
+  QPointF residual = dataPoint->residual();
   QLineF residualLine( pixelXMM, pixelYMM, pixelXMM + residual.x(), pixelYMM + residual.y() );
   QPointF intersectionPoint;
 
@@ -210,14 +208,14 @@ double QgsResidualPlotItem::maxMMToPixelRatioForGCP( const QgsGeorefDataPoint *p
   }
 }
 
-bool QgsResidualPlotItem::writeXml( QDomElement &elem, QDomDocument &doc ) const
+bool QgsResidualPlotItem::writeXML( QDomElement &elem, QDomDocument &doc ) const
 {
   Q_UNUSED( elem );
   Q_UNUSED( doc );
   return false;
 }
 
-bool QgsResidualPlotItem::readXml( const QDomElement &itemElem, const QDomDocument &doc )
+bool QgsResidualPlotItem::readXML( const QDomElement &itemElem, const QDomDocument &doc )
 {
   Q_UNUSED( itemElem );
   Q_UNUSED( doc );

@@ -4,21 +4,18 @@ FIND_PACKAGE(GSL REQUIRED)      # Georeferencer
 # Files
 
 SET (GEOREF_SRCS
-     qgsgcpcanvasitem.cpp
      qgsgeorefconfigdialog.cpp
      qgsgeorefdatapoint.cpp
      qgsgeorefdelegates.cpp
      qgsgeorefdescriptiondialog.cpp
      qgsgeorefplugin.cpp
      qgsgeorefplugingui.cpp
-     qgsgeoreftooladdpoint.cpp
-     qgsgeoreftooldeletepoint.cpp
-     qgsgeoreftoolmovepoint.cpp
      qgsgeorefvalidators.cpp
      qgsleastsquares.cpp
      qgsmapcoordsdialog.cpp
      qgsresidualplotitem.cpp
      qgstransformsettingsdialog.cpp
+     qgsgcpdatabasedialog.cpp
 
      qgsgcplist.cpp
      qgsgcplistmodel.cpp
@@ -27,6 +24,8 @@ SET (GEOREF_SRCS
      qgsgcplistwidget.cpp
 
      qgsrasterchangecoords.cpp
+     qgsspatialitegcputils.cpp
+     qgsgcpcoverages.cpp
 )
 
 SET (GEOREF_UIS
@@ -35,6 +34,8 @@ SET (GEOREF_UIS
      qgsgeorefpluginguibase.ui
      qgsmapcoordsdialogbase.ui
      qgstransformsettingsdialogbase.ui
+     qgsgcpdatabasedialogbase.ui
+     qgsgcpcoveragesdialogbase.ui
      ../../ui/qgsprojectionselectorbase.ui
      ../../ui/qgsrasterlayerpropertiesbase.ui
 )
@@ -46,17 +47,17 @@ SET (GEOREF_MOC_HDRS
      qgsgeorefdescriptiondialog.h
      qgsgeorefplugin.h
      qgsgeorefplugingui.h
-     qgsgeoreftooladdpoint.h
-     qgsgeoreftooldeletepoint.h
-     qgsgeoreftoolmovepoint.h
      qgsgeorefvalidators.h
      qgsmapcoordsdialog.h
      qgsresidualplotitem.h
      qgstransformsettingsdialog.h
      qgsvalidateddoublespinbox.h
-     
+
      qgsgcplistmodel.h
      qgsgcplistwidget.h
+     qgsgcpdatabasedialog.h
+     qgsspatialitegcputils.h
+     qgsgcpcoverages.h
 )
 SET (GEOREF_RCCS  georeferencer.qrc)
 
@@ -74,6 +75,7 @@ ADD_LIBRARY (georefplugin MODULE ${GEOREF_SRCS} ${GEOREF_MOC_SRCS} ${GEOREF_RCC_
 
 INCLUDE_DIRECTORIES(
   ${CMAKE_CURRENT_SOURCE_DIR}
+<<<<<<< HEAD
   ${CMAKE_SOURCE_DIR}/src/core
   ${CMAKE_SOURCE_DIR}/src/core/expression
   ${CMAKE_SOURCE_DIR}/src/core/geometry
@@ -85,6 +87,14 @@ INCLUDE_DIRECTORIES(
   ${CMAKE_SOURCE_DIR}/src/gui/layertree
   ${CMAKE_SOURCE_DIR}/src/plugins
 
+=======
+  ${CMAKE_CURRENT_BINARY_DIR}
+  ${CMAKE_CURRENT_BINARY_DIR}/../../ui
+  ../../core ../../core/geometry ../../core/raster ../../core/composer
+  ../../core/symbology-ng ../../core/layertree  ../../app
+  ../../gui  ../../gui/editorwidgets ../../gui/layertree
+  ..
+>>>>>>> Initial port of 2.18 version of Georeferencer-Extended to Qgis 3.0 master.
   ${CMAKE_BINARY_DIR}/src/core
   ${CMAKE_BINARY_DIR}/src/gui
   ${CMAKE_BINARY_DIR}/src/app
@@ -102,6 +112,7 @@ INCLUDE_DIRECTORIES(SYSTEM
 )
 
 TARGET_LINK_LIBRARIES(georefplugin
+  qgis_app
   qgis_core
   qgis_gui
   ${GSL_LIBRARIES}

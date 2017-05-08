@@ -27,13 +27,10 @@
 
 QgsGCPListWidget::QgsGCPListWidget( QWidget *parent )
   : QTableView( parent )
-  , mGCPList( nullptr )
   , mGCPListModel( new QgsGCPListModel( this ) )
   , mNonEditableDelegate( new QgsNonEditableDelegate( this ) )
   , mDmsAndDdDelegate( new QgsDmsAndDdDelegate( this ) )
   , mCoordDelegate( new QgsCoordDelegate( this ) )
-  , mPrevRow( 0 )
-  , mPrevColumn( 0 )
 {
   // Create a proxy model, which will handle dynamic sorting
   QSortFilterProxyModel *proxyModel = new QSortFilterProxyModel( this );
@@ -51,13 +48,24 @@ QgsGCPListWidget::QgsGCPListWidget( QWidget *parent )
 
   // set delegates for items
   setItemDelegateForColumn( 1, mNonEditableDelegate ); // id
-  setItemDelegateForColumn( 2, mCoordDelegate ); // srcX
-  setItemDelegateForColumn( 3, mCoordDelegate ); // srcY
-  setItemDelegateForColumn( 4, mDmsAndDdDelegate ); // dstX
-  setItemDelegateForColumn( 5, mDmsAndDdDelegate ); // dstY
-  setItemDelegateForColumn( 6, mNonEditableDelegate ); // dX
-  setItemDelegateForColumn( 7, mNonEditableDelegate ); // dY
-  setItemDelegateForColumn( 8, mNonEditableDelegate ); // residual
+  setItemDelegateForColumn( 2, mNonEditableDelegate ); // dX
+  setItemDelegateForColumn( 3, mNonEditableDelegate ); // dY
+  setItemDelegateForColumn( 4, mNonEditableDelegate ); // residual
+  setItemDelegateForColumn( 5, mNonEditableDelegate ); // pixel azimuth
+  setItemDelegateForColumn( 6, mNonEditableDelegate ); // map azimuth
+  setItemDelegateForColumn( 7, mNonEditableDelegate ); // name+notes
+  setItemDelegateForColumn( 8, mNonEditableDelegate ); // pixel WKT
+  setItemDelegateForColumn( 9, mNonEditableDelegate ); // map WKT
+  //setItemDelegateForColumn( 2, mCoordDelegate ); // srcX
+  //setItemDelegateForColumn( 3, mCoordDelegate ); // srcY
+  //setItemDelegateForColumn( 4, mDmsAndDdDelegate ); // dstX
+  //setItemDelegateForColumn( 5, mDmsAndDdDelegate ); // dstY
+  // setItemDelegateForColumn( 9, mNonEditableDelegate ); // pixel distance
+  //setItemDelegateForColumn( 12, mNonEditableDelegate ); // map distance
+
+
+  connect( this, &QgsGCPListWidget::replaceDataPoint,
+           mGCPListModel, &QgsGCPListModel::replaceDataPoint );
 
   connect( this, &QAbstractItemView::doubleClicked,
            this, &QgsGCPListWidget::itemDoubleClicked );
@@ -66,30 +74,30 @@ QgsGCPListWidget::QgsGCPListWidget( QWidget *parent )
   connect( this, &QWidget::customContextMenuRequested,
            this, &QgsGCPListWidget::showContextMenu );
 
-  connect( mDmsAndDdDelegate, &QAbstractItemDelegate::closeEditor,
-           this, &QgsGCPListWidget::updateItemCoords );
-  connect( mCoordDelegate, &QAbstractItemDelegate::closeEditor,
-           this, &QgsGCPListWidget::updateItemCoords );
+  // connect( mDmsAndDdDelegate, &QAbstractItemDelegate::closeEditor,  this, &QgsGCPListWidget::updateItemCoords );
+  // connect( mCoordDelegate, &QAbstractItemDelegate::closeEditor, this, &QgsGCPListWidget::updateItemCoords );
 }
 
-void QgsGCPListWidget::setGCPList( QgsGCPList *theGCPList )
-{
-  mGCPListModel->setGCPList( theGCPList );
-  mGCPList = theGCPList;
 
+void QgsGCPListWidget::setGCPList( QgsGCPList *gcpList )
+{
+  mGCPListModel->setGCPList( gcpList );
   adjustTableContent();
 }
 
-void QgsGCPListWidget::setGeorefTransform( QgsGeorefTransform *georefTransform )
+void QgsGCPListWidget::setGeorefTransform( QgsGeorefTransform *theGeorefTransform )
 {
-  mGCPListModel->setGeorefTransform( georefTransform );
+  mGCPListModel->setGeorefTransform( theGeorefTransform );
   adjustTableContent();
 }
 
 void QgsGCPListWidget::updateGCPList()
 {
-  mGCPListModel->updateModel();
-  adjustTableContent();
+  if ( isDirty() )
+  {
+    mGCPListModel->updateModel();
+    adjustTableContent();
+  }
 }
 
 void QgsGCPListWidget::closeEditors()
@@ -103,13 +111,10 @@ void QgsGCPListWidget::closeEditors()
 void QgsGCPListWidget::itemDoubleClicked( QModelIndex index )
 {
   index = static_cast<const QSortFilterProxyModel *>( model() )->mapToSource( index );
-  QStandardItem *item = mGCPListModel->item( index.row(), 1 );
-  bool ok;
-  int id = item->text().toInt( &ok );
-
-  if ( ok )
+  QgsGeorefDataPoint *dataPoint = getGCPList()->at( index.row() );
+  if ( dataPoint )
   {
-    emit jumpToGCP( id );
+    emit jumpToGCP( dataPoint );
   }
 }
 
@@ -119,18 +124,18 @@ void QgsGCPListWidget::itemClicked( QModelIndex index )
   QStandardItem *item = mGCPListModel->item( index.row(), index.column() );
   if ( item->isCheckable() )
   {
-    QgsGeorefDataPoint *p = mGCPList->at( index.row() );
+    QgsGeorefDataPoint *dataPoint = getGCPList()->at( index.row() );
     if ( item->checkState() == Qt::Checked )
     {
-      p->setEnabled( true );
+      dataPoint->setEnabled( true );
     }
     else // Qt::Unchecked
     {
-      p->setEnabled( false );
+      dataPoint->setEnabled( false );
     }
 
     mGCPListModel->updateModel();
-    emit pointEnabled( p, index.row() );
+    emit pointEnabled( dataPoint, index.row() );
     adjustTableContent();
   }
 
@@ -140,8 +145,11 @@ void QgsGCPListWidget::itemClicked( QModelIndex index )
 
 void QgsGCPListWidget::updateItemCoords( QWidget *editor )
 {
+  Q_UNUSED( editor );
+  return;
+  // editing of Points no longer supported.
   QLineEdit *lineEdit = qobject_cast<QLineEdit *>( editor );
-  QgsGeorefDataPoint *dataPoint = mGCPList->at( mPrevRow );
+  QgsGeorefDataPoint *dataPoint = getGCPList()->at( mPrevRow );
   if ( lineEdit )
   {
     double value = lineEdit->text().toDouble();
@@ -172,13 +180,12 @@ void QgsGCPListWidget::updateItemCoords( QWidget *editor )
     dataPoint->setMapCoords( newMapCoords );
   }
 
-  dataPoint->updateCoords();
   updateGCPList();
 }
 
 void QgsGCPListWidget::showContextMenu( QPoint p )
 {
-  if ( !mGCPList || 0 == mGCPList->count() )
+  if ( !getGCPList() || 0 == getGCPList()->count() )
     return;
 
   QMenu m;// = new QMenu(this);
@@ -217,7 +224,11 @@ void QgsGCPListWidget::editCell()
 void QgsGCPListWidget::jumpToPoint()
 {
   QModelIndex index = static_cast<const QSortFilterProxyModel *>( model() )->mapToSource( currentIndex() );
-  emit jumpToGCP( index.row() );
+  QgsGeorefDataPoint *dataPoint = getGCPList()->at( index.row() );
+  if ( dataPoint )
+  {
+    emit jumpToGCP( dataPoint );
+  }
 }
 
 void QgsGCPListWidget::adjustTableContent()

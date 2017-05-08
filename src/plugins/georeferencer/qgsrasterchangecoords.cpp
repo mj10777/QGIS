@@ -21,8 +21,7 @@
 #include <QFile>
 
 QgsRasterChangeCoords::QgsRasterChangeCoords()
-  : mHasCrs( false )
-  , mUL_X( 0. )
+  : mUL_X( 0. )
   , mUL_Y( 0. )
   , mResX( 1. )
   , mResY( 1. )

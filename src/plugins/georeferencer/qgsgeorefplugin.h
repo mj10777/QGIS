@@ -29,7 +29,7 @@
  *
  *   Additional useful conventions:
  *
- *   variableName - a method parameter (prefix with 'the')
+ *   theVariableName - a method parameter (prefix with 'the')
  *   myVariableName - a locally declared variable within a method ('my' prefix)
  *
  *   DO: Use mixed case variable names - myVariableName
@@ -71,11 +71,11 @@ class QgsGeorefPlugin: public QObject, public QgisPlugin
     /**
     * Constructor for a plugin. The QgisApp and QgisIface pointers are passed by
     * QGIS when it attempts to instantiate the plugin.
-    * \param Pointer to the QgisApp object
-    * \param Pointer to the QgisIface object.
+    * @param Pointer to the QgisApp object
+    * @param Pointer to the QgisIface object.
      */
     explicit QgsGeorefPlugin( QgisInterface * );
-
+    //! Destructor
     virtual ~ QgsGeorefPlugin();
 
   public slots:
