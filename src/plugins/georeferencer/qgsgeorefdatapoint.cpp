@@ -115,6 +115,19 @@ void QgsGeorefDataPoint::setMapCoords( const QgsPointXY &map_point )
   mMapCoords = map_point;
 }
 
+void QgsGeorefDataPoint::updateDataPoint( bool bPointMap, QgsPoint updatePoint )
+{
+  // iPointType: 0=pixel ; 1 = map
+  if ( bPointMap )
+  {
+    setMapCoords( updatePoint );
+  }
+  else
+  {
+    setPixelCoords( updatePoint );
+  }
+}
+
 void QgsGeorefDataPoint::setEnabled( bool enabled )
 {
   mEnabled = enabled;

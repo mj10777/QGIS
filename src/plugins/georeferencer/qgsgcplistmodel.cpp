@@ -1,5 +1,5 @@
 /***************************************************************************
-    qgsgcplistmodel.cpp - Model implementation of GCPList Model/View
+    qgsgcplistmodel.cpp - Model implementation of GcpList Model/View
      --------------------------------------
     Date                 : 27-Feb-2009
     Copyright            : (c) 2009 by Manuel Massing
@@ -53,36 +53,41 @@ class QgsStandardItem : public QStandardItem
     }
 };
 
-QgsGCPListModel::QgsGCPListModel( QObject *parent )
+QgsGcpListModel::QgsGcpListModel( QObject *parent )
   : QStandardItemModel( parent )
-  , mGCPList( new QgsGCPList() )
+  , mGcpList( new QgsGcpList() )
 {
   // Use data provided by Qt::UserRole as sorting key (needed for numerical sorting).
   setSortRole( Qt::UserRole );
 }
 
-void QgsGCPListModel::setGCPList( QgsGCPList *gcpList )
+void QgsGcpListModel::setGcpList( QgsGcpList *gcpList )
 {
-  mGCPList = gcpList;
+  mGcpList = gcpList;
   updateModel();
 }
 // ------------------------------- public ---------------------------------- //
-void QgsGCPListModel::setGeorefTransform( QgsGeorefTransform *theGeorefTransform )
+void QgsGcpListModel::setGeorefTransform( QgsGeorefTransform *georefTransform )
 {
-  mGeorefTransform = theGeorefTransform;
+  mGeorefTransform = georefTransform;
   updateModel();
 }
 
-void QgsGCPListModel::updateModel()
+void QgsGcpListModel::updateModel()
 {
   //clear();
-  if ( !mGCPList )
+  if ( !mGcpList )
     return;
   bMapUnitsPossible = false;
   bTransformUpdated = false;
 
+<<<<<<< HEAD
   QVector<QgsPointXY> mapCoords, pixelCoords;
   mGCPList->createGCPVectors( mapCoords, pixelCoords );
+=======
+  QVector<QgsPoint> mapCoords, pixelCoords;
+  mGcpList->createGcpVectors( mapCoords, pixelCoords );
+>>>>>>> Last major problems resolved. Start test phase
 
   //  // Setup table header
   QStringList itemLabels;
@@ -116,12 +121,12 @@ void QgsGCPListModel::updateModel()
              << tr( "WKT (%1)" ).arg( "map" );
 
   setHorizontalHeaderLabels( itemLabels );
-  setRowCount( mGCPList->size() );
+  setRowCount( mGcpList->size() );
 
-  for ( int i = 0; i < mGCPList->countDataPoints(); ++i )
+  for ( int i = 0; i < mGcpList->countDataPoints(); ++i )
   {
     int j = 0;
-    QgsGeorefDataPoint *dataPoint = mGCPList->at( i );
+    QgsGeorefDataPoint *dataPoint = mGcpList->at( i );
 
     if ( !dataPoint )
       continue;
@@ -142,7 +147,7 @@ void QgsGCPListModel::updateModel()
     double dX = 0;
     double dY = 0;
     // Calculate residual if transform is available and up-to-date
-    if ( mGeorefTransform && bTransformUpdated && mGeorefTransform->parametersInitialized() && !mGCPList->avoidUnneededUpdates() )
+    if ( mGeorefTransform && bTransformUpdated && mGeorefTransform->parametersInitialized() && !mGcpList->avoidUnneededUpdates() )
     {
       QgsPointXY reverse_point_pixel;
       QgsPointXY reverse_point_map;
@@ -213,14 +218,14 @@ void QgsGCPListModel::updateModel()
     setClean();
   }
 }
-bool QgsGCPListModel::calculateMeanError( double &error ) const
+bool QgsGcpListModel::calculateMeanError( double &error ) const
 {
   if ( mGeorefTransform->transformParametrisation() == QgsGeorefTransform::InvalidTransform )
   {
     return false;
   }
 
-  int nPointsEnabled = mGCPList->countDataPointsEnabled();
+  int nPointsEnabled = mGcpList->countDataPointsEnabled();
   if ( nPointsEnabled == mGeorefTransform->getMinimumGCPCount() )
   {
     error = 0;
@@ -234,9 +239,9 @@ bool QgsGCPListModel::calculateMeanError( double &error ) const
   double sumVxSquare = 0;
   double sumVySquare = 0;
 
-  for ( int i = 0; i < mGCPList->countDataPoints(); ++i )
+  for ( int i = 0; i < mGcpList->countDataPoints(); ++i )
   {
-    QgsGeorefDataPoint *dataPoint = mGCPList->at( i );
+    QgsGeorefDataPoint *dataPoint = mGcpList->at( i );
     if ( dataPoint->isEnabled() )
     {
       sumVxSquare += ( dataPoint->residual().x() * dataPoint->residual().x() );
@@ -251,15 +256,15 @@ bool QgsGCPListModel::calculateMeanError( double &error ) const
 }
 
 // --------------------------- public slots -------------------------------- //
-void QgsGCPListModel::replaceDataPoint( QgsGeorefDataPoint *newDataPoint, int i )
+void QgsGcpListModel::replaceDataPoint( QgsGeorefDataPoint *newDataPoint, int i )
 {
-  mGCPList->replace( i, newDataPoint );
+  mGcpList->replace( i, newDataPoint );
 }
 
-void QgsGCPListModel::onGCPListModified()
+void QgsGcpListModel::onGcpListModified()
 {
 }
 
-void QgsGCPListModel::onTransformationModified()
+void QgsGcpListModel::onTransformationModified()
 {
 }

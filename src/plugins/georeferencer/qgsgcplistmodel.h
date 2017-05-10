@@ -1,5 +1,5 @@
 /***************************************************************************
-    qgsgcplistmodel.h - Model implementation of GCPList Model/View
+    qgsgcplistmodel.h - Model implementation of GcpList Model/View
      --------------------------------------
     Date                 : 27-Feb-2009
     Copyright            : (c) 2009 by Manuel Massing
@@ -22,26 +22,31 @@
 
 class QgsGeorefDataPoint;
 class QgsGeorefTransform;
+<<<<<<< HEAD
 class QgsGCPList;
 class QgsPointXY;
+=======
+class QgsGcpList;
+class QgsPoint;
+>>>>>>> Last major problems resolved. Start test phase
 
-class QgsGCPListModel : public QStandardItemModel
+class QgsGcpListModel : public QStandardItemModel
 {
     Q_OBJECT
 
   public:
-    explicit QgsGCPListModel( QObject *parent = nullptr );
+    explicit QgsGcpListModel( QObject *parent = nullptr );
 
-    void setGCPList( QgsGCPList *gcpList );
-    void setGeorefTransform( QgsGeorefTransform *theGeorefTransform );
+    void setGcpList( QgsGcpList *gcpList );
+    void setGeorefTransform( QgsGeorefTransform *georefTransform );
 
     /**
      * Update Modual
-     *  - calls createGCPVectors to recreate List of enabled Points
+     *  - calls createGcpVectors to recreate List of enabled Points
      *  - rebuilds List calculating residual value
-     * \see QgsGCPList::updatePoint
-     * \see QgsGCPList::removePoint
-     * \see QgsGCPList::createGCPVectors
+     * \see QgsGcpList::updatePoint
+     * \see QgsGcpList::removePoint
+     * \see QgsGcpList::createGcpVectors
      * \return true if the id was found, otherwise false
      */
     void updateModel();
@@ -61,7 +66,7 @@ class QgsGCPListModel : public QStandardItemModel
   public slots:
     void replaceDataPoint( QgsGeorefDataPoint *newDataPoint, int i );
 
-    void onGCPListModified();
+    void onGcpListModified();
     void onTransformationModified();
   protected:
 
@@ -71,7 +76,11 @@ class QgsGCPListModel : public QStandardItemModel
      * \param pixelCoords to store the Pixel-points
      * \return nullptr if the id was not found, otherwise Point of the fiven id
      */
+<<<<<<< HEAD
     void createGCPVectors( QVector<QgsPointXY> &mapCoords, QVector<QgsPointXY> &pixelCoords ) { return  mGCPList->createGCPVectors( mapCoords, pixelCoords ); }
+=======
+    void createGcpVectors( QVector<QgsPoint> &mapCoords, QVector<QgsPoint> &pixelCoords ) { return  mGcpList->createGcpVectors( mapCoords, pixelCoords ); }
+>>>>>>> Last major problems resolved. Start test phase
 
     /**
      * Retrieve Data-Point pair in List
@@ -79,14 +88,14 @@ class QgsGCPListModel : public QStandardItemModel
      * \param id_gcp (either id_gcp of the database OR a count whlie loading .points file) to search for and update
      * \return nullptr if the id was not found, otherwise Point of the fiven id
      */
-    QgsGeorefDataPoint *getDataPoint( int id_gcp )  { return mGCPList->getDataPoint( id_gcp ); }
+    QgsGeorefDataPoint *getDataPoint( int id_gcp )  { return mGcpList->getDataPoint( id_gcp ); }
 
     /**
      * Add a Data-Point pair to the List
      * \param dataPoint
      * \return truealways
      */
-    bool addDataPoint( QgsGeorefDataPoint *dataPoint ) { return mGCPList->addDataPoint( dataPoint ); }
+    bool addDataPoint( QgsGeorefDataPoint *dataPoint ) { return mGcpList->addDataPoint( dataPoint ); }
 
     /**
      * Update Data-Point pair in List
@@ -96,7 +105,11 @@ class QgsGCPListModel : public QStandardItemModel
      * \param updatePoint the point to use
      * \return true if the id was found, otherwise false
      */
+<<<<<<< HEAD
     bool updateDataPoint( int id_gcp, bool bPointMap, QgsPointXY updatePoint ) { return  mGCPList->updateDataPoint( id_gcp, bPointMap, updatePoint ); }
+=======
+    bool updateDataPoint( int id_gcp, bool bPointMap, QgsPoint updatePoint ) { return  mGcpList->updateDataPoint( id_gcp, bPointMap, updatePoint ); }
+>>>>>>> Last major problems resolved. Start test phase
 
     /**
      * Remove Data-Point pair in List
@@ -104,69 +117,75 @@ class QgsGCPListModel : public QStandardItemModel
      * \param id_gcp (either id_gcp of the database OR a count whlie loading .points file) to search for and update
      * \return true if the id was found, otherwise false
      */
-    bool removeDataPoint( int id_gcp ) { return  mGCPList->removeDataPoint( id_gcp ); }
+    bool removeDataPoint( int id_gcp ) { return  mGcpList->removeDataPoint( id_gcp ); }
 
     /**
      * Informs the caller if any Update, Adding or Delete have been made since the last Update.
      * \return true or false (value of mIsDirty)
      */
-    bool isDirty() { return mGCPList->isDirty(); }
+    bool isDirty() { return mGcpList->isDirty(); }
+
+    /**
+     * Set status if  Update, Adding or Delete have been made, possibly externaly
+     * \return true or false (value of mIsDirty)
+     */
+    bool setDirty() { return mGcpList->setDirty(); }
 
     /**
      * Informs the caller if any changes have been made since the Initial loading of Point-Pairs.
      * \return true or false (value of mHasChanged)
      */
-    bool hasChanged() { return mGCPList->hasChanged(); }
-    QgsGCPList *getGCPList() { return mGCPList; }
+    bool hasChanged() { return mGcpList->hasChanged(); }
+    QgsGcpList *getGcpList() { return mGcpList; }
 
     /**
-     * Informs QgsGCPList that any Updating has been done
+     * Informs QgsGcpList that any Updating has been done
      *  - until next Update, Adding or removal: isDirty() = false
      */
-    void setClean() { mGCPList->setClean(); };
+    void setClean() { mGcpList->setClean(); };
 
     /**
-     * Informs QgsGCPList (when true) that the Initial loading of Point-Pairs has been completed
+     * Informs QgsGcpList (when true) that the Initial loading of Point-Pairs has been completed
      * \param true or false
      */
-    void setChanged( bool bChanged ) { mGCPList->setChanged( bChanged ); }
+    void setChanged( bool bChanged ) { mGcpList->setChanged( bChanged ); }
 
     /**
      * Set mGcpDbData for Spatialite Gcp-Support
      * \param parmsGcpDbData which contains all needed information to use Spatialite Gcp-Support
      * \param bClear clear the list
      */
-    void setGcpDbData( QgsSpatiaLiteGcpUtils::GcpDbData *parmsGcpDbData, bool bClear ) { mGCPList->setGcpDbData( parmsGcpDbData, bClear ); };
+    void setGcpDbData( QgsSpatiaLiteGcpUtils::GcpDbData *parmsGcpDbData, bool bClear ) { mGcpList->setGcpDbData( parmsGcpDbData, bClear ); };
 
     /**
      * Return mGcpDbData for Spatialite Gcp-Support
      * \return mGcpDbDatawhich contains all needed information to use Spatialite Gcp-Support
      */
-    QgsSpatiaLiteGcpUtils::GcpDbData *getGcpDbData() { return mGCPList->getGcpDbData(); }
+    QgsSpatiaLiteGcpUtils::GcpDbData *getGcpDbData() { return mGcpList->getGcpDbData(); }
 
     /**
      * Remove all Data-Points
      *  - set to isDirty
      */
-    void clearDataPoints() {mGCPList->clearDataPoints(); };
+    void clearDataPoints() {mGcpList->clearDataPoints(); };
 
     /**
      * Return amount of DataPoints
      *  - Enabled and Disabled
      */
-    int countDataPoints() {return mGCPList->countDataPoints(); };
+    int countDataPoints() {return mGcpList->countDataPoints(); };
 
     /**
      * Return amount of enabled DataPoints
      *  - Enabled only
      */
-    int countDataPointsEnabled() {return mGCPList->countDataPointsEnabled(); };
+    int countDataPointsEnabled() {return mGcpList->countDataPointsEnabled(); };
 
     /**
      * Return amount of disabled DataPoints
      *  - Disabled only
      */
-    int countDataPointsDisabled() {return mGCPList->countDataPointsDisabled(); };
+    int countDataPointsDisabled() {return mGcpList->countDataPointsDisabled(); };
 
     /**
      * Search Point in List
@@ -188,15 +207,21 @@ class QgsGCPListModel : public QStandardItemModel
      * \see QgsPointXY::compare
      * \return true result is exact, otherwise false
      */
+<<<<<<< HEAD
     bool searchDataPoint( QgsPointXY searchPoint, bool bPointMap = true, double epsilon = 0.5, int *id_gcp = nullptr, double *distance = nullptr, int *iResultType = nullptr )  {return mGCPList->searchDataPoint( searchPoint, bPointMap, epsilon, id_gcp, distance, iResultType ); };
     bool avoidUnneededUpdates() {return mGCPList->avoidUnneededUpdates();};
     void setAvoidUnneededUpdates( bool bAvoidUnneededUpdates ) {mGCPList->setAvoidUnneededUpdates( bAvoidUnneededUpdates );};
+=======
+    bool searchDataPoint( QgsPoint searchPoint, bool bPointMap = true, double epsilon = 0.5, int *id_gcp = nullptr, double *distance = nullptr, int *iResultType = nullptr )  {return mGcpList->searchDataPoint( searchPoint, bPointMap, epsilon, id_gcp, distance, iResultType ); };
+    bool avoidUnneededUpdates() {return mGcpList->avoidUnneededUpdates();};
+    void setAvoidUnneededUpdates( bool bAvoidUnneededUpdates ) {mGcpList->setAvoidUnneededUpdates( bAvoidUnneededUpdates );};
+>>>>>>> Last major problems resolved. Start test phase
   private:
-    QgsGCPList         *mGCPList = nullptr;
+    QgsGcpList         *mGcpList = nullptr;
     QgsGeorefTransform *mGeorefTransform = nullptr;
     bool bTransformUpdated = false;
     bool bMapUnitsPossible = false;
-    friend class QgsGCPListWidget; // in order to access createGCPVectors, getPoint, updatePoint and removePoint
+    friend class QgsGcpListWidget; // in order to access createGcpVectors, getPoint, updatePoint and removePoint
 };
 
 #endif

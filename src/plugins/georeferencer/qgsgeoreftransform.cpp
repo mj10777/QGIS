@@ -505,30 +505,30 @@ bool QgsGDALGeorefTransform::updateParametersFromGCPs( const QVector<QgsPointXY>
     return false;
   int n = mapCoords.size();
 
-  GDAL_GCP *GCPList = new GDAL_GCP[n];
+  GDAL_GCP *GcpList = new GDAL_GCP[n];
   for ( int i = 0; i < n; i++ )
   {
-    GCPList[i].pszId = new char[20];
-    snprintf( GCPList[i].pszId, 19, "gcp%i", i );
-    GCPList[i].pszInfo = nullptr;
-    GCPList[i].dfGCPPixel =  pixelCoords[i].x();
-    GCPList[i].dfGCPLine  = -pixelCoords[i].y();
-    GCPList[i].dfGCPX = mapCoords[i].x();
-    GCPList[i].dfGCPY = mapCoords[i].y();
-    GCPList[i].dfGCPZ = 0;
+    GcpList[i].pszId = new char[20];
+    snprintf( GcpList[i].pszId, 19, "gcp%i", i );
+    GcpList[i].pszInfo = nullptr;
+    GcpList[i].dfGCPPixel =  pixelCoords[i].x();
+    GcpList[i].dfGCPLine  = -pixelCoords[i].y();
+    GcpList[i].dfGCPX = mapCoords[i].x();
+    GcpList[i].dfGCPY = mapCoords[i].y();
+    GcpList[i].dfGCPZ = 0;
   }
   destroy_gdal_args();
 
   if ( mIsTPSTransform )
-    mGDALTransformerArgs = GDALCreateTPSTransformer( n, GCPList, false );
+    mGDALTransformerArgs = GDALCreateTPSTransformer( n, GcpList, false );
   else
-    mGDALTransformerArgs = GDALCreateGCPTransformer( n, GCPList, mPolynomialOrder, false );
+    mGDALTransformerArgs = GDALCreateGCPTransformer( n, GcpList, mPolynomialOrder, false );
 
   for ( int i = 0; i < n; i++ )
   {
-    delete [] GCPList[i].pszId;
+    delete [] GcpList[i].pszId;
   }
-  delete [] GCPList;
+  delete [] GcpList;
 
   return nullptr != mGDALTransformerArgs;
 }

@@ -37,7 +37,7 @@ class QLabel;
 
 class QgisInterface;
 class QgsGeorefDataPoint;
-class QgsGCPListWidget;
+class QgsGcpListWidget;
 class QgsMapTool;
 class QgsMapCanvas;
 class QgsMapCoordsDialog;
@@ -350,6 +350,16 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     void geometryChanged_gcp( QgsFeatureId fid, const QgsGeometry &changed_geometry );
 
     /**
+     * Reacts to any changes in other Meta-Data attribute
+     *  - Update of Meta-Data in GcpList
+     *  -- any activity should then only be done once
+     * \param fid The id of the changed feature
+     * \param idx The attribute index of the changed attribute
+     * \param value The new value of the attribute
+     */
+    void attributeChanged_gcp( QgsFeatureId fid, int idx, const QVariant &value );
+
+    /**
      * Reacts to a Spatialite-Database storing a cutline [cutline_points, linestrings, polygons and mecator_polygons]
      *  - save edit after each change
      *  -- so that the geometries can bee seen in the Canvos while moving around
@@ -459,6 +469,13 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
      *  - TODO: document
      */
     void setGdalScriptType();
+
+    /**
+     * setLayerProviderType
+      * Switch between Spatialite (default) and OGR Provider
+     * \since QGIS 3.0
+     */
+    void setLayerProviderType();
 
     /**
      * setPointsPolygon
@@ -630,12 +647,12 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
 
     /**
      * Update Modell
-     *  - calls createGCPVectors to recreate List of enabled Points
+     *  - calls createGcpVectors to recreate List of enabled Points
      *  - rebuilds List calculating residual value
      * \note this is also done in updateModel
      *  - then calls updateTransformParamLabel to set summery of results
      * \see updateTransformParamLabel
-     * \see QgsGCPListWidget::updateModel
+     * \see QgsGcpListWidget::updateModel
      * \return true if the id was found, otherwise false
      */
     bool updateGeorefTransform();
@@ -807,7 +824,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
      *  --> Gcp-Points will read from the '.points' file
      * - both methods will:
      * -> add the QgsGeorefDataPoint
-     * - calls 'setGCPList' AFTER all points have been added
+     * - calls 'setGcpList' AFTER all points have been added
      * \since QGIS 3.0
      *  - the 'if (mLegacyMode == 0)' portion can be removed
      *  -> reading of the .points file
@@ -815,7 +832,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
      * \see openRaster
      * \see extentsChanged
      * \see createGcpDb
-     * \see QgsGCPListWidget::setGCPList
+     * \see QgsGcpListWidget::setGcpList
      * \see QgsSpatiaLiteGcpUtils::createGcpDb
      * \param file name as string
      */
@@ -958,7 +975,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     QgsImageWarper::ResamplingMethod setGcpResamplingMethod( QString sResamplingMethod );
 
     /**
-     * mSpatialite_gcp_enabled
+     * mSpatialiteGcpEnabled
      *  - Has the Spatialite being used been compiled with the Gcp-Logic
      *  -> if not the Legacy QgsMapCoordsDialog will be called
      * \since QGIS 3.0
@@ -966,7 +983,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
      *  - therefore is needed
      * \see SaveGCPs
      */
-    bool mSpatialite_gcp_enabled;
+    bool mSpatialiteGcpEnabled;
 
     /**
      * isGcpEnabled
@@ -975,10 +992,10 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
      * \since QGIS 3.0
      * New for ( mLegacyMode == 1 )
      *  - therefore is needed
-     * \see mSpatialite_gcp_enabled
-     * \return  mSpatialite_gcp_enabled
+     * \see mSpatialiteGcpEnabled
+     * \return  mSpatialiteGcpEnabled
      */
-    bool isGcpEnabled() { return mSpatialite_gcp_enabled; }
+    bool isGcpEnabled() { return mSpatialiteGcpEnabled; }
 
     /**
      * isGcpOff
@@ -987,8 +1004,8 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
      * \since QGIS 3.0
      * New for ( mLegacyMode == 1 )
      *  - therefore is needed
-     * \see mSpatialite_gcp_enabled
-     * \return  mSpatialite_gcp_enabled
+     * \see mSpatialiteGcpEnabled
+     * \return  mSpatialiteGcpEnabled
      */
     bool isGcpOff() { if ( isGcpEnabled() ) return mSpatialiteGcpOff; else return false; }
     // mj10777: add gui logic for this and store in setting
@@ -1000,7 +1017,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     QString mError;
     QgsGeorefTransform mTransformType;
     QString mGcpLabelExpression;
-    int mGcp_label_type;
+    int mGcpLabelType;
     bool mPointsPolygon;
     double fontPointSize;
     bool exportLayerDefinition( QgsLayerTreeGroup *group_layer, QString file_path = QString::null );
@@ -1086,7 +1103,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     QString guessWorldFileName( const QString &rasterFileName );
     QIcon getThemeIcon( const QString &name );
     bool checkFileExisting( const QString &fileName, const QString &title, const QString &question );
-    bool equalGCPlists( const QgsGCPList *list1, const QgsGCPList *list2 );
+    bool equalGCPlists( const QgsGcpList *list1, const QgsGcpList *list2 );
     void logTransformOptions();
     void logRequaredGCPs();
 
@@ -1113,7 +1130,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
      * \note Display in Georeferencer-Canvas: mTreeGroupCutlineMercator
      * -> mLayerGcpPixels
      * -> mLayerMercatorPolygons
-     * \note GCPListWidget
+     * \note GcpListWidget
      * - Data-Points will be cleared
      * - Georeferencer-Canvas will be removed and refreshed
      */
@@ -1195,7 +1212,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
      * \param error out: the mean error
      * \return true in case of success
      */
-    bool calculateMeanError( double &error ) const { return mGCPListWidget->calculateMeanError( error ); }
+    bool calculateMeanError( double &error ) const { return mGcpListWidget->calculateMeanError( error ); }
 
     //! Docks / undocks this window
     void dockThisWindow( bool dock );
@@ -1208,7 +1225,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
 
     QAction *mActionHelp = nullptr;
 
-    QgsGCPListWidget *mGCPListWidget = nullptr;
+    QgsGcpListWidget *mGcpListWidget = nullptr;
     QLineEdit *mScaleEdit = nullptr;
     QLabel *mScaleLabel = nullptr;
     QLabel *mCoordsLabel = nullptr;
@@ -1250,7 +1267,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
 
     QgisInterface *mIface = nullptr;
 
-    QgsGCPList *getGCPList() { return mGCPListWidget->getGCPList(); }
+    QgsGcpList *getGcpList() { return mGcpListWidget->getGcpList(); }
     QgsMapCanvas *mCanvas = nullptr;
     QgsRasterLayer *mLayerRaster = nullptr;
     bool mAgainAddRaster = false;
@@ -1306,16 +1323,16 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     QgsLayerTreeGroup *mTreeGroupGeoreferencer = nullptr;
     QgsLayerTreeGroup *mTreeGroupGcpPoints = nullptr;
     //! Raster file without extension Lower-Case from Database since QGIS 3.0
-    QString mGcpCoverageName;
+    QString mGcpCoverageName = QString::null;
     //! Original Spelling of mGcpCoverageName from Database since QGIS 3.0
-    QString mGcpCoverageNameBase;
+    QString mGcpCoverageNameBase = QString::null;
 
     /**
      * Gcp-Points/Pixel selected name from Database
      * \see mGcpDbData->mGcpPointsTableName;
      * \since QGIS 3.0
      */
-    QString mGcpPointsTableName;
+    QString mGcpPointsTableName = QString::null;
 
     /**
      * Gcp-Points Geometry-Name from Gcp-Points/Pixel Table
@@ -1338,7 +1355,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
      *  - Format: tablename(geometryname)
      * \since QGIS 3.0
      */
-    QString mGcpPointsLayername;
+    QString mGcpPointsLayername = QString::null;
 
     /**
      * Active GcpPoints VectorLayer
@@ -1351,7 +1368,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
      *  - Format: tablename(geometryname)
      * \since QGIS 3.0
      */
-    QString mGcpPixelLayername;
+    QString mGcpPixelLayername = QString::null;
 
     /**
      * Active GcpPixels VectorLayer
@@ -1580,7 +1597,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
      *  - 'ogr' cannot be used.
      * \since QGIS 3.0
      */
-    QString mLayerProviderType;
+    QString mLayerProviderType = QString::null;
 
     /**
      * Connection string to use, depending on Provider to use
@@ -1654,8 +1671,6 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     QgsMapTool *mToolPan = nullptr;
     QgsMapTool *mToolAddPoint = nullptr;
     QgsMapTool *mToolNodePoint = nullptr;
-    // mLegacyMode=0 ; QgsMapTool *mToolMovePoint = nullptr;
-    // mLegacyMode=0 ; QgsMapTool *mToolMovePointQgis = nullptr;
 
     QgsGeorefDataPoint *mMovingPoint = nullptr;
     QgsGeorefDataPoint *mMovingPointQgis = nullptr;
@@ -1841,7 +1856,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
      * \param parmsGcpDbData  which will contain a spatialite connection (with mParseString to use and if Spatialite Gcp-logic is active)
      * \return true if all commands where executed correctly
      */
-    int bulkGcpPointsInsert( QgsGCPList *master_GcpList );
+    int bulkGcpPointsInsert( QgsGcpList *master_GcpList );
     // docks ------------------------------------------
     // QgsLayerTreeGroup *mRootLayerTreeGroup = nullptr;
     QgsLayerTree *mRootLayerTree = nullptr;

@@ -33,8 +33,8 @@ class QgsResidualPlotItem: public QgsComposerItem
     //! \brief Reimplementation of QCanvasItem::paint
     virtual void paint( QPainter *painter, const QStyleOptionGraphicsItem *itemStyle, QWidget *pWidget ) override;
 
-    void setGCPList( QgsGCPList *list ) { mGCPList = list; }
-    QgsGCPList *GCPList() const { return mGCPList; }
+    void setGcpList( QgsGcpList *list ) { mGcpList = list; }
+    QgsGcpList *GcpList() const { return mGcpList; }
 
     void setExtent( const QgsRectangle &rect ) { mExtent = rect;}
     QgsRectangle extent() const { return mExtent; }
@@ -47,7 +47,7 @@ class QgsResidualPlotItem: public QgsComposerItem
 
   private:
     //gcp list
-    QgsGCPList *mGCPList = nullptr;
+    QgsGcpList *mGcpList = nullptr;
 
     QgsRectangle mExtent;
     //! True if the scale bar units should be converted to map units. This can be done for transformation where the scaling in all directions is the same (helmert)

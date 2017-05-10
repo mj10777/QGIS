@@ -27,13 +27,13 @@ class QgsGeorefDataPoint;
 class QgsPointXY;
 
 // what is better use inherid or agrigate QList?
-class QgsGCPList : public QList<QgsGeorefDataPoint *>
+class QgsGcpList : public QList<QgsGeorefDataPoint *>
 {
   public:
-    QgsGCPList();
-    QgsGCPList( const QgsGCPList &list );
+    QgsGcpList();
+    QgsGcpList( const QgsGcpList &list );
 
-    QgsGCPList &operator =( const QgsGCPList &list );
+    QgsGcpList &operator =( const QgsGcpList &list );
 
     /**
      * Remove all Data-Points
@@ -134,10 +134,14 @@ class QgsGCPList : public QList<QgsGeorefDataPoint *>
      * \param pixelCoords to store the Pixel-points
      * \return nullptr if the id was not found, otherwise Point of the fiven id
      */
+<<<<<<< HEAD
     void createGCPVectors( QVector<QgsPointXY> &mapCoords, QVector<QgsPointXY> &pixelCoords );
+=======
+    void createGcpVectors( QVector<QgsPoint> &mapCoords, QVector<QgsPoint> &pixelCoords );
+>>>>>>> Last major problems resolved. Start test phase
 
     /**
-     * Informs QgsGCPList that any Updating has been done
+     * Informs QgsGcpList that any Updating has been done
      *  - until next Update, Adding or Delete: isDirty() = false
      */
     void setClean() { mIsDirty = false; };
@@ -149,13 +153,19 @@ class QgsGCPList : public QList<QgsGeorefDataPoint *>
     bool isDirty() { return mIsDirty; }
 
     /**
+     * Set status if  Update, Adding or Delete have been made
+     * \return true or false (value of mIsDirty)
+     */
+    bool setDirty() { mIsDirty = true; mHasChanged = true ; return mIsDirty; }
+
+    /**
      * Informs the caller if any changes have been made since the Initial loading of Point-Pairs.
      * \return true or false (value of mHasChanged)
      */
     bool hasChanged() { return mHasChanged; }
 
     /**
-     * Informs QgsGCPList (when true) that the Initial loading of Point-Pairs is completed
+     * Informs QgsGcpList (when true) that the Initial loading of Point-Pairs is completed
      * \param true or false
      */
     void setChanged( bool bChanged ) { mHasChanged = bChanged; };
@@ -179,8 +189,7 @@ class QgsGCPList : public QList<QgsGeorefDataPoint *>
      * \see QgsSpatiaLiteGcpUtils::GcpDbData
      */
     QgsSpatiaLiteGcpUtils::GcpDbData *mGcpDbData = nullptr;
-    bool setDirty() { mIsDirty = true; mHasChanged = true ; return mIsDirty; }
-    friend class QgsGCPListModel; // in order to access createGCPVectors, getPoint, updatePoint and removePoint
+    friend class QgsGcpListModel; // in order to access createGcpVectors, getPoint, updatePoint and removePoint
     bool mAvoidUnneededUpdates = false;
 };
 

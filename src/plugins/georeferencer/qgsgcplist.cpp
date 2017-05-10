@@ -15,17 +15,17 @@
 
 #include "qgsgcplist.h"
 
-QgsGCPList::QgsGCPList()
+QgsGcpList::QgsGcpList()
   : QList<QgsGeorefDataPoint *>()
 {
 }
 
-QgsGCPList::QgsGCPList( const QgsGCPList &list )
+QgsGcpList::QgsGcpList( const QgsGcpList &list )
   : QList<QgsGeorefDataPoint *>()
   , mHasChanged( true )
 {
   clear();
-  QgsGCPList::const_iterator it = list.constBegin();
+  QgsGcpList::const_iterator it = list.constBegin();
   for ( ; it != list.constEnd(); ++it )
   {
     QgsGeorefDataPoint *dataPoint = new QgsGeorefDataPoint( **it );
@@ -33,7 +33,11 @@ QgsGCPList::QgsGCPList( const QgsGCPList &list )
   }
 }
 
+<<<<<<< HEAD
 void QgsGCPList::createGCPVectors( QVector<QgsPointXY> &mapCoords, QVector<QgsPointXY> &pixelCoords )
+=======
+void QgsGcpList::createGcpVectors( QVector<QgsPoint> &mapCoords, QVector<QgsPoint> &pixelCoords )
+>>>>>>> Last major problems resolved. Start test phase
 {
   mapCoords   = QVector<QgsPointXY>( size() );
   pixelCoords = QVector<QgsPointXY>( size() );
@@ -48,7 +52,7 @@ void QgsGCPList::createGCPVectors( QVector<QgsPointXY> &mapCoords, QVector<QgsPo
     }
   }
 }
-QgsGeorefDataPoint *QgsGCPList::getDataPoint( int id_gcp )
+QgsGeorefDataPoint *QgsGcpList::getDataPoint( int id_gcp )
 {
   for ( int i = 0; i < sizeAll(); i++ )
   {
@@ -60,12 +64,12 @@ QgsGeorefDataPoint *QgsGCPList::getDataPoint( int id_gcp )
   }
   return nullptr;
 }
-bool QgsGCPList::addDataPoint( QgsGeorefDataPoint *dataPoint )
+bool QgsGcpList::addDataPoint( QgsGeorefDataPoint *dataPoint )
 {
   append( dataPoint );
   return setDirty();
 }
-bool QgsGCPList::removeDataPoint( int id_gcp )
+bool QgsGcpList::removeDataPoint( int id_gcp )
 {
   int i_position_at = -1;
   bool b_hit = false;
@@ -86,27 +90,28 @@ bool QgsGCPList::removeDataPoint( int id_gcp )
   }
   return b_hit;
 }
+<<<<<<< HEAD
 bool QgsGCPList::updateDataPoint( int id_gcp, bool bPointMap, QgsPointXY updatePoint )
+=======
+bool QgsGcpList::updateDataPoint( int id_gcp, bool bPointMap, QgsPoint updatePoint )
+>>>>>>> Last major problems resolved. Start test phase
 {
   // iPointType: 0=pixel ; 1 = map
   bool b_hit = false;
   QgsGeorefDataPoint *update_dataPoint = getDataPoint( id_gcp );
   if ( update_dataPoint )
   {
-    if ( bPointMap )
-    {
-      update_dataPoint->setMapCoords( updatePoint );
-    }
-    else
-    {
-      update_dataPoint->setPixelCoords( updatePoint );
-    }
+    update_dataPoint->updateDataPoint( bPointMap, updatePoint );
     b_hit = true;
     setDirty();
   }
   return b_hit;
 }
+<<<<<<< HEAD
 bool QgsGCPList::searchDataPoint( QgsPointXY searchPoint, bool bPointMap, double epsilon, int *id_gcp, double *distance, int *iResultType )
+=======
+bool QgsGcpList::searchDataPoint( QgsPoint searchPoint, bool bPointMap, double epsilon, int *id_gcp, double *distance, int *iResultType )
+>>>>>>> Last major problems resolved. Start test phase
 {
   // iPointType: 0=pixel ; 1 = map
   bool b_hit = false;
@@ -170,7 +175,7 @@ bool QgsGCPList::searchDataPoint( QgsPointXY searchPoint, bool bPointMap, double
   return b_hit;
 }
 
-int QgsGCPList::size()
+int QgsGcpList::size()
 {
   if ( QList<QgsGeorefDataPoint *>::isEmpty() )
   {
@@ -193,15 +198,15 @@ int QgsGCPList::size()
   return mCountEnabled;
 }
 
-int QgsGCPList::sizeAll() const
+int QgsGcpList::sizeAll() const
 {
   return QList<QgsGeorefDataPoint *>::size();
 }
 
-QgsGCPList &QgsGCPList::operator =( const QgsGCPList &list )
+QgsGcpList &QgsGcpList::operator =( const QgsGcpList &list )
 {
   clear();
-  QgsGCPList::const_iterator it = list.constBegin();
+  QgsGcpList::const_iterator it = list.constBegin();
   for ( ; it != list.constEnd(); ++it )
   {
     QgsGeorefDataPoint *dataPoint = new QgsGeorefDataPoint( **it );

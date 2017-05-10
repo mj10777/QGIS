@@ -34,7 +34,7 @@ void QgsResidualPlotItem::paint( QPainter *painter, const QStyleOptionGraphicsIt
 {
   Q_UNUSED( itemStyle );
   Q_UNUSED( pWidget );
-  if ( mGCPList->countDataPointsEnabled() < 1 || !painter )
+  if ( mGcpList->countDataPointsEnabled() < 1 || !painter )
   {
     return;
   }
@@ -53,10 +53,15 @@ void QgsResidualPlotItem::paint( QPainter *painter, const QStyleOptionGraphicsIt
 
   painter->setRenderHint( QPainter::Antialiasing, true );
 
-  for ( int i = 0; i < mGCPList->countDataPoints(); ++i )
+  for ( int i = 0; i < mGcpList->countDataPoints(); ++i )
   {
+<<<<<<< HEAD
     QgsGeorefDataPoint *dataPoint = mGCPList->at( i );
     QgsPointXP gcpCoords = dataPoint->pixelCoords();
+=======
+    QgsGeorefDataPoint *dataPoint = mGcpList->at( i );
+    QgsPoint gcpCoords = dataPoint->pixelCoords();
+>>>>>>> Last major problems resolved. Start test phase
     double gcpItemMMX = ( gcpCoords.x() - mExtent.xMinimum() ) / mExtent.width() * widthMM;
     double gcpItemMMY = ( 1 - ( gcpCoords.y() - mExtent.yMinimum() ) / mExtent.height() ) * heightMM;
 
@@ -81,10 +86,15 @@ void QgsResidualPlotItem::paint( QPainter *painter, const QStyleOptionGraphicsIt
   }
 
   //draw residual arrows
-  for ( int i = 0; i < mGCPList->countDataPoints(); ++i )
+  for ( int i = 0; i < mGcpList->countDataPoints(); ++i )
   {
+<<<<<<< HEAD
     QgsGeorefDataPoint *dataPoint = mGCPList->at( i );
     QgsPointXP gcpCoords = dataPoint->pixelCoords();
+=======
+    QgsGeorefDataPoint *dataPoint = mGcpList->at( i );
+    QgsPoint gcpCoords = dataPoint->pixelCoords();
+>>>>>>> Last major problems resolved. Start test phase
     double gcpItemMMX = ( gcpCoords.x() - mExtent.xMinimum() ) / mExtent.width() * widthMM;
     double gcpItemMMY = ( 1 - ( gcpCoords.y() - mExtent.yMinimum() ) / mExtent.height() ) * heightMM;
     if ( dataPoint->isEnabled() )

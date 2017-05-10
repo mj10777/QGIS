@@ -46,8 +46,22 @@ class QgsGeorefDataPoint : public QObject
     QgsPointXY mapCoords() const { return mMapCoords; }
     void setMapCoords( const QgsPointXY &map_point );
 
+<<<<<<< HEAD
     QgsPointXY mapCoordsReverse() const { return mMapCoordsReverse; }
     void setMapCoordsReverse( const QgsPointXY &map_point )  { mMapCoordsReverse = map_point; }
+=======
+    /**
+     * Update Point
+     *  - added to avoid reloading all the points again
+     * \param bPointMap (either pixel.point [false] of map.point [true]) to update at give id
+     * \param updatePoint the point to use
+     * \return true if the id was found, otherwise false
+     */
+    void updateDataPoint( bool bPointMap, QgsPoint updatePoint );
+
+    QgsPoint mapCoordsReverse() const { return mMapCoordsReverse; }
+    void setMapCoordsReverse( const QgsPoint &map_point )  { mMapCoordsReverse = map_point; }
+>>>>>>> Last major problems resolved. Start test phase
     double mapDistanceReverse()  { return mMapCoords.distance( mMapCoordsReverse ); }
     double mapAzimuthReverse()  { return fabs( mMapCoords.azimuth( mMapCoordsReverse ) ); }
 
@@ -128,7 +142,7 @@ class QgsGeorefDataPoint : public QObject
     /**
      * getResultType()
      *  - How the point is being used
-     *  -> UPDATE and INSERT should only be used on copys of the GCPListWidget entries
+     *  -> UPDATE and INSERT should only be used on copys of the GcpListWidget entries
      * \note
      * Expected values:
      *  0: default value upon creation
@@ -145,7 +159,7 @@ class QgsGeorefDataPoint : public QObject
     /**
      * setResultType()
      *  - How the point is to be used
-     *  -> UPDATE and INSERT should only be used on copiess of the GCPListWidget entries
+     *  -> UPDATE and INSERT should only be used on copiess of the GcpListWidget entries
      * \note
      * Expected values:
      *  0: default value upon creation
@@ -215,7 +229,7 @@ class QgsGeorefDataPoint : public QObject
     /**
      * sqlInsertPointsCoverage
      *  - Depending on how point is being used
-     *  -> UPDATE and INSERT should only be used on copys of the GCPListWidget entries
+     *  -> UPDATE and INSERT should only be used on copys of the GcpListWidget entries
      * \note
      * Used values of mResultType:
      *  2: is being used to UPDATE the Database with the present values

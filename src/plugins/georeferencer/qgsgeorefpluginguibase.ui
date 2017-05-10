@@ -55,7 +55,6 @@
     </property>
     <addaction name="mActionAddFeature"/>
     <addaction name="mActionNodeFeature"/>
-    <addaction name="mActionMoveFeature"/>
     <addaction name="separator"/>
     <addaction name="mActionFetchMasterGcpExtent"/>
     <addaction name="separator"/>
@@ -92,8 +91,9 @@
      <property name="title">
       <string>Settings</string>
      </property>
-     <addaction name="mActionGdalScriptType"/>
+     <addaction name="mActionLayerProviderType"/>
      <addaction name="separator"/>
+     <addaction name="mActionGdalScriptType"/>
     </widget>
      <widget class="QMenu" name="menuGcpDbTasks">
      <property name="title">
@@ -182,7 +182,6 @@
    </attribute>
    <addaction name="mActionAddFeature"/>
    <addaction name="mActionNodeFeature"/>
-   <addaction name="mActionMoveFeature"/>
     <addaction name="separator"/>
     <addaction name="mActionFetchMasterGcpExtent"/>
     <addaction name="separator"/>
@@ -417,14 +416,6 @@
     <string>View Raster Properties</string>
    </property>
   </action>
-  <action name="mActionMoveFeature">
-   <property name="text">
-    <string>Move GCP Point</string>
-   </property>
-   <property name="statusTip">
-    <string>Move GCP point</string>
-   </property>
-  </action>
   <action name="mActionZoomNext">
    <property name="text">
     <string>Zoom Next</string>
@@ -439,6 +430,17 @@
    <property name="text">
     <string>Switch Gdal-Script Type</string>
    </property>
+  </action>
+  <action name="mActionLayerProviderType">
+   <property name="text">
+    <string>Switch Spatialite/OGR Provider</string>
+   </property>
+   <property name="toolTip">
+    <string>Switch between Spatialite and OGR Provider</string>
+   </property>
+    <property name="statusTip">
+     <string>Switch between Spatialite and OGR Provider</string>
+    </property>
   </action>
   <action name="mActionPointsPolygon">
    <property name="text">
