@@ -113,8 +113,8 @@ QgsGeorefPluginGui::QgsGeorefPluginGui( QgisInterface *qgisInterface, QWidget *p
   mEventPixelStatus = 0;
   mGcpDbData = nullptr;
   mGcpMasterDatabaseFileName = QString::null;
-  mGcpMasterSrid = -1;
-  mGcpSrid = -1;
+  mGcpMasterSrid = -2; // Invalid
+  mGcpSrid = -2; // Invalid
   mGcpDatabaseFileName = QString::null;
   mGcpFileName = QString::null;
   mGcpBaseFileName = QString::null;
@@ -343,9 +343,7 @@ void QgsGeorefPluginGui::openRaster( QFileInfo raster_file )
   if ( sa_authid.length() == 2 )
     s_srid = sa_authid[1];
   mGcpSrid = s_srid.toInt();
-  // destinationCrs: authid[EPSG:3068]  srsid[1031]  description[DHDN / Soldner Berlin]
-  // s_srid=QString("destinationCrs[%1]: authid[%2]  srsid[%3]  description[%4] ").arg(mGcpSrid).arg(mGcpAuthid).arg(mIface->mapCanvas()->mapRenderer()->destinationCrs().srsid()).arg(mGcpDescription);
-  // qDebug()<<s_srid;
+  // qDebug()<< QString("destinationCrs[%1]: authid[%2]  srsid[%3]  description[%4] ").arg(mGcpSrid).arg(mGcpAuthid).arg(mIface->mapCanvas()->mapSettings().destinationCrs().srsid()).arg(mGcpDescription);
   if ( mGcpSrid > 0 )
   {
     // with srid (of project), activate the buttons and set set output-filename
@@ -778,9 +776,11 @@ void QgsGeorefPluginGui::jumpToGCP( QgsGeorefDataPoint *dataPoint )
   if ( dataPoint )
   {
     mExtentsChangedRecursionGuard = true;
+    // true=Georeferencer-Canvas (isPixel)
     dataPoint->moveTo( true );
     if ( mActionLinkGeorefToQGis->isChecked() )
     {
+      // false=QGis-Canvas (!isPixel)
       dataPoint->moveTo( false );
     }
     mExtentsChangedRecursionGuard = false;
@@ -1030,6 +1030,8 @@ void QgsGeorefPluginGui::createActions()
   connect( mActionSqlDumpGcpCoverage, &QAction::triggered, this, &QgsGeorefPluginGui::createSqlDumpGcpCoverage );
   mActionSqlDumpGcpMaster->setIcon( QgsApplication::getThemeIcon( QStringLiteral( "/mActionNewSpatiaLiteLayer.svg" ) ) );
   connect( mActionSqlDumpGcpMaster, &QAction::triggered, this, &QgsGeorefPluginGui::createSqlDumpGcpMaster );
+  mActionGcpCoverageAsGcpMaster->setIcon( QgsApplication::getThemeIcon( QStringLiteral( "/symbologyAdd.svg" ) ) );
+  connect( mActionGcpCoverageAsGcpMaster, &QAction::triggered, this, &QgsGeorefPluginGui::exportGcpCoverageAsGcpMaster );
 
   // Histogram stretch
   mActionLocalHistogramStretch->setIcon( getThemeIcon( QStringLiteral( "/mActionLocalHistogramStretch.svg" ) ) );
@@ -1072,7 +1074,13 @@ void QgsGeorefPluginGui::createMapCanvas()
   mCanvas = new QgsMapCanvas( this->centralWidget() );
   mCanvas->setObjectName( QStringLiteral( "georefCanvas" ) );
   mCanvas->setSizePolicy( QSizePolicy::Expanding, QSizePolicy::Expanding );
-  mCanvas->setCanvasColor( Qt::white );
+  // mCanvas->setCanvasColor( QColor(170,170,127) ); // aaaa7f
+  QgsSettings settings;
+  // Retrieve default values for main application (hoping that is not QColor::White, so that the image edges can be seen)
+  int appRed = settings.value( QStringLiteral( "qgis/default_canvas_color_red" ), 255 ).toInt();
+  int appGreen = settings.value( QStringLiteral( "qgis/default_canvas_color_green" ), 255 ).toInt();
+  int appBlue = settings.value( QStringLiteral( "qgis/default_canvas_color_blue" ), 255 ).toInt();
+  mCanvas->setCanvasColor( QColor( appRed, appGreen, appBlue ) );
   mCanvas->setMinimumWidth( 400 );
   mCentralLayout->addWidget( mCanvas, 0, 0, 2, 1 );
 
@@ -1390,6 +1398,7 @@ void QgsGeorefPluginGui::updateIconTheme( const QString &theme )
 // Mapcanvas Plugin
 void QgsGeorefPluginGui::addRaster( const QString &rasterFileName )
 {
+  QDateTime functionDuration = QDateTime::currentDateTime();
   mCanvas->freeze( true );
   mIface->mapCanvas()->freeze( true );
   if ( mLayerRaster )
@@ -1401,7 +1410,6 @@ void QgsGeorefPluginGui::addRaster( const QString &rasterFileName )
   // the Layer should be loaded just before loadGCPs is called - will read metadata from file and set layer
   if ( loadGcpData() )
   {
-    qDebug() << QString( "-I-> QgsGeorefPluginGui::addRaster[%1] Raster[%2]" ).arg( mLayerProviderType ).arg( mGcpBaseFileName );
     // so layer is not added to legend
     QgsProject::instance()->addMapLayers( QList<QgsMapLayer *>() << mLayerRaster, false, false );
     // add layer to map canvas
@@ -1478,7 +1486,13 @@ void QgsGeorefPluginGui::addRaster( const QString &rasterFileName )
     mIface->mapCanvas()->freeze( false );
     mCanvas->refresh();
     mIface->mapCanvas()->refresh();
-    // mExtentsChangedRecursionGuard = false;
+    qDebug() << QString( "-I-> QgsGeorefPluginGui::addRaster[%1] Raster[%2] duration[%3]" ).arg( mLayerProviderType ).arg( mGcpBaseFileName ).arg( functionDuration.msecsTo( QDateTime::currentDateTime() ) );
+    // -I-> QgsGeorefPluginGui::addRaster[ogr.01] Raster[1910.Straube_Blatt_Uebersicht.26500] duration[4015]
+    // -I-> QgsGeorefPluginGui::addRaster[ogr.01] Raster[1909.Straube_Blatt_III_A.4000] duration[59434]
+    // -I-> QgsGeorefPluginGui::addRaster[ogr.02] Raster[1910.Straube_Blatt_Uebersicht.26500] duration[4843]
+    // -I-> QgsGeorefPluginGui::addRaster[ogr] Raster[1909.Straube_Blatt_III_A.4000] duration[59452]
+    // -I-> QgsGeorefPluginGui::addRaster[spatialite.01] Raster[1910.Straube_Blatt_Uebersicht.26500] duration[3237]
+    // -I-> QgsGeorefPluginGui::addRaster[spatialite.01] Raster[1909.Straube_Blatt_III_A.4000] duration[59794]
   }
   else
   {
@@ -3115,6 +3129,12 @@ bool QgsGeorefPluginGui::setGcpLayerSettings( QgsVectorLayer *layer_gcp )
     gcp_layer_settings.setFormat( gcp_layer_textFormat );
     // Write settings to layer
     gcp_layer_settings.writeToLayer( layer_gcp );
+    QgsSnappingConfig config( QgsProject::instance() );
+    config.setEnabled( true );
+    config.setMode( QgsSnappingConfig::AdvancedConfiguration );
+    config.setIntersectionSnapping( false );  // only snap to layers
+    config.setIndividualLayerSettings( layer_gcp, QgsSnappingConfig::IndividualLayerSettings(
+                                         layer_gcp->isEditable(), QgsSnappingConfig::VertexAndSegment, mGcpPointArea, QgsTolerance::ProjectUnits ) );
   }
   if ( ( layer_gcp->isValid() ) && ( layer_gcp->editFormConfig().suppress() !=  QgsEditFormConfig::SuppressOn ) )
   {
@@ -3280,6 +3300,12 @@ bool QgsGeorefPluginGui::setCutlineGcpMasterArea( double d_area, QgsVectorLayer 
               cutline_layer_symbol_circle->setSize( mGcpMasterArea );
               cutline_layer_symbol_container->insertSymbolLayer( 0, cutline_layer_symbol_circle );
               layer_cutline->setRenderer( cutline_layer_renderer );
+              QgsSnappingConfig config( QgsProject::instance() );
+              config.setEnabled( true );
+              config.setMode( QgsSnappingConfig::AdvancedConfiguration );
+              config.setIntersectionSnapping( false );  // only snap to layers
+              config.setIndividualLayerSettings( layer_cutline, QgsSnappingConfig::IndividualLayerSettings(
+                                                   layer_cutline->isEditable(), QgsSnappingConfig::VertexAndSegment, mGcpMasterArea, QgsTolerance::ProjectUnits ) );
               b_rc = true;
             }
           }
@@ -3327,6 +3353,12 @@ bool QgsGeorefPluginGui::setCutlineLayerSettings( QgsVectorLayer *layer_cutline 
   // Symbols:
   if ( ( layer_cutline->isValid() ) && ( layer_cutline->renderer() ) )
   {
+    QgsSnappingConfig config( QgsProject::instance() );
+    config.setEnabled( true );
+    config.setMode( QgsSnappingConfig::AdvancedConfiguration );
+    config.setIntersectionSnapping( false );  // only snap to layers
+    config.setIndividualLayerSettings( layer_cutline, QgsSnappingConfig::IndividualLayerSettings(
+                                         layer_cutline->isEditable(), QgsSnappingConfig::VertexAndSegment, mGcpMasterArea, QgsTolerance::ProjectUnits ) );
     // see: gui/symbology-ng/qgsrendererv2propertiesdialog.cpp, qgslayerpropertieswidget.cpp and  app/qgsvectorlayerproperties.cpp
     QgsFeatureRenderer *cutline_layer_renderer = layer_cutline->renderer();
     if ( cutline_layer_renderer )
@@ -3852,6 +3884,36 @@ void QgsGeorefPluginGui::createSqlDumpGcpCoverage()
     }
   }
 }
+void QgsGeorefPluginGui::exportGcpCoverageAsGcpMaster()
+{
+  if ( mGcpDbData )
+  {
+    if ( QFile::exists( mGcpDbData->mGcpDatabaseFileName ) )
+    {
+      // the GcpMasterDb (with this name) will be created if it does not exsist.
+      QString sDatabaseFilename = QString( "%1/%2.db" ).arg( mRasterFilePath ).arg( QString( "gcp_master_%1" ).arg( mGcpDbData->mGcpCoverageName ) );
+      QgsSpatiaLiteGcpUtils::GcpDbData *parmsGcpDbData = nullptr;
+      parmsGcpDbData = new QgsSpatiaLiteGcpUtils::GcpDbData( mGcpDbData->mGcpDatabaseFileName, mGcpDbData->mGcpCoverageName, mGcpDbData->mGcpSrid );
+      parmsGcpDbData->mIdGcpCoverage = mGcpDbData->mIdGcpCoverage;
+      parmsGcpDbData->mGcpMasterDatabaseFileName = sDatabaseFilename;
+      parmsGcpDbData->mGcpMasterSrid = mGcpDbData->mGcpSrid;
+      parmsGcpDbData->mSqlDump = true;
+      if ( QgsSpatiaLiteGcpUtils::exportGcpCoverageAsGcpMaster( parmsGcpDbData ) )
+      {
+        statusBar()->showMessage( tr( "Exported '%1': to in %2" ).arg( mGcpDbData->mGcpCoverageName ).arg( parmsGcpDbData->mGcpMasterDatabaseFileName ) );
+      }
+      else
+      {
+        statusBar()->showMessage( tr( "Export of '%1' as GcpMaster failed:  %2" ).arg( mGcpDbData->mGcpCoverageName ).arg( sDatabaseFilename ) );
+      }
+      parmsGcpDbData = nullptr;
+    }
+    else
+    {
+      statusBar()->showMessage( tr( "GcpCoverageDb for '%2' not found:  %1" ).arg( mGcpDbData->mGcpCoverageName ).arg( mGcpDbData->mGcpDatabaseFileName ) );
+    }
+  }
+}
 void QgsGeorefPluginGui::createSqlDumpGcpMaster()
 {
   if ( mGcpDbData )
@@ -4243,10 +4305,16 @@ bool QgsGeorefPluginGui::saveEditsGcp( QgsVectorLayer *gcp_layer, bool leaveEdit
   {
     //  [When used with 'gcp_layer->commitChanges' instead of 'editBuffer()->commitChanges', caused crashes] Warning: QUndoStack::endMacro(): no matching beginMacro()
     b_rc = gcp_layer->editBuffer()->commitChanges( sa_errors );
-    if ( gcp_layer->isModified() )
+    if ( ( gcp_layer->editBuffer()->isModified() ) && ( sa_errors.size() ) )
     {
-      qDebug() << QString( "-W-> QgsGeorefPluginGui::saveEditsGcp: layer_name[%1] Invalid error[%2]" ).arg( gcp_layer->name() ).arg( gcp_layer->error().message( QgsErrorMessage::Text ) );
-      gcp_layer->rollBack( false ); // clear for the next AddPoint
+      QString s_error = sa_errors.join( ";" );
+      // gcp_layer->error().message( QgsErrorMessage::Text )
+      // Warning: QUndoStack::setIndex(): cannot set index in the middle of a macro
+      if ( ! s_error.startsWith( "SUCCESS" ) )
+      {
+        qDebug() << QString( "-W-> QgsGeorefPluginGui::saveEditsGcp: layer_name[%1] Invalid error[%2] b_rc=%3" ).arg( gcp_layer->name() ).arg( s_error ).arg( b_rc );
+        gcp_layer->rollBack( false ); // clear for the next AddPoint
+      }
     }
   }
   else
@@ -4294,7 +4362,7 @@ void QgsGeorefPluginGui::featureAdded_gcp( QgsFeatureId fid )
       layer_gcp_event = mLayerGcpPixels;
       layer_gcp_update = mLayerGcpPoints;
     }
-    qDebug() << QString( "QgsGeorefPluginGui::featureAdded_gcp[%1] [%2,%3]" ).arg( fid ).arg( bToPixel ).arg( s_Event );
+    qDebug() << QString( "QgsGeorefPluginGui::featureAdded_gcp[%1] [%2,%3] srid=%4" ).arg( fid ).arg( bToPixel ).arg( s_Event ).arg( mGcpSrid );
     if ( fid < 0 )
     {
       //  fid is negative for new features
@@ -4302,8 +4370,24 @@ void QgsGeorefPluginGui::featureAdded_gcp( QgsFeatureId fid )
         mEventPointStatus = 1;
       else
         mEventPointStatus = 2;
-      //QgsFeatureMap &addedFeatures = const_cast<QgsFeatureMap &>( layer_gcp_event->editBuffer()->addedFeatures() );
+      // Search for (highest) unique id_gcp
+      int id_gcp_next = 0;
+      QgsAttributeList lst_search_gcp;
+      lst_search_gcp.append( 0 ); // id_gcp
+      QgsFeature fet_gcp;
+      QgsFeatureIterator fit_gcp = layer_gcp_event->getFeatures( QgsFeatureRequest().setSubsetOfAttributes( lst_search_gcp ) );
+      while ( fit_gcp.nextFeature( fet_gcp ) )
+      {
+        int id_gcp_search = fet_gcp.attribute( QString( "id_gcp" ) ).toInt();
+        if ( id_gcp_search > id_gcp_next )
+        {
+          id_gcp_next = id_gcp_search;
+        }
+      }
+      id_gcp_next++;
       QgsFeatureMap addedFeatures = layer_gcp_event->editBuffer()->addedFeatures();
+      // Avoid setting this in the Add Dialog
+      addedFeatures[fid].setAttribute( "id_gcp", id_gcp_next );
       // qDebug() << QString( "QgsGeorefPluginGui::featureAdded_gcp[%1] [%2,%3] mEventPointStatus[%4]" ).arg( fid ).arg( bToPixel ).arg( s_Event ).arg( mEventPointStatus );
       if ( addedFeatures[fid].attribute( QString( "id_gcp_coverage" ) ).toInt() <= 0 )
       {
@@ -4324,8 +4408,13 @@ void QgsGeorefPluginGui::featureAdded_gcp( QgsFeatureId fid )
         if ( layer_gcp_event->getFeatures( QgsFeatureRequest( mEventGcpStatus ).setSubsetOfAttributes( lst_needed_fields ) ).nextFeature( fet_point_event ) )
         {
           // Retrieve the newly added record and extract the primary key
+<<<<<<< HEAD
           QgsPointXY added_point_event = fet_point_event.geometry().asPoint();
           int id_gcp = fet_point_event.attribute( QString( "id_gcp" ) ).toInt();
+=======
+          QgsPoint added_point_event = fet_point_event.geometry().asPoint();
+          int id_gcp = fet_point_event.attribute( QString( "id_gcp" ) ).toInt(); // Should now be the same as id_gcp_next
+>>>>>>> Save changes of last week.
           QString sName = fet_point_event.attribute( QString( "name" ) ).toString();
           QString sNotes = fet_point_event.attribute( QString( "notes" ) ).toString();
           // qDebug() << QString( "QgsGeorefPluginGui::featureAdded_gcp[%1]  mEventPointStatus[%2] id_gcp[%3]" ).arg( fid ).arg( mEventPointStatus ).arg( id_gcp );
@@ -4350,7 +4439,7 @@ void QgsGeorefPluginGui::featureAdded_gcp( QgsFeatureId fid )
                 pixelPoint = added_point_event;
                 map_point = added_point_update;
               }
-              QString s_map_points = QString( "pixel[%1] map[%2]" ).arg( pixelPoint.wellKnownText() ).arg( map_point.wellKnownText() );
+              QString s_map_points = QString( "pixel[%1] map[%2] srid=%3" ).arg( pixelPoint.wellKnownText() ).arg( map_point.wellKnownText() ).arg( mGcpSrid );
               s_Event = QString( "%1 id_gcp[%2] - %3[%4]" ).arg( s_Event ).arg( id_gcp ).arg( "Adding Point" ).arg( s_map_points );
               // qDebug() << QString( "QgsGeorefPluginGui::featureAdded_gcp[%1] -yy- after commit update_fid[%2]  event_modified[%3] update_modified[%4]" ).arg( s_Event ).arg( fet_point_update.id() ).arg( layer_gcp_event->isModified() ).arg( layer_gcp_update->isModified() );
               if ( fet_point_update.geometry().asPoint() != added_point_update )
@@ -4364,6 +4453,7 @@ void QgsGeorefPluginGui::featureAdded_gcp( QgsFeatureId fid )
                   {
                     // TODO: resove problem layer_gcp_event->isModified() == true
                     mEventPointStatus = 0;
+                    qDebug() << QString( "QgsGeorefPluginGui::featureAdded_gcp[%1] [%2] gcp_next[%3] SpatialiteGcpEnabled[%4] SpatialiteGcpOff[%5]" ).arg( fid ).arg( bToPixel ).arg( id_gcp_next ).arg( mSpatialiteGcpEnabled ).arg( mSpatialiteGcpOff );
                     updateGcpTranslate( mGcpCoverageName );
                   }
                   else
@@ -4678,8 +4768,12 @@ void QgsGeorefPluginGui::geometryChanged_cutline( QgsFeatureId fid, const QgsGeo
 bool QgsGeorefPluginGui::readGcpDb( QString  sDatabaseFilename, bool b_DatabaseDump )
 {
   bool b_rc = false;
+  if ( mGcpSrid < 0 )
+  {
+    mGcpSrid = readProjectSrid();
+  }
   QgsSpatiaLiteGcpUtils::GcpDbData *parmsGcpDbData = nullptr;
-  parmsGcpDbData = new QgsSpatiaLiteGcpUtils::GcpDbData( sDatabaseFilename, QString::null, INT_MIN );
+  parmsGcpDbData = new QgsSpatiaLiteGcpUtils::GcpDbData( sDatabaseFilename, QString::null, mGcpSrid );
   if ( QgsSpatiaLiteGcpUtils::createGcpDb( parmsGcpDbData ) )
   {
     if ( parmsGcpDbData->mDatabaseValid )
@@ -4721,6 +4815,10 @@ bool QgsGeorefPluginGui::createGcpDb( bool b_DatabaseDump )
   QFileInfo raster_file( mRasterFileName );
   mRasterFilePath = raster_file.canonicalPath(); // Path to the file, without file-name
   QString sRasterFileName = raster_file.fileName(); // file-name without path
+  if ( mGcpSrid < 0 )
+  {
+    mGcpSrid = readProjectSrid();
+  }
   mGcpCoverageNameBase = raster_file.completeBaseName(); // file without extension
   mGcpCoverageName = mGcpCoverageNameBase.toLower(); // file without extension (Lower-Case)
   QStringList sa_list_id_fields = mGcpCoverageNameBase.split( "." );
@@ -4829,6 +4927,10 @@ bool QgsGeorefPluginGui::createGcpDb( bool b_DatabaseDump )
 }
 bool QgsGeorefPluginGui::updateGcpDb( QString sCoverageName )
 {
+  if ( mGcpSrid < 0 )
+  {
+    mGcpSrid = readProjectSrid();
+  }
   if ( !mGcpDbData )
   {
     mGcpDbData = new QgsSpatiaLiteGcpUtils::GcpDbData( mGcpDatabaseFileName, mGcpCoverageName, mGcpSrid, mGcpPointsTableName, mLayerRaster, mSpatialiteGcpEnabled );
@@ -4884,6 +4986,7 @@ QgsPointXY QgsGeorefPluginGui::getGcpConvert( QString sCoverageName, QgsPointXY 
   if ( ( ! isGcpEnabled() ) || ( isGcpOff() ) )
   {
     // Spatialite-Gcp-Logic is not available or has been turned off by the User [also LegacyMode==0]
+    qDebug() << QString( "-W-> QgsGeorefPluginGui:ugetGcpConvert - SpatialiteGcpEnabled[%1] SpatialiteGcpOff[%2]" ).arg( mSpatialiteGcpEnabled ).arg( mSpatialiteGcpOff );
     return convertPoint;
   }
   if ( !mGcpDbData )
@@ -4928,6 +5031,7 @@ bool QgsGeorefPluginGui::updateGcpTranslate( QString sCoverageName )
   if ( ( ! isGcpEnabled() ) || ( ! mLayerRaster ) )
   {
     // Preconditions
+    qDebug() << QString( "-W-> QgsGeorefPluginGui:updateGcpTranslate - SpatialiteGcpEnabled[%1] SpatialiteGcpOff[%2]" ).arg( mSpatialiteGcpEnabled ).arg( mSpatialiteGcpOff );
     return false;
   }
   if ( !mGcpDbData )
@@ -4967,7 +5071,7 @@ int QgsGeorefPluginGui::createGcpMasterDb( QString  sDatabaseFilename,  int i_sr
     }
     else
     {
-      qDebug() << QString( "QgsGeorefPluginGui:createGcpCoverageDb -  Database considered invalid-  db[%1] error[%2]" ).arg( parmsGcpDbData->mGcpDatabaseFileName ).arg( parmsGcpDbData->mError );
+      qDebug() << QString( "QgsGeorefPluginGui:ucreateGcpMasterDb -  Database considered invalid-  db[%1] error[%2]" ).arg( parmsGcpDbData->mGcpDatabaseFileName ).arg( parmsGcpDbData->mError );
     }
   }
   else
@@ -4975,6 +5079,21 @@ int QgsGeorefPluginGui::createGcpMasterDb( QString  sDatabaseFilename,  int i_sr
     qDebug() << QString( "QgsGeorefPluginGui::createGcpMasterDb - creation of Database failed - db[%1] error[%2]" ).arg( parmsGcpDbData->mGcpDatabaseFileName ).arg( parmsGcpDbData->mError );
   }
   parmsGcpDbData = nullptr;
+  return return_srid;
+}
+int QgsGeorefPluginGui::readProjectSrid()
+{
+  int return_srid = INT_MIN; // Invalid
+  if ( mIface )
+  {
+    QString sGcpAuthid = mIface->mapCanvas()->mapSettings().destinationCrs().authid();
+    QString sGcpDescription = mIface->mapCanvas()->mapSettings().destinationCrs().description();
+    QStringList sa_authid = sGcpAuthid.split( ":" );
+    QString s_srid = "-2";
+    if ( sa_authid.length() == 2 )
+      s_srid = sa_authid[1];
+    return_srid = s_srid.toInt();
+  }
   return return_srid;
 }
 int QgsGeorefPluginGui::createGcpCoverageDb( QString  sDatabaseFilename, int i_srid, bool b_dump )
@@ -4988,6 +5107,18 @@ int QgsGeorefPluginGui::createGcpCoverageDb( QString  sDatabaseFilename, int i_s
       return return_srid;
     }
     sDatabaseFilename = QString( "%1/%2.db" ).arg( mRasterFilePath ).arg( "gcp_coverage.gcp.db" );
+  }
+  if ( i_srid < 0 )
+  {
+    if ( mGcpSrid < 0 )
+    {
+      mGcpSrid = readProjectSrid();
+    }
+    i_srid = mGcpSrid;
+  }
+  if ( i_srid < 0 )
+  {
+    return return_srid;
   }
   QgsSpatiaLiteGcpUtils::GcpDbData *parmsGcpDbData = nullptr;
   parmsGcpDbData = new QgsSpatiaLiteGcpUtils::GcpDbData( sDatabaseFilename, QString::null, i_srid );
@@ -5200,6 +5331,10 @@ int QgsGeorefPluginGui::bulkGcpPointsInsert( QgsGcpList *master_GcpList )
   }
   if ( parmsGcpDbData->gcp_coverages.count() > 0 )
   {
+    // during INSERTing, block all events [valid until end of if-statement]
+    // - wil hopfully rid ourselves of the 'Warning: QUndoStack::endMacro(): no matching beginMacro()' messages
+    const QSignalBlocker blockerPoints( mLayerGcpPoints );
+    const QSignalBlocker blockerPixels( mLayerGcpPixels );
     if ( QgsSpatiaLiteGcpUtils::bulkGcpPointsInsert( parmsGcpDbData ) )
     {
       // No errors
@@ -5227,16 +5362,19 @@ int QgsGeorefPluginGui::bulkGcpPointsInsert( QgsGcpList *master_GcpList )
       }
       else
       {
-        qDebug() << QString( "QgsGeorefPluginGui::bulkGcpPointsInsert -  Database invalid -  db[%1] error[%2]" ).arg( parmsGcpDbData->mGcpDatabaseFileName ).arg( parmsGcpDbData->mError );
+        qDebug() << QString( "QgsGeorefPluginGui::bulkGcpPointsInsert -  Database invalid - db[%1] error[%2]" ).arg( parmsGcpDbData->mGcpDatabaseFileName ).arg( parmsGcpDbData->mError );
       }
     }
     else
     {
-      qDebug() << QString( "QgsGeorefPluginGui::bulkGcpPointsInsert -  INSERTing of Gcp failed -  db[%1] error[%2]" ).arg( parmsGcpDbData->mGcpDatabaseFileName ).arg( parmsGcpDbData->mError );
+      qDebug() << QString( "QgsGeorefPluginGui::bulkGcpPointsInsert -  INSERTing of Gcp failed - db[%1] error[%2]" ).arg( parmsGcpDbData->mGcpDatabaseFileName ).arg( parmsGcpDbData->mError );
     }
   }
   if ( sql_update.count() > 0 )
   {
+    // during UPDATEs, block all events [valid until end of if-statement]
+    const QSignalBlocker blockerPoints( mLayerGcpPoints );
+    const QSignalBlocker blockerPixels( mLayerGcpPixels );
     // There may be no INSERTs, so  do the  UPDATEs here
     parmsGcpDbData->mOrder = 2; // UPDATE
     parmsGcpDbData->gcp_coverages = sql_update;

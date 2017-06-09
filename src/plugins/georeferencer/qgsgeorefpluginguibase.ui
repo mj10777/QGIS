@@ -104,6 +104,8 @@
      <addaction name="mActionSqlDumpGcpCoverage"/>
      <addaction name="separator"/>
      <addaction name="mActionSqlDumpGcpMaster"/>
+     <addaction name="separator"/>
+     <addaction name="mActionGcpCoverageAsGcpMaster"/>
     </widget>
      <widget class="QMenu" name="menuGcpMercatorPolygons">
      <property name="title">
@@ -515,6 +517,14 @@
    </property>
    <property name="statusTip">
     <string>Create an Sql-Dump of the active Gcp-Master Database</string>
+   </property>
+  </action>
+  <action name="mActionGcpCoverageAsGcpMaster">
+   <property name="text">
+    <string>Export the active Gcp-Coverage as a Gcp-Master Database</string>
+   </property>
+   <property name="statusTip">
+    <string>Export the active Gcp-Coverage as a Gcp-Master Database</string>
    </property>
   </action>
   <action name="mActionOpenGcpMaster">

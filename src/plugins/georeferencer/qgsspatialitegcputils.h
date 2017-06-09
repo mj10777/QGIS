@@ -20,6 +20,7 @@
 #include <QTextStream>
 
 #include "qgsrasterlayer.h"
+#include "qgsvectordataprovider.h"
 
 #include <sqlite3.h>
 #include <spatialite.h>
@@ -116,7 +117,7 @@ class QgsSpatiaLiteGcpUtils
         , mGcpMasterDatabaseFileName( QString::null )
         , mGcpCoverageName( sCoverageName )
         , mGcpSrid( i_srid )
-        , mGcpMasterSrid( -1 )
+        , mGcpMasterSrid( -2 )
         , mGcpCoverageTitle( "" )
         , mGcpCoverageAbstract( "" )
         , mGcpCoverageCopyright( "" )
@@ -159,7 +160,7 @@ class QgsSpatiaLiteGcpUtils
         , mGcpMasterDatabaseFileName( QString::null )
         , mGcpCoverageName( sCoverageName )
         , mGcpSrid( i_srid )
-        , mGcpMasterSrid( -1 )
+        , mGcpMasterSrid( -2 )
         , mGcpCoverageTitle( "" )
         , mGcpCoverageAbstract( "" )
         , mGcpCoverageCopyright( "" )
@@ -383,6 +384,19 @@ class QgsSpatiaLiteGcpUtils
      * \since QGIS 3.0
      */
     static bool createGcpMasterDb( GcpDbData *parmsGcpDbData );
+    static bool exportGcpCoverageAsGcpMaster( GcpDbData *parmsGcpDbData );
+
+    /**
+     * Attempt to correct a faulty srid (such as '-1') of a coverage_table
+     *  - should never be needed, but this is how it is done
+     * \note
+     *  - Change srid in geometry columns [tables only]
+     *  - Change srid in gcp_coverages and gcp_compute
+     *  - Change srid and isrid of gcp_point in the coverage points-table [no trnasformation of point values!]
+     * \param parmsGcpDbData  which will contain a spatialite connection (with mParseString to use and if Spatialite Gcp-logic is active)
+     * \since QGIS 3.0
+     */
+    static bool correctGcpCoverageSrid( GcpDbData *parmsGcpDbData );
 
     /**
      * Bulk INSERT (or UPDATE) of Gcp-coverages Points TABLE
@@ -579,6 +593,30 @@ class QgsSpatiaLiteGcpUtils
      * \since QGIS 3.0
      */
     static QMap<QString, QString> readProvidertags( QgsRasterLayer *rasterLayer, bool bSetTags = false );
+
+    /** General Parse function SubLayerString for reading and writing
+     * \note
+     *  If subLayerString is empty, the given values will be used to format the string returned
+     *  - otherwise the given values will be filled with the values from the parsed subLayerString
+     * \param subLayerString Data Source
+     * \param layerIndex index of Layer
+     * \param layerName name of Layer
+     * \param featuresCounted number of features of Layer
+     * \param geometryType geometry type to be read
+     * \param geometryName geometry name to be read
+     * \param geometryIndex geometry field index to be read
+     * \param enabledCapabilities Capabilities that can be used
+     * \returns QString::null on error
+     * \since QGIS 3.0
+     */
+    static QString SpatialiteParseSubLayerStringWrapper( QString const subLayerString,
+        int &layerIndex,
+        QString &layerName,
+        qlonglong &featuresCounted,
+        QgsWkbTypes::Type &geometryType,
+        QString &geometryName,
+        QgsVectorDataProvider::Capabilities &enabledCapabilities,
+        int &layerType );
 };
 
 #endif

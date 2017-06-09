@@ -443,6 +443,15 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     void createSqlDumpGcpCoverage();
 
     /**
+     * createSqlDumpGcpCoverage
+     *  -> Create a Sql-Dump of the active Gcp-Coverages Database
+     * \since QGIS 3.0
+     * New for ( mLegacyMode == 1 )
+     * \see createGcpCoverageDb
+     */
+    void exportGcpCoverageAsGcpMaster();
+
+    /**
      * createSqlDumpGcpMaster
      *  -> Create a Sql-Dump of the active Gcp-Master Database
      * \since QGIS 3.0
@@ -1836,6 +1845,14 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
      * \return return_srid INT_MIN if invalid, otherwise the srid being used will be returned
      */
     int createGcpCoverageDb( QString  sDatabaseFilename, int i_srid = 3068, bool b_dump = false );
+
+    /**
+     * Attempt to extract srid from project destinationCrs().authid
+     * \return return_srid INT_MIN if invalid, otherwise the srid being used will be returned
+     * \since QGIS 3.0
+     * \see createGcpCoverageDb
+     */
+    int readProjectSrid();
 
     /**
      * Bulk INSERT (or UPDATE) of Gcp-coverages Points TABLE
