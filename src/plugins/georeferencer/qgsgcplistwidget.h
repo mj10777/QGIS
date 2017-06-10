@@ -99,11 +99,7 @@ class QgsGcpListWidget : public QTableView
      * \param pixelCoords to store the Pixel-points
      * \return nullptr if the id was not found, otherwise Point of the fiven id
      */
-<<<<<<< HEAD
-    void createGCPVectors( QVector<QgsPointXY> &mapCoords, QVector<QgsPointXY> &pixelCoords ) { return  mGCPListModel->createGCPVectors( mapCoords, pixelCoords ); }
-=======
-    void createGcpVectors( QVector<QgsPoint> &mapCoords, QVector<QgsPoint> &pixelCoords ) { return  mGcpListModel->createGcpVectors( mapCoords, pixelCoords ); }
->>>>>>> Last major problems resolved. Start test phase
+    void createGcpVectors( QVector<QgsPointXY> &mapCoords, QVector<QgsPointXY> &pixelCoords ) { return  mGcpListModel->createGcpVectors( mapCoords, pixelCoords ); }
 
     /**
      * Retrieve Data-Point pair in List
@@ -128,11 +124,7 @@ class QgsGcpListWidget : public QTableView
      * \param updatePoint the point to use
      * \return true if the id was found, otherwise false
      */
-<<<<<<< HEAD
-    bool updateDataPoint( int id_gcp, bool bPointMap, QgsPointXY updatePoint )  { return  mGCPListModel->updateDataPoint( id_gcp, bPointMap, updatePoint ); }
-=======
-    bool updateDataPoint( int id_gcp, bool bPointMap, QgsPoint updatePoint )  { return  mGcpListModel->updateDataPoint( id_gcp, bPointMap, updatePoint ); }
->>>>>>> Last major problems resolved. Start test phase
+    bool updateDataPoint( int id_gcp, bool bPointMap, QgsPointXY updatePoint )  { return  mGcpListModel->updateDataPoint( id_gcp, bPointMap, updatePoint ); }
 
     /**
      * Remove Data-Point pair in List
@@ -209,15 +201,9 @@ class QgsGcpListWidget : public QTableView
      * \see QgsPointXY::compare
      * \return true result is exact, otherwise false
      */
-<<<<<<< HEAD
-    bool searchDataPoint( QgsPointXY searchPoint, bool bPointMap = true, double epsilon = 0.5, int *id_gcp = nullptr, double *distance = nullptr, int *iResultType = nullptr )  {return mGCPListModel->searchDataPoint( searchPoint, bPointMap, epsilon, id_gcp, distance, iResultType ); };
-    bool avoidUnneededUpdates() {return mGCPListModel->avoidUnneededUpdates();};
-    void setAvoidUnneededUpdates( bool bAvoidUnneededUpdates ) {mGCPListModel->setAvoidUnneededUpdates( bAvoidUnneededUpdates );};
-=======
-    bool searchDataPoint( QgsPoint searchPoint, bool bPointMap = true, double epsilon = 0.5, int *id_gcp = nullptr, double *distance = nullptr, int *iResultType = nullptr )  {return mGcpListModel->searchDataPoint( searchPoint, bPointMap, epsilon, id_gcp, distance, iResultType ); };
+    bool searchDataPoint( QgsPointXY searchPoint, bool bPointMap = true, double epsilon = 0.5, int *id_gcp = nullptr, double *distance = nullptr, int *iResultType = nullptr )  {return mGcpListModel->searchDataPoint( searchPoint, bPointMap, epsilon, id_gcp, distance, iResultType ); };
     bool avoidUnneededUpdates() {return mGcpListModel->avoidUnneededUpdates();};
     void setAvoidUnneededUpdates( bool bAvoidUnneededUpdates ) {mGcpListModel->setAvoidUnneededUpdates( bAvoidUnneededUpdates );};
->>>>>>> Last major problems resolved. Start test phase
   public slots:
     // This slot is called by the list view if an item is double-clicked
     void itemDoubleClicked( QModelIndex index );

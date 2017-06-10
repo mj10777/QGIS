@@ -22,13 +22,8 @@
 
 class QgsGeorefDataPoint;
 class QgsGeorefTransform;
-<<<<<<< HEAD
-class QgsGCPList;
-class QgsPointXY;
-=======
 class QgsGcpList;
-class QgsPoint;
->>>>>>> Last major problems resolved. Start test phase
+class QgsPointXY;
 
 class QgsGcpListModel : public QStandardItemModel
 {
@@ -76,11 +71,7 @@ class QgsGcpListModel : public QStandardItemModel
      * \param pixelCoords to store the Pixel-points
      * \return nullptr if the id was not found, otherwise Point of the fiven id
      */
-<<<<<<< HEAD
-    void createGCPVectors( QVector<QgsPointXY> &mapCoords, QVector<QgsPointXY> &pixelCoords ) { return  mGCPList->createGCPVectors( mapCoords, pixelCoords ); }
-=======
-    void createGcpVectors( QVector<QgsPoint> &mapCoords, QVector<QgsPoint> &pixelCoords ) { return  mGcpList->createGcpVectors( mapCoords, pixelCoords ); }
->>>>>>> Last major problems resolved. Start test phase
+    void createGcpVectors( QVector<QgsPointXY> &mapCoords, QVector<QgsPointXY> &pixelCoords ) { return  mGcpList->createGcpVectors( mapCoords, pixelCoords ); }
 
     /**
      * Retrieve Data-Point pair in List
@@ -105,11 +96,7 @@ class QgsGcpListModel : public QStandardItemModel
      * \param updatePoint the point to use
      * \return true if the id was found, otherwise false
      */
-<<<<<<< HEAD
-    bool updateDataPoint( int id_gcp, bool bPointMap, QgsPointXY updatePoint ) { return  mGCPList->updateDataPoint( id_gcp, bPointMap, updatePoint ); }
-=======
-    bool updateDataPoint( int id_gcp, bool bPointMap, QgsPoint updatePoint ) { return  mGcpList->updateDataPoint( id_gcp, bPointMap, updatePoint ); }
->>>>>>> Last major problems resolved. Start test phase
+    bool updateDataPoint( int id_gcp, bool bPointMap, QgsPointXY updatePoint ) { return  mGcpList->updateDataPoint( id_gcp, bPointMap, updatePoint ); }
 
     /**
      * Remove Data-Point pair in List
@@ -207,15 +194,9 @@ class QgsGcpListModel : public QStandardItemModel
      * \see QgsPointXY::compare
      * \return true result is exact, otherwise false
      */
-<<<<<<< HEAD
-    bool searchDataPoint( QgsPointXY searchPoint, bool bPointMap = true, double epsilon = 0.5, int *id_gcp = nullptr, double *distance = nullptr, int *iResultType = nullptr )  {return mGCPList->searchDataPoint( searchPoint, bPointMap, epsilon, id_gcp, distance, iResultType ); };
-    bool avoidUnneededUpdates() {return mGCPList->avoidUnneededUpdates();};
-    void setAvoidUnneededUpdates( bool bAvoidUnneededUpdates ) {mGCPList->setAvoidUnneededUpdates( bAvoidUnneededUpdates );};
-=======
-    bool searchDataPoint( QgsPoint searchPoint, bool bPointMap = true, double epsilon = 0.5, int *id_gcp = nullptr, double *distance = nullptr, int *iResultType = nullptr )  {return mGcpList->searchDataPoint( searchPoint, bPointMap, epsilon, id_gcp, distance, iResultType ); };
+    bool searchDataPoint( QgsPointXY searchPoint, bool bPointMap = true, double epsilon = 0.5, int *id_gcp = nullptr, double *distance = nullptr, int *iResultType = nullptr )  {return mGcpList->searchDataPoint( searchPoint, bPointMap, epsilon, id_gcp, distance, iResultType ); };
     bool avoidUnneededUpdates() {return mGcpList->avoidUnneededUpdates();};
     void setAvoidUnneededUpdates( bool bAvoidUnneededUpdates ) {mGcpList->setAvoidUnneededUpdates( bAvoidUnneededUpdates );};
->>>>>>> Last major problems resolved. Start test phase
   private:
     QgsGcpList         *mGcpList = nullptr;
     QgsGeorefTransform *mGeorefTransform = nullptr;

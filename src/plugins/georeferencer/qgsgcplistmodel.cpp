@@ -81,13 +81,8 @@ void QgsGcpListModel::updateModel()
   bMapUnitsPossible = false;
   bTransformUpdated = false;
 
-<<<<<<< HEAD
   QVector<QgsPointXY> mapCoords, pixelCoords;
-  mGCPList->createGCPVectors( mapCoords, pixelCoords );
-=======
-  QVector<QgsPoint> mapCoords, pixelCoords;
   mGcpList->createGcpVectors( mapCoords, pixelCoords );
->>>>>>> Last major problems resolved. Start test phase
 
   //  // Setup table header
   QStringList itemLabels;

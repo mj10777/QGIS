@@ -115,7 +115,7 @@ void QgsGeorefDataPoint::setMapCoords( const QgsPointXY &map_point )
   mMapCoords = map_point;
 }
 
-void QgsGeorefDataPoint::updateDataPoint( bool bPointMap, QgsPoint updatePoint )
+void QgsGeorefDataPoint::updateDataPoint( bool bPointMap, QgsPointXY updatePoint )
 {
   // iPointType: 0=pixel ; 1 = map
   if ( bPointMap )
@@ -143,7 +143,7 @@ void QgsGeorefDataPoint::setResidual( QPointF r )
   mResidual = r;
 }
 
-bool QgsGeorefDataPoint::contains( QPointXY searchPoint, bool isPixelPoint )
+bool QgsGeorefDataPoint::contains( QgsPointXY searchPoint, bool isPixelPoint )
 {
   if ( isPixelPoint )
   {

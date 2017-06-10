@@ -46,10 +46,6 @@ class QgsGeorefDataPoint : public QObject
     QgsPointXY mapCoords() const { return mMapCoords; }
     void setMapCoords( const QgsPointXY &map_point );
 
-<<<<<<< HEAD
-    QgsPointXY mapCoordsReverse() const { return mMapCoordsReverse; }
-    void setMapCoordsReverse( const QgsPointXY &map_point )  { mMapCoordsReverse = map_point; }
-=======
     /**
      * Update Point
      *  - added to avoid reloading all the points again
@@ -57,11 +53,10 @@ class QgsGeorefDataPoint : public QObject
      * \param updatePoint the point to use
      * \return true if the id was found, otherwise false
      */
-    void updateDataPoint( bool bPointMap, QgsPoint updatePoint );
+    void updateDataPoint( bool bPointMap, QgsPointXY updatePoint );
 
-    QgsPoint mapCoordsReverse() const { return mMapCoordsReverse; }
-    void setMapCoordsReverse( const QgsPoint &map_point )  { mMapCoordsReverse = map_point; }
->>>>>>> Last major problems resolved. Start test phase
+    QgsPointXY mapCoordsReverse() const { return mMapCoordsReverse; }
+    void setMapCoordsReverse( const QgsPointXY &map_point )  { mMapCoordsReverse = map_point; }
     double mapDistanceReverse()  { return mMapCoords.distance( mMapCoordsReverse ); }
     double mapAzimuthReverse()  { return fabs( mMapCoords.azimuth( mMapCoordsReverse ) ); }
 
@@ -271,7 +266,7 @@ class QgsGeorefDataPoint : public QObject
      * \see moveTo
      * \since QGIS 3.0
      */
-    bool contains( QPointXY searchPoint, bool isPixelPoint );
+    bool contains( QgsPointXY searchPoint, bool isPixelPoint );
 
     /**
      * Returns pixel (Georeferencer) Canvas

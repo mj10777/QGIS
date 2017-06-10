@@ -115,11 +115,7 @@ class QgsMapCoordsDialog : public QDialog, private Ui::QgsMapCoordsDialogBase
     Q_OBJECT
 
   public:
-<<<<<<< HEAD
-    QgsMapCoordsDialog( QgsMapCanvas *qgisCanvas, const QgsPointXY &pixelCoords, QWidget *parent = nullptr );
-=======
-    QgsMapCoordsDialog( QgsMapCanvas *qgisCanvas, const QgsPoint &pixelCoords, int id_gcp = -1, QWidget *parent = nullptr );
->>>>>>> Initial port of 2.18 version of Georeferencer-Extended to Qgis 3.0 master.
+    QgsMapCoordsDialog( QgsMapCanvas *qgisCanvas, const QgsPointXY &pixelCoords, int id_gcp = -1, QWidget *parent = nullptr );
     ~QgsMapCoordsDialog();
 
   private slots:
@@ -132,11 +128,7 @@ class QgsMapCoordsDialog : public QDialog, private Ui::QgsMapCoordsDialogBase
     void setPrevTool();
 
   signals:
-<<<<<<< HEAD
-    void pointAdded( const QgsPointXY &, const QgsPointXY & );
-=======
-    void pointAdded( const QgsPoint &, const QgsPoint &, const int &, const bool & );
->>>>>>> Initial port of 2.18 version of Georeferencer-Extended to Qgis 3.0 master.
+    void pointAdded( const QgsPointXY &, const QgsPointXY &, const int &, const bool & );
 
   private:
     double dmsToDD( const QString &dms );
@@ -147,14 +139,10 @@ class QgsMapCoordsDialog : public QDialog, private Ui::QgsMapCoordsDialogBase
     QgsMapTool *mPrevMapTool = nullptr;
     QgsMapCanvas *mQgisCanvas = nullptr;
 
-<<<<<<< HEAD
     QgsPointXY mPixelCoords;
-=======
-    QgsPoint mPixelCoords;
-    QgsPoint mMapCoords;
+    QgsPointXY mMapCoords;
     bool mPixelMap = false;
     int mIdGcp = 0;
->>>>>>> Initial port of 2.18 version of Georeferencer-Extended to Qgis 3.0 master.
 };
 
 #endif

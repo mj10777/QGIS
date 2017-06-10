@@ -33,11 +33,7 @@ QgsGcpList::QgsGcpList( const QgsGcpList &list )
   }
 }
 
-<<<<<<< HEAD
-void QgsGCPList::createGCPVectors( QVector<QgsPointXY> &mapCoords, QVector<QgsPointXY> &pixelCoords )
-=======
-void QgsGcpList::createGcpVectors( QVector<QgsPoint> &mapCoords, QVector<QgsPoint> &pixelCoords )
->>>>>>> Last major problems resolved. Start test phase
+void QgsGcpList::createGcpVectors( QVector<QgsPointXY> &mapCoords, QVector<QgsPointXY> &pixelCoords )
 {
   mapCoords   = QVector<QgsPointXY>( size() );
   pixelCoords = QVector<QgsPointXY>( size() );
@@ -90,11 +86,7 @@ bool QgsGcpList::removeDataPoint( int id_gcp )
   }
   return b_hit;
 }
-<<<<<<< HEAD
-bool QgsGCPList::updateDataPoint( int id_gcp, bool bPointMap, QgsPointXY updatePoint )
-=======
-bool QgsGcpList::updateDataPoint( int id_gcp, bool bPointMap, QgsPoint updatePoint )
->>>>>>> Last major problems resolved. Start test phase
+bool QgsGcpList::updateDataPoint( int id_gcp, bool bPointMap, QgsPointXY updatePoint )
 {
   // iPointType: 0=pixel ; 1 = map
   bool b_hit = false;
@@ -107,11 +99,7 @@ bool QgsGcpList::updateDataPoint( int id_gcp, bool bPointMap, QgsPoint updatePoi
   }
   return b_hit;
 }
-<<<<<<< HEAD
-bool QgsGCPList::searchDataPoint( QgsPointXY searchPoint, bool bPointMap, double epsilon, int *id_gcp, double *distance, int *iResultType )
-=======
-bool QgsGcpList::searchDataPoint( QgsPoint searchPoint, bool bPointMap, double epsilon, int *id_gcp, double *distance, int *iResultType )
->>>>>>> Last major problems resolved. Start test phase
+bool QgsGcpList::searchDataPoint( QgsPointXY searchPoint, bool bPointMap, double epsilon, int *id_gcp, double *distance, int *iResultType )
 {
   // iPointType: 0=pixel ; 1 = map
   bool b_hit = false;
@@ -123,7 +111,7 @@ bool QgsGcpList::searchDataPoint( QgsPoint searchPoint, bool bPointMap, double e
   for ( int i = 0; i < sizeAll(); i++ )
   {
     QgsGeorefDataPoint *dataPoint = at( i );
-    QgsPoint check_point;
+    QgsPointXY check_point;
     int i_check_id = dataPoint->id();
     int i_check_result_type = 0;
     if ( bPointMap )

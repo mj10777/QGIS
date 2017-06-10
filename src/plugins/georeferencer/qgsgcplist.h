@@ -134,11 +134,7 @@ class QgsGcpList : public QList<QgsGeorefDataPoint *>
      * \param pixelCoords to store the Pixel-points
      * \return nullptr if the id was not found, otherwise Point of the fiven id
      */
-<<<<<<< HEAD
-    void createGCPVectors( QVector<QgsPointXY> &mapCoords, QVector<QgsPointXY> &pixelCoords );
-=======
-    void createGcpVectors( QVector<QgsPoint> &mapCoords, QVector<QgsPoint> &pixelCoords );
->>>>>>> Last major problems resolved. Start test phase
+    void createGcpVectors( QVector<QgsPointXY> &mapCoords, QVector<QgsPointXY> &pixelCoords );
 
     /**
      * Informs QgsGcpList that any Updating has been done
@@ -173,7 +169,7 @@ class QgsGcpList : public QList<QgsGeorefDataPoint *>
     void setAvoidUnneededUpdates( bool bAvoidUnneededUpdates ) {mAvoidUnneededUpdates = bAvoidUnneededUpdates;};
   private:
 
-    int size() const;
+    int size();
     int mCountEnabled = 0;
     int sizeAll() const;
     bool mIsDirty = true;
