@@ -994,31 +994,32 @@ bool QgsSpatiaLiteGcpUtils::createGcpDb( GcpDbData *parmsGcpDbData )
     s_sql_select_coverages += QString( "%2||'%1'||%3||'%1'||%4 AS create_points,\n " ).arg( parmsGcpDbData->mParseString ).arg( "id_gcp_coverage" ).arg( "srid" ).arg( "coverage_name" );
     // Format: INSERT_COVERAGES;#;#VALUES(...)
     // returns the INSERT VALUE portion for each entry in gcp_coverages
+    // when creating a Sql-Dump: make sure that text fields with possible "'" are properly double quoted
     s_sql_select_coverages += QString( "'INSERT_COVERAGES'||'%1'||'%2'" ).arg( parmsGcpDbData->mParseString ).arg( "VALUES(" );
     s_sql_select_coverages += QString( "||%1" ).arg( "id_gcp_coverage" );
-    s_sql_select_coverages += QString( "||','''||%1" ).arg( "coverage_name" );
-    s_sql_select_coverages += QString( "||''','''||%1" ).arg( "map_date" );
-    s_sql_select_coverages += QString( "||''','''||%1" ).arg( "raster_file" );
-    s_sql_select_coverages += QString( "||''','''||%1" ).arg( "raster_gtif" );
-    s_sql_select_coverages += QString( "||''','''||%1" ).arg( "title" );
-    s_sql_select_coverages += QString( "||''','''||%1" ).arg( "abstract" );
-    s_sql_select_coverages += QString( "||''','''||%1" ).arg( "copyright" );
-    s_sql_select_coverages += QString( "||''','||%1" ).arg( "scale" );
+    s_sql_select_coverages += QString( "||','||%1" ).arg( "quote(coverage_name)" );
+    s_sql_select_coverages += QString( "||','||%1" ).arg( "quote(map_date)" );
+    s_sql_select_coverages += QString( "||','||%1" ).arg( "quote(raster_file)" );
+    s_sql_select_coverages += QString( "||','||%1" ).arg( "quote(raster_gtif)" );
+    s_sql_select_coverages += QString( "||','||%1" ).arg( "quote(title)" );
+    s_sql_select_coverages += QString( "||','||%1" ).arg( "quote(abstract)" );
+    s_sql_select_coverages += QString( "||','||%1" ).arg( "quote(copyright)" );
+    s_sql_select_coverages += QString( "||','||%1" ).arg( "scale" );
     s_sql_select_coverages += QString( "||','||%1" ).arg( "nodata" );
     s_sql_select_coverages += QString( "||','||%1" ).arg( "srid" );
     s_sql_select_coverages += QString( "||','||%1" ).arg( "id_cutline" );
     s_sql_select_coverages += QString( "||','||%1" ).arg( "gcp_count" );
     s_sql_select_coverages += QString( "||','||%1" ).arg( "transformtype" );
-    s_sql_select_coverages += QString( "||','''||%1" ).arg( "resampling" );
-    s_sql_select_coverages += QString( "||''','''||%1" ).arg( "compression" );
-    s_sql_select_coverages += QString( "||''','||%1" ).arg( "image_max_x" );
+    s_sql_select_coverages += QString( "||','||%1" ).arg( "quote(resampling)" );
+    s_sql_select_coverages += QString( "||','||%1" ).arg( "quote(compression)" );
+    s_sql_select_coverages += QString( "||','||%1" ).arg( "image_max_x" );
     s_sql_select_coverages += QString( "||','||%1" ).arg( "image_max_y" );
     s_sql_select_coverages += QString( "||','||%1" ).arg( "extent_minx" );
     s_sql_select_coverages += QString( "||','||%1" ).arg( "extent_miny" );
     s_sql_select_coverages += QString( "||','||%1" ).arg( "extent_maxx" );
     s_sql_select_coverages += QString( "||','||%1" ).arg( "extent_maxy" );
-    s_sql_select_coverages += QString( "||','''||%1" ).arg( "raster_path" );
-    s_sql_select_coverages += QString( "||'''%1" ).arg( ");' AS coverage_value,\n " );
+    s_sql_select_coverages += QString( "||','||%1" ).arg( "quote(raster_path)" );
+    s_sql_select_coverages += QString( "||'%1" ).arg( ");' AS coverage_value,\n " );
     s_sql_select_coverages += QString( "'INSERT_COMPUTE'||'%1'||%2||'%1'||%3||'%1'||%4||'%1'||%5||'%1'||%6 AS insert_compute\n" ).arg( parmsGcpDbData->mParseString ).arg( "id_gcp_coverage" ).arg( "srid" ).arg( "coverage_name" ).arg( "image_max_x" ).arg( "image_max_y" );
     s_sql_select_coverages += QString( "FROM '%1'\nORDER BY id_gcp_coverage;" ).arg( "gcp_coverages" );
     ret = sqlite3_prepare_v2( db_handle, s_sql_select_coverages.toUtf8().constData(), -1, &stmt, NULL );
@@ -1122,7 +1123,8 @@ bool QgsSpatiaLiteGcpUtils::createGcpDb( GcpDbData *parmsGcpDbData )
     if ( sa_points_tables.size() > 0 )
     {
       QString s_fields = QString( "id_gcp, id_gcp_coverage, name, notes, pixel_x, pixel_y, srid, point_x, point_y, order_selected, gcp_enable, gcp_text, gcp_pixel, gcp_point" );
-      QString s_values = QString( "'('||id_gcp||','||id_gcp_coverage||','''||name||''','''|| notes||''','||pixel_x||','|| pixel_y||','||srid||','||point_x||','||point_y||','||order_selected||','||gcp_enable||','''||gcp_text||''','" );
+      // when creating a Sql-Dump: make sure that text fields with possible "'" are properly double quoted
+      QString s_values = QString( "'('||id_gcp||','||id_gcp_coverage||','||quote(name)||','||quote(notes)||','||pixel_x||','|| pixel_y||','||srid||','||point_x||','||point_y||','||order_selected||','||gcp_enable||','||quote(gcp_text)||','" );
       s_values += QString( "||'\n  GeomFromEWKT('''||AsEWKT(%1)||'''),'" ).arg( "gcp_pixel" );
       s_values += QString( "||'\n  GeomFromEWKT('''||AsEWKT(%1)||'''))'" ).arg( "gcp_point" );
       for ( int i_list = 0; i_list < sa_points_tables.size(); i_list++ )
@@ -1185,20 +1187,22 @@ bool QgsSpatiaLiteGcpUtils::createGcpDb( GcpDbData *parmsGcpDbData )
       sa_sql_commands.clear();
     }
     sa_gcp_compute.clear();
+    // SELECT 'name='||replace("blombo's",'''','''''')||';' AS test
     //-- read cutlines_ [points, linestrings,polygons]
     QString s_cutline_fields = QString( "(id_cutline, id_gcp_coverage, cutline_type, name, notes, text, belongs_to_01, belongs_to_02, valid_since, valid_until, cutline_%1)" );
     QString s_cutline_values = QString( "VALUES('" );
     s_cutline_values += QString( "||%1" ).arg( "id_cutline" );
     s_cutline_values += QString( "||','||%1" ).arg( "id_gcp_coverage" );
     s_cutline_values += QString( "||','||%1" ).arg( "cutline_type" );
-    s_cutline_values += QString( "||','''||%1" ).arg( "name" );
-    s_cutline_values += QString( "||''','''||%1" ).arg( "notes" );
-    s_cutline_values += QString( "||''','''||%1" ).arg( "text" );
-    s_cutline_values += QString( "||''','''||%1" ).arg( "belongs_to_01" );
-    s_cutline_values += QString( "||''','''||%1" ).arg( "belongs_to_02" );
-    s_cutline_values += QString( "||''','''||%1" ).arg( "valid_since" );
-    s_cutline_values += QString( "||''','''||%1" ).arg( "valid_until" );
-    s_cutline_values += QString( "||''',\n  GeomFromEWKT('''||AsEWKT(cutline_%1)||'''));'\n" );
+    // when creating a Sql-Dump: make sure that text fields with possible "'" are properly double quoted
+    s_cutline_values += QString( "||','||%1" ).arg( "quote(name)" );
+    s_cutline_values += QString( "||','||%1" ).arg( "quote(notes)" );
+    s_cutline_values += QString( "||','||%1" ).arg( "quote(text)" );
+    s_cutline_values += QString( "||','||%1" ).arg( "quote(belongs_to_01)" );
+    s_cutline_values += QString( "||','||%1" ).arg( "quote(belongs_to_02)" );
+    s_cutline_values += QString( "||','||%1" ).arg( "quote(valid_since)" );
+    s_cutline_values += QString( "||','||%1" ).arg( "quote(valid_until)" );
+    s_cutline_values += QString( "||',\n  GeomFromEWKT('''||AsEWKT(cutline_%1)||'''));'\n" );
     s_cutline_values += QString( "FROM 'create_cutline_%1s' ORDER BY id_gcp_coverage,id_cutline;" );
     QString s_sql_select_insert = QString( "SELECT\n " );
     s_sql_select_insert += QString( "'INSERT INTO ''create_cutline_%1s''\n" );
@@ -3084,8 +3088,8 @@ QStringList QgsSpatiaLiteGcpUtils::createGcpSqlCoveragesCommands( GcpDbData *par
       QString s_TRIGGER_FIELDS = QString( "id_cutline meters_length%1" );
       // If while INSERTING, no geometries are supplied (only valid pixel/point x+y values), the geometries will be created
       QString s_TRIGGER_INSERT_BASE = QString( "CREATE TRIGGER IF NOT EXISTS 'tb_ins_create_cutline_%1'\n" );
-      s_TRIGGER_INSERT_BASE += QString( " AFTER INSERT ON \"'create_cutline_%1\"\nBEGIN\n" );
-      s_TRIGGER_INSERT_BASE += QString( " UPDATE \"'create_cutline_%1\" \n" );
+      s_TRIGGER_INSERT_BASE += QString( " AFTER INSERT ON \"create_cutline_%1\"\nBEGIN\n" );
+      s_TRIGGER_INSERT_BASE += QString( " UPDATE \"create_cutline_%1\" \n" );
       QString s_TRIGGER_UPDATE_BASE = QString( "CREATE TRIGGER IF NOT EXISTS 'tb_upd_create_cutline_%1'\n" );
       s_TRIGGER_UPDATE_BASE += QString( " AFTER UPDATE OF\n" );
       s_TRIGGER_UPDATE_BASE += QString( "  %2\n" );
@@ -3093,9 +3097,9 @@ QStringList QgsSpatiaLiteGcpUtils::createGcpSqlCoveragesCommands( GcpDbData *par
       QString s_ST_LengthLinestring = QString( "ST_Length(NEW.cutline_linestring)" );
       s_TRIGGER_UPDATE_BASE += QString( " UPDATE \"create_cutline_%1\" \n" );
       QString s_ST_LengthPolygon = QString( "ST_Length(ST_ExteriorRing(NEW.cutline_polygon))" );
-      QString s_MetersAreaPolygon = QString( "  meters_area = CASE WHEN NEW.cutline_polygon IS NOT NULL THEN ST_Area(NEW.cutline_polygon) ELSE 0 END,\n" );
-      QString s_TRIGGER_INSERT_SET_BASE = QString( " SET \n  meters_length = CASE WHEN NEW.cutline_%1 IS NOT NULL THEN %2 ELSE 0 END,\n%3" );
-      s_TRIGGER_INSERT_SET_BASE += QString( "  WHERE id_cutline = NEW.id_cutline;\nEND;" );
+      QString s_MetersAreaPolygon = QString( ",\n  meters_area = CASE WHEN NEW.cutline_polygon IS NOT NULL THEN ST_Area(NEW.cutline_polygon) ELSE 0 END\n" );
+      QString s_TRIGGER_INSERT_SET_BASE = QString( " SET \n  meters_length = CASE WHEN NEW.cutline_%1 IS NOT NULL THEN %2 ELSE 0 END%3" );
+      s_TRIGGER_INSERT_SET_BASE += QString( " WHERE id_cutline = NEW.id_cutline;\nEND;" );
       QString s_TRIGGER_UPDATE_SET_BASE = s_TRIGGER_INSERT_SET_BASE;
       s_TRIGGER_UPDATE_SET_BASE.replace( "WHERE id_cutline = NEW.id_cutline;", "WHERE id_cutline = OLD.id_cutline;" );
       QString sExtraFields = "";
@@ -3113,7 +3117,7 @@ QStringList QgsSpatiaLiteGcpUtils::createGcpSqlCoveragesCommands( GcpDbData *par
       s_sql_cutline += QString( " %1 DATE DEFAULT '0001-01-01',\n" ).arg( "valid_since" );
       s_sql_cutline += QString( " %1 DATE DEFAULT '3000-01-01'\n);" ).arg( "valid_until" );
       // --- Cutline POINTs to assist georeferencing
-      s_sql = QString( s_sql_cutline ).arg( "points" ).arg( "POINT" ).arg( "POINTs" ).arg( sExtraFields );
+      s_sql = QString( QString( "\n%1%2" ).arg( s_sql_newline ).arg( s_sql_cutline ).arg( "points" ).arg( "POINT" ).arg( "POINTs" ).arg( sExtraFields ) );
       sa_sql_commands.append( s_sql );
       s_sql = QString( "SELECT AddGeometryColumn('create_cutline_points','cutline_point',%1,'POINT','XY');" ).arg( i_srid );
       sa_sql_commands.append( s_sql );
@@ -3122,10 +3126,10 @@ QStringList QgsSpatiaLiteGcpUtils::createGcpSqlCoveragesCommands( GcpDbData *par
       // --- Cutline LINESTRINGs to assist georeferencing
       sExtraFields = QString( "%1" ).arg( sMetersLength );
       s_sql = QString( s_sql_cutline ).arg( "linestrings" ).arg( "LINESTRING" ).arg( "LINESTRINGs" ).arg( sExtraFields );
-      QString s_TRIGGER_INSERT = QString( s_TRIGGER_INSERT_BASE ).arg( "linestrings" );
-      s_TRIGGER_INSERT += QString( "%1" ).arg( s_TRIGGER_INSERT_SET_BASE.arg( "linestring" ).arg( s_ST_LengthLinestring ).arg( "" ) );
-      QString s_TRIGGER_UPDATE = QString( s_TRIGGER_UPDATE_BASE ).arg( "linestrings" ).arg( QString( "meters_length" ) );
-      s_TRIGGER_UPDATE += QString( "%1" ).arg( s_TRIGGER_UPDATE_SET_BASE.arg( "linestring" ).arg( s_ST_LengthLinestring ).arg( "" ) );
+      QString s_TRIGGER_INSERT = QString( QString( "\n%1%2" ).arg( s_sql_newline ).arg( s_TRIGGER_INSERT_BASE ).arg( "linestrings" ) );
+      s_TRIGGER_INSERT += QString( "%1" ).arg( s_TRIGGER_INSERT_SET_BASE.arg( "linestring" ).arg( s_ST_LengthLinestring ).arg( "\n" ) );
+      QString s_TRIGGER_UPDATE = QString( QString( "\n%1%2" ).arg( s_sql_newline ).arg( s_TRIGGER_UPDATE_BASE ).arg( "linestrings" ).arg( QString( "meters_length" ) ) );
+      s_TRIGGER_UPDATE += QString( "%1" ).arg( s_TRIGGER_UPDATE_SET_BASE.arg( "linestring" ).arg( s_ST_LengthLinestring ).arg( "\n" ) );
       // Add CREATE VIEWs to CREATE TABLE statement
       s_sql += QString( "%1%2" ).arg( s_TRIGGER_INSERT ).arg( s_TRIGGER_UPDATE );
       sa_sql_commands.append( s_sql );
@@ -3137,9 +3141,10 @@ QStringList QgsSpatiaLiteGcpUtils::createGcpSqlCoveragesCommands( GcpDbData *par
       sExtraFields = QString( "%1%2" ).arg( sMetersLength ).arg( sMetersArea );
       s_sql = QString( s_sql_cutline ).arg( "polygons" ).arg( "POLYGON" ).arg( "POLYGONs" ).arg( sExtraFields );
       s_sql.replace( QString( " id_gcp_coverage INTEGER DEFAULT 0,\n" ), QString( " id_gcp_coverage INTEGER DEFAULT 0,\n -- cutline_type=77: use as gdal cutline for id_gcp_coverage\n" ) );
-      s_TRIGGER_INSERT = QString( QString( "%1%2" ).arg( s_sql_newline ).arg( s_TRIGGER_INSERT_BASE ).arg( "polygons" ) );
+      s_TRIGGER_INSERT = QString( QString( "\n%1%2" ).arg( s_sql_newline ).arg( s_TRIGGER_INSERT_BASE ).arg( "polygons" ) );
       s_TRIGGER_INSERT += QString( "%1" ).arg( s_TRIGGER_INSERT_SET_BASE.arg( "polygon" ).arg( s_ST_LengthPolygon ).arg( s_MetersAreaPolygon ) );
-      s_TRIGGER_UPDATE = QString( QString( "%1%2" ).arg( s_sql_newline ).arg( s_TRIGGER_UPDATE_BASE ).arg( "polygons" ).arg( QString( "meters_length,meters_area" ) ) );
+      s_TRIGGER_UPDATE = QString( QString( "\n%1%2" ).arg( s_sql_newline ).arg( s_TRIGGER_UPDATE_BASE ).arg( "polygons" ).arg( QString( "meters_length,meters_area" ) ) );
+      s_TRIGGER_UPDATE += QString( "%1" ).arg( s_TRIGGER_UPDATE_SET_BASE.arg( "polygon" ).arg( s_ST_LengthPolygon ).arg( s_MetersAreaPolygon ) );
       // Add CREATE VIEWs to CREATE TABLE statement
       s_sql += QString( "%1%2" ).arg( s_TRIGGER_INSERT ).arg( s_TRIGGER_UPDATE );
       sa_sql_commands.append( s_sql );
@@ -3296,6 +3301,7 @@ QStringList QgsSpatiaLiteGcpUtils::createGcpSqlMasterCommands( GcpDbData *parmsG
     QString sCoverageName = QString::null;
     QString sAppendTable = QString::null;
     QString sPointsTableName = "";
+    QString s_sql_newline = QString( "---------------" );
     if ( sa_fields.count() > 1 )
     {
       s_command_type = sa_fields.at( 0 );
@@ -3538,23 +3544,23 @@ QStringList QgsSpatiaLiteGcpUtils::createGcpSqlMasterCommands( GcpDbData *parmsG
       s_sql = QString( "SELECT\n " );
       // Format: INSERT_MASTER;#;#VALUES(...)
       // returns the INSERT VALUE portion for each entry in gcp_master
-      s_sql += QString( "'%1'" ).arg( "(" );
+      s_sql += QString( "'%1" ).arg( "(" );
       // s_sql += QString( "||%1" ).arg( "id_gcp" );
-      s_sql += QString( "'''||%1" ).arg( "name" );
-      s_sql += QString( "||''','''||%1" ).arg( "notes" );
-      s_sql += QString( "||''','''||%1" ).arg( "text" );
-      s_sql += QString( "||''','''||%1" ).arg( "belongs_to_01" );
-      s_sql += QString( "||''','''||%1" ).arg( "belongs_to_02" );
-      s_sql += QString( "||''','''||%1" ).arg( "valid_since" );
-      s_sql += QString( "||''','''||%1" ).arg( "valid_until" );
-      s_sql += QString( "||''',\n '||%1" ).arg( "map_x" );
+      s_sql += QString( "'||%1" ).arg( "quote(name)" );
+      s_sql += QString( "||','||%1" ).arg( "quote(notes)" );
+      s_sql += QString( "||','||%1" ).arg( "quote(text)" );
+      s_sql += QString( "||','||%1" ).arg( "quote(belongs_to_01)" );
+      s_sql += QString( "||','||%1" ).arg( "quote(belongs_to_02)" );
+      s_sql += QString( "||','||%1" ).arg( "quote(valid_since)" );
+      s_sql += QString( "||','||%1" ).arg( "quote(valid_until)" );
+      s_sql += QString( "||',\n '||%1" ).arg( "map_x" );
       s_sql += QString( "||','||%1" ).arg( "map_y" );
       s_sql += QString( "||','||%1" ).arg( "srid" );
       s_sql += QString( "||','||%1" ).arg( "gcp_type" );
       s_sql += QString( "||','||%1" ).arg( "order_selected" );
       s_sql += QString( "||','||%1" ).arg( "gcp_enable" );
-      s_sql += QString( "||','''||%1" ).arg( "gcp_text" );
-      s_sql += QString( "||''',\n  GeomFromEWKT('''||AsEWKT(gcp_point)||'''))'AS master_value\n" );
+      s_sql += QString( "||','||%1" ).arg( "quote(gcp_text)" );
+      s_sql += QString( "||',\n  GeomFromEWKT('''||AsEWKT(gcp_point)||'''))'AS master_value \n" );
       s_sql += QString( "FROM '%1'" ).arg( s_gcp_master );
       // s_sql += QString( "\nORDER BY %1;" ).arg( "id_gcp,valid_since" );
       s_sql += QString( "\nORDER BY %1;" ).arg( "name,gcp_type,valid_since" );
@@ -3565,6 +3571,43 @@ QStringList QgsSpatiaLiteGcpUtils::createGcpSqlMasterCommands( GcpDbData *parmsG
     }
     if ( s_command_type.toUpper() == "CREATE_CUTLINE" )
     {
+      QString s_TRIGGER_FIELDS_BASE = QString( "name,notes,text,valid_since,valid_until,gcp_type,belongs_to_01,belongs_to_02,order_selected, gcp_enable,gcp_text,meters_length,gcp_%1" );
+      // If while INSERTING, no geometries are supplied (only valid pixel/point x+y values), the geometries will be created
+      QString s_TRIGGER_INSERT_BASE = QString( "CREATE TRIGGER IF NOT EXISTS 'tb_ins_VIEWNAME'\n" );
+      s_TRIGGER_INSERT_BASE += QString( " INSTEAD OF INSERT ON \"VIEWNAME\"\nBEGIN\n" );
+      s_TRIGGER_INSERT_BASE += QString( " INSERT OR REPLACE INTO \"gcp_master_%1s\" \n" );
+      s_TRIGGER_INSERT_BASE += QString( "  NEW.name,\n" );
+      s_TRIGGER_INSERT_BASE += QString( "  NEW.notes,\n" );
+      s_TRIGGER_INSERT_BASE += QString( "  NEW.text,\n" );
+      s_TRIGGER_INSERT_BASE += QString( "  NEW.belongs_to_01,\n" );
+      s_TRIGGER_INSERT_BASE += QString( "  NEW.belongs_to_02,\n" );
+      s_TRIGGER_INSERT_BASE += QString( "  NEW.valid_since,\n" );
+      s_TRIGGER_INSERT_BASE += QString( "  NEW.valid_until,\n" );
+      s_TRIGGER_INSERT_BASE += QString( "  CASE WHEN NEW.gcp_type IS NULL THEN 0 ELSE NEW.gcp_type END,\n" );
+      s_TRIGGER_INSERT_BASE += QString( "  NEW.belongs_to_01,\n" );
+      s_TRIGGER_INSERT_BASE += QString( "  NEW.belongs_to_02,\n" );
+      s_TRIGGER_INSERT_BASE += QString( "  NEW.order_selected,\n" );
+      s_TRIGGER_INSERT_BASE += QString( "  NEW.gcp_enable,\n" );
+      s_TRIGGER_INSERT_BASE += QString( "  NEW.gcp_text,\n" );
+      s_TRIGGER_INSERT_BASE += QString( "  ST_Length(NEW.gcp_%1),\n" );
+      s_TRIGGER_INSERT_BASE += QString( "  NEW.gcp_%1\n" );
+      s_TRIGGER_INSERT_BASE += QString( " );\nEND;" );
+      QString s_TRIGGER_UPDATE_BASE = QString( "CREATE TRIGGER IF NOT EXISTS 'tb_upd_VIEWNAME'\n" );
+      s_TRIGGER_UPDATE_BASE += QString( " AFTER UPDATE OF\n" );
+      s_TRIGGER_UPDATE_BASE += QString( "  %2\n" );
+      s_TRIGGER_UPDATE_BASE += QString( " ON \"VIEWNAME\" \nBEGIN\n" );
+      s_TRIGGER_UPDATE_BASE += QString( " UPDATE \"gcp_master_%1s\" \n" );
+      QString s_TRIGGER_DELETE_BASE = QString( "CREATE TRIGGER IF NOT EXISTS 'vw_del_VIEWNAME' \n" );
+      s_TRIGGER_DELETE_BASE += QString( " INSTEAD OF DELETE ON VIEWNAME \nBEGIN\n" );
+      s_TRIGGER_DELETE_BASE += QString( " DELETE FROM gcp_master_%1s WHERE id_gcp = OLD.id_gcp;\nEND;" );
+      // -------
+      QStringList sa_view_types;
+      QMap<int, QString> map_views;
+      map_views.insert( 11, QString( "%1;%2" ).arg( "streets" ).arg( "11=streets" ) );
+      map_views.insert( 13, QString( "%1;%2" ).arg( "bridges" ).arg( "13=bridge" ) );
+      map_views.insert( 150, QString( "%1;%2" ).arg( "streets_routes" ).arg( "150=streets routes" ) );
+      map_views.insert( 17, QString( "%1;%2" ).arg( "rivers" ).arg( "17=rivers" ) );
+      QMap<int, QString>::iterator it_map_views;
       QStringList listCutlines;
       //-- create cutlines_ [points, linestrings,polygons]
       listCutlines.append( QString( "%2%1%3" ).arg( parmsGcpDbData->mParseString ).arg( "CREATE_CUTLINES" ).arg( i_srid ) );
@@ -3573,25 +3616,93 @@ QStringList QgsSpatiaLiteGcpUtils::createGcpSqlMasterCommands( GcpDbData *parmsG
         QStringList sa_cutline_commands = QgsSpatiaLiteGcpUtils::createGcpSqlCoveragesCommands( parmsGcpDbData, listCutlines );
         if ( sa_cutline_commands.size() > 0 )
         {
+          QString s_gcp_table_name;
+          QString s_gcp_table_type;
+          QString s_gcp_view_name;
           for ( int i_list = 0; i_list < sa_cutline_commands.size(); i_list++ )
           {
             // raster entry has been added to gcp_covarage, create corresponding tables
             s_sql = sa_cutline_commands.at( i_list );
+            QString s_sql_view;
             // (Ignore 'create_mercator_polygons')
             if ( !s_sql.contains( QString( "_mercator_" ) ) )
             {
+              // Replace original 'create_cutline_'  syntax to 'gcp_master_' syntax.
+              s_sql.replace( "create_cutline_", "gcp_master_" ).replace( "_cutline", "_gcp" ).replace( "cutline_", "gcp_" );
               sa_sql_commands.append( s_sql );
               if ( s_sql.contains( QString( "SELECT CreateSpatialIndex(" ) ) )
               {
                 // Create views
-                if ( s_sql.contains( QString( "create_cutline_points" ) ) )
+                if ( s_sql.contains( QString( "%1_points" ).arg( s_gcp_master ) ) )
                 {
+                  s_gcp_table_type = QString( "%1" ).arg( "point" );
+                  s_gcp_table_name = QString( "%1_%2s" ).arg( s_gcp_master ).arg( s_gcp_table_type );
                 }
-                if ( s_sql.contains( QString( "create_cutline_linestrings" ) ) )
+                if ( s_sql.contains( QString( "%1_linestrings" ).arg( s_gcp_master ) ) )
                 {
+                  s_gcp_table_type = QString( "%1" ).arg( "linestring" );
+                  s_gcp_table_name = QString( "%1_%2s" ).arg( s_gcp_master ).arg( s_gcp_table_type );
+                  QString s_TRIGGER_INSERT = QString( s_TRIGGER_INSERT_BASE.arg( s_gcp_table_type ) );
+                  QString s_TRIGGER_FIELDS = QString( s_TRIGGER_FIELDS_BASE.arg( s_gcp_table_type ) );
+                  QString s_TRIGGER_UPDATE = QString( s_TRIGGER_UPDATE_BASE.arg( s_gcp_table_type ).arg( s_TRIGGER_FIELDS ) );
+                  QString s_TRIGGER_DELETE = QString( s_TRIGGER_FIELDS_BASE.arg( s_gcp_table_type ) );
+                  for ( it_map_views = map_views.begin(); it_map_views != map_views.end(); ++it_map_views )
+                  {
+                    int i_gcp_type = it_map_views.key();
+                    switch ( i_gcp_type )
+                    {
+                      case 11:
+                      case 13:
+                      case 17:
+                      case 150:
+                      {
+                        QString s_value = it_map_views.value();
+                        QStringList sa_list = s_value.split( ";" );
+                        QString s_gcp_type_name = sa_list[0];
+                        QString s_gcp_type_info = sa_list[1];
+                        s_gcp_view_name = QString( "gcp_%1" ).arg( s_gcp_type_name );
+                        // s_TRIGGER_INSERT.replace(QString("gcp_%1").arg(s_gcp_table_type),s_gcp_view_name).replace("VIEWNAME",s_gcp_view_name);
+                        s_TRIGGER_INSERT.replace( "VIEWNAME", s_gcp_view_name );
+                        s_TRIGGER_UPDATE.replace( "VIEWNAME", s_gcp_view_name );
+                        s_TRIGGER_DELETE.replace( "VIEWNAME", s_gcp_view_name );
+                        s_sql_view = QString( "CREATE VIEW IF NOT EXISTS '%1' AS\n" ).arg( s_gcp_view_name );
+                        s_sql_view += QString( " SELECT \n  %1 \n" ).arg( s_TRIGGER_FIELDS );
+                        s_sql_view += QString( " FROM \"%1\"\n WHERE \n ( -- %2\n  gcp_type=%3\n )\n ORDER BY name;" ).arg( s_gcp_table_name ).arg( s_gcp_type_info ).arg( i_gcp_type );
+                        sa_sql_commands.append( s_sql_view );
+                        // sa_sql_commands.append( QString("\n%1%2").arg(s_sql_newline).arg(s_sql_view) );
+                        //s_sql=QString("\n%1%2\n%3").arg(s_sql).arg(s_sql_newline).arg(s_sql_view);
+                        // -------
+                        s_sql_view = QString( "INSERT INTO views_geometry_columns\n%1\n" ).arg( " (view_name,view_geometry,view_rowid,f_table_name,f_geometry_column,read_only)" );
+                        s_sql_view += QString( " VALUES ('%1','gcp_%2','id_gcp','%3','gcp_%2',0);" ).arg( s_gcp_view_name ).arg( s_gcp_table_type ).arg( s_gcp_table_name );
+                        sa_sql_commands.append( s_sql_view );
+                        // sa_sql_commands.append( QString("\n%1%2").arg(s_sql_newline).arg(s_sql_view) );
+                        // s_sql=QString("%1\n%2\n%3").arg(s_sql).arg(s_sql_newline).arg(s_sql_view);
+                        // -------
+                        s_sql_view = s_TRIGGER_INSERT;
+                        // s_sql_view += QString("(%1)").arg(s_TRIGGER_FIELDS);
+                        s_sql_view = s_sql_view.replace( QString( "CASE WHEN NEW.gcp_type IS NULL THEN 0 ELSE NEW.gcp_type END," ), QString( "CASE WHEN NEW.gcp_type IS NULL THEN %1 ELSE NEW.gcp_type END," ).arg( i_gcp_type ) );
+                        sa_sql_commands.append( s_sql_view );
+                        // -------
+                        s_sql_view = s_TRIGGER_UPDATE;
+                        s_sql_view = s_sql.replace( QString( " ON \"%1\" \nBEGIN\n" ).arg( s_gcp_table_name ), QString( " ON \"%1_%2\" \nBEGIN\n" ).arg( s_gcp_table_name ).arg( s_gcp_type_name ) );
+                        s_sql_view = s_sql_view.replace( QString( " CASE WHEN NEW.gcp_type IS NULL THEN 0 ELSE NEW.gcp_type END," ), QString( " CASE WHEN NEW.gcp_type IS NULL THEN %1 ELSE NEW.gcp_type END," ).arg( i_gcp_type ) );
+                        sa_sql_commands.append( s_sql_view );
+                        // s_sql=QString("%1\n%2\n%3").arg(s_sql).arg(s_sql_newline).arg(s_sql_view);
+                        // sa_sql_commands.append( QString("\n%1%2").arg(s_sql_newline).arg(s_sql_view) );
+                        // -------
+                        s_sql_view = s_TRIGGER_DELETE;
+                        s_sql_view = s_sql.replace( QString( "INSTEAD OF DELETE ON %1" ).arg( s_gcp_table_name ), QString( "INSTEAD OF DELETE ON %1" ).arg( s_gcp_view_name ) );
+                        sa_sql_commands.append( s_sql_view );
+                        //s_sql=QString("%1\n%2\n%3").arg(s_sql).arg(s_sql_newline).arg(s_sql_view);
+                        // sa_sql_commands.append( QString("\n%1%2").arg(s_sql_newline).arg(s_sql_view) );
+                      }
+                    }
+                  }
                 }
-                if ( s_sql.contains( QString( "create_cutline_polygons" ) ) )
+                if ( s_sql.contains( QString( "%1_polygons" ).arg( s_gcp_master ) ) )
                 {
+                  s_gcp_table_type = QString( "%1" ).arg( "polygon" );
+                  s_gcp_table_name = QString( "%1_%2s" ).arg( s_gcp_master ).arg( s_gcp_table_type );
                 }
               }
             }
@@ -3618,17 +3729,18 @@ QStringList QgsSpatiaLiteGcpUtils::createGcpSqlMasterCommands( GcpDbData *parmsG
       s_sql = QString( "SELECT\n " );
       // Format: INSERT_MASTER;#;#VALUES(...)
       // returns the INSERT VALUE portion for each entry in gcp_master
+      // when creating a Sql-Dump: make sure that text fields with possible "'" are properly double quoted
       s_sql += QString( "'%1'" ).arg( "(" );
       s_sql += QString( "||%1" ).arg( "id_gcp_coverage" );
       s_sql += QString( "||','||%1" ).arg( "cutline_type" );
-      s_sql += QString( "||','''||%1" ).arg( "name" );
-      s_sql += QString( "||''','''||%1" ).arg( "notes" );
-      s_sql += QString( "||''','''||%1" ).arg( "text" );
-      s_sql += QString( "||''','''||%1" ).arg( "belongs_to_01" );
-      s_sql += QString( "||''','''||%1" ).arg( "belongs_to_02" );
-      s_sql += QString( "||''','''||%1" ).arg( "valid_since" );
-      s_sql += QString( "||''','''||%1" ).arg( "valid_until" );
-      s_sql += QString( "||''',\n  GeomFromEWKT('''||AsEWKT(cutline_%1)||'''))'AS geometry_value\n" ).arg( sGeometryType );
+      s_sql += QString( "||','||%1" ).arg( "quote(name)" );
+      s_sql += QString( "||','||%1" ).arg( "quote(notes)" );
+      s_sql += QString( "||','||%1" ).arg( "quote(text)" );
+      s_sql += QString( "||','||%1" ).arg( "quote(belongs_to_01)" );
+      s_sql += QString( "||','||%1" ).arg( "quote(belongs_to_02)" );
+      s_sql += QString( "||','||%1" ).arg( "quote(valid_since)" );
+      s_sql += QString( "||','||%1" ).arg( "quote(valid_until)" );
+      s_sql += QString( "||',\n  GeomFromEWKT('''||AsEWKT(cutline_%1)||'''))'AS geometry_value\n" ).arg( sGeometryType );
       s_sql += QString( "FROM '%1'" ).arg( s_gcp_master );
       s_sql += QString( "\nORDER BY %1;" ).arg( "name,cutline_type,valid_since" );
       sa_sql_commands.append( s_sql );

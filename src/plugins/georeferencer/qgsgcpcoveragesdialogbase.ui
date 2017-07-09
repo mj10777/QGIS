@@ -15,14 +15,38 @@
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QVBoxLayout" name="verticalLayout_2">
-    <item>
+    <item row="0" column="0">
      <widget class="QLabel" name="mGcpCoveragesDatabase">
       <property name="text">
        <string>Gcp Coverages Database</string>
       </property>
      </widget>
     </item>
-    <item>
+    <item row="1" column="0">
+     <widget class="QToolBar" name="toolBar">
+      <property name="windowTitle">
+       <string>toolBar</string>
+      </property>
+      <property name="movable">
+       <bool>false</bool>
+      </property>
+      <property name="iconSize">
+       <size>
+        <width>24</width>
+        <height>24</height>
+       </size>
+      </property>
+      <attribute name="toolBarArea">
+       <enum>TopToolBarArea</enum>
+      </attribute>
+      <attribute name="toolBarBreak">
+       <bool>false</bool>
+      </attribute>
+      <addaction name="actionExpandAll"/>
+      <addaction name="actionCollapseAll"/>
+     </widget>
+    </item>
+    <item row="2" column="0">
      <widget class="QTreeWidget" name="treeWidget">
       <property name="selectionBehavior">
        <enum>QAbstractItemView::SelectItems</enum>
@@ -53,7 +77,7 @@
       </column>
      </widget>
     </item>
-    <item>
+    <item row="3" column="0">
      <widget class="QDialogButtonBox" name="buttonBox">
       <property name="orientation">
        <enum>Qt::Horizontal</enum>
@@ -64,28 +88,6 @@
      </widget>
     </item>
    </layout>
-  </widget>
-  <widget class="QToolBar" name="toolBar">
-   <property name="windowTitle">
-    <string>toolBar</string>
-   </property>
-   <property name="movable">
-    <bool>false</bool>
-   </property>
-   <property name="iconSize">
-    <size>
-     <width>24</width>
-     <height>24</height>
-    </size>
-   </property>
-   <attribute name="toolBarArea">
-    <enum>TopToolBarArea</enum>
-   </attribute>
-   <attribute name="toolBarBreak">
-    <bool>false</bool>
-   </attribute>
-   <addaction name="actionExpandAll"/>
-   <addaction name="actionCollapseAll"/>
   </widget>
   <action name="actionExpandAll">
    <property name="icon">

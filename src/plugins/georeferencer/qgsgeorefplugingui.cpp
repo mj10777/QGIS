@@ -3210,6 +3210,7 @@ bool QgsGeorefPluginGui::setGcpLayerSettings( QgsVectorLayer *layer_gcp )
                     feature_layer_symbol_first_clone_area->setSize( mGcpPointArea );
                     feature_layer_symbol_first_clone_area->setStrokeWidth( ( mGcpPointArea / 20 ) );
                     feature_layer_symbol_first_clone_area->setStrokeWidthMapUnitScale( QgsMapUnitScale() );
+                    feature_layer_symbol_first_clone_area->setShape( QgsSimpleMarkerSymbolLayerBase::Circle );
                     feature_layer_symbol_container->appendSymbolLayer( feature_layer_symbol_first_clone_area );
                     feature_layer_symbol_container->setOpacity( 0.75 ); // was setAlpha( 0.75 );
                     i_valid_layer_count++;
@@ -3423,6 +3424,7 @@ bool QgsGeorefPluginGui::setCutlineLayerSettings( QgsVectorLayer *layer_cutline 
                     // Will show area of 2.5 meters around the Point [only noticeable when zoomed in]
                     feature_layer_symbol_first_clone_area->setFillColor( color_red );
                     feature_layer_symbol_first_clone_area->setStrokeWidthMapUnitScale( QgsMapUnitScale() );
+                    feature_layer_symbol_first_clone_area->setShape( QgsSimpleMarkerSymbolLayerBase::Circle );
                     // feature_layer_symbol_first_clone_area->setOutputUnit( QgsUnitTypes::RenderMetersToMapUnits );
                     feature_layer_symbol_first_clone_area->setOutputUnit( QgsUnitTypes::RenderMapUnits );
                     feature_layer_symbol_first_clone_area->setSize( mGcpMasterArea );
@@ -4306,29 +4308,28 @@ bool QgsGeorefPluginGui::saveEditsGcp( QgsVectorLayer *gcp_layer, bool leaveEdit
     qDebug() << QString( "-W-> QgsGeorefPluginGui::saveEditsGcp: layer_name[%1] Invalid error[%2]" ).arg( gcp_layer->name() ).arg( gcp_layer->error().message( QgsErrorMessage::Text ) );
   }
 #endif
+  QStringList sa_errors;
   if ( !leaveEditable )
   {
     if ( ( gcp_layer ) && ( gcp_layer->isValid() ) && ( gcp_layer->isEditable() ) && ( gcp_layer->editBuffer()->isModified() ) )
     {
-      gcp_layer->commitChanges();
+      b_rc = gcp_layer->commitChanges();
       gcp_layer->endEditCommand();
-      qDebug() << QString( "-I-> QgsGeorefPluginGui::saveEditsGcp[%2,%3]: layer_name[%1] isModified[%4]" ).arg( gcp_layer->name() ).arg( "After endEditCommand" ).arg( b_rc ).arg( gcp_layer->isModified() );
+      qDebug() << QString( "-I-> QgsGeorefPluginGui::saveEditsGcp[%2,%3]: layer_name[%1] isModified[%4] errors[%5]" ).arg( gcp_layer->name() ).arg( "After endEditCommand" ).arg( b_rc ).arg( gcp_layer->isModified() ).arg( sa_errors.join( ";" ) );
     }
     return true;
   }
-  QStringList sa_errors;
   if ( ( gcp_layer ) && ( gcp_layer->isValid() ) && ( gcp_layer->isEditable() ) && ( gcp_layer->editBuffer()->isModified() ) )
   {
     //  [When used with 'gcp_layer->commitChanges' instead of 'editBuffer()->commitChanges', caused crashes] Warning: QUndoStack::endMacro(): no matching beginMacro()
     b_rc = gcp_layer->editBuffer()->commitChanges( sa_errors );
     if ( ( gcp_layer->editBuffer()->isModified() ) && ( sa_errors.size() ) )
     {
-      QString s_error = sa_errors.join( ";" );
       // gcp_layer->error().message( QgsErrorMessage::Text )
       // Warning: QUndoStack::setIndex(): cannot set index in the middle of a macro
-      if ( ! s_error.startsWith( "SUCCESS" ) )
+      if ( ! sa_errors.join( ";" ).startsWith( "SUCCESS" ) )
       {
-        qDebug() << QString( "-W-> QgsGeorefPluginGui::saveEditsGcp: layer_name[%1] Invalid error[%2] b_rc=%3" ).arg( gcp_layer->name() ).arg( s_error ).arg( b_rc );
+        qDebug() << QString( "-W-> QgsGeorefPluginGui::saveEditsGcp: layer_name[%1] Invalid errors[%2] b_rc=%3" ).arg( gcp_layer->name() ).arg( sa_errors.join( ";" ) ).arg( b_rc );
         gcp_layer->rollBack( false ); // clear for the next AddPoint
       }
     }
