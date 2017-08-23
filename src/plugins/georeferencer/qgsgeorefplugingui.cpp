@@ -3997,14 +3997,14 @@ void QgsGeorefPluginGui::loadGTifInQgis( const QString &gtif_file )
       {
         if ( mTreeGroupGtifRasters )
         {
-          // so that layer is not added to legend
+          // so that layer is not added to legend [first boolean parm]
           QgsProject::instance()->addMapLayers( QList<QgsMapLayer *>() << mLayerGtifRaster, false, false );
           // must be added AFTER being registered !
           mTreeLayerGtifRaster = mTreeGroupGtifRasters->addLayer( mLayerGtifRaster );
         }
         else
         {
-          // so that layer is added to legend
+          // so that layer is added to legend [first boolean parm]
           QgsProject::instance()->addMapLayers( QList<QgsMapLayer *>() << mLayerGtifRaster, true, false );
         }
       }
