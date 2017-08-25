@@ -3071,7 +3071,7 @@ bool QgsGeorefPluginGui::setGcpLayerSettings( QgsVectorLayer *layer_gcp )
     // pal_layer_settings.placementFlags = QgsPalLayerSettings::AboveLine | QgsPalLayerSettings::MapOrientation;
     pal_layer_settings.placementFlags = QgsPalLayerSettings::AboveLine;
     pal_layer_settings.dist = 5;
-    pal_layer_settings.distInMapUnits = false;
+    pal_layer_settings.distUnits = QgsUnitTypes::RenderMillimeters; // QgsUnitTypes::RenderMapUnits
     // Wrap
     if ( mGcpLabelType == 2 )
     {
@@ -3617,7 +3617,7 @@ bool QgsGeorefPluginGui::setCutlineLayerSettings( QgsVectorLayer *layer_cutline 
     pal_layer_settings.isExpression = true;
     // Placement
     pal_layer_settings.dist = 5;
-    pal_layer_settings.distInMapUnits = false;
+    pal_layer_settings.distUnits = QgsUnitTypes::RenderMillimeters; // QgsUnitTypes::RenderMapUnits
     switch ( layer_type )
     {
       // 0=point ; 1= linestring ; 2=polygon

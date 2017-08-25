@@ -165,7 +165,7 @@ bool QgsSpatiaLiteGcpUtils::createGcpDb( GcpDbData *parmsGcpDbData )
   }
   if ( ( !b_create_empty_database ) && ( !bDatabaseExists ) && ( parmsGcpDbData->mDatabaseDump ) )
   {
-    // Cannot dump a Databse that does not exist
+    // Cannot dump a Database that does not exist
     return bDatabaseExists;
   }
   // base on code found in 'QgsOSMDatabase::createSpatialTable'

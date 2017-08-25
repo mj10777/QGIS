@@ -88,7 +88,7 @@ INCLUDE_DIRECTORIES(
   ${CMAKE_CURRENT_BINARY_DIR}
   ${CMAKE_CURRENT_BINARY_DIR}/../../ui
   ../../core ../../core/geometry ../../core/raster ../../core/composer
-  ../../core/symbology-ng ../../core/layertree  ../../app
+  ../../core/symbology ../../core/layertree  ../../app
   ../../gui  ../../gui/editorwidgets ../../gui/layertree
   ..
   ${CMAKE_BINARY_DIR}/src/core
