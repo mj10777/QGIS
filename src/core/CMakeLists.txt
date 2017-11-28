@@ -121,6 +121,10 @@ SET(QGIS_CORE_SRCS
   providers/memory/qgsmemoryfeatureiterator.cpp
   providers/memory/qgsmemoryprovider.cpp
   providers/memory/qgsmemoryproviderutils.cpp
+  providers/spatialite/qgssqlitehandle.cpp
+  providers/spatialite/qgsspatialitedbinfo.cpp
+  providers/spatialite/qgsspatialiteconnection.cpp
+  providers/spatialite/qgsspatialiteconnpool.cpp
 
   scalebar/qgsdoubleboxscalebarrenderer.cpp
   scalebar/qgsnumericscalebarrenderer.cpp
@@ -687,6 +691,9 @@ SET(QGIS_CORE_MOC_HDRS
   processing/qgsprocessingregistry.h
 
   providers/memory/qgsmemoryprovider.h
+  providers/spatialite/qgsspatialitedbinfo.h
+  providers/spatialite/qgsspatialiteconnection.h
+  providers/spatialite/qgsspatialiteconnpool.h
 
   raster/qgsrasterfilewritertask.h
   raster/qgsrasterlayer.h
@@ -1037,6 +1044,10 @@ SET(QGIS_CORE_HDRS
 
   providers/memory/qgsmemoryfeatureiterator.h
   providers/memory/qgsmemoryproviderutils.h
+  providers/spatialite/qgssqlitehandle.h
+  providers/spatialite/qgsspatialitedbinfo.h
+  providers/spatialite/qgsspatialiteconnection.h
+  providers/spatialite/qgsspatialiteconnpool.h
 
   raster/qgsbilinearrasterresampler.h
   raster/qgsbrightnesscontrastfilter.h
@@ -1197,6 +1208,7 @@ INCLUDE_DIRECTORIES(
   processing/models
   providers
   providers/memory
+  providers/spatialite
   raster
   renderer
   scalebar
