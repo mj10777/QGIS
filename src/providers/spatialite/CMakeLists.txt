@@ -6,47 +6,25 @@ IF(WITH_QSPATIALITE)
 ENDIF(WITH_QSPATIALITE)
 
 SET(SPATIALITE_SRCS
-  qgsspatialiteconnection.cpp
-  qgsspatialiteconnpool.cpp
-  qgsspatialiteutils.cpp
   qgsspatialiteprovider.cpp
-  qgsspatialitedataitems.cpp
   qgsspatialitefeatureiterator.cpp
+  qgsspatialitesourceselect.cpp
   qgsspatialitetablemodel.cpp
 )
 
 SET(SPATIALITE_MOC_HDRS
-  qgsspatialiteconnection.h
-  qgsspatialiteconnpool.h
-  qgsspatialiteutils.h
   qgsspatialiteprovider.h
-  qgsspatialitedataitems.h
+  qgsspatialitesourceselect.h
   qgsspatialitetablemodel.h
 )
 
 SET(RASTERLITE2_SRCS
-  qgsspatialiteconnection.cpp
-  qgsspatialiteconnpool.cpp
-  qgsspatialiteutils.cpp
   qgsrasterlite2provider.cpp
 )
 
 SET(RASTERLITE2_MOC_HDRS
-  qgsspatialiteconnection.h
-  qgsspatialiteconnpool.h
-  qgsspatialiteutils.h
   qgsrasterlite2provider.h
 )
-
-IF (WITH_GUI)
-  SET(SPATIALITE_SRCS ${SPATIALITE_SRCS}
-    qgsspatialitesourceselect.cpp
-  )
-  SET(SPATIALITE_MOC_HDRS ${SPATIALITE_MOC_HDRS}
-    qgsspatialitesourceselect.h
-  )
-ENDIF ()
-
 
 ########################################################
 # Build
@@ -65,6 +43,7 @@ INCLUDE_DIRECTORIES(
   ${CMAKE_SOURCE_DIR}/src/core/expression
   ${CMAKE_SOURCE_DIR}/src/core/geometry
   ${CMAKE_SOURCE_DIR}/src/core/metadata
+  ${CMAKE_SOURCE_DIR}/src/core/providers/spatialite
   ${CMAKE_SOURCE_DIR}/src/core/raster
   ${CMAKE_SOURCE_DIR}/src/gui
 
@@ -75,27 +54,25 @@ INCLUDE_DIRECTORIES(
 INCLUDE_DIRECTORIES(SYSTEM
   ${SQLITE3_INCLUDE_DIR}
   ${SPATIALITE_INCLUDE_DIR}
-IF(RASTERLITE2_INCLUDE_DIR)
-  ${RASTERLITE2_INCLUDE_DIR}
-ENDIF(RASTERLITE2_INCLUDE_DIR)
   ${GEOS_INCLUDE_DIR}
   ${GDAL_INCLUDE_DIR}
 )
 
 ADD_LIBRARY (spatialiteprovider MODULE ${SPATIALITE_SRCS} ${SPATIALITE_MOC_SRCS})
-IF(RASTERLITE2_LIBRARY)
-TARGET_LINK_LIBRARIES(spatialiteprovider
-  qgis_core
-  ${SPATIALITE_LIBRARY}
-  ${RASTERLITE2_LIBRARY}
-)
-ELSE(RASTERLITE2_LIBRARY)
-TARGET_LINK_LIBRARIES(spatialiteprovider
-  qgis_core
-  qgis_gui
+SET(SPATIALITE_LIBRARYS_PROVIDER
   ${SPATIALITE_LIBRARY}
 )
-ENDIF(RASTERLITE2_LIBRARY)
+
+IF (RASTERLITE2_LIBRARY)
+  SET(SPATIALITE_LIBRARYS_PROVIDE ${SPATIALITE_LIBRARYS_PROVIDER}
+   ${RASTERLITE2_LIBRARY}
+  )
+ENDIF (RASTERLITE2_LIBRARY)
+
+TARGET_LINK_LIBRARIES(spatialiteprovider
+  qgis_core
+  ${SPATIALITE_LIBRARYS_PROVIDER}
+)
 
 IF(RASTERLITE2_LIBRARY)
 ADD_LIBRARY (rasterlite2provider MODULE ${RASTERLITE2_SRCS} ${RASTERLITE2_MOC_SRCS})

@@ -90,6 +90,20 @@ class QgsGcpListWidget : public QTableView
      * \param true or false
      */
     void setChanged( bool bChanged ) { mGcpListModel->setChanged( bChanged ); }
+
+    /**
+     * Skip Calculate residual during updateModel
+     * \note Goals:
+     *  - avoids very slow reactions when points > 900.
+     * \param true or false
+     */
+    void setSkipUpdateModel( bool skipUpdateModel ) {mGcpListModel->setSkipUpdateModel( skipUpdateModel ); }
+
+    /**
+     * Informs the caller if any Update, Adding or Delete have been made since the last Update.
+     * \return true or false (value of mIsDirty)
+     */
+    bool isSkipUpdateModel() { return mGcpListModel->isSkipUpdateModel(); }
     bool transformUpdated() { return mGcpListModel->transformUpdated(); }
     bool mapUnitsPossible() { return mGcpListModel->mapUnitsPossible(); }
 

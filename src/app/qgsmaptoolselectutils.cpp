@@ -242,7 +242,7 @@ QgsFeatureIds QgsMapToolSelectUtils::getMatchingFeatures( QgsMapCanvas *canvas, 
     request.setSubsetOfAttributes( QgsAttributeList() );
 
   QgsFeatureIterator fit = vlayer->getFeatures( request );
-
+  qDebug().noquote() << QString( "-I-> QgsMapToolSelectUtils::getMatchingFeatures" );
   QgsFeature f;
   QgsFeatureId closestFeatureId = 0;
   bool foundSingleFeature = false;

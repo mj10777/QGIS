@@ -840,6 +840,7 @@ INCLUDE_DIRECTORIES(
   ${CMAKE_SOURCE_DIR}/src/core/locator
   ${CMAKE_SOURCE_DIR}/src/core/metadata
   ${CMAKE_SOURCE_DIR}/src/core/providers/memory
+  ${CMAKE_SOURCE_DIR}/src/core/providers/spatialite
   ${CMAKE_SOURCE_DIR}/src/core/raster
   ${CMAKE_SOURCE_DIR}/src/core/scalebar
   ${CMAKE_SOURCE_DIR}/src/core/symbology
@@ -861,6 +862,10 @@ INCLUDE_DIRECTORIES(SYSTEM
   ${QSCINTILLA_INCLUDE_DIR}
   ${GEOS_INCLUDE_DIR}
   ${GDAL_INCLUDE_DIR}
+  ${SPATIALITE_INCLUDE_DIR}
+IF(RASTERLITE2_INCLUDE_DIR)
+  ${RASTERLITE2_INCLUDE_DIR}
+ENDIF(RASTERLITE2_INCLUDE_DIR)
 )
 
 # disable deprecation warnings for classes re-exporting deprecated methods

@@ -14,7 +14,7 @@
  ***************************************************************************/
 
 #include "qgsosmimport.h"
-#include "qgsslconnect.h"
+#include "qgssqlitehandle.h"
 
 #include <QStringList>
 #include <QXmlStreamReader>
@@ -133,7 +133,7 @@ bool QgsOSMXmlImport::createDatabase()
 {
   char **results = nullptr;
   int rows, columns;
-  if ( QgsSLConnect::sqlite3_open_v2( mDbFileName.toUtf8().data(), &mDatabase, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, nullptr ) != SQLITE_OK )
+  if ( QgsSqliteHandle::sqlite3_open_v2( mDbFileName.toUtf8().data(), &mDatabase, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, nullptr ) != SQLITE_OK )
     return false;
 
   bool above41 = false;
@@ -234,7 +234,7 @@ bool QgsOSMXmlImport::closeDatabase()
 
   Q_ASSERT( !mStmtInsertNode );
 
-  QgsSLConnect::sqlite3_close( mDatabase );
+  QgsSqliteHandle::sqlite3_close( mDatabase );
   mDatabase = nullptr;
   return true;
 }

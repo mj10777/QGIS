@@ -30,8 +30,7 @@
 #include "qgsprovidermetadata.h"
 #include "qgsvectorlayer.h"
 #include "qgsproject.h"
-#include "providers/memory/qgsmemoryprovider.h"
-
+#include "qgsmemoryprovider.h"
 
 // typedefs for provider plugin functions of interest
 typedef QString providerkey_t();

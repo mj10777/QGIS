@@ -14,7 +14,7 @@
  ***************************************************************************/
 
 #include "qgsosmdatabase.h"
-#include "qgsslconnect.h"
+#include "qgssqlitehandle.h"
 #include "qgsgeometry.h"
 #include "qgslogger.h"
 
@@ -46,7 +46,7 @@ bool QgsOSMDatabase::isOpen() const
 bool QgsOSMDatabase::open()
 {
   // open database
-  int res = QgsSLConnect::sqlite3_open_v2( mDbFileName.toUtf8().data(), &mDatabase, SQLITE_OPEN_READWRITE, nullptr );
+  int res = QgsSqliteHandle::sqlite3_open_v2( mDbFileName.toUtf8().data(), &mDatabase, SQLITE_OPEN_READWRITE, nullptr );
   if ( res != SQLITE_OK )
   {
     mError = QStringLiteral( "Failed to open database [%1]: %2" ).arg( res ).arg( mDbFileName );
@@ -86,7 +86,7 @@ bool QgsOSMDatabase::close()
   Q_ASSERT( !mStmtNode );
 
   // close database
-  if ( QgsSLConnect::sqlite3_close( mDatabase ) != SQLITE_OK )
+  if ( QgsSqliteHandle::sqlite3_close( mDatabase ) != SQLITE_OK )
   {
     //mError = ( char * ) "Closing SQLite3 database failed.";
     //return false;

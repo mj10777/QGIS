@@ -138,6 +138,20 @@ class QgsGcpListModel : public QStandardItemModel
     void setChanged( bool bChanged ) { mGcpList->setChanged( bChanged ); }
 
     /**
+     * Skip Calculate residual during updateModel
+     * \note Goals:
+     *  - avoids very slow reactions when points > 900.
+     * \param true or false
+     */
+    void setSkipUpdateModel( bool skipUpdateModel ) { bSkipUpdateModel = skipUpdateModel; }
+
+    /**
+     * Informs the caller if any Update, Adding or Delete have been made since the last Update.
+     * \return true or false (value of mIsDirty)
+     */
+    bool isSkipUpdateModel() { return bSkipUpdateModel; }
+
+    /**
      * Set mGcpDbData for Spatialite Gcp-Support
      * \param parmsGcpDbData which contains all needed information to use Spatialite Gcp-Support
      * \param bClear clear the list
@@ -202,6 +216,7 @@ class QgsGcpListModel : public QStandardItemModel
     QgsGeorefTransform *mGeorefTransform = nullptr;
     bool bTransformUpdated = false;
     bool bMapUnitsPossible = false;
+    bool bSkipUpdateModel = false;
     friend class QgsGcpListWidget; // in order to access createGcpVectors, getPoint, updatePoint and removePoint
 };
 

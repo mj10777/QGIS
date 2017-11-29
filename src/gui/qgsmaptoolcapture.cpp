@@ -259,7 +259,6 @@ void QgsMapToolCapture::cadCanvasMoveEvent( QgsMapMouseEvent *e )
   QgsMapToolAdvancedDigitizing::cadCanvasMoveEvent( e );
   bool snapped = e->isSnapped();
   QgsPointXY point = e->mapPoint();
-
   if ( !snapped )
   {
     delete mSnappingMarker;

@@ -14,7 +14,8 @@
  *   (at your option) any later version.                                   *
  *                                                                         *
  ***************************************************************************/
-
+#ifndef QGSSPATIALITETABLEMODEL_H
+#define QGSSPATIALITETABLEMODEL_H
 #include <QStandardItemModel>
 class QIcon;
 #include "qgis.h"
@@ -23,7 +24,7 @@ class QIcon;
 /** A model that holds the tables of a database in a hierarchy where the
 SQLite DB is the root elements that contain the individual tables as children.
 The tables have the following columns: Type, Tablename, Geometry Column*/
-class QgsSpatiaLiteTableModel: public QStandardItemModel
+class  QgsSpatiaLiteTableModel: public QStandardItemModel
 {
   Q_OBJECT public:
 
@@ -315,3 +316,5 @@ class QgsSpatiaLiteTableModel: public QStandardItemModel
     QStandardItem *mNonSpatialItem = nullptr;
     bool mLoadGeometrylessTables = true;
 };
+
+#endif // QGSSPATIALITETABLEMODEL_H

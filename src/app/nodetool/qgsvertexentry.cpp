@@ -44,6 +44,7 @@ void QgsVertexEntry::placeMarker()
     {
       mMarker = new QgsVertexMarker( mCanvas );
       QColor c = mSelected ? QColor( Qt::blue ) : QColor( Qt::red );
+      qDebug().noquote() << QString( "-I-> QgsVertexEntry::placeMarker[%1] creating marker" ).arg( mSelected );
       if ( mVertexId.type == QgsVertexId::CurveVertex )
       {
         mMarker->setIconType( QgsVertexMarker::ICON_CIRCLE );
@@ -62,6 +63,7 @@ void QgsVertexEntry::placeMarker()
   }
   else if ( mMarker )
   {
+    qDebug().noquote() << QString( "-W-> QgsVertexEntry::placeMarkerr[%1] creating marker" ).arg( mSelected );
     delete mMarker;
     mMarker = nullptr;
   }
@@ -70,6 +72,7 @@ void QgsVertexEntry::placeMarker()
 void QgsVertexEntry::setSelected( bool selected )
 {
   mSelected = selected;
+  qDebug().noquote() << QString( "-I-> QgsVertexEntry::setSelected" );
   if ( mMarker )
   {
     QColor c = mSelected ? QColor( Qt::blue ) : QColor( Qt::red );

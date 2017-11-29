@@ -48,6 +48,7 @@ QgsMapCanvasDockWidget::QgsMapCanvasDockWidget( const QString &name, QWidget *pa
 
   mMapCanvas = new QgsMapCanvas( this );
   mXyMarker = new QgsVertexMarker( mMapCanvas );
+  qDebug().noquote() << QString( "-I-> QgsMapCanvasDockWidget::QgsMapCanvasDockWidgetr[%1] creating marker" ).arg( name );
   mXyMarker->setIconType( QgsVertexMarker::ICON_CIRCLE );
   mXyMarker->setIconSize( 6 );
   mXyMarker->setColor( QColor( 30, 30, 30, 225 ) );

@@ -78,139 +78,142 @@ void QgsGcpListModel::updateModel()
   //clear();
   if ( !mGcpList )
     return;
-  bMapUnitsPossible = false;
-  bTransformUpdated = false;
-
-  QVector<QgsPointXY> mapCoords, pixelCoords;
-  mGcpList->createGcpVectors( mapCoords, pixelCoords );
-
-  //  // Setup table header
-  QStringList itemLabels;
-  QString unitType;
-  QgsSettings s;
-
-  if ( mGeorefTransform )
+  if ( !bSkipUpdateModel )
   {
-    bTransformUpdated = mGeorefTransform->updateParametersFromGCPs( mapCoords, pixelCoords );
-    bMapUnitsPossible = mGeorefTransform->providesAccurateInverseTransformation();
-  }
+    bMapUnitsPossible = false;
+    bTransformUpdated = false;
 
-  if ( s.value( "/Plugin-GeoReferencer/Config/ResidualUnits" ) == "mapUnits" && bMapUnitsPossible )
-  {
-    unitType = tr( "map units" );
-  }
-  else
-  {
-    unitType = tr( "pixels" );
-  }
+    QVector<QgsPointXY> mapCoords, pixelCoords;
+    mGcpList->createGcpVectors( mapCoords, pixelCoords );
 
-  itemLabels << tr( "Visible" )
-             << tr( "id_gcp" )
-             << tr( "dX (%1)" ).arg( unitType )
-             << tr( "dY (%1)" ).arg( unitType )
-             << tr( "Residual (%1)" ).arg( unitType )
-             << tr( "azimuth (%1)" ).arg( "pixels" )
-             << tr( "azimuth (%1)" ).arg( "map" )
-             << tr( "Notes" )
-             << tr( "WKT (%1)" ).arg( "pixels" )
-             << tr( "WKT (%1)" ).arg( "map" );
+    //  // Setup table header
+    QStringList itemLabels;
+    QString unitType;
+    QgsSettings s;
 
-  setHorizontalHeaderLabels( itemLabels );
-  setRowCount( mGcpList->size() );
-
-  for ( int i = 0; i < mGcpList->countDataPoints(); ++i )
-  {
-    int j = 0;
-    QgsGeorefDataPoint *dataPoint = mGcpList->at( i );
-
-    if ( !dataPoint )
-      continue;
-
-    QStandardItem *si = new QStandardItem();
-    si->setTextAlignment( Qt::AlignCenter );
-    si->setCheckable( true );
-    if ( dataPoint->isEnabled() )
-      si->setCheckState( Qt::Checked );
-    else
-      si->setCheckState( Qt::Unchecked );
-
-    setItem( i, j++, si );
-    setItem( i, j++, new QgsStandardItem( dataPoint-> id() ) );
-    QString sNotes = dataPoint->name();
-
-    double residual;
-    double dX = 0;
-    double dY = 0;
-    // Calculate residual if transform is available and up-to-date
-    if ( mGeorefTransform && bTransformUpdated && mGeorefTransform->parametersInitialized() && !mGcpList->avoidUnneededUpdates() )
+    if ( mGeorefTransform )
     {
-      QgsPointXY reverse_point_pixel;
-      QgsPointXY reverse_point_map;
-      QgsPointXY pixelPoint = mGeorefTransform->hasCrs() ? mGeorefTransform->toColumnLine( dataPoint->pixelCoords() ) : dataPoint->pixelCoords();
-      if ( unitType == tr( "pixels" ) )
+      bTransformUpdated = mGeorefTransform->updateParametersFromGCPs( mapCoords, pixelCoords );
+      bMapUnitsPossible = mGeorefTransform->providesAccurateInverseTransformation();
+    }
+
+    if ( s.value( "/Plugin-GeoReferencer/Config/ResidualUnits" ) == "mapUnits" && bMapUnitsPossible )
+    {
+      unitType = tr( "map units" );
+    }
+    else
+    {
+      unitType = tr( "pixels" );
+    }
+
+    itemLabels << tr( "Visible" )
+               << tr( "id_gcp" )
+               << tr( "dX (%1)" ).arg( unitType )
+               << tr( "dY (%1)" ).arg( unitType )
+               << tr( "Residual (%1)" ).arg( unitType )
+               << tr( "azimuth (%1)" ).arg( "pixels" )
+               << tr( "azimuth (%1)" ).arg( "map" )
+               << tr( "Notes" )
+               << tr( "WKT (%1)" ).arg( "pixels" )
+               << tr( "WKT (%1)" ).arg( "map" );
+
+    setHorizontalHeaderLabels( itemLabels );
+    setRowCount( mGcpList->size() );
+
+    for ( int i = 0; i < mGcpList->countDataPoints(); ++i )
+    {
+      int j = 0;
+      QgsGeorefDataPoint *dataPoint = mGcpList->at( i );
+
+      if ( !dataPoint )
+        continue;
+
+      QStandardItem *si = new QStandardItem();
+      si->setTextAlignment( Qt::AlignCenter );
+      si->setCheckable( true );
+      if ( dataPoint->isEnabled() )
+        si->setCheckState( Qt::Checked );
+      else
+        si->setCheckState( Qt::Unchecked );
+
+      setItem( i, j++, si );
+      setItem( i, j++, new QgsStandardItem( dataPoint-> id() ) );
+      QString sNotes = dataPoint->name();
+      double residual;
+      double dX = 0;
+      double dY = 0;
+
+      // Calculate residual if transform is available and up-to-date
+      if ( mGeorefTransform && bTransformUpdated && mGeorefTransform->parametersInitialized() && !mGcpList->avoidUnneededUpdates() )
       {
-        // Transform from world to raster coordinate:
-        // This is the transform direction used by the warp operation.
-        // As transforms of order >=2 are not invertible, we are only
-        // interested in the residual in this direction
-        // correct   : 23258.22999986090144375,20888.28000062370119849,4036.55863499999986743,-1720.50918799999999464,1
-        // incorrect: 23258.22999986090144375,20888.28000062370119849,4039.69056077662253301,-2549.30078565706389782,1
-        if ( mGeorefTransform->transformWorldToRaster( dataPoint->mapCoords(), reverse_point_pixel ) )
+        QgsPointXY reverse_point_pixel;
+        QgsPointXY reverse_point_map;
+        QgsPointXY pixelPoint = mGeorefTransform->hasCrs() ? mGeorefTransform->toColumnLine( dataPoint->pixelCoords() ) : dataPoint->pixelCoords();
+        if ( unitType == tr( "pixels" ) )
         {
-          dX = ( reverse_point_pixel.x() - pixelPoint.x() );
-          dY = -( reverse_point_pixel.y() - pixelPoint.y() );
-          dataPoint->setPixelCoordsReverse( reverse_point_pixel );
-          if ( mGeorefTransform->transformRasterToWorld( dataPoint->pixelCoords(), reverse_point_map ) )
-          {
-            dataPoint->setMapCoordsReverse( reverse_point_map );
-          }
-        }
-      }
-      else if ( unitType == tr( "map units" ) )
-      {
-        if ( mGeorefTransform->transformRasterToWorld( pixelPoint, reverse_point_map ) )
-        {
-          dX = ( reverse_point_map.x() - dataPoint->mapCoords().x() );
-          dY = ( reverse_point_map.y() - dataPoint->mapCoords().y() );
-          dataPoint->setMapCoordsReverse( reverse_point_map );
+          // Transform from world to raster coordinate:
+          // This is the transform direction used by the warp operation.
+          // As transforms of order >=2 are not invertible, we are only
+          // interested in the residual in this direction
+          // correct   : 23258.22999986090144375,20888.28000062370119849,4036.55863499999986743,-1720.50918799999999464,1
+          // incorrect: 23258.22999986090144375,20888.28000062370119849,4039.69056077662253301,-2549.30078565706389782,1
           if ( mGeorefTransform->transformWorldToRaster( dataPoint->mapCoords(), reverse_point_pixel ) )
           {
+            dX = ( reverse_point_pixel.x() - pixelPoint.x() );
+            dY = -( reverse_point_pixel.y() - pixelPoint.y() );
             dataPoint->setPixelCoordsReverse( reverse_point_pixel );
+            if ( mGeorefTransform->transformRasterToWorld( dataPoint->pixelCoords(), reverse_point_map ) )
+            {
+              dataPoint->setMapCoordsReverse( reverse_point_map );
+            }
+          }
+        }
+        else if ( unitType == tr( "map units" ) )
+        {
+          if ( mGeorefTransform->transformRasterToWorld( pixelPoint, reverse_point_map ) )
+          {
+            dX = ( reverse_point_map.x() - dataPoint->mapCoords().x() );
+            dY = ( reverse_point_map.y() - dataPoint->mapCoords().y() );
+            dataPoint->setMapCoordsReverse( reverse_point_map );
+            if ( mGeorefTransform->transformWorldToRaster( dataPoint->mapCoords(), reverse_point_pixel ) )
+            {
+              dataPoint->setPixelCoordsReverse( reverse_point_pixel );
+            }
           }
         }
       }
-    }
-    residual = sqrt( dX * dX + dY * dY );
+      residual = sqrt( dX * dX + dY * dY );
 
-    dataPoint->setResidual( QPointF( dX, dY ) );
+      dataPoint->setResidual( QPointF( dX, dY ) );
 
-    if ( residual >= 0.f )
-    {
-      setItem( i, j++, new QgsStandardItem( QString::number( dX, 'f', 10 ) ) );
-      setItem( i, j++, new QgsStandardItem( QString::number( dY, 'f', 10 ) ) );
-      setItem( i, j++, new QgsStandardItem( QString::number( residual, 'f', 10 ) ) );
-      setItem( i, j++, new QgsStandardItem( QString::number( dataPoint->pixelAzimuthReverse(), 'f', 4 ) ) );
-      setItem( i, j++, new QgsStandardItem( QString::number( dataPoint->mapAzimuthReverse(), 'f', 4 ) ) );
+      if ( residual >= 0.f )
+      {
+        setItem( i, j++, new QgsStandardItem( QString::number( dX, 'f', 10 ) ) );
+        setItem( i, j++, new QgsStandardItem( QString::number( dY, 'f', 10 ) ) );
+        setItem( i, j++, new QgsStandardItem( QString::number( residual, 'f', 10 ) ) );
+        setItem( i, j++, new QgsStandardItem( QString::number( dataPoint->pixelAzimuthReverse(), 'f', 4 ) ) );
+        setItem( i, j++, new QgsStandardItem( QString::number( dataPoint->mapAzimuthReverse(), 'f', 4 ) ) );
+      }
+      else
+      {
+        setItem( i, j++, new QgsStandardItem( "n/a" ) );
+        setItem( i, j++, new QgsStandardItem( "n/a" ) );
+        setItem( i, j++, new QgsStandardItem( "n/a" ) );
+        setItem( i, j++, new QgsStandardItem( "n/a" ) );
+        setItem( i, j++, new QgsStandardItem( "n/a" ) );
+      }
+      if ( !dataPoint->notes().isEmpty() )
+      {
+        sNotes = QString( "%1, %2" ).arg( sNotes ).arg( dataPoint->notes() );
+      }
+      setItem( i, j++, new QgsStandardItem( sNotes ) );
+      setItem( i, j++, new QgsStandardItem( dataPoint->pixelCoordsReverse().wellKnownText() ) );
+      setItem( i, j++, new QgsStandardItem( dataPoint->mapCoordsReverse().wellKnownText() ) );
     }
-    else
+    if ( bTransformUpdated )
     {
-      setItem( i, j++, new QgsStandardItem( "n/a" ) );
-      setItem( i, j++, new QgsStandardItem( "n/a" ) );
-      setItem( i, j++, new QgsStandardItem( "n/a" ) );
-      setItem( i, j++, new QgsStandardItem( "n/a" ) );
-      setItem( i, j++, new QgsStandardItem( "n/a" ) );
+      setClean();
     }
-    if ( !dataPoint->notes().isEmpty() )
-    {
-      sNotes = QString( "%1, %2" ).arg( sNotes ).arg( dataPoint->notes() );
-    }
-    setItem( i, j++, new QgsStandardItem( sNotes ) );
-    setItem( i, j++, new QgsStandardItem( dataPoint->pixelCoordsReverse().wellKnownText() ) );
-    setItem( i, j++, new QgsStandardItem( dataPoint->mapCoordsReverse().wellKnownText() ) );
-  }
-  if ( bTransformUpdated )
-  {
-    setClean();
   }
 }
 bool QgsGcpListModel::calculateMeanError( double &error ) const

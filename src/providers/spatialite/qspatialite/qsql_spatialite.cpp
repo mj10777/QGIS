@@ -58,7 +58,7 @@
 #endif
 
 #include <sqlite3.h>
-#include <qgsslconnect.h>
+#include <qgssqlitehandle.h>
 
 Q_DECLARE_OPAQUE_POINTER(sqlite3*)
 Q_DECLARE_OPAQUE_POINTER(sqlite3_stmt*)
@@ -563,7 +563,7 @@ bool QSpatiaLiteDriver::open(const QString & db, const QString &, const QString 
 
     sqlite3_enable_shared_cache(sharedCache);
 
-    if (QgsSLConnect::sqlite3_open_v2(db.toUtf8().constData(), &d->access, openMode, nullptr ) == SQLITE_OK) {
+    if (QgsSqliteHandle::sqlite3_open_v2(db.toUtf8().constData(), &d->access, openMode, nullptr ) == SQLITE_OK) {
         sqlite3_busy_timeout(d->access, timeOut);
         setOpen(true);
         setOpenError(false);
@@ -582,7 +582,7 @@ void QSpatiaLiteDriver::close()
         foreach (QSpatiaLiteResult *result, d->results)
             result->d->finalize();
 
-        if (QgsSLConnect::sqlite3_close(d->access) != SQLITE_OK)
+        if (QgsSqliteHandle::sqlite3_close(d->access) != SQLITE_OK)
             setLastError(qMakeError(d->access, tr("Error closing database"),
                                     QSqlError::ConnectionError));
         d->access = 0;

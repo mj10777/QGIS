@@ -834,7 +834,6 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
      * - both methods will:
      * -> add the QgsGeorefDataPoint
      * - calls 'setGcpList' AFTER all points have been added
-     * \since QGIS 3.0
      *  - the 'if (mLegacyMode == 0)' portion can be removed
      *  -> reading of the .points file
      *  --> the Gcp-Database will still read an existing '.points' file upon creation if the gcp_points TABLE does not exist
@@ -844,6 +843,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
      * \see QgsGcpListWidget::setGcpList
      * \see QgsSpatiaLiteGcpUtils::createGcpDb
      * \param file name as string
+     * \since QGIS 3.0
      */
     bool loadGcpData( /*bool verbose = true*/ );
 
@@ -873,8 +873,6 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
      * Srid of read MasterDB
      *  - srid of Gcp (to be stored or retrieved from Gcp-Database
      * \since QGIS 3.0
-     * New for ( mLegacyMode == 1 )
-     *  - therefore is needed
      */
     int mGcpMasterSrid;
 
@@ -1881,6 +1879,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     QgsLayerTreeView *mLayerTreeView = nullptr;
     void initLayerTreeView();
     bool mAvoidUnneededUpdates = false;
+    int mMaxPointsUpdateModel = 500;
 };
 
 #endif

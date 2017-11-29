@@ -32,7 +32,7 @@ QgsSpatiaLiteFeatureIterator::QgsSpatiaLiteFeatureIterator( QgsSpatiaLiteFeature
   , mExpressionCompiled( false )
 {
   mHandle = mSource->getQSqliteHandle();
-  mFetchGeometry = !mSource->getGeometryColumn() .isNull() && !( mRequest.flags() & QgsFeatureRequest::NoGeometry );
+  mFetchGeometry = !mSource->getGeometryColumn().isNull() && !( mRequest.flags() & QgsFeatureRequest::NoGeometry );
   mHasPrimaryKey = !mSource->getPrimaryKey().isEmpty();
   mRowNumber = 0;
   QStringList whereClauses;
@@ -193,13 +193,14 @@ QgsSpatiaLiteFeatureIterator::QgsSpatiaLiteFeatureIterator( QgsSpatiaLiteFeature
     QSet<int> attributeIndexes;
     Q_FOREACH ( const QString &attr, mRequest.orderBy().usedAttributes() )
     {
-      attributeIndexes << mSource->getAttributeFields().lookupField( attr ); // mSource->mFields.lookupField( attr );
+      attributeIndexes << mSource->getAttributeFields().lookupField( attr ); // mSource->getAttributeFields().lookupField( attr );
     }
     attributeIndexes += mRequest.subsetOfAttributes().toSet();
     mRequest.setSubsetOfAttributes( attributeIndexes.toList() );
   }
 
   // preparing the SQL statement
+  // whereClause["id_geometry" IN (SELECT pkid FROM "idx_berlin_linestrings_soldner_linestring" WHERE xmin <= 24685.53663580332067795 AND xmax >= 24640.70353396030259319 AND ymin <= 22091.64312717200664338 AND ymax >= 22058.88187432484119199)]
   bool success = prepareStatement( whereClause, limitAtProvider ? mRequest.limit() : -1, orderByParts.join( QStringLiteral( "," ) ) );
   if ( !success && useFallbackWhereClause )
   {
@@ -335,7 +336,7 @@ bool QgsSpatiaLiteFeatureIterator::prepareStatement( const QString &whereClause,
       sql += QStringLiteral( ", AsBinary(%1)" ).arg( QgsSpatiaLiteUtils::quotedIdentifier( mSource->getGeometryColumn() ) );
       mGeomColIdx = colIdx;
     }
-    sql += QStringLiteral( " FROM %1" ).arg( mSource->mQuery );
+    sql += QStringLiteral( " FROM %1" ).arg( QgsSpatiaLiteUtils::quotedIdentifier( mSource->mQuery ) );
 
     if ( !whereClause.isEmpty() )
       sql += QStringLiteral( " WHERE %1" ).arg( whereClause );
@@ -357,7 +358,6 @@ bool QgsSpatiaLiteFeatureIterator::prepareStatement( const QString &whereClause,
     rewind();
     return false;
   }
-
   return true;
 }
 

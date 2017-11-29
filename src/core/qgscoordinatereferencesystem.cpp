@@ -28,6 +28,7 @@
 #include <QRegExp>
 #include <QTextStream>
 #include <QFile>
+#include <QDebug>
 
 #include "qgsapplication.h"
 #include "qgslogger.h"
@@ -347,7 +348,7 @@ bool QgsCoordinateReferenceSystem::createFromOgcWmsCrs( const QString &crs )
       return true;
     }
   }
-
+  qDebug() << QString( "QgsCoordinateReferenceSystem::createFromOgcWmsCrs calling loadFromDatabase crs[%1]" ).arg( crs );
   if ( loadFromDatabase( QgsApplication::srsDatabaseFilePath(), QStringLiteral( "lower(auth_name||':'||auth_id)" ), wmsCrs.toLower() ) )
   {
     sOgcLock.lockForWrite();
@@ -427,7 +428,7 @@ bool QgsCoordinateReferenceSystem::createFromSrid( const long id )
     return true;
   }
   sSrIdCacheLock.unlock();
-
+  qDebug() << QString( "QgsCoordinateReferenceSystem::createFromSrid calling loadFromDatabase id[%1]" ).arg( id );
   bool result = loadFromDatabase( QgsApplication::srsDatabaseFilePath(), QStringLiteral( "srid" ), QString::number( id ) );
 
   sSrIdCacheLock.lockForWrite();
@@ -449,7 +450,7 @@ bool QgsCoordinateReferenceSystem::createFromSrsId( const long id )
     return true;
   }
   sCRSSrsIdLock.unlock();
-
+  qDebug() << QString( "QgsCoordinateReferenceSystem::createFromSrsId calling loadFromDatabase id[%1]" ).arg( id );
   bool result = loadFromDatabase( id < USER_CRS_START_ID ? QgsApplication::srsDatabaseFilePath() :
                                   QgsApplication::qgisUserDatabaseFilePath(),
                                   QStringLiteral( "srs_id" ), QString::number( id ) );
@@ -529,7 +530,9 @@ bool QgsCoordinateReferenceSystem::loadFromDatabase( const QString &db, const QS
     {
       OSRDestroySpatialReference( d->mCRS );
       d->mCRS = OSRNewSpatialReference( nullptr );
+      qDebug() << QString( "QgsCoordinateReferenceSystem::loadFromDatabase calling OSRSetFromUserInput[%1]" ).arg( d->mAuthId.toLower() );
       d->mIsValid = OSRSetFromUserInput( d->mCRS, d->mAuthId.toLower().toLatin1() ) == OGRERR_NONE;
+      qDebug() << QString( "QgsCoordinateReferenceSystem::loadFromDatabase after mIsValid[%1]" ).arg( d->mIsValid );
       setMapUnits();
     }
 

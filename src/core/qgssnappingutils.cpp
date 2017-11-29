@@ -87,7 +87,6 @@ bool QgsSnappingUtils::isIndexPrepared( QgsVectorLayer *vl, const QgsRectangle &
     return false;
 
   QgsPointLocator *loc = locatorForLayer( vl );
-
   if ( mStrategy == IndexAlwaysFull && loc->hasIndex() )
     return true;
 
@@ -95,7 +94,6 @@ bool QgsSnappingUtils::isIndexPrepared( QgsVectorLayer *vl, const QgsRectangle &
   aoi.scale( 0.999 );
   if ( ( mStrategy == IndexHybrid || mStrategy == IndexExtent ) && loc->hasIndex() && ( !loc->extent() || loc->extent()->contains( aoi ) ) )
     return true;
-
   return false; // the index - even if it exists - is not suitable
 }
 
@@ -254,7 +252,6 @@ QgsPointLocator::Match QgsSnappingUtils::snapToMap( const QgsPointXY &pointMap, 
     QgsPointLocator::Match bestMatch;
     QgsPointLocator::MatchList edges; // for snap on intersection
     double maxSnapIntTolerance = 0;
-
     Q_FOREACH ( const LayerConfig &layerConfig, mLayers )
     {
       double tolerance = QgsTolerance::toleranceInProjectUnits( layerConfig.tolerance, layerConfig.layer, mMapSettings, layerConfig.unit );
@@ -272,7 +269,6 @@ QgsPointLocator::Match QgsSnappingUtils::snapToMap( const QgsPointXY &pointMap, 
 
     if ( mSnappingConfig.intersectionSnapping() )
       _replaceIfBetter( bestMatch, _findClosestSegmentIntersection( pointMap, edges ), maxSnapIntTolerance );
-
     return bestMatch;
   }
   else if ( mSnappingConfig.mode() == QgsSnappingConfig::AllLayers )
@@ -329,6 +325,7 @@ void QgsSnappingUtils::prepareIndex( const QList<LayerAndAreaOfInterest> &layers
 
     if ( !isIndexPrepared( vl, entry.second ) )
       layersToIndex << entry;
+
   }
   if ( !layersToIndex.isEmpty() )
   {
@@ -397,7 +394,6 @@ void QgsSnappingUtils::prepareIndex( const QList<LayerAndAreaOfInterest> &layers
       }
       else  // full index strategy
         loc->init();
-
       QgsDebugMsg( QString( "Index init: %1 ms (%2)" ).arg( tt.elapsed() ).arg( vl->id() ) );
       prepareIndexProgress( ++i );
     }

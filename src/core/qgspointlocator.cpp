@@ -783,7 +783,6 @@ void QgsPointLocator::onFeatureAdded( QgsFeatureId fid )
       rebuildIndex(); // first feature - let's built the index
     return; // nothing to do if we are not initialized yet
   }
-
   QgsFeature f;
   if ( mLayer->getFeatures( QgsFeatureRequest( fid ) ).nextFeature( f ) )
   {

@@ -84,6 +84,8 @@ class QgsRectangle;
 class QgsRuntimeProfiler;
 class QgsSnappingUtils;
 class QgsSnappingWidget;
+class QgsSqliteHandle;
+class SpatialiteDbInfo;
 class QgsStatusBarCoordinatesWidget;
 class QgsStatusBarMagnifierWidget;
 class QgsStatusBarScaleWidget;
