@@ -52,10 +52,10 @@ class FieldsPyculator(QgisAlgorithm):
     OUTPUT = 'OUTPUT'
     RESULT_VAR_NAME = 'value'
 
-    TYPES = [QVariant.Int, QVariant.Double, QVariant.String]
+    TYPES = [QVariant.LongLong, QVariant.Double, QVariant.String]
 
     def group(self):
-        return self.tr('Vector table tools')
+        return self.tr('Vector table')
 
     def __init__(self):
         super().__init__()
@@ -97,8 +97,8 @@ class FieldsPyculator(QgisAlgorithm):
         globalExpression = self.parameterAsString(parameters, self.GLOBAL, context)
 
         fields = source.fields()
-        fields.append(QgsField(field_name, self.TYPES[field_type], '',
-                               width, precision))
+        field = QgsField(field_name, field_type, '', width, precision)
+        fields.append(field)
         new_ns = {}
 
         (sink, dest_id) = self.parameterAsSink(parameters, self.OUTPUT, context,

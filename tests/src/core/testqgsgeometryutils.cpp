@@ -19,7 +19,6 @@
 #include "qgslinestring.h"
 #include "qgspolygon.h"
 #include "qgsmultipolygon.h"
-#include "qgstestutils.h"
 
 class TestQgsGeometryUtils: public QObject
 {
@@ -44,7 +43,6 @@ class TestQgsGeometryUtils: public QObject
     void testLinePerpendicularAngle();
     void testAverageAngle_data();
     void testAverageAngle();
-    void testAdjacentVertices();
     void testDistanceToVertex();
     void testVerticesAtDistance();
     void testCircleCenterRadius_data();
@@ -62,24 +60,24 @@ class TestQgsGeometryUtils: public QObject
 void TestQgsGeometryUtils::testExtractLinestrings()
 {
   QgsLineString *outerRing1 = new QgsLineString();
-  outerRing1->setPoints( QList<QgsPoint>() << QgsPoint( 1, 1 ) << QgsPoint( 1, 2 ) << QgsPoint( 2, 2 ) << QgsPoint( 2, 1 ) << QgsPoint( 1, 1 ) );
-  QgsPolygonV2 *polygon1 = new QgsPolygonV2();
+  outerRing1->setPoints( QVector<QgsPoint>() << QgsPoint( 1, 1 ) << QgsPoint( 1, 2 ) << QgsPoint( 2, 2 ) << QgsPoint( 2, 1 ) << QgsPoint( 1, 1 ) );
+  QgsPolygon *polygon1 = new QgsPolygon();
   polygon1->setExteriorRing( outerRing1 );
 
   QgsLineString *outerRing2 = new QgsLineString();
-  outerRing2->setPoints( QList<QgsPoint>() << QgsPoint( 10, 10 ) << QgsPoint( 10, 20 ) << QgsPoint( 20, 20 ) << QgsPoint( 20, 10 ) << QgsPoint( 10, 10 ) );
-  QgsPolygonV2 *polygon2 = new QgsPolygonV2();
+  outerRing2->setPoints( QVector<QgsPoint>() << QgsPoint( 10, 10 ) << QgsPoint( 10, 20 ) << QgsPoint( 20, 20 ) << QgsPoint( 20, 10 ) << QgsPoint( 10, 10 ) );
+  QgsPolygon *polygon2 = new QgsPolygon();
   polygon2->setExteriorRing( outerRing2 );
 
   QgsLineString *innerRing2 = new QgsLineString();
-  innerRing2->setPoints( QList<QgsPoint>() << QgsPoint( 14, 14 ) << QgsPoint( 14, 16 ) << QgsPoint( 16, 16 ) << QgsPoint( 16, 14 ) << QgsPoint( 14, 14 ) );
-  polygon2->setInteriorRings( QList<QgsCurve *>() << innerRing2 );
+  innerRing2->setPoints( QVector<QgsPoint>() << QgsPoint( 14, 14 ) << QgsPoint( 14, 16 ) << QgsPoint( 16, 16 ) << QgsPoint( 16, 14 ) << QgsPoint( 14, 14 ) );
+  polygon2->setInteriorRings( QVector<QgsCurve *>() << innerRing2 );
 
-  QgsMultiPolygonV2 mpg;
+  QgsMultiPolygon mpg;
   mpg.addGeometry( polygon1 );
   mpg.addGeometry( polygon2 );
 
-  QList<QgsLineString *> linestrings = QgsGeometryUtils::extractLineStrings( &mpg );
+  QVector<QgsLineString *> linestrings = QgsGeometryUtils::extractLineStrings( &mpg );
   QCOMPARE( linestrings.count(), 3 );
   qDeleteAll( linestrings );
 }
@@ -190,8 +188,8 @@ void TestQgsGeometryUtils::testSegmentMidPoint()
             midPoint, radius, left );
 
   QVERIFY( ok );
-  QVERIFY( qgsDoubleNear( midPoint.x(), expectedX ) );
-  QVERIFY( qgsDoubleNear( midPoint.y(), expectedY ) );
+  QGSCOMPARENEAR( midPoint.x(), expectedX, 4 * DBL_EPSILON );
+  QGSCOMPARENEAR( midPoint.y(), expectedY, 4 * DBL_EPSILON );
 }
 
 void TestQgsGeometryUtils::testCircleLength_data()
@@ -218,7 +216,7 @@ void TestQgsGeometryUtils::testCircleLength()
   QFETCH( double, y3 );
   QFETCH( double, expected );
 
-  QVERIFY( qgsDoubleNear( expected, QgsGeometryUtils::circleLength( x1, y1, x2, y2, x3, y3 ) ) );
+  QGSCOMPARENEAR( expected, QgsGeometryUtils::circleLength( x1, y1, x2, y2, x3, y3 ), 4 * DBL_EPSILON );
 }
 
 void TestQgsGeometryUtils::testNormalizedAngle_data()
@@ -243,7 +241,7 @@ void TestQgsGeometryUtils::testNormalizedAngle()
 {
   QFETCH( double, input );
   QFETCH( double, expected );
-  QVERIFY( qgsDoubleNear( expected, QgsGeometryUtils::normalizedAngle( input ), 0.0001 ) );
+  QGSCOMPARENEAR( expected, QgsGeometryUtils::normalizedAngle( input ), 0.0001 );
 }
 
 void TestQgsGeometryUtils::testLineAngle_data()
@@ -275,7 +273,7 @@ void TestQgsGeometryUtils::testLineAngle()
 
   double lineAngle = QgsGeometryUtils::lineAngle( x1, y1, x2, y2 ) * 180 / M_PI;
   if ( expected > -99999 )
-    QVERIFY( qgsDoubleNear( lineAngle, expected ) );
+    QGSCOMPARENEAR( lineAngle, expected, 4 * DBL_EPSILON );
 }
 
 void TestQgsGeometryUtils::testLinePerpendicularAngle_data()
@@ -307,7 +305,7 @@ void TestQgsGeometryUtils::testLinePerpendicularAngle()
 
   double pAngle = QgsGeometryUtils::linePerpendicularAngle( x1, y1, x2, y2 ) * 180 / M_PI;
   if ( expected > -99999 )
-    QVERIFY( qgsDoubleNear( pAngle, expected, 0.01 ) );
+    QGSCOMPARENEAR( pAngle, expected, 0.01 );
 }
 
 void TestQgsGeometryUtils::testAverageAngle_data()
@@ -340,35 +338,14 @@ void TestQgsGeometryUtils::testAverageAngle()
   QFETCH( double, expected );
 
   double averageAngle = QgsGeometryUtils::averageAngle( angle1 * M_PI / 180.0, angle2 * M_PI / 180.0 ) * 180.0 / M_PI;
-  QVERIFY( qgsDoubleNear( averageAngle, expected, 0.0000000001 ) );
-}
-
-void TestQgsGeometryUtils::testAdjacentVertices()
-{
-  // test polygon - should wrap around!
-  QgsLineString *closedRing1 = new QgsLineString();
-  closedRing1->setPoints( QList<QgsPoint>() << QgsPoint( 1, 1 ) << QgsPoint( 1, 2 ) << QgsPoint( 2, 2 ) << QgsPoint( 2, 1 ) << QgsPoint( 1, 1 ) );
-  QgsPolygonV2 polygon1;
-  polygon1.setExteriorRing( closedRing1 );
-  QgsVertexId previous;
-  QgsVertexId next;
-
-  QgsGeometryUtils::adjacentVertices( polygon1, QgsVertexId( 0, 0, 0 ), previous, next );
-  QCOMPARE( previous, QgsVertexId( 0, 0, 3 ) );
-  QCOMPARE( next, QgsVertexId( 0, 0, 1 ) );
-
-  // test point - both vertices should be invalid
-  QgsPoint point( 1, 2 );
-  QgsGeometryUtils::adjacentVertices( point, QgsVertexId( 0, 0, 0 ), previous, next );
-  QVERIFY( !previous.isValid() );
-  QVERIFY( !next.isValid() );
+  QGSCOMPARENEAR( averageAngle, expected, 0.0000000001 );
 }
 
 void TestQgsGeometryUtils::testDistanceToVertex()
 {
   //test with linestring
   QgsLineString *outerRing1 = new QgsLineString();
-  outerRing1->setPoints( QList<QgsPoint>() << QgsPoint( 1, 1 ) << QgsPoint( 1, 2 ) << QgsPoint( 2, 2 ) << QgsPoint( 2, 1 ) << QgsPoint( 1, 1 ) );
+  outerRing1->setPoints( QVector<QgsPoint>() << QgsPoint( 1, 1 ) << QgsPoint( 1, 2 ) << QgsPoint( 2, 2 ) << QgsPoint( 2, 1 ) << QgsPoint( 1, 1 ) );
   QCOMPARE( QgsGeometryUtils::distanceToVertex( *outerRing1, QgsVertexId( 0, 0, 0 ) ), 0.0 );
   QCOMPARE( QgsGeometryUtils::distanceToVertex( *outerRing1, QgsVertexId( 0, 0, 1 ) ), 1.0 );
   QCOMPARE( QgsGeometryUtils::distanceToVertex( *outerRing1, QgsVertexId( 0, 0, 2 ) ), 2.0 );
@@ -378,7 +355,7 @@ void TestQgsGeometryUtils::testDistanceToVertex()
   QCOMPARE( QgsGeometryUtils::distanceToVertex( *outerRing1, QgsVertexId( 0, 1, 1 ) ), -1.0 );
 
   //test with polygon
-  QgsPolygonV2 polygon1;
+  QgsPolygon polygon1;
   polygon1.setExteriorRing( outerRing1 );
   QCOMPARE( QgsGeometryUtils::distanceToVertex( polygon1, QgsVertexId( 0, 0, 0 ) ), 0.0 );
   QCOMPARE( QgsGeometryUtils::distanceToVertex( polygon1, QgsVertexId( 0, 0, 1 ) ), 1.0 );
@@ -402,7 +379,7 @@ void TestQgsGeometryUtils::testVerticesAtDistance()
   QgsVertexId next;
   QVERIFY( !QgsGeometryUtils::verticesAtDistance( *outerRing1, .5, previous, next ) );
 
-  outerRing1->setPoints( QList<QgsPoint>() << QgsPoint( 1, 1 ) << QgsPoint( 1, 2 ) << QgsPoint( 2, 2 ) << QgsPoint( 2, 1 ) << QgsPoint( 3, 1 ) );
+  outerRing1->setPoints( QVector<QgsPoint>() << QgsPoint( 1, 1 ) << QgsPoint( 1, 2 ) << QgsPoint( 2, 2 ) << QgsPoint( 2, 1 ) << QgsPoint( 3, 1 ) );
   QVERIFY( QgsGeometryUtils::verticesAtDistance( *outerRing1, .5, previous, next ) );
   QCOMPARE( previous, QgsVertexId( 0, 0, 0 ) );
   QCOMPARE( next, QgsVertexId( 0, 0, 1 ) );
@@ -437,7 +414,7 @@ void TestQgsGeometryUtils::testVerticesAtDistance()
 
   // test closed line
   QgsLineString *closedRing1 = new QgsLineString();
-  closedRing1->setPoints( QList<QgsPoint>() << QgsPoint( 1, 1 ) << QgsPoint( 1, 2 ) << QgsPoint( 2, 2 ) << QgsPoint( 2, 1 ) << QgsPoint( 1, 1 ) );
+  closedRing1->setPoints( QVector<QgsPoint>() << QgsPoint( 1, 1 ) << QgsPoint( 1, 2 ) << QgsPoint( 2, 2 ) << QgsPoint( 2, 1 ) << QgsPoint( 1, 1 ) );
   QVERIFY( QgsGeometryUtils::verticesAtDistance( *closedRing1, 0, previous, next ) );
   QCOMPARE( previous, QgsVertexId( 0, 0, 0 ) );
   QCOMPARE( next, QgsVertexId( 0, 0, 0 ) );
@@ -446,7 +423,7 @@ void TestQgsGeometryUtils::testVerticesAtDistance()
   QCOMPARE( next, QgsVertexId( 0, 0, 4 ) );
 
   // test with polygon
-  QgsPolygonV2 polygon1;
+  QgsPolygon polygon1;
   polygon1.setExteriorRing( closedRing1 );
   QVERIFY( QgsGeometryUtils::verticesAtDistance( polygon1, .5, previous, next ) );
   QCOMPARE( previous, QgsVertexId( 0, 0, 0 ) );
@@ -485,7 +462,7 @@ void TestQgsGeometryUtils::testCircleCenterRadius_data()
   QTest::addColumn<double>( "expectedCenterX" );
   QTest::addColumn<double>( "expectedCenterY" );
 
-  QTest::newRow( "circleCenterRadius1" ) << 1.0 << 1.0 << 5.0 << 7.0 << 1.0 << 1.0 << sqrt( 13.0 ) << 3.0 << 4.0;
+  QTest::newRow( "circleCenterRadius1" ) << 1.0 << 1.0 << 5.0 << 7.0 << 1.0 << 1.0 << std::sqrt( 13.0 ) << 3.0 << 4.0;
   QTest::newRow( "circleCenterRadius1" ) << 0.0 << 2.0 << 2.0 << 2.0 << 0.0 << 2.0 << 1.0 << 1.0 << 2.0;
 }
 
@@ -503,9 +480,9 @@ void TestQgsGeometryUtils::testCircleCenterRadius()
 
   double radius, centerX, centerY;
   QgsGeometryUtils::circleCenterRadius( QgsPoint( x1, y1 ), QgsPoint( x2, y2 ), QgsPoint( x3, y3 ), radius, centerX, centerY );
-  QVERIFY( qgsDoubleNear( expectedRadius, radius ) );
-  QVERIFY( qgsDoubleNear( expectedCenterX, centerX ) );
-  QVERIFY( qgsDoubleNear( expectedCenterY, centerY ) );
+  QGSCOMPARENEAR( expectedRadius, radius, 4 * DBL_EPSILON );
+  QGSCOMPARENEAR( expectedCenterX, centerX, 4 * DBL_EPSILON );
+  QGSCOMPARENEAR( expectedCenterY, centerY, 4 * DBL_EPSILON );
 }
 
 //QgsGeometryUtils::sqrDistToLine
@@ -642,14 +619,14 @@ void TestQgsGeometryUtils::testClosestPoint()
 
   QgsPoint pt1 = QgsGeometryUtils::closestPoint( linestringZ, QgsPoint( 1, 0 ) );
   QGSCOMPARENEAR( pt1.z(), 1, 0.0001 );
-  QVERIFY( qIsNaN( pt1.m() ) );
+  QVERIFY( std::isnan( pt1.m() ) );
 
   QgsLineString linestringM( QVector<QgsPoint>()
                              << QgsPoint( 1, 1, std::numeric_limits<double>::quiet_NaN(), 1 )
                              << QgsPoint( 1, 3, std::numeric_limits<double>::quiet_NaN(), 2 ) );
 
   QgsPoint pt2 = QgsGeometryUtils::closestPoint( linestringM, QgsPoint( 1, 4 ) );
-  QVERIFY( qIsNaN( pt2.z() ) );
+  QVERIFY( std::isnan( pt2.z() ) );
   QGSCOMPARENEAR( pt2.m(), 2, 0.0001 );
 
   QgsLineString linestringZM( QVector<QgsPoint>()

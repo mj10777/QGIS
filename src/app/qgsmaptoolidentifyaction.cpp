@@ -37,6 +37,7 @@
 #include "qgsrenderer.h"
 #include "qgsunittypes.h"
 #include "qgsstatusbar.h"
+#include "qgsactionscoperegistry.h"
 
 #include "qgssettings.h"
 #include <QMouseEvent>
@@ -119,6 +120,8 @@ void QgsMapToolIdentifyAction::canvasReleaseEvent( QgsMapMouseEvent *e )
   connect( this, &QgsMapToolIdentifyAction::identifyProgress, QgisApp::instance(), &QgisApp::showProgress );
   connect( this, &QgsMapToolIdentifyAction::identifyMessage, QgisApp::instance(), &QgisApp::showStatusMessage );
 
+  setClickContextScope( toMapCoordinates( e->pos() ) );
+
   identifyMenu()->setResultsIfExternalAction( false );
 
   // enable the right click for extended menu so it behaves as a contextual menu
@@ -146,7 +149,7 @@ void QgsMapToolIdentifyAction::canvasReleaseEvent( QgsMapMouseEvent *e )
       resultsDialog()->QDialog::show();
 
     QList<IdentifyResult>::const_iterator result;
-    for ( result = results.begin(); result != results.end(); ++result )
+    for ( result = results.constBegin(); result != results.constEnd(); ++result )
     {
       resultsDialog()->addFeature( *result );
     }
@@ -164,7 +167,7 @@ void QgsMapToolIdentifyAction::handleChangedRasterResults( QList<IdentifyResult>
   // Add new result after raster format change
   QgsDebugMsg( QString( "%1 raster results" ).arg( results.size() ) );
   QList<IdentifyResult>::const_iterator rresult;
-  for ( rresult = results.begin(); rresult != results.end(); ++rresult )
+  for ( rresult = results.constBegin(); rresult != results.constEnd(); ++rresult )
   {
     if ( rresult->mLayer->type() == QgsMapLayer::RasterLayer )
     {
@@ -201,4 +204,16 @@ void QgsMapToolIdentifyAction::handleCopyToClipboard( QgsFeatureStore &featureSt
   emit copyToClipboard( featureStore );
 }
 
+void QgsMapToolIdentifyAction::setClickContextScope( const QgsPointXY &point )
+{
+  QgsExpressionContextScope clickScope;
+  clickScope.addVariable( QgsExpressionContextScope::StaticVariable( QString( "click_x" ), point.x(), true ) );
+  clickScope.addVariable( QgsExpressionContextScope::StaticVariable( QString( "click_y" ), point.y(), true ) );
 
+  resultsDialog()->setExpressionContextScope( clickScope );
+
+  if ( mIdentifyMenu )
+  {
+    mIdentifyMenu->setExpressionContextScope( clickScope );
+  }
+}

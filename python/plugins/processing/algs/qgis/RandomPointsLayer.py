@@ -63,7 +63,7 @@ class RandomPointsLayer(QgisAlgorithm):
         return QIcon(os.path.join(pluginPath, 'images', 'ftools', 'random_points.png'))
 
     def group(self):
-        return self.tr('Vector creation tools')
+        return self.tr('Vector creation')
 
     def __init__(self):
         super().__init__()
@@ -122,7 +122,7 @@ class RandomPointsLayer(QgisAlgorithm):
             ry = bbox.yMinimum() + bbox.height() * random.random()
 
             p = QgsPointXY(rx, ry)
-            geom = QgsGeometry.fromPoint(p)
+            geom = QgsGeometry.fromPointXY(p)
             ids = sourceIndex.intersects(geom.buffer(5, 5).boundingBox())
             if len(ids) > 0 and \
                     vector.checkMinDistance(p, index, minDistance, points):

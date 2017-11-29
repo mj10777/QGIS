@@ -30,10 +30,7 @@ class originally created circa 2004 by T.Sutton, Gary E.Sherman, Steve Halasz
 #include <QDomElement>
 
 QgsContrastEnhancement::QgsContrastEnhancement( Qgis::DataType dataType )
-  : mContrastEnhancementAlgorithm( NoEnhancement )
-  , mEnhancementDirty( false )
-  , mLookupTable( nullptr )
-  , mRasterDataType( dataType )
+  : mRasterDataType( dataType )
 {
   mMinimumValue = minimumValuePossible( mRasterDataType );
   mMaximumValue = maximumValuePossible( mRasterDataType );
@@ -53,7 +50,6 @@ QgsContrastEnhancement::QgsContrastEnhancement( Qgis::DataType dataType )
 
 QgsContrastEnhancement::QgsContrastEnhancement( const QgsContrastEnhancement &ce )
   : mEnhancementDirty( true )
-  , mLookupTable( nullptr )
   , mMinimumValue( ce.mMinimumValue )
   , mMaximumValue( ce.mMaximumValue )
   , mRasterDataType( ce.mRasterDataType )
@@ -179,7 +175,10 @@ int QgsContrastEnhancement::enhanceContrast( double value )
 
   if ( mLookupTable && NoEnhancement != mContrastEnhancementAlgorithm )
   {
-    return mLookupTable[static_cast <int>( value + mLookupTableOffset )];
+    double shiftedValue = value + mLookupTableOffset;
+    if ( shiftedValue >= 0 && shiftedValue < mRasterDataTypeRange + 1 )
+      return mLookupTable[static_cast <int>( shiftedValue )];
+    return 0;
   }
   else
   {

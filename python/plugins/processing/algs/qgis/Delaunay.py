@@ -60,7 +60,7 @@ class Delaunay(QgisAlgorithm):
         return QIcon(os.path.join(pluginPath, 'images', 'ftools', 'delaunay.png'))
 
     def group(self):
-        return self.tr('Vector geometry tools')
+        return self.tr('Vector geometry')
 
     def __init__(self):
         super().__init__()
@@ -148,7 +148,7 @@ class Delaunay(QgisAlgorithm):
                     attrs.append(ids[index])
                 step += 1
             feat.setAttributes(attrs)
-            geometry = QgsGeometry().fromPolygon([polygon])
+            geometry = QgsGeometry().fromPolygonXY([polygon])
             feat.setGeometry(geometry)
             sink.addFeature(feat, QgsFeatureSink.FastInsert)
             feedback.setProgress(int(current * total))

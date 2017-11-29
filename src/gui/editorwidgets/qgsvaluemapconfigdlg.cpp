@@ -81,7 +81,7 @@ void QgsValueMapConfigDlg::setConfig( const QVariantMap &config )
 
   int row = 0;
   QVariantMap values = config.value( QStringLiteral( "map" ) ).toMap();
-  for ( QVariantMap::ConstIterator mit = values.begin(); mit != values.end(); mit++, row++ )
+  for ( QVariantMap::ConstIterator mit = values.constBegin(); mit != values.constEnd(); mit++, row++ )
   {
     if ( mit.value().isNull() )
       setRow( row, mit.key(), QString() );
@@ -201,7 +201,7 @@ void QgsValueMapConfigDlg::loadFromCSVButtonPushed()
   {
     QMessageBox::information( nullptr,
                               tr( "Error" ),
-                              tr( "Could not open file %1\nError was:%2" ).arg( fileName, f.errorString() ),
+                              tr( "Could not open file %1\nError was: %2" ).arg( fileName, f.errorString() ),
                               QMessageBox::Cancel );
     return;
   }

@@ -25,25 +25,33 @@ class QgsCircularString: QgsCurve
     QgsCircularString();
 
     virtual bool operator==( const QgsCurve &other ) const;
+
     virtual bool operator!=( const QgsCurve &other ) const;
 
+
     virtual QString geometryType() const;
+
     virtual int dimension() const;
+
     virtual QgsCircularString *clone() const /Factory/;
+
     virtual void clear();
 
+
     virtual bool fromWkb( QgsConstWkbPtr &wkb );
+
     virtual bool fromWkt( const QString &wkt );
+
 
     virtual QByteArray asWkb() const;
 
     virtual QString asWkt( int precision = 17 ) const;
 
-    virtual QDomElement asGML2( QDomDocument &doc, int precision = 17, const QString &ns = "gml" ) const;
+    virtual QDomElement asGml2( QDomDocument &doc, int precision = 17, const QString &ns = "gml" ) const;
 
-    virtual QDomElement asGML3( QDomDocument &doc, int precision = 17, const QString &ns = "gml" ) const;
+    virtual QDomElement asGml3( QDomDocument &doc, int precision = 17, const QString &ns = "gml" ) const;
 
-    virtual QString asJSON( int precision = 17 ) const;
+    virtual QString asJson( int precision = 17 ) const;
 
 
     virtual bool isEmpty() const;
@@ -66,20 +74,14 @@ class QgsCircularString: QgsCurve
 %End
 
     virtual double length() const;
+
     virtual QgsPoint startPoint() const;
+
     virtual QgsPoint endPoint() const;
 
     virtual QgsLineString *curveToLine( double tolerance = M_PI_2 / 90, SegmentationToleranceType toleranceType = MaximumAngle ) const /Factory/;
-%Docstring
- Returns a new line string geometry corresponding to a segmentized approximation
- of the curve.
- \param tolerance segmentation tolerance
- \param toleranceType maximum segmentation angle or maximum difference between approximation and curve
 
- Uses a MaximumAngle tolerance of 1 degrees by default (360
- segments in a full circle)
- :rtype: QgsLineString
-%End
+    virtual QgsCircularString *snappedToGrid( double hSpacing, double vSpacing, double dSpacing = 0, double mSpacing = 0 ) const /Factory/;
 
     virtual void draw( QPainter &p ) const;
 
@@ -89,17 +91,15 @@ class QgsCircularString: QgsCurve
 
     virtual void addToPainterPath( QPainterPath &path ) const;
 
-
     virtual void drawAsPolygon( QPainter &p ) const;
 
-
     virtual bool insertVertex( QgsVertexId position, const QgsPoint &vertex );
+
     virtual bool moveVertex( QgsVertexId position, const QgsPoint &newPos );
+
     virtual bool deleteVertex( QgsVertexId position );
 
-    virtual double closestSegment( const QgsPoint &pt, QgsPoint &segmentPt /Out/,
-                                   QgsVertexId &vertexAfter /Out/,
-                                   bool *leftOf /Out/, double epsilon ) const;
+    virtual double closestSegment( const QgsPoint &pt, QgsPoint &segmentPt /Out/, QgsVertexId &vertexAfter /Out/, bool *leftOf /Out/ = 0, double epsilon = 4 * DBL_EPSILON ) const;
 
     virtual bool pointAt( int node, QgsPoint &point, QgsVertexId::VertexType &type ) const;
 
@@ -109,19 +109,16 @@ class QgsCircularString: QgsCurve
 
     virtual double vertexAngle( QgsVertexId vertex ) const;
 
-%Docstring
- Returns approximate rotation angle for a vertex. Usually average angle between adjacent segments.
-\param vertex the vertex id
-:return: rotation in radians, clockwise from north*
- :rtype: float
-%End
+    virtual double segmentLength( QgsVertexId startVertex ) const;
 
     virtual QgsCircularString *reversed() const  /Factory/;
 
     virtual bool addZValue( double zValue = 0 );
+
     virtual bool addMValue( double mValue = 0 );
 
     virtual bool dropZValue();
+
     virtual bool dropMValue();
 
     virtual double xAt( int index ) const;
@@ -130,10 +127,13 @@ class QgsCircularString: QgsCurve
 
 
   protected:
+    virtual QgsCircularString *createEmptyWithSameType() const /Factory/;
 
     virtual QgsRectangle calculateBoundingBox() const;
 
+
 };
+
 
 /************************************************************************
  * This file has been generated automatically from                      *

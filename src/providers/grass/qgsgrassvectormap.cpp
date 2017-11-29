@@ -103,7 +103,6 @@ void QgsGrassVectorMap::close()
   closeMap();
   mOpen = false;
   unlockOpenClose();
-  return;
 }
 
 bool QgsGrassVectorMap::openMap()
@@ -350,9 +349,9 @@ bool QgsGrassVectorMap::closeEdit( bool newMap )
 
 void QgsGrassVectorMap::clearUndoCommands()
 {
-  Q_FOREACH ( int index, mUndoCommands.keys() )
+  for ( auto it = mUndoCommands.constBegin(); it != mUndoCommands.constEnd(); ++it )
   {
-    Q_FOREACH ( QgsGrassUndoCommand *command, mUndoCommands[index] )
+    Q_FOREACH ( QgsGrassUndoCommand *command, it.value() )
     {
       delete command;
     }
@@ -387,7 +386,7 @@ QgsGrassVectorMapLayer *QgsGrassVectorMap::openLayer( int field )
 
   if ( !layer )
   {
-    layer = new QgsGrassVectorMapLayer( this, field ) ;
+    layer = new QgsGrassVectorMapLayer( this, field );
     layer->load();
     mLayers << layer;
   }
@@ -641,7 +640,7 @@ QgsAbstractGeometry *QgsGrassVectorMap::lineGeometry( int id )
   }
   else if ( type & GV_FACE )
   {
-    QgsPolygonV2 *polygon = new QgsPolygonV2();
+    QgsPolygon *polygon = new QgsPolygon();
     QgsLineString *ring = new QgsLineString();
     ring->setPoints( pointList );
     polygon->setExteriorRing( ring );
@@ -663,7 +662,7 @@ QgsAbstractGeometry *QgsGrassVectorMap::nodeGeometry( int id )
 QgsAbstractGeometry *QgsGrassVectorMap::areaGeometry( int id )
 {
   QgsDebugMsgLevel( QString( "id = %1" ).arg( id ), 3 );
-  QgsPolygonV2 *polygon = new QgsPolygonV2();
+  QgsPolygon *polygon = new QgsPolygon();
 
   struct line_pnts *points = Vect_new_line_struct();
   QgsDebugMsgLevel( QString( "points= %1" ).arg( ( quint64 )points ), 3 );
@@ -716,10 +715,6 @@ void QgsGrassVectorMap::closeAllIterators()
 
 //------------------------------------ QgsGrassVectorMapStore ------------------------------------
 QgsGrassVectorMapStore *QgsGrassVectorMapStore::sStore = 0;
-
-QgsGrassVectorMapStore::QgsGrassVectorMapStore()
-{
-}
 
 QgsGrassVectorMapStore *QgsGrassVectorMapStore::instance()
 {

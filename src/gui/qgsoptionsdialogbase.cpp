@@ -42,12 +42,6 @@ QgsOptionsDialogBase::QgsOptionsDialogBase( const QString &settingsKey, QWidget 
   : QDialog( parent, fl )
   , mOptsKey( settingsKey )
   , mInit( false )
-  , mOptListWidget( nullptr )
-  , mOptStackedWidget( nullptr )
-  , mOptSplitter( nullptr )
-  , mOptButtonBox( nullptr )
-  , mSearchLineEdit( nullptr )
-  , mDialogTitle( QLatin1String( "" ) )
   , mIconOnly( false )
   , mSettings( settings )
   , mDelSettings( false )
@@ -104,7 +98,7 @@ void QgsOptionsDialogBase::initOptionsBase( bool restoreUi, const QString &title
   mOptSplitter = findChild<QSplitter *>( QStringLiteral( "mOptionsSplitter" ) );
   mOptButtonBox = findChild<QDialogButtonBox *>( QStringLiteral( "buttonBox" ) );
   QFrame *buttonBoxFrame = findChild<QFrame *>( QStringLiteral( "mButtonBoxFrame" ) );
-  mSearchLineEdit = findChild<QgsFilterLineEdit *>( "mSearchLineEdit" );
+  mSearchLineEdit = findChild<QgsFilterLineEdit *>( QStringLiteral( "mSearchLineEdit" ) );
 
   if ( !mOptListWidget || !mOptStackedWidget || !mOptSplitter || !optionsFrame )
   {
@@ -232,7 +226,7 @@ void QgsOptionsDialogBase::searchText( const QString &text )
     mOptListWidget->setRowHidden( r, !text.isEmpty() );
   }
 
-  for ( QPair< QgsSearchHighlightOptionWidget *, int > rsw : mRegisteredSearchWidgets )
+  for ( const QPair< QgsSearchHighlightOptionWidget *, int > &rsw : qgis::as_const( mRegisteredSearchWidgets ) )
   {
     rsw.first->reset();
     if ( !text.isEmpty() && rsw.first->searchHighlight( text ) )
@@ -362,24 +356,24 @@ void QgsOptionsDialogBase::updateOptionsListVerticalTabs()
     mOptListWidget->setWordWrap( true );
 }
 
-void QgsOptionsDialogBase::optionsStackedWidget_CurrentChanged( int indx )
+void QgsOptionsDialogBase::optionsStackedWidget_CurrentChanged( int index )
 {
   mOptListWidget->blockSignals( true );
-  mOptListWidget->setCurrentRow( indx );
+  mOptListWidget->setCurrentRow( index );
   mOptListWidget->blockSignals( false );
 
   updateWindowTitle();
 }
 
-void QgsOptionsDialogBase::optionsStackedWidget_WidgetRemoved( int indx )
+void QgsOptionsDialogBase::optionsStackedWidget_WidgetRemoved( int index )
 {
   // will need to take item first, if widgets are set for item in future
-  delete mOptListWidget->item( indx );
+  delete mOptListWidget->item( index );
 
   QList<QPair< QgsSearchHighlightOptionWidget *, int > >::iterator it = mRegisteredSearchWidgets.begin();
   while ( it != mRegisteredSearchWidgets.end() )
   {
-    if ( ( *it ).second == indx )
+    if ( ( *it ).second == index )
       it = mRegisteredSearchWidgets.erase( it );
     else
       ++it;
@@ -400,29 +394,26 @@ void QgsOptionsDialogBase::warnAboutMissingObjects()
 QgsSearchHighlightOptionWidget::QgsSearchHighlightOptionWidget( QWidget *widget )
   : QObject( widget )
   , mWidget( widget )
-  , mStyleSheet( QString() )
-  , mValid( true )
-  , mChangedStyle( false )
   , mText( [ = ]() {return QString();} )
 {
   if ( qobject_cast<QLabel *>( widget ) )
   {
-    mStyleSheet = "QLabel { background-color: yellow; color: blue;}";
+    mStyleSheet = QStringLiteral( "QLabel { background-color: yellow; color: blue;}" );
     mText = [ = ]() {return qobject_cast<QLabel *>( mWidget )->text();};
   }
   else if ( qobject_cast<QCheckBox *>( widget ) )
   {
-    mStyleSheet = "QCheckBox { background-color: yellow; color: blue;}";
+    mStyleSheet = QStringLiteral( "QCheckBox { background-color: yellow; color: blue;}" );
     mText = [ = ]() {return qobject_cast<QCheckBox *>( mWidget )->text();};
   }
   else if ( qobject_cast<QAbstractButton *>( widget ) )
   {
-    mStyleSheet = "QAbstractButton { background-color: yellow; color: blue;}";
+    mStyleSheet = QStringLiteral( "QAbstractButton { background-color: yellow; color: blue;}" );
     mText = [ = ]() {return qobject_cast<QAbstractButton *>( mWidget )->text();};
   }
   else if ( qobject_cast<QGroupBox *>( widget ) )
   {
-    mStyleSheet = "QGroupBox::title { background-color: yellow; color: blue;}";
+    mStyleSheet = QStringLiteral( "QGroupBox::title { background-color: yellow; color: blue;}" );
     mText = [ = ]() {return qobject_cast<QGroupBox *>( mWidget )->title();};
   }
   else if ( qobject_cast<QTreeView *>( widget ) )

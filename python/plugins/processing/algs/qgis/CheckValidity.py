@@ -66,7 +66,7 @@ class CheckValidity(QgisAlgorithm):
         return QIcon(os.path.join(pluginPath, 'images', 'ftools', 'check_geometry.png'))
 
     def group(self):
-        return self.tr('Vector geometry tools')
+        return self.tr('Vector geometry')
 
     def __init__(self):
         super().__init__()
@@ -80,6 +80,11 @@ class CheckValidity(QgisAlgorithm):
                                                               self.tr('Input layer')))
         self.addParameter(QgsProcessingParameterEnum(self.METHOD,
                                                      self.tr('Method'), self.methods))
+        self.parameterDefinition(self.METHOD).setMetadata({
+            'widget_wrapper': {
+                'class': 'processing.gui.wrappers.EnumWidgetWrapper',
+                'useCheckBoxes': True,
+                'columns': 3}})
 
         self.addParameter(QgsProcessingParameterFeatureSink(self.VALID_OUTPUT, self.tr('Valid output'), QgsProcessing.TypeVectorAnyGeometry, '', True))
         self.addOutput(QgsProcessingOutputNumber(self.VALID_COUNT, self.tr('Count of valid features')))
@@ -147,7 +152,7 @@ class CheckValidity(QgisAlgorithm):
                     reasons = []
                     for error in errors:
                         errFeat = QgsFeature()
-                        error_geom = QgsGeometry.fromPoint(error.where())
+                        error_geom = QgsGeometry.fromPointXY(error.where())
                         errFeat.setGeometry(error_geom)
                         errFeat.setAttributes([error.what()])
                         if error_output_sink:

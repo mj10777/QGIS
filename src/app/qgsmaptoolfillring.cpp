@@ -31,10 +31,6 @@ QgsMapToolFillRing::QgsMapToolFillRing( QgsMapCanvas *canvas )
 {
 }
 
-QgsMapToolFillRing::~QgsMapToolFillRing()
-{
-}
-
 void QgsMapToolFillRing::cadCanvasReleaseEvent( QgsMapMouseEvent *e )
 {
   //check if we operate on a vector layer
@@ -92,7 +88,7 @@ void QgsMapToolFillRing::cadCanvasReleaseEvent( QgsMapMouseEvent *e )
 
     vlayer->beginEditCommand( tr( "Ring added and filled" ) );
 
-    QList< QgsPointXY > pointList = points();
+    QVector< QgsPointXY > pointList = points();
 
     int addRingReturnCode = vlayer->addRing( pointList, &fid );
     if ( addRingReturnCode != 0 )
@@ -129,7 +125,7 @@ void QgsMapToolFillRing::cadCanvasReleaseEvent( QgsMapMouseEvent *e )
       return;
     }
 
-    g = QgsGeometry::fromPolygon( QgsPolygon() << pointList.toVector() );
+    g = QgsGeometry::fromPolygonXY( QgsPolygonXY() << pointList );
   }
   else
   {
@@ -203,10 +199,10 @@ QgsGeometry QgsMapToolFillRing::ringUnderPoint( const QgsPointXY &p, QgsFeatureI
     if ( g.isNull() )
       continue;
 
-    QgsMultiPolygon pol;
+    QgsMultiPolygonXY pol;
     if ( g.wkbType() == QgsWkbTypes::Polygon ||  g.wkbType()  == QgsWkbTypes::Polygon25D )
     {
-      pol = QgsMultiPolygon() << g.asPolygon();
+      pol = QgsMultiPolygonXY() << g.asPolygon();
     }
     else
     {
@@ -220,8 +216,8 @@ QgsGeometry QgsMapToolFillRing::ringUnderPoint( const QgsPointXY &p, QgsFeatureI
       {
         for ( int j = 1; j < pol[i].size(); ++j )
         {
-          QgsPolygon tempPol = QgsPolygon() << pol[i][j];
-          QgsGeometry tempGeom = QgsGeometry::fromPolygon( tempPol );
+          QgsPolygonXY tempPol = QgsPolygonXY() << pol[i][j];
+          QgsGeometry tempGeom = QgsGeometry::fromPolygonXY( tempPol );
           if ( tempGeom.area() < area && tempGeom.contains( &p ) )
           {
             fid = f.id();

@@ -19,7 +19,7 @@
 
 #include <gdal_alg.h> // just needed for GDALTransformerFunc, forward?
 
-#include <qgspoint.h>
+#include "qgspoint.h"
 #include <QVector>
 #include <stdexcept>
 
@@ -28,7 +28,7 @@
 class QgsGeorefTransformInterface
 {
   public:
-    virtual ~QgsGeorefTransformInterface() { }
+    virtual ~QgsGeorefTransformInterface() = default;
 
     virtual bool updateParametersFromGCPs( const QVector<QgsPointXY> &mapCoords, const QVector<QgsPointXY> &pixelCoords ) = 0;
 

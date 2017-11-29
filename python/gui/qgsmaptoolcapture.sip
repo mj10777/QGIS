@@ -18,7 +18,16 @@ class QgsMapToolCapture : QgsMapToolAdvancedDigitizing
 #include "qgsmaptoolcapture.h"
 %End
   public:
-    QgsMapToolCapture( QgsMapCanvas *canvas, QgsAdvancedDigitizingDockWidget *cadDockWidget, CaptureMode mode = CaptureNone );
+
+    enum CaptureMode
+    {
+      CaptureNone,
+      CapturePoint,
+      CaptureLine,
+      CapturePolygon
+    };
+
+    QgsMapToolCapture( QgsMapCanvas *canvas, QgsAdvancedDigitizingDockWidget *cadDockWidget, CaptureMode mode );
 %Docstring
 constructor
 %End
@@ -28,10 +37,25 @@ constructor
     virtual void activate();
     virtual void deactivate();
 
+    CaptureMode mode() const;
+%Docstring
+ The capture mode
+
+ :return: Capture mode
+ :rtype: CaptureMode
+%End
+
     int addCurve( QgsCurve *c );
 %Docstring
 Adds a whole curve (e.g. circularstring) to the captured geometry. Curve must be in map CRS
  :rtype: int
+%End
+
+    void clearCurve( );
+%Docstring
+ Clear capture curve.
+
+.. versionadded:: 3.0
 %End
 
     const QgsCompoundCurve *captureCurve() const;
@@ -63,6 +87,11 @@ Adds a whole curve (e.g. circularstring) to the captured geometry. Curve must be
     void deleteTempRubberBand();
 %Docstring
  Clean a temporary rubberband
+%End
+
+    virtual void clean();
+%Docstring
+convenient method to clean members
 %End
 
   protected:
@@ -122,14 +151,14 @@ Removes the last vertex from mRubberBand and mCaptureList
  :rtype: int
 %End
 
-    QList<QgsPointXY> points();
+    QVector<QgsPointXY> points();
 %Docstring
  List of digitized points
  :return: List of points
  :rtype: list of QgsPointXY
 %End
 
-    void setPoints( const QList<QgsPointXY> &pointList );
+    void setPoints( const QVector<QgsPointXY> &pointList );
 %Docstring
  Set the points on which to work
 

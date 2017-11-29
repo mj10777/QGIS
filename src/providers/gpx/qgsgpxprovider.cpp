@@ -69,9 +69,6 @@ const QString GPX_DESCRIPTION = QObject::tr( "GPS eXchange format provider" );
 
 QgsGPXProvider::QgsGPXProvider( const QString &uri )
   : QgsVectorDataProvider( uri )
-  , data( nullptr )
-  , mFeatureType( WaypointType )
-  , mValid( false ) // assume that it won't work
 {
   // we always use UTF-8
   setEncoding( QStringLiteral( "utf8" ) );
@@ -213,7 +210,7 @@ bool QgsGPXProvider::addFeatures( QgsFeatureList &flist, Flags flags )
 
 bool QgsGPXProvider::addFeature( QgsFeature &f, Flags )
 {
-  QByteArray wkb( f.geometry().exportToWkb() );
+  QByteArray wkb( f.geometry().asWkb() );
   const char *geo = wkb.constData();
   QgsWkbTypes::Type wkbType = f.geometry().wkbType();
   bool success = false;
@@ -556,7 +553,8 @@ QGISEXTERN QgsGPXProvider *classFactory( const QString *uri )
 }
 
 
-/** Required key function (used to map the plugin to a data store type)
+/**
+ * Required key function (used to map the plugin to a data store type)
 */
 QGISEXTERN QString providerKey()
 {

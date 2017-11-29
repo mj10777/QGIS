@@ -20,38 +20,41 @@ class QgsMultiLineString: QgsMultiCurve
 %End
   public:
     QgsMultiLineString();
+
     virtual QString geometryType() const;
+
     virtual QgsMultiLineString *clone() const /Factory/;
 
+    virtual void clear();
 
     virtual bool fromWkt( const QString &wkt );
 
+    virtual QDomElement asGml2( QDomDocument &doc, int precision = 17, const QString &ns = "gml" ) const;
 
-    virtual QDomElement asGML2( QDomDocument &doc, int precision = 17, const QString &ns = "gml" ) const;
+    virtual QDomElement asGml3( QDomDocument &doc, int precision = 17, const QString &ns = "gml" ) const;
 
-    virtual QDomElement asGML3( QDomDocument &doc, int precision = 17, const QString &ns = "gml" ) const;
-
-    virtual QString asJSON( int precision = 17 ) const;
-
+    virtual QString asJson( int precision = 17 ) const;
 
     virtual bool addGeometry( QgsAbstractGeometry *g /Transfer/ );
-%Docstring
-Adds a geometry and takes ownership. Returns true in case of success
- :rtype: bool
-%End
 
-    virtual QgsAbstractGeometry *toCurveType() const /Factory/;
+    virtual bool insertGeometry( QgsAbstractGeometry *g /Transfer/, int index );
+
+
+    virtual QgsMultiCurve *toCurveType() const /Factory/;
 
 %Docstring
  Returns the geometry converted to the more generic curve type QgsMultiCurve
 :return: the converted geometry. Caller takes ownership*
- :rtype: QgsAbstractGeometry
+ :rtype: QgsMultiCurve
 %End
 
   protected:
+    virtual QgsMultiLineString *createEmptyWithSameType() const /Factory/;
 
     virtual bool wktOmitChildType() const;
+
 };
+
 
 /************************************************************************
  * This file has been generated automatically from                      *

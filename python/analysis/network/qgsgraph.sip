@@ -22,7 +22,11 @@ class QgsGraphEdge
 #include "qgsgraph.h"
 %End
   public:
+
     QgsGraphEdge();
+%Docstring
+ Constructor for QgsGraphEdge.
+%End
 
     QVariant cost( int strategyIndex ) const;
 %Docstring
@@ -37,15 +41,17 @@ class QgsGraphEdge
  :rtype: list of QVariant
 %End
 
-    int outVertex() const;
+    int toVertex() const;
 %Docstring
- Returns index of the outgoing vertex
+ Returns the index of the vertex at the end of this edge.
+.. seealso:: fromVertex()
  :rtype: int
 %End
 
-    int inVertex() const;
+    int fromVertex() const;
 %Docstring
- Returns index of the incoming vertex
+ Returns the index of the vertex at the start of this edge.
+.. seealso:: toVertex()
  :rtype: int
 %End
 
@@ -58,6 +64,7 @@ class QgsGraphVertex
 {
 %Docstring
  This class implements a graph vertex
+.. versionadded:: 3.0
 %End
 
 %TypeHeaderCode
@@ -76,21 +83,23 @@ class QgsGraphVertex
  This constructor initializes QgsGraphVertex object and associates a vertex with a point
 %End
 
-    QgsGraphEdgeIds outEdges() const;
+    QgsGraphEdgeIds incomingEdges() const;
 %Docstring
- Returns outgoing edges ids
+ Returns the incoming edge ids, i.e. edges which end at this node.
+.. seealso:: outgoingEdges()
  :rtype: QgsGraphEdgeIds
 %End
 
-    QgsGraphEdgeIds inEdges() const;
+    QgsGraphEdgeIds outgoingEdges() const;
 %Docstring
- Return incoming edges ids
+ Returns outgoing edge ids, i.e. edges which start at this node.
+.. seealso:: incomingEdges()
  :rtype: QgsGraphEdgeIds
 %End
 
     QgsPointXY point() const;
 %Docstring
- Returns point associated with graph vertex
+ Returns point associated with graph vertex.
  :rtype: QgsPointXY
 %End
 
@@ -101,13 +110,18 @@ class QgsGraph
 {
 %Docstring
  Mathematical graph representation
+.. versionadded:: 3.0
 %End
 
 %TypeHeaderCode
 #include "qgsgraph.h"
 %End
   public:
+
     QgsGraph();
+%Docstring
+ Constructor for QgsGraph.
+%End
 
 
     int addVertex( const QgsPointXY &pt );
@@ -116,9 +130,10 @@ class QgsGraph
  :rtype: int
 %End
 
-    int addEdge( int outVertexIdx, int inVertexIdx, const QVector< QVariant > &strategies );
+    int addEdge( int fromVertexIdx, int toVertexIdx, const QVector< QVariant > &strategies );
 %Docstring
- Add an edge to the graph
+ Add an edge to the graph, going from the ``fromVertexIdx``
+ to ``toVertexIdx``.
  :rtype: int
 %End
 

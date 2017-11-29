@@ -2,13 +2,22 @@ SET(GDAL_SRCS
   qgsgdalproviderbase.cpp
   qgsgdalprovider.cpp
   qgsgdaldataitems.cpp
-  qgsgdalsourceselect.cpp
 )
 SET(GDAL_MOC_HDRS
   qgsgdalprovider.h
   qgsgdaldataitems.h
-  qgsgdalsourceselect.h
 )
+
+IF (WITH_GUI)
+  SET(GDAL_SRCS ${GDAL_SRCS}
+    qgsgdalsourceselect.cpp
+  )
+  SET(GDAL_MOC_HDRS ${GDAL_MOC_HDRS}
+    qgsgdalsourceselect.h
+  )
+ENDIF ()
+
+########################################################
 
 INCLUDE_DIRECTORIES (
   ${CMAKE_SOURCE_DIR}/src/core
@@ -16,6 +25,7 @@ INCLUDE_DIRECTORIES (
   ${CMAKE_SOURCE_DIR}/src/core/raster
   ${CMAKE_SOURCE_DIR}/src/core/geometry
   ${CMAKE_SOURCE_DIR}/src/core/metadata
+  ${CMAKE_SOURCE_DIR}/src/core/providers/spatialite
   ${CMAKE_SOURCE_DIR}/src/gui
 
   ${CMAKE_BINARY_DIR}/src/core

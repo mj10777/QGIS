@@ -143,7 +143,6 @@ class QgsProcessingParameterDefinition
 %TypeHeaderCode
 #include "qgsprocessingparameters.h"
 %End
-
 %ConvertToSubClassCode
     if ( sipCpp->type() == QgsProcessingParameterBoolean::typeName() )
       sipType = sipType_QgsProcessingParameterBoolean;
@@ -354,7 +353,25 @@ class QgsProcessingParameterDefinition
  :rtype: list of str
 %End
 
+    QgsProcessingAlgorithm *algorithm() const;
+%Docstring
+ Returns a pointer to the algorithm which owns this parameter. May be None
+ for non-owned parameters.
+.. seealso:: provider()
+ :rtype: QgsProcessingAlgorithm
+%End
+
+    QgsProcessingProvider *provider() const;
+%Docstring
+ Returns a pointer to the provider for the algorithm which owns this parameter. May be None
+ for non-owned parameters or algorithms.
+.. seealso:: algorithm()
+ :rtype: QgsProcessingProvider
+%End
+
   protected:
+
+
 
 
 
@@ -534,16 +551,59 @@ class QgsProcessingParameters
  :rtype: QgsCoordinateReferenceSystem
 %End
 
-    static QgsRectangle parameterAsExtent( const QgsProcessingParameterDefinition *definition, const QVariantMap &parameters, QgsProcessingContext &context );
+    static QgsRectangle parameterAsExtent( const QgsProcessingParameterDefinition *definition, const QVariantMap &parameters, QgsProcessingContext &context,
+                                           const QgsCoordinateReferenceSystem &crs = QgsCoordinateReferenceSystem() );
 %Docstring
  Evaluates the parameter with matching ``definition`` to a rectangular extent.
+
+ If ``crs`` is set, and the original coordinate reference system of the parameter can be determined, then the extent will be automatically
+ reprojected so that it is in the specified ``crs``. In this case the extent of the reproject rectangle will be returned.
+
+.. seealso:: parameterAsExtentGeometry()
+.. seealso:: parameterAsExtentCrs()
  :rtype: QgsRectangle
 %End
 
-    static QgsPointXY parameterAsPoint( const QgsProcessingParameterDefinition *definition, const QVariantMap &parameters, QgsProcessingContext &context );
+    static QgsGeometry parameterAsExtentGeometry( const QgsProcessingParameterDefinition *definition, const QVariantMap &parameters, QgsProcessingContext &context,
+        const QgsCoordinateReferenceSystem &crs = QgsCoordinateReferenceSystem() );
+%Docstring
+ Evaluates the parameter with matching ``definition`` to a rectangular extent, and returns a geometry covering this extent.
+
+ If ``crs`` is set, and the original coordinate reference system of the parameter can be determined, then the extent will be automatically
+ reprojected so that it is in the specified ``crs``. Unlike parameterAsExtent(), the reprojected rectangle returned by this function
+ will no longer be a rectangle itself (i.e. this method returns the geometry of the actual reprojected rectangle, while parameterAsExtent() returns
+ just the extent of the reprojected rectangle).
+
+.. seealso:: parameterAsExtent()
+.. seealso:: parameterAsExtentCrs()
+ :rtype: QgsGeometry
+%End
+
+    static QgsCoordinateReferenceSystem parameterAsExtentCrs( const QgsProcessingParameterDefinition *definition, const QVariantMap &parameters, QgsProcessingContext &context );
+%Docstring
+ Returns the coordinate reference system associated with an extent parameter value.
+
+.. seealso:: parameterAsExtent()
+ :rtype: QgsCoordinateReferenceSystem
+%End
+
+    static QgsPointXY parameterAsPoint( const QgsProcessingParameterDefinition *definition, const QVariantMap &parameters, QgsProcessingContext &context,
+                                        const QgsCoordinateReferenceSystem &crs = QgsCoordinateReferenceSystem() );
 %Docstring
  Evaluates the parameter with matching ``definition`` to a point.
+
+ If ``crs`` is set then the point will be automatically reprojected so that it is in the specified ``crs``.
+
+.. seealso:: parameterAsPointCrs()
  :rtype: QgsPointXY
+%End
+
+    static QgsCoordinateReferenceSystem parameterAsPointCrs( const QgsProcessingParameterDefinition *definition, const QVariantMap &parameters, QgsProcessingContext &context );
+%Docstring
+ Returns the coordinate reference system associated with an point parameter value.
+
+.. seealso:: parameterAsPoint()
+ :rtype: QgsCoordinateReferenceSystem
 %End
 
     static QString parameterAsFile( const QgsProcessingParameterDefinition *definition, const QVariantMap &parameters, QgsProcessingContext &context );
@@ -786,6 +846,8 @@ class QgsProcessingParameterPoint : QgsProcessingParameterDefinition
 
     virtual QString type() const;
     virtual bool checkValueIsAcceptable( const QVariant &input, QgsProcessingContext *context = 0 ) const;
+
+    virtual QString valueAsPythonString( const QVariant &value, QgsProcessingContext &context ) const;
 
 
     static QgsProcessingParameterPoint *fromScriptCode( const QString &name, const QString &description, bool isOptional, const QString &definition ) /Factory/;
@@ -1420,7 +1482,42 @@ class QgsProcessingParameterExpression : QgsProcessingParameterDefinition
 
 };
 
-class QgsProcessingParameterVectorLayer : QgsProcessingParameterDefinition
+
+class QgsProcessingParameterLimitedDataTypes
+{
+%Docstring
+ Can be inherited by parameters which require limits to their acceptable data types.
+.. versionadded:: 3.0
+%End
+
+%TypeHeaderCode
+#include "qgsprocessingparameters.h"
+%End
+  public:
+
+    QgsProcessingParameterLimitedDataTypes( const QList< int > &types = QList< int >() );
+%Docstring
+ Constructor for QgsProcessingParameterLimitedDataTypes, with a list of acceptable data ``types``.
+%End
+
+    QList< int > dataTypes() const;
+%Docstring
+ Returns the geometry types for sources acceptable by the parameter.
+.. seealso:: setDataTypes()
+ :rtype: list of int
+%End
+
+    void setDataTypes( const QList< int > &types );
+%Docstring
+ Sets the geometry ``types`` for sources acceptable by the parameter.
+.. seealso:: dataTypes()
+%End
+
+  protected:
+
+};
+
+class QgsProcessingParameterVectorLayer : QgsProcessingParameterDefinition, QgsProcessingParameterLimitedDataTypes
 {
 %Docstring
  A vector layer (with or without geometry) parameter for processing algorithms. Consider using
@@ -1454,19 +1551,6 @@ class QgsProcessingParameterVectorLayer : QgsProcessingParameterDefinition
 
     virtual QString valueAsPythonString( const QVariant &value, QgsProcessingContext &context ) const;
 
-
-    QList< int > dataTypes() const;
-%Docstring
- Returns the geometry types for sources acceptable by the parameter.
-.. seealso:: setDataTypes()
- :rtype: list of int
-%End
-
-    void setDataTypes( const QList< int > &types );
-%Docstring
- Sets the geometry ``types`` for sources acceptable by the parameter.
-.. seealso:: dataTypes()
-%End
 
     virtual QVariantMap toVariantMap() const;
 
@@ -1579,7 +1663,8 @@ class QgsProcessingParameterField : QgsProcessingParameterDefinition
 
 };
 
-class QgsProcessingParameterFeatureSource : QgsProcessingParameterDefinition
+
+class QgsProcessingParameterFeatureSource : QgsProcessingParameterDefinition, QgsProcessingParameterLimitedDataTypes
 {
 %Docstring
  An input feature source (such as vector layers) parameter for processing algorithms.
@@ -1612,19 +1697,6 @@ class QgsProcessingParameterFeatureSource : QgsProcessingParameterDefinition
 
     virtual QString asScriptCode() const;
 
-
-    QList< int > dataTypes() const;
-%Docstring
- Returns the geometry types for sources acceptable by the parameter.
-.. seealso:: setDataTypes()
- :rtype: list of int
-%End
-
-    void setDataTypes( const QList< int > &types );
-%Docstring
- Sets the geometry ``types`` for sources acceptable by the parameter.
-.. seealso:: dataTypes()
-%End
 
     virtual QVariantMap toVariantMap() const;
 
@@ -2085,6 +2157,7 @@ class QgsProcessingParameterBand : QgsProcessingParameterDefinition
 %End
 
 };
+
 
 
 

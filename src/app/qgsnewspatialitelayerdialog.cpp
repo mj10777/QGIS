@@ -28,7 +28,11 @@
 #include "qgsproject.h"
 #include "qgscoordinatereferencesystem.h"
 #include "qgsprojectionselectiondialog.h"
+<<< <<< < HEAD
 #include "qgssqlitehandle.h"
+== == == =
+#include "qgsspatialiteutils.h"
+  >>> >>> > upstream_qgis / master32.spatialite_provider
 #include "qgslogger.h"
 #include "qgssettings.h"
 
@@ -40,10 +44,17 @@
 
 #include <spatialite.h>
 
-QgsNewSpatialiteLayerDialog::QgsNewSpatialiteLayerDialog( QWidget *parent, Qt::WindowFlags fl, const QgsCoordinateReferenceSystem &defaultCrs )
-  : QDialog( parent, fl )
+  QgsNewSpatialiteLayerDialog::QgsNewSpatialiteLayerDialog( QWidget *parent, Qt::WindowFlags fl, const QgsCoordinateReferenceSystem &defaultCrs )
+    : QDialog( parent, fl )
 {
   setupUi( this );
+  connect( mAddAttributeButton, &QToolButton::clicked, this, &QgsNewSpatialiteLayerDialog::mAddAttributeButton_clicked );
+  connect( mRemoveAttributeButton, &QToolButton::clicked, this, &QgsNewSpatialiteLayerDialog::mRemoveAttributeButton_clicked );
+  connect( mTypeBox, static_cast<void ( QComboBox::* )( int )>( &QComboBox::currentIndexChanged ), this, &QgsNewSpatialiteLayerDialog::mTypeBox_currentIndexChanged );
+  connect( pbnFindSRID, &QPushButton::clicked, this, &QgsNewSpatialiteLayerDialog::pbnFindSRID_clicked );
+  connect( toolButtonNewDatabase, &QToolButton::clicked, this, &QgsNewSpatialiteLayerDialog::toolButtonNewDatabase_clicked );
+  connect( buttonBox, &QDialogButtonBox::accepted, this, &QgsNewSpatialiteLayerDialog::buttonBox_accepted );
+  connect( buttonBox, &QDialogButtonBox::rejected, this, &QgsNewSpatialiteLayerDialog::buttonBox_rejected );
 
   QgsSettings settings;
   restoreGeometry( settings.value( QStringLiteral( "Windows/NewSpatiaLiteLayer/geometry" ) ).toByteArray() );
@@ -96,7 +107,7 @@ QgsNewSpatialiteLayerDialog::~QgsNewSpatialiteLayerDialog()
   settings.setValue( QStringLiteral( "Windows/NewSpatiaLiteLayer/geometry" ), saveGeometry() );
 }
 
-void QgsNewSpatialiteLayerDialog::on_mTypeBox_currentIndexChanged( int index )
+void QgsNewSpatialiteLayerDialog::mTypeBox_currentIndexChanged( int index )
 {
   // This isn't used since widths are irrelevant in sqlite3
   switch ( index )
@@ -109,7 +120,7 @@ void QgsNewSpatialiteLayerDialog::on_mTypeBox_currentIndexChanged( int index )
   }
 }
 
-void QgsNewSpatialiteLayerDialog::on_toolButtonNewDatabase_clicked()
+void QgsNewSpatialiteLayerDialog::toolButtonNewDatabase_clicked()
 {
   QString fileName = QFileDialog::getSaveFileName( this, tr( "New SpatiaLite Database File" ),
                      QDir::homePath(),
@@ -167,7 +178,7 @@ void QgsNewSpatialiteLayerDialog::checkOk()
   mOkButton->setEnabled( created );
 }
 
-void QgsNewSpatialiteLayerDialog::on_mAddAttributeButton_clicked()
+void QgsNewSpatialiteLayerDialog::mAddAttributeButton_clicked()
 {
   if ( !mNameEdit->text().isEmpty() )
   {
@@ -182,20 +193,20 @@ void QgsNewSpatialiteLayerDialog::on_mAddAttributeButton_clicked()
   }
 }
 
-void QgsNewSpatialiteLayerDialog::on_mRemoveAttributeButton_clicked()
+void QgsNewSpatialiteLayerDialog::mRemoveAttributeButton_clicked()
 {
   delete mAttributeView->currentItem();
 
   checkOk();
 }
 
-void QgsNewSpatialiteLayerDialog::on_pbnFindSRID_clicked()
+void QgsNewSpatialiteLayerDialog::pbnFindSRID_clicked()
 {
   // first get list of supported SRID from the selected SpatiaLite database
   // to build filter for projection selector
-  sqlite3 *db = nullptr;
+  sqlite3_database_unique_ptr database;
   bool status = true;
-  int rc = sqlite3_open_v2( mDatabaseComboBox->currentText().toUtf8(), &db, SQLITE_OPEN_READONLY, nullptr );
+  int rc = database.open_v2( mDatabaseComboBox->currentText(), SQLITE_OPEN_READONLY, nullptr );
   if ( rc != SQLITE_OK )
   {
     QMessageBox::warning( this, tr( "SpatiaLite Database" ), tr( "Unable to open the database" ) );
@@ -203,54 +214,48 @@ void QgsNewSpatialiteLayerDialog::on_pbnFindSRID_clicked()
   }
 
   // load up the srid table
-  const char *pzTail = nullptr;
-  sqlite3_stmt *ppStmt = nullptr;
+  sqlite3_statement_unique_ptr statement;
   QString sql = QStringLiteral( "select auth_name || ':' || auth_srid from spatial_ref_sys order by srid asc" );
 
   QSet<QString> myCRSs;
 
-  rc = sqlite3_prepare( db, sql.toUtf8(), sql.toUtf8().length(), &ppStmt, &pzTail );
+  statement = database.prepare( sql, rc );
   // XXX Need to free memory from the error msg if one is set
   if ( rc == SQLITE_OK )
   {
     // get the first row of the result set
-    while ( sqlite3_step( ppStmt ) == SQLITE_ROW )
+    while ( sqlite3_step( statement.get() ) == SQLITE_ROW )
     {
-      myCRSs.insert( QString::fromUtf8( ( const char * )sqlite3_column_text( ppStmt, 0 ) ) );
+      myCRSs.insert( statement.columnAsText( 0 ) );
     }
   }
   else
   {
     // XXX query failed -- warn the user some how
-    QMessageBox::warning( nullptr, tr( "Error" ), tr( "Failed to load SRIDS: %1" ).arg( sqlite3_errmsg( db ) ) );
+    QMessageBox::warning( nullptr, tr( "Error" ), tr( "Failed to load SRIDS: %1" ).arg( database.errorMessage() ) );
     status = false;
   }
-  // close the statement
-  sqlite3_finalize( ppStmt );
-  sqlite3_close( db );
 
-  if ( !status )
+  if ( status )
   {
-    return;
-  }
+    // prepare projection selector
+    QgsProjectionSelectionDialog *mySelector = new QgsProjectionSelectionDialog( this );
+    mySelector->setMessage( QString() );
+    mySelector->setOgcWmsCrsFilter( myCRSs );
+    mySelector->setCrs( QgsCoordinateReferenceSystem::fromOgcWmsCrs( mCrsId ) );
 
-  // prepare projection selector
-  QgsProjectionSelectionDialog *mySelector = new QgsProjectionSelectionDialog( this );
-  mySelector->setMessage( QString() );
-  mySelector->setOgcWmsCrsFilter( myCRSs );
-  mySelector->setCrs( QgsCoordinateReferenceSystem::fromOgcWmsCrs( mCrsId ) );
-
-  if ( mySelector->exec() )
-  {
-    QgsCoordinateReferenceSystem srs = mySelector->crs();
-    QString crsId = srs.authid();
-    if ( crsId != mCrsId )
+    if ( mySelector->exec() )
     {
-      mCrsId = crsId;
-      leSRID->setText( srs.authid() + " - " + srs.description() );
+      QgsCoordinateReferenceSystem srs = mySelector->crs();
+      QString crsId = srs.authid();
+      if ( crsId != mCrsId )
+      {
+        mCrsId = crsId;
+        leSRID->setText( srs.authid() + " - " + srs.description() );
+      }
     }
+    delete mySelector;
   }
-  delete mySelector;
 }
 
 void QgsNewSpatialiteLayerDialog::nameChanged( const QString &name )
@@ -325,13 +330,13 @@ bool QgsNewSpatialiteLayerDialog::createDb()
   return true;
 }
 
-void QgsNewSpatialiteLayerDialog::on_buttonBox_accepted()
+void QgsNewSpatialiteLayerDialog::buttonBox_accepted()
 {
   if ( apply() )
     accept();
 }
 
-void QgsNewSpatialiteLayerDialog::on_buttonBox_rejected()
+void QgsNewSpatialiteLayerDialog::buttonBox_rejected()
 {
   reject();
 }
@@ -340,7 +345,7 @@ bool QgsNewSpatialiteLayerDialog::apply()
 {
   // Build up the sql statement for creating the table
   QString sql = QStringLiteral( "create table %1(" ).arg( quotedIdentifier( leLayerName->text() ) );
-  QString delim = QLatin1String( "" );
+  QString delim;
 
   if ( checkBoxPrimaryKey->isChecked() )
   {
@@ -375,8 +380,13 @@ bool QgsNewSpatialiteLayerDialog::apply()
                                  quotedValue( leGeometryColumn->text() ) );
   QgsDebugMsg( sqlCreateIndex ); // OK
 
+  <<< <<< < HEAD
   sqlite3 *db = nullptr;
   int rc = QgsSqliteHandle::sqlite3_open( mDatabaseComboBox->currentText().toUtf8(), &db );
+  == == == =
+    spatialite_database_unique_ptr database;
+  int rc = database.open( mDatabaseComboBox->currentText() );
+  >>> >>> > upstream_qgis / master32.spatialite_provider
   if ( rc != SQLITE_OK )
   {
     QMessageBox::warning( this,
@@ -386,7 +396,7 @@ bool QgsNewSpatialiteLayerDialog::apply()
   else
   {
     char *errmsg = nullptr;
-    rc = sqlite3_exec( db, sql.toUtf8(), nullptr, nullptr, &errmsg );
+    rc = sqlite3_exec( database.get(), sql.toUtf8(), nullptr, nullptr, &errmsg );
     if ( rc != SQLITE_OK )
     {
       QMessageBox::warning( this,
@@ -397,7 +407,7 @@ bool QgsNewSpatialiteLayerDialog::apply()
     else
     {
       // create the geometry column and the spatial index
-      rc = sqlite3_exec( db, sqlAddGeom.toUtf8(), nullptr, nullptr, &errmsg );
+      rc = sqlite3_exec( database.get(), sqlAddGeom.toUtf8(), nullptr, nullptr, &errmsg );
       if ( rc != SQLITE_OK )
       {
         QMessageBox::warning( this,
@@ -408,7 +418,7 @@ bool QgsNewSpatialiteLayerDialog::apply()
       else
       {
         // create the spatial index
-        rc = sqlite3_exec( db, sqlCreateIndex.toUtf8(), nullptr, nullptr, &errmsg );
+        rc = sqlite3_exec( database.get(), sqlCreateIndex.toUtf8(), nullptr, nullptr, &errmsg );
         if ( rc != SQLITE_OK )
         {
           QMessageBox::warning( this,
@@ -439,8 +449,11 @@ bool QgsNewSpatialiteLayerDialog::apply()
         }
       }
     }
+    <<< <<< < HEAD
 
     QgsSqliteHandle::sqlite3_close( db );
+    == == == =
+      >>> >>> > upstream_qgis / master32.spatialite_provider
   }
 
   return false;

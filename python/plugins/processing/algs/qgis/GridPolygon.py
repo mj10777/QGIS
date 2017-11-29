@@ -67,7 +67,7 @@ class GridPolygon(QgisAlgorithm):
         return self.tr('grid,lines,vector,create,fishnet').split(',')
 
     def group(self):
-        return self.tr('Vector creation tools')
+        return self.tr('Vector creation')
 
     def __init__(self):
         super().__init__()
@@ -113,8 +113,8 @@ class GridPolygon(QgisAlgorithm):
         hOverlay = self.parameterAsDouble(parameters, self.HOVERLAY, context)
         vOverlay = self.parameterAsDouble(parameters, self.VOVERLAY, context)
 
-        bbox = self.parameterAsExtent(parameters, self.EXTENT, context)
         crs = self.parameterAsCrs(parameters, self.CRS, context)
+        bbox = self.parameterAsExtent(parameters, self.EXTENT, context, crs)
 
         width = bbox.width()
         height = bbox.height()
@@ -190,7 +190,7 @@ class GridPolygon(QgisAlgorithm):
                 polyline.append(QgsPointXY(x1, y2))
                 polyline.append(QgsPointXY(x1, y1))
 
-                ft.setGeometry(QgsGeometry.fromPolygon([polyline]))
+                ft.setGeometry(QgsGeometry.fromPolygonXY([polyline]))
                 ft.setAttributes([x1, y1, x2, y2, id])
                 sink.addFeature(ft, QgsFeatureSink.FastInsert)
 
@@ -245,7 +245,7 @@ class GridPolygon(QgisAlgorithm):
                 polyline.append(QgsPointXY(x2, y3))
                 polyline.append(QgsPointXY(x1, y2))
 
-                ft.setGeometry(QgsGeometry.fromPolygon([polyline]))
+                ft.setGeometry(QgsGeometry.fromPolygonXY([polyline]))
                 ft.setAttributes([x1, y1, x3, y3, id])
                 sink.addFeature(ft, QgsFeatureSink.FastInsert)
                 id += 1
@@ -312,7 +312,7 @@ class GridPolygon(QgisAlgorithm):
                 polyline.append(QgsPointXY(x2, y3))
                 polyline.append(QgsPointXY(x1, y2))
 
-                ft.setGeometry(QgsGeometry.fromPolygon([polyline]))
+                ft.setGeometry(QgsGeometry.fromPolygonXY([polyline]))
                 ft.setAttributes([x1, y1, x4, y3, id])
                 sink.addFeature(ft, QgsFeatureSink.FastInsert)
                 id += 1

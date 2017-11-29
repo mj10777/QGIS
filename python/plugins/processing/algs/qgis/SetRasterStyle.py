@@ -2,7 +2,7 @@
 
 """
 ***************************************************************************
-    SelectByLocation.py
+    SetRasterStyle.py
     ---------------------
     Date                 : August 2012
     Copyright            : (C) 2012 by Victor Olaya
@@ -42,7 +42,7 @@ class SetRasterStyle(QgisAlgorithm):
     OUTPUT = 'OUTPUT'
 
     def group(self):
-        return self.tr('Raster general tools')
+        return self.tr('Raster tools')
 
     def __init__(self):
         super().__init__()

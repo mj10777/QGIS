@@ -20,17 +20,23 @@
 #include <cfloat>
 #include <cmath>
 
+<<< <<< < HEAD
 QgsResidualPlotItem::QgsResidualPlotItem( QgsComposition *c ): QgsComposerItem( c )
 {
 
 }
 
 QgsResidualPlotItem::~QgsResidualPlotItem()
+== == == =
+  QgsResidualPlotItem::QgsResidualPlotItem( QgsComposition *c )
+    : QgsComposerItem( c )
+  , mConvertScaleToMapUnits( false )
+      >>> >>> > upstream_qgis / master32.spatialite_provider
 {
 
 }
 
-void QgsResidualPlotItem::paint( QPainter *painter, const QStyleOptionGraphicsItem *itemStyle, QWidget *pWidget )
+void QgsResidualPlotItem::paint( QPainter * painter, const QStyleOptionGraphicsItem * itemStyle, QWidget * pWidget )
 {
   Q_UNUSED( itemStyle );
   Q_UNUSED( pWidget );
@@ -111,17 +117,17 @@ void QgsResidualPlotItem::paint( QPainter *painter, const QStyleOptionGraphicsIt
   int nDecPlaces;
   if ( scaleBarWidthUnits < 1 )
   {
-    nDecPlaces = -floor( log10( scaleBarWidthUnits ) );
-    scaleBarWidthUnits *= pow( 10.0, nDecPlaces );
+    nDecPlaces = -std::floor( std::log10( scaleBarWidthUnits ) );
+    scaleBarWidthUnits *= std::pow( 10.0, nDecPlaces );
     scaleBarWidthUnits = ( int )( scaleBarWidthUnits + 0.5 );
-    scaleBarWidthUnits /= pow( 10.0, nDecPlaces );
+    scaleBarWidthUnits /= std::pow( 10.0, nDecPlaces );
   }
   else
   {
-    nDecPlaces = ( int )log10( scaleBarWidthUnits );
-    scaleBarWidthUnits /= pow( 10.0, nDecPlaces );
+    nDecPlaces = ( int )std::log10( scaleBarWidthUnits );
+    scaleBarWidthUnits /= std::pow( 10.0, nDecPlaces );
     scaleBarWidthUnits = ( int )( scaleBarWidthUnits + 0.5 );
-    scaleBarWidthUnits *= pow( 10.0, nDecPlaces );
+    scaleBarWidthUnits *= std::pow( 10.0, nDecPlaces );
   }
   initialScaleBarWidth = scaleBarWidthUnits * minMMPixelRatio;
 
@@ -197,7 +203,7 @@ double QgsResidualPlotItem::maxMMToPixelRatioForGCP( const QgsGeorefDataPoint *d
     }
   }
 
-  double resTot = sqrt( residual.x() * residual.x() + residual.y() * residual.y() );
+  double resTot = std::sqrt( residual.x() * residual.x() + residual.y() * residual.y() );
   if ( leftRightDist <= upDownDist )
   {
     return leftRightDist / resTot;
@@ -226,5 +232,5 @@ double QgsResidualPlotItem::dist( QPointF p1, QPointF p2 ) const
 {
   double dx = p2.x() - p1.x();
   double dy = p2.y() - p1.y();
-  return sqrt( dx * dx + dy * dy );
+  return std::sqrt( dx * dx + dy * dy );
 }

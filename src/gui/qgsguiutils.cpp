@@ -158,7 +158,7 @@ namespace QgsGuiUtils
       outputFileName = fileDialog->selectedFiles().first();
     }
 
-    selectedFilter = fileDialog->selectedFilter();
+    selectedFilter = fileDialog->selectedNameFilter();
     QgsDebugMsg( "Selected filter: " + selectedFilter );
     ext = filterMap.value( selectedFilter, QString() );
 
@@ -201,4 +201,4 @@ namespace QgsGuiUtils
     return QFontDialog::getFont( &ok, initial, nullptr, title );
 #endif
   }
-} // namespace QgisGui
+}

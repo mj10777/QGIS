@@ -34,6 +34,7 @@ class QgsFeatureSink;
 class QgsProcessingFeatureSource;
 class QgsProcessingOutputDefinition;
 class QgsProcessingFeedback;
+class QgsProcessingProvider;
 
 /**
  * \class QgsProcessingFeatureSourceDefinition
@@ -137,7 +138,7 @@ class CORE_EXPORT QgsProcessingOutputLayerDefinition
      * to automatically load the resulting sink/layer after completing processing.
      * The default behavior is not to load the result into any project (nullptr).
      */
-    QgsProject *destinationProject;
+    QgsProject *destinationProject = nullptr;
 
     /**
      * Name to use for sink if it's to be loaded into a destination project.
@@ -391,6 +392,20 @@ class CORE_EXPORT QgsProcessingParameterDefinition
      */
     virtual QStringList dependsOnOtherParameters() const { return QStringList(); }
 
+    /**
+     * Returns a pointer to the algorithm which owns this parameter. May be nullptr
+     * for non-owned parameters.
+     * \see provider()
+     */
+    QgsProcessingAlgorithm *algorithm() const;
+
+    /**
+     * Returns a pointer to the provider for the algorithm which owns this parameter. May be nullptr
+     * for non-owned parameters or algorithms.
+     * \see algorithm()
+     */
+    QgsProcessingProvider *provider() const;
+
   protected:
 
     //! Parameter name
@@ -407,6 +422,12 @@ class CORE_EXPORT QgsProcessingParameterDefinition
 
     //! Freeform metadata for parameter. Mostly used by widget wrappers to customise their appearance and behavior.
     QVariantMap mMetadata;
+
+    //! Pointer to algorithm which owns this parameter
+    QgsProcessingAlgorithm *mAlgorithm = nullptr;
+
+    // To allow access to mAlgorithm. We don't want a public setter for this!
+    friend class QgsProcessingAlgorithm;
 
 };
 
@@ -565,13 +586,53 @@ class CORE_EXPORT QgsProcessingParameters
 
     /**
      * Evaluates the parameter with matching \a definition to a rectangular extent.
+     *
+     * If \a crs is set, and the original coordinate reference system of the parameter can be determined, then the extent will be automatically
+     * reprojected so that it is in the specified \a crs. In this case the extent of the reproject rectangle will be returned.
+     *
+     * \see parameterAsExtentGeometry()
+     * \see parameterAsExtentCrs()
      */
-    static QgsRectangle parameterAsExtent( const QgsProcessingParameterDefinition *definition, const QVariantMap &parameters, QgsProcessingContext &context );
+    static QgsRectangle parameterAsExtent( const QgsProcessingParameterDefinition *definition, const QVariantMap &parameters, QgsProcessingContext &context,
+                                           const QgsCoordinateReferenceSystem &crs = QgsCoordinateReferenceSystem() );
+
+    /**
+     * Evaluates the parameter with matching \a definition to a rectangular extent, and returns a geometry covering this extent.
+     *
+     * If \a crs is set, and the original coordinate reference system of the parameter can be determined, then the extent will be automatically
+     * reprojected so that it is in the specified \a crs. Unlike parameterAsExtent(), the reprojected rectangle returned by this function
+     * will no longer be a rectangle itself (i.e. this method returns the geometry of the actual reprojected rectangle, while parameterAsExtent() returns
+     * just the extent of the reprojected rectangle).
+     *
+     * \see parameterAsExtent()
+     * \see parameterAsExtentCrs()
+     */
+    static QgsGeometry parameterAsExtentGeometry( const QgsProcessingParameterDefinition *definition, const QVariantMap &parameters, QgsProcessingContext &context,
+        const QgsCoordinateReferenceSystem &crs = QgsCoordinateReferenceSystem() );
+
+    /**
+     * Returns the coordinate reference system associated with an extent parameter value.
+     *
+     * \see parameterAsExtent()
+     */
+    static QgsCoordinateReferenceSystem parameterAsExtentCrs( const QgsProcessingParameterDefinition *definition, const QVariantMap &parameters, QgsProcessingContext &context );
 
     /**
      * Evaluates the parameter with matching \a definition to a point.
+     *
+     * If \a crs is set then the point will be automatically reprojected so that it is in the specified \a crs.
+     *
+     * \see parameterAsPointCrs()
      */
-    static QgsPointXY parameterAsPoint( const QgsProcessingParameterDefinition *definition, const QVariantMap &parameters, QgsProcessingContext &context );
+    static QgsPointXY parameterAsPoint( const QgsProcessingParameterDefinition *definition, const QVariantMap &parameters, QgsProcessingContext &context,
+                                        const QgsCoordinateReferenceSystem &crs = QgsCoordinateReferenceSystem() );
+
+    /**
+     * Returns the coordinate reference system associated with an point parameter value.
+     *
+     * \see parameterAsPoint()
+     */
+    static QgsCoordinateReferenceSystem parameterAsPointCrs( const QgsProcessingParameterDefinition *definition, const QVariantMap &parameters, QgsProcessingContext &context );
 
     /**
      * Evaluates the parameter with matching \a definition to a file/folder name.
@@ -776,6 +837,7 @@ class CORE_EXPORT QgsProcessingParameterPoint : public QgsProcessingParameterDef
     QgsProcessingParameterDefinition *clone() const override SIP_FACTORY;
     QString type() const override { return typeName(); }
     bool checkValueIsAcceptable( const QVariant &input, QgsProcessingContext *context = nullptr ) const override;
+    QString valueAsPythonString( const QVariant &value, QgsProcessingContext &context ) const override;
 
     /**
      * Creates a new parameter using the definition from a script code.
@@ -1350,6 +1412,40 @@ class CORE_EXPORT QgsProcessingParameterExpression : public QgsProcessingParamet
 
 };
 
+
+/**
+ * \class QgsProcessingParameterLimitedDataTypes
+ * \ingroup core
+ * Can be inherited by parameters which require limits to their acceptable data types.
+  * \since QGIS 3.0
+ */
+class CORE_EXPORT QgsProcessingParameterLimitedDataTypes
+{
+  public:
+
+    /**
+     * Constructor for QgsProcessingParameterLimitedDataTypes, with a list of acceptable data \a types.
+     */
+    QgsProcessingParameterLimitedDataTypes( const QList< int > &types = QList< int >() );
+
+    /**
+     * Returns the geometry types for sources acceptable by the parameter.
+     * \see setDataTypes()
+     */
+    QList< int > dataTypes() const;
+
+    /**
+     * Sets the geometry \a types for sources acceptable by the parameter.
+     * \see dataTypes()
+     */
+    void setDataTypes( const QList< int > &types );
+
+  protected:
+
+    //! List of acceptable data types for the parameter
+    QList< int > mDataTypes;
+};
+
 /**
  * \class QgsProcessingParameterVectorLayer
  * \ingroup core
@@ -1357,7 +1453,7 @@ class CORE_EXPORT QgsProcessingParameterExpression : public QgsProcessingParamet
  * the more versatile QgsProcessingParameterFeatureSource wherever possible.
   * \since QGIS 3.0
  */
-class CORE_EXPORT QgsProcessingParameterVectorLayer : public QgsProcessingParameterDefinition
+class CORE_EXPORT QgsProcessingParameterVectorLayer : public QgsProcessingParameterDefinition, public QgsProcessingParameterLimitedDataTypes
 {
   public:
 
@@ -1379,18 +1475,6 @@ class CORE_EXPORT QgsProcessingParameterVectorLayer : public QgsProcessingParame
     bool checkValueIsAcceptable( const QVariant &input, QgsProcessingContext *context = nullptr ) const override;
     QString valueAsPythonString( const QVariant &value, QgsProcessingContext &context ) const override;
 
-    /**
-     * Returns the geometry types for sources acceptable by the parameter.
-     * \see setDataTypes()
-     */
-    QList< int > dataTypes() const;
-
-    /**
-     * Sets the geometry \a types for sources acceptable by the parameter.
-     * \see dataTypes()
-     */
-    void setDataTypes( const QList< int > &types );
-
     QVariantMap toVariantMap() const override;
     bool fromVariantMap( const QVariantMap &map ) override;
 
@@ -1398,11 +1482,6 @@ class CORE_EXPORT QgsProcessingParameterVectorLayer : public QgsProcessingParame
      * Creates a new parameter using the definition from a script code.
      */
     static QgsProcessingParameterVectorLayer *fromScriptCode( const QString &name, const QString &description, bool isOptional, const QString &definition ) SIP_FACTORY;
-
-  private:
-
-    QList< int > mDataTypes = QList< int >() << QgsProcessing::TypeVectorAnyGeometry;
-
 
 };
 
@@ -1497,13 +1576,14 @@ class CORE_EXPORT QgsProcessingParameterField : public QgsProcessingParameterDef
 
 };
 
+
 /**
  * \class QgsProcessingParameterFeatureSource
  * \ingroup core
  * An input feature source (such as vector layers) parameter for processing algorithms.
   * \since QGIS 3.0
  */
-class CORE_EXPORT QgsProcessingParameterFeatureSource : public QgsProcessingParameterDefinition
+class CORE_EXPORT QgsProcessingParameterFeatureSource : public QgsProcessingParameterDefinition, public QgsProcessingParameterLimitedDataTypes
 {
   public:
 
@@ -1524,18 +1604,6 @@ class CORE_EXPORT QgsProcessingParameterFeatureSource : public QgsProcessingPara
     QString valueAsPythonString( const QVariant &value, QgsProcessingContext &context ) const override;
     QString asScriptCode() const override;
 
-    /**
-     * Returns the geometry types for sources acceptable by the parameter.
-     * \see setDataTypes()
-     */
-    QList< int > dataTypes() const;
-
-    /**
-     * Sets the geometry \a types for sources acceptable by the parameter.
-     * \see dataTypes()
-     */
-    void setDataTypes( const QList< int > &types );
-
     QVariantMap toVariantMap() const override;
     bool fromVariantMap( const QVariantMap &map ) override;
 
@@ -1543,10 +1611,6 @@ class CORE_EXPORT QgsProcessingParameterFeatureSource : public QgsProcessingPara
      * Creates a new parameter using the definition from a script code.
      */
     static QgsProcessingParameterFeatureSource *fromScriptCode( const QString &name, const QString &description, bool isOptional, const QString &definition ) SIP_FACTORY;
-
-  private:
-
-    QList< int > mDataTypes = QList< int >() << QgsProcessing::TypeVectorAnyGeometry;
 
 };
 
@@ -1932,6 +1996,8 @@ class CORE_EXPORT QgsProcessingParameterBand : public QgsProcessingParameterDefi
 
     QString mParentLayerParameterName;
 };
+
+// clazy:excludeall=qstring-allocations
 
 #endif // QGSPROCESSINGPARAMETERS_H
 

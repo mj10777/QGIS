@@ -19,17 +19,6 @@ email                : hugo dot mercier at oslandia dot com
 #include <string.h>
 #include <limits>
 
-SpatialiteBlobHeader::SpatialiteBlobHeader()
-  : start( 0x00 )
-  , endianness( 0x01 )
-  , srid( -1 )
-  , mbrMinX( -DBL_MAX )
-  , mbrMinY( -DBL_MAX )
-  , mbrMaxX( DBL_MAX )
-  , mbrMaxY( DBL_MAX )
-  , end( 0x7C )
-{}
-
 void SpatialiteBlobHeader::readFrom( const char *p )
 {
   // we cannot use directly memcpy( this, p, sizeof(this) ),
@@ -78,7 +67,7 @@ void qgsGeometryToSpatialiteBlob( const QgsGeometry &geom, int32_t srid, char *&
 {
   const int header_len = SpatialiteBlobHeader::LENGTH;
 
-  QByteArray wkb( geom.exportToWkb() );
+  QByteArray wkb( geom.asWkb() );
 
   const int wkb_size = wkb.length();
   size = header_len + wkb_size;

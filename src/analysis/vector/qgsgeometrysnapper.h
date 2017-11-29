@@ -211,6 +211,10 @@ class QgsSnapIndex
 
     QgsSnapIndex( const QgsPoint &origin, double cellSize );
     ~QgsSnapIndex();
+
+    QgsSnapIndex( const QgsSnapIndex &rh ) = delete;
+    QgsSnapIndex &operator=( const QgsSnapIndex &rh ) = delete;
+
     void addGeometry( const QgsAbstractGeometry *geom );
     QgsPoint getClosestSnapToPoint( const QgsPoint &p, const QgsPoint &q );
     SnapItem *getSnapItem( const QgsPoint &pos, double tol, PointSnapItem **pSnapPoint = nullptr, SegmentSnapItem **pSnapSegment = nullptr, bool endPointOnly = false ) const;
@@ -222,7 +226,7 @@ class QgsSnapIndex
     class GridRow
     {
       public:
-        GridRow() : mColStartIdx( 0 ) {}
+        GridRow() = default;
         ~GridRow();
         const Cell *getCell( int col ) const;
         Cell &getCreateCell( int col );
@@ -230,7 +234,7 @@ class QgsSnapIndex
 
       private:
         QList<QgsSnapIndex::Cell> mCells;
-        int mColStartIdx;
+        int mColStartIdx = 0;
     };
 
     QgsPoint mOrigin;
@@ -245,8 +249,6 @@ class QgsSnapIndex
     const Cell *getCell( int col, int row ) const;
     Cell &getCreateCell( int col, int row );
 
-    QgsSnapIndex( const QgsSnapIndex &rh );
-    QgsSnapIndex &operator=( const QgsSnapIndex &rh );
 };
 
 ///@endcond

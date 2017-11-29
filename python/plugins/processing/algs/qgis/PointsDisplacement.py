@@ -49,7 +49,7 @@ class PointsDisplacement(QgisAlgorithm):
     OUTPUT = 'OUTPUT'
 
     def group(self):
-        return self.tr('Vector geometry tools')
+        return self.tr('Vector geometry')
 
     def __init__(self):
         super().__init__()
@@ -169,7 +169,7 @@ class PointsDisplacement(QgisAlgorithm):
                     dy = radius * cosinusCurrentAngle
 
                     # we want to keep any existing m/z values
-                    point = f.geometry().geometry().clone()
+                    point = f.geometry().constGet().clone()
                     point.setX(old_point.x() + dx)
                     point.setY(old_point.y() + dy)
                     f.setGeometry(QgsGeometry(point))

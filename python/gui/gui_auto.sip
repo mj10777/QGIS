@@ -1,7 +1,6 @@
 // Include auto-generated SIP files
 %Include qgsattributeeditorcontext.sip
 %Include qgsattributeforminterface.sip
-%Include qgscustomdrophandler.sip
 %Include qgsdetaileditemdata.sip
 %Include qgsexpressionbuilderdialog.sip
 %Include qgsgeometryrubberband.sip
@@ -15,12 +14,15 @@
 %Include qgsmapmouseevent.sip
 %Include qgsmaptip.sip
 %Include qgsrubberband.sip
+%Include qgssnapindicator.sip
 %Include qgstablewidgetitem.sip
 %Include qgsuserinputdockwidget.sip
 %Include qgsbrowserdockwidget.sip
 %Include qgsvertexmarker.sip
-%Include qgsfiledownloader.sip
 %Include qgsabstractdatasourcewidget.sip
+%Include qgssourceselectprovider.sip
+%Include qgssourceselectproviderregistry.sip
+%Include qgsvscrollarea.sip
 %Include attributetable/qgsfeaturemodel.sip
 %Include auth/qgsauthauthoritieseditor.sip
 %Include auth/qgsauthcertificateinfo.sip
@@ -28,6 +30,7 @@
 %Include auth/qgsauthcerttrustpolicycombobox.sip
 %Include auth/qgsauthconfigeditor.sip
 %Include auth/qgsauthconfigselect.sip
+%Include auth/qgsauthsettingswidget.sip
 %Include auth/qgsautheditorwidgets.sip
 %Include auth/qgsauthidentitieseditor.sip
 %Include auth/qgsauthimportcertdialog.sip
@@ -44,7 +47,6 @@
 %Include layertree/qgslayertreeembeddedwidgetregistry.sip
 %Include layout/qgslayoutviewmouseevent.sip
 %Include layout/qgslayoutviewrubberband.sip
-%Include locator/qgslocatorcontext.sip
 %Include raster/qgsrasterrendererwidget.sip
 %Include symbology/qgssymbolwidgetcontext.sip
 %Include qgisinterface.sip
@@ -90,6 +92,7 @@
 %Include qgsconfigureshortcutsdialog.sip
 %Include qgscredentialdialog.sip
 %Include qgscurveeditorwidget.sip
+%Include qgscustomdrophandler.sip
 %Include qgsdetaileditemdelegate.sip
 %Include qgsdetaileditemwidget.sip
 %Include qgsdial.sip
@@ -106,6 +109,7 @@
 %Include qgsfeatureselectiondlg.sip
 %Include qgsfieldcombobox.sip
 %Include qgsfieldexpressionwidget.sip
+%Include qgsfeaturelistcombobox.sip
 %Include qgsfieldvalidator.sip
 %Include qgsfieldvalueslineedit.sip
 %Include qgsfilewidget.sip
@@ -149,6 +153,9 @@
 %Include qgsmessagebaritem.sip
 %Include qgsmessagelogviewer.sip
 %Include qgsmessageviewer.sip
+%Include qgsmetadatawidget.sip
+%Include qgsnewauxiliarylayerdialog.sip
+%Include qgsnewauxiliaryfielddialog.sip
 %Include qgsnewhttpconnection.sip
 %Include qgsnewmemorylayerdialog.sip
 %Include qgsnewnamedialog.sip
@@ -196,6 +203,7 @@
 %Include qgstreewidgetitem.sip
 %Include qgsunitselectionwidget.sip
 %Include qgsvariableeditorwidget.sip
+%Include qgsfiledownloaderdialog.sip
 %Include raster/qgsmultibandcolorrendererwidget.sip
 %Include raster/qgspalettedrendererwidget.sip
 %Include raster/qgsrasterbandcombobox.sip
@@ -279,6 +287,7 @@
 %Include layertree/qgslayertreeview.sip
 %Include layertree/qgslayertreeviewdefaultactions.sip
 %Include layout/qgslayoutdesignerinterface.sip
+%Include layout/qgslayoutitemcombobox.sip
 %Include layout/qgslayoutitemguiregistry.sip
 %Include layout/qgslayoutitemwidget.sip
 %Include layout/qgslayoutnewitempropertiesdialog.sip
@@ -287,13 +296,14 @@
 %Include layout/qgslayoutview.sip
 %Include layout/qgslayoutviewtool.sip
 %Include layout/qgslayoutviewtooladditem.sip
+%Include layout/qgslayoutviewtooladdnodeitem.sip
+%Include layout/qgslayoutviewtooleditnodes.sip
+%Include layout/qgslayoutviewtoolmoveitemcontent.sip
 %Include layout/qgslayoutviewtoolpan.sip
 %Include layout/qgslayoutviewtoolselect.sip
 %Include layout/qgslayoutviewtooltemporarykeypan.sip
 %Include layout/qgslayoutviewtooltemporarykeyzoom.sip
 %Include layout/qgslayoutviewtooltemporarymousepan.sip
 %Include layout/qgslayoutviewtoolzoom.sip
-%Include locator/qgslocator.sip
-%Include locator/qgslocatorfilter.sip
 %Include locator/qgslocatorwidget.sip
 %Include qgsadvanceddigitizingcanvasitem.sip

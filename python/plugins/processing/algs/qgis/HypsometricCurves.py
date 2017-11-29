@@ -56,7 +56,7 @@ class HypsometricCurves(QgisAlgorithm):
     OUTPUT_DIRECTORY = 'OUTPUT_DIRECTORY'
 
     def group(self):
-        return self.tr('Raster tools')
+        return self.tr('Raster terrain analysis')
 
     def __init__(self):
         super().__init__()
@@ -135,7 +135,7 @@ class HypsometricCurves(QgisAlgorithm):
             fName = os.path.join(
                 outputPath, 'hystogram_%s_%s.csv' % (source.sourceName(), f.id()))
 
-            ogrGeom = ogr.CreateGeometryFromWkt(intersectedGeom.exportToWkt())
+            ogrGeom = ogr.CreateGeometryFromWkt(intersectedGeom.asWkt())
             bbox = intersectedGeom.boundingBox()
             xMin = bbox.xMinimum()
             xMax = bbox.xMaximum()

@@ -23,6 +23,8 @@
 class QgsPoint;
 class Vector3D;
 
+#define SIP_NO_FILE
+
 namespace MathUtils
 {
   //! Calculates the barycentric coordinates of a point (x,y) with respect to p1, p2, p3 and stores the three barycentric coordinates in 'result'. Thus the u-coordinate is stored in result::x, the v-coordinate in result::y and the w-coordinate in result::z. Attention: p1, p2 and p3 have to be ordered counterclockwise
@@ -47,19 +49,13 @@ namespace MathUtils
   //! Tests, whether 'point' is inside the diametral circle through 'p1' and 'p2'
   bool ANALYSIS_EXPORT inDiametral( QgsPoint *p1, QgsPoint *p2, QgsPoint *point );
   //! Returns whether 'thepoint' is left or right of the line from 'p1' to 'p2'. Negativ values mean left and positiv values right. There may be numerical instabilities, so a threshold may be useful
-  double ANALYSIS_EXPORT leftOf( QgsPoint *thepoint, QgsPoint *p1, QgsPoint *p2 );
+  double ANALYSIS_EXPORT leftOf( const QgsPoint &thepoint, const QgsPoint *p1, const QgsPoint *p2 );
   //! Returns true, if line1 (p1 to p2) and line2 (p3 to p4) intersect. If the lines have an endpoint in common, false is returned
   bool ANALYSIS_EXPORT lineIntersection( QgsPoint *p1, QgsPoint *p2, QgsPoint *p3, QgsPoint *p4 );
   //! Returns true, if line1 (p1 to p2) and line2 (p3 to p4) intersect. If the lines have an endpoint in common, false is returned. The intersecting point is stored in 'intersection_point.
   bool ANALYSIS_EXPORT lineIntersection( QgsPoint *p1, QgsPoint *p2, QgsPoint *p3, QgsPoint *p4, QgsPoint *intersection_point );
   //! Lower function
   int ANALYSIS_EXPORT lower( int n, int i );
-  //! Returns the maximum of two doubles or the first argument if both are equal
-  double ANALYSIS_EXPORT max( double x, double y );
-  //! Returns the minimum of two doubles or the first argument if both are equal
-  double ANALYSIS_EXPORT min( double x, double y );
-  //! Power function for integer coefficients
-  double ANALYSIS_EXPORT power( double a, int b );//calculates a power b
   //! Returns the area of a triangle. If the points are ordered counterclockwise, the value will be positiv. If they are ordered clockwise, the value will be negativ
   double ANALYSIS_EXPORT triArea( QgsPoint *pa, QgsPoint *pb, QgsPoint *pc );
   //! Calculates the z-component of a vector with coordinates 'x' and 'y'which is in the same tangent plane as the tangent vectors 'v1' and 'v2'. The result is assigned to 'result'

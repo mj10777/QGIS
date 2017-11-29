@@ -35,13 +35,14 @@ class CORE_EXPORT QgsValueRelationFieldFormatter : public QgsFieldFormatter
   public:
     struct ValueRelationItem
     {
+      //! Constructor for ValueRelationItem
       ValueRelationItem( const QVariant &key, const QString &value )
         : key( key )
         , value( value )
       {}
 
-      ValueRelationItem()
-      {}
+      //! Constructor for ValueRelationItem
+      ValueRelationItem() = default;
 
       QVariant key;
       QString value;
@@ -49,7 +50,10 @@ class CORE_EXPORT QgsValueRelationFieldFormatter : public QgsFieldFormatter
 
     typedef QVector < QgsValueRelationFieldFormatter::ValueRelationItem > ValueRelationCache;
 
-    QgsValueRelationFieldFormatter();
+    /**
+     * Constructor for QgsValueRelationFieldFormatter.
+     */
+    QgsValueRelationFieldFormatter() = default;
 
     QString id() const override;
     QString representValue( QgsVectorLayer *layer, int fieldIndex, const QVariantMap &config, const QVariant &cache, const QVariant &value ) const override;

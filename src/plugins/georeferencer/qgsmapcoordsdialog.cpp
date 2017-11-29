@@ -39,6 +39,7 @@ QgsMapCoordsDialog::QgsMapCoordsDialog( QgsMapCanvas *qgisCanvas, const QgsPoint
   }
   qDebug() << QString( "QgsMapCoordsDialog[%1]  dialog- mPixelMap[%2] " ).arg( qgisCanvas->objectName() ).arg( mPixelMap );
   setupUi( this );
+  connect( buttonBox, &QDialogButtonBox::accepted, this, &QgsMapCoordsDialog::buttonBox_accepted );
 
   QgsSettings s;
   restoreGeometry( s.value( QStringLiteral( "/Plugin-GeoReferencer/MapCoordsWindow/geometry" ) ).toByteArray() );
@@ -94,7 +95,7 @@ void QgsMapCoordsDialog::setPrevTool()
   mQgisCanvas->setMapTool( mPrevMapTool );
 }
 
-void QgsMapCoordsDialog::on_buttonBox_accepted()
+void QgsMapCoordsDialog::buttonBox_accepted()
 {
   bool ok;
   double x = leXCoord->text().toDouble( &ok );
@@ -165,7 +166,7 @@ double QgsMapCoordsDialog::dmsToDD( const QString &dms )
 {
   QStringList list = dms.split( ' ' );
   QString tmpStr = list.at( 0 );
-  double res = qAbs( tmpStr.toDouble() );
+  double res = std::fabs( tmpStr.toDouble() );
 
   tmpStr = list.value( 1 );
   if ( !tmpStr.isEmpty() )

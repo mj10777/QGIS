@@ -15,11 +15,14 @@
 
 #include "qgsrasterchangecoords.h"
 
-#include <qgspoint.h>
+#include "qgspoint.h"
+#include "qgsogrutils.h"
+
 #include <gdal.h>
 
 #include <QFile>
 
+<<< <<< < HEAD
 QgsRasterChangeCoords::QgsRasterChangeCoords()
   : mUL_X( 0. )
   , mUL_Y( 0. )
@@ -28,12 +31,14 @@ QgsRasterChangeCoords::QgsRasterChangeCoords()
 {
 }
 
-void QgsRasterChangeCoords::setRaster( const QString &fileRaster )
+== == == =
+  >>> >>> > upstream_qgis / master32.spatialite_provider
+  void QgsRasterChangeCoords::setRaster( const QString &fileRaster )
 {
   GDALAllRegister();
-  GDALDatasetH hDS = GDALOpen( fileRaster.toUtf8().constData(), GA_ReadOnly );
+  gdal::dataset_unique_ptr hDS( GDALOpen( fileRaster.toUtf8().constData(), GA_ReadOnly ) );
   double adfGeoTransform[6];
-  if ( GDALGetProjectionRef( hDS ) && GDALGetGeoTransform( hDS, adfGeoTransform ) == CE_None )
+  if ( GDALGetProjectionRef( hDS.get() ) && GDALGetGeoTransform( hDS.get(), adfGeoTransform ) == CE_None )
     //if ( false )
   {
     mHasCrs = true;
@@ -46,7 +51,6 @@ void QgsRasterChangeCoords::setRaster( const QString &fileRaster )
   {
     mHasCrs = false;
   }
-  GDALClose( hDS );
 }
 
 QVector<QgsPointXY> QgsRasterChangeCoords::getPixelCoords( const QVector<QgsPointXY> &mapCoords )

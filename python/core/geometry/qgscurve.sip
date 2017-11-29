@@ -21,7 +21,11 @@ class QgsCurve: QgsAbstractGeometry
 #include "qgscurve.h"
 %End
   public:
+
     QgsCurve();
+%Docstring
+ Constructor for QgsCurve.
+%End
 
     virtual bool operator==( const QgsCurve &other ) const = 0;
     virtual bool operator!=( const QgsCurve &other ) const = 0;
@@ -30,6 +34,7 @@ class QgsCurve: QgsAbstractGeometry
 %End
 
     virtual QgsCurve *clone() const = 0 /Factory/;
+
 
     virtual QgsPoint startPoint() const = 0;
 %Docstring
@@ -62,7 +67,10 @@ class QgsCurve: QgsAbstractGeometry
  Returns a new line string geometry corresponding to a segmentized approximation
  of the curve.
  \param tolerance segmentation tolerance
- \param toleranceType maximum segmentation angle or maximum difference between approximation and curve*
+ \param toleranceType maximum segmentation angle or maximum difference between approximation and curve
+
+ Uses a MaximumAngle tolerance of 1 degrees by default (360
+ segments in a full circle)
  :rtype: QgsLineString
 %End
 
@@ -94,7 +102,13 @@ class QgsCurve: QgsAbstractGeometry
 %End
 
     virtual QgsCoordinateSequence coordinateSequence() const;
+
     virtual bool nextVertex( QgsVertexId &id, QgsPoint &vertex /Out/ ) const;
+
+    virtual void adjacentVertices( QgsVertexId vertex, QgsVertexId &previousVertex /Out/, QgsVertexId &nextVertex /Out/ ) const;
+
+    virtual int vertexNumberFromVertexId( QgsVertexId id ) const;
+
 
     virtual bool pointAt( int node, QgsPoint &point /Out/, QgsVertexId::VertexType &type /Out/ ) const = 0;
 %Docstring
@@ -115,6 +129,7 @@ class QgsCurve: QgsAbstractGeometry
 
     virtual QgsAbstractGeometry *boundary() const /Factory/;
 
+
     virtual QgsCurve *segmentize( double tolerance = M_PI_2 / 90, SegmentationToleranceType toleranceType = MaximumAngle ) const /Factory/;
 
 %Docstring
@@ -125,11 +140,18 @@ class QgsCurve: QgsAbstractGeometry
 %End
 
     virtual int vertexCount( int part = 0, int ring = 0 ) const;
+
     virtual int ringCount( int part = 0 ) const;
+
     virtual int partCount() const;
+
     virtual QgsPoint vertexAt( QgsVertexId id ) const;
 
+    virtual QgsCurve *toCurveType() const /Factory/;
+
+
     virtual QgsRectangle boundingBox() const;
+
 
     virtual double xAt( int index ) const = 0;
 %Docstring
@@ -160,6 +182,11 @@ class QgsCurve: QgsAbstractGeometry
   protected:
 
     virtual void clearCache() const;
+
+
+    virtual int childCount() const;
+    virtual QgsPoint childPoint( int index ) const;
+
 
 };
 

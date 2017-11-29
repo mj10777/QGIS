@@ -160,7 +160,7 @@ Constructor
  :rtype: float
 %End
 
-    double measureLine( const QList<QgsPointXY> &points ) const;
+    double measureLine( const QVector<QgsPointXY> &points ) const;
 %Docstring
  Measures the length of a line with multiple segments.
  \param points list of points in line
@@ -179,7 +179,7 @@ Constructor
  :rtype: float
 %End
 
-    double measureLineProjected( const QgsPointXY &p1, double distance = 1, double azimuth = M_PI / 2, QgsPointXY *projectedPoint /Out/ = 0 ) const;
+    double measureLineProjected( const QgsPointXY &p1, double distance = 1, double azimuth = M_PI_2, QgsPointXY *projectedPoint /Out/ = 0 ) const;
 %Docstring
  Calculates the distance from one point with distance in meters and azimuth (direction)
  When the sourceCrs() is geographic, computeSpheroidProject() will be called
@@ -213,7 +213,7 @@ Constructor
  :rtype: QgsUnitTypes.AreaUnit
 %End
 
-    double measurePolygon( const QList<QgsPointXY> &points ) const;
+    double measurePolygon( const QVector<QgsPointXY> &points ) const;
 %Docstring
  Measures the area of the polygon described by a set of points.
  :rtype: float
@@ -279,7 +279,7 @@ Constructor
  :rtype: float
 %End
 
-    QgsPointXY computeSpheroidProject( const QgsPointXY &p1, double distance = 1, double azimuth = M_PI / 2 ) const;
+    QgsPointXY computeSpheroidProject( const QgsPointXY &p1, double distance = 1, double azimuth = M_PI_2 ) const;
 %Docstring
  Given a location, an azimuth and a distance, computes the
  location of the projected point. Based on Vincenty's formula

@@ -104,7 +104,7 @@ class GUI_EXPORT QgsLayoutRuler: public QWidget
     QgsLayoutView *mView = nullptr;
 
     QTransform mTransform;
-    QPointF mMarkerPos;
+    QPoint mMarkerPos;
 
     QFont mRulerFont;
     std::unique_ptr< QFontMetrics > mRulerFontMetrics;
@@ -121,7 +121,7 @@ class GUI_EXPORT QgsLayoutRuler: public QWidget
     QgsLayoutGuide *mHoverGuide = nullptr;
 
     bool mCreatingGuide = false;
-    std::unique_ptr< QGraphicsLineItem > mGuideItem;
+    QGraphicsLineItem *mGuideItem = nullptr;
 
     //! Polygon for drawing guide markers
     QPolygonF mGuideMarker;

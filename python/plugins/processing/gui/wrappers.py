@@ -18,7 +18,6 @@
 ***************************************************************************
 """
 
-
 __author__ = 'Arnaud Morvan'
 __date__ = 'May 2016'
 __copyright__ = '(C) 2016, Arnaud Morvan'
@@ -26,7 +25,6 @@ __copyright__ = '(C) 2016, Arnaud Morvan'
 # This will get replaced with a git SHA1 when you do a git archive
 
 __revision__ = '$Format:%H$'
-
 
 import locale
 import os
@@ -67,6 +65,7 @@ from qgis.core import (
     QgsProcessingFeatureSourceDefinition,
     QgsProcessingOutputRasterLayer,
     QgsProcessingOutputVectorLayer,
+    QgsProcessingOutputFile,
     QgsProcessingOutputString,
     QgsProcessingOutputNumber,
     QgsProcessingModelChildParameterSource,
@@ -98,6 +97,7 @@ from qgis.PyQt.QtCore import pyqtSignal, QObject, QVariant, Qt
 from qgis.utils import iface
 
 from processing.gui.NumberInputPanel import NumberInputPanel, ModellerNumberInputPanel
+from processing.gui.RangePanel import RangePanel
 from processing.modeler.MultilineTextPanel import MultilineTextPanel
 from processing.gui.PointSelectionPanel import PointSelectionPanel
 from processing.core.parameters import (ParameterBoolean,
@@ -118,11 +118,13 @@ from processing.gui.FileSelectionPanel import FileSelectionPanel
 from processing.core.outputs import (OutputFile, OutputRaster, OutputVector,
                                      OutputString, OutputTable, OutputExtent)
 from processing.tools import dataobjects
+from processing.gui.CheckboxesPanel import CheckboxesPanel
 from processing.gui.MultipleInputPanel import MultipleInputPanel
 from processing.gui.BatchInputSelectionPanel import BatchInputSelectionPanel
 from processing.gui.FixedTablePanel import FixedTablePanel
 from processing.gui.ExtentSelectionPanel import ExtentSelectionPanel
 from processing.gui.ParameterGuiUtils import getFileFilter
+
 DIALOG_STANDARD = 'standard'
 DIALOG_BATCH = 'batch'
 DIALOG_MODELER = 'modeler'
@@ -146,7 +148,6 @@ def getExtendedLayerName(layer):
 
 
 class WidgetWrapper(QObject):
-
     widgetValueHasChanged = pyqtSignal(object)
 
     def __init__(self, param, dialog, row=0, col=0, **kwargs):
@@ -219,42 +220,13 @@ class WidgetWrapper(QObject):
         else:
             path = ''
 
+        # TODO: should use selectedFilter argument for default file format
         filename, selected_filter = QFileDialog.getOpenFileName(self.widget, self.tr('Select file'),
                                                                 path, getFileFilter(self.param))
         if filename:
             settings.setValue('/Processing/LastInputPath',
                               os.path.dirname(str(filename)))
         return filename, selected_filter
-
-
-class ExpressionWidgetWrapperMixin():
-
-    def wrapWithExpressionButton(self, basewidget):
-        expr_button = QToolButton()
-        expr_button.clicked.connect(self.showExpressionsBuilder)
-        expr_button.setText('…')
-
-        layout = QHBoxLayout()
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.addWidget(basewidget)
-        layout.addWidget(expr_button)
-
-        widget = QWidget()
-        widget.setLayout(layout)
-
-        return widget
-
-    def showExpressionsBuilder(self):
-        context = dataobjects.createExpressionContext()
-        value = self.value()
-        if not isinstance(value, str):
-            value = ''
-        dlg = QgsExpressionBuilderDialog(None, value, self.widget, 'generic', context)
-        dlg.setWindowTitle(self.tr('Expression based input'))
-        if dlg.exec_() == QDialog.Accepted:
-            exp = QgsExpression(dlg.expressionText())
-            if not exp.hasParserError():
-                self.setValue(dlg.expressionText())
 
 
 class BasicWidgetWrapper(WidgetWrapper):
@@ -320,11 +292,13 @@ class CrsWidgetWrapper(WidgetWrapper):
 
             widget.setLayout(layout)
             self.combo.setEditable(True)
-            crss = self.dialog.getAvailableValuesOfType(QgsProcessingParameterCrs)
+            crss = self.dialog.getAvailableValuesOfType((QgsProcessingParameterCrs, QgsProcessingParameterString), QgsProcessingOutputString)
             for crs in crss:
                 self.combo.addItem(self.dialog.resolveValueDescription(crs), crs)
-            raster = self.dialog.getAvailableValuesOfType(QgsProcessingParameterRasterLayer, QgsProcessingOutputRasterLayer)
-            vector = self.dialog.getAvailableValuesOfType(QgsProcessingParameterFeatureSource, QgsProcessingOutputVectorLayer)
+            raster = self.dialog.getAvailableValuesOfType(QgsProcessingParameterRasterLayer,
+                                                          QgsProcessingOutputRasterLayer)
+            vector = self.dialog.getAvailableValuesOfType(QgsProcessingParameterFeatureSource,
+                                                          QgsProcessingOutputVectorLayer)
             for r in raster:
                 self.combo.addItem("Crs of layer " + self.dialog.resolveValueDescription(r), r)
             for v in vector:
@@ -377,7 +351,6 @@ class CrsWidgetWrapper(WidgetWrapper):
 
 
 class ExtentWidgetWrapper(WidgetWrapper):
-
     USE_MIN_COVERING_EXTENT = "[Use min covering extent]"
 
     def createWidget(self):
@@ -386,11 +359,13 @@ class ExtentWidgetWrapper(WidgetWrapper):
         else:
             widget = QComboBox()
             widget.setEditable(True)
-            extents = self.dialog.getAvailableValuesOfType(QgsProcessingParameterExtent, OutputExtent)
+            extents = self.dialog.getAvailableValuesOfType(QgsProcessingParameterExtent, (OutputExtent, QgsProcessingOutputString))
             if self.param.flags() & QgsProcessingParameterDefinition.FlagOptional:
                 widget.addItem(self.USE_MIN_COVERING_EXTENT, None)
-            raster = self.dialog.getAvailableValuesOfType(QgsProcessingParameterRasterLayer, QgsProcessingOutputRasterLayer)
-            vector = self.dialog.getAvailableValuesOfType(QgsProcessingParameterFeatureSource, QgsProcessingOutputVectorLayer)
+            raster = self.dialog.getAvailableValuesOfType(QgsProcessingParameterRasterLayer,
+                                                          QgsProcessingOutputRasterLayer)
+            vector = self.dialog.getAvailableValuesOfType(QgsProcessingParameterFeatureSource,
+                                                          QgsProcessingOutputVectorLayer)
             for ex in extents:
                 widget.addItem(self.dialog.resolveValueDescription(ex), ex)
             for r in raster:
@@ -440,7 +415,7 @@ class PointWidgetWrapper(WidgetWrapper):
         else:
             item = QComboBox()
             item.setEditable(True)
-            points = self.dialog.getAvailableValuesOfType(QgsProcessingParameterPoint)
+            points = self.dialog.getAvailableValuesOfType((QgsProcessingParameterPoint, QgsProcessingParameterString), (QgsProcessingOutputString))
             for p in points:
                 item.addItem(self.dialog.resolveValueDescription(p), p)
             item.setEditText(str(self.param.defaultValue()))
@@ -481,26 +456,63 @@ class FileWidgetWrapper(WidgetWrapper):
 
     def createWidget(self):
         if self.dialogType in (DIALOG_STANDARD, DIALOG_BATCH):
-            return FileSelectionPanel(self.param.behavior() == QgsProcessingParameterFile.Folder, self.param.extension())
+            return FileSelectionPanel(self.param.behavior() == QgsProcessingParameterFile.Folder,
+                                      self.param.extension())
         else:
-            widget = QComboBox()
-            widget.setEditable(True)
-            files = self.dialog.getAvailableValuesOfType(QgsProcessingParameterFile, OutputFile)
+            self.combo = QComboBox()
+            self.combo.setEditable(True)
+            files = self.dialog.getAvailableValuesOfType(QgsProcessingParameterFile, (QgsProcessingOutputFile, QgsProcessingOutputString))
             for f in files:
-                widget.addItem(self.dialog.resolveValueDescription(f), f)
+                self.combo.addItem(self.dialog.resolveValueDescription(f), f)
+            if self.param.flags() & QgsProcessingParameterDefinition.FlagOptional:
+                self.combo.setEditText("")
+            widget = QWidget()
+            layout = QHBoxLayout()
+            layout.setMargin(0)
+            layout.setContentsMargins(0, 0, 0, 0)
+            layout.setSpacing(2)
+            layout.addWidget(self.combo)
+            btn = QToolButton()
+            btn.setText('…')
+            btn.setToolTip(self.tr("Select file"))
+            btn.clicked.connect(self.selectFile)
+            layout.addWidget(btn)
+            widget.setLayout(layout)
             return widget
+
+    def selectFile(self):
+        settings = QgsSettings()
+        if os.path.isdir(os.path.dirname(self.combo.currentText())):
+            path = os.path.dirname(self.combo.currentText())
+        if settings.contains('/Processing/LastInputPath'):
+            path = settings.value('/Processing/LastInputPath')
+        else:
+            path = ''
+
+        if self.param.extension():
+            filter = self.tr('{} files').format(
+                self.param.extension().upper()) + ' (*.' + self.param.extension() + self.tr(
+                ');;All files (*.*)')
+        else:
+            filter = self.tr('All files (*.*)')
+
+        filename, selected_filter = QFileDialog.getOpenFileName(self.widget,
+                                                                self.tr('Select file'), path,
+                                                                filter)
+        if filename:
+            self.combo.setEditText(filename)
 
     def setValue(self, value):
         if self.dialogType in (DIALOG_STANDARD, DIALOG_BATCH):
             self.widget.setText(value)
         else:
-            self.setComboValue(value)
+            self.setComboValue(value, combobox=self.combo)
 
     def value(self):
         if self.dialogType in (DIALOG_STANDARD, DIALOG_BATCH):
             return self.widget.getValue()
         else:
-            return self.comboValue()
+            return self.comboValue(combobox=self.combo)
 
 
 class FixedTableWidgetWrapper(WidgetWrapper):
@@ -521,24 +533,43 @@ class FixedTableWidgetWrapper(WidgetWrapper):
             return self.widget.table
 
 
-class MultipleInputWidgetWrapper(WidgetWrapper):
+class MultipleLayerWidgetWrapper(WidgetWrapper):
 
     def _getOptions(self):
         if self.param.layerType() == QgsProcessing.TypeVectorAnyGeometry:
-            options = self.dialog.getAvailableValuesOfType((QgsProcessingParameterFeatureSource, QgsProcessingParameterVectorLayer, QgsProcessingParameterMultipleLayers), QgsProcessingOutputVectorLayer)
+            options = self.dialog.getAvailableValuesOfType((QgsProcessingParameterFeatureSource,
+                                                            QgsProcessingParameterVectorLayer,
+                                                            QgsProcessingParameterMultipleLayers),
+                                                           QgsProcessingOutputVectorLayer)
         elif self.param.layerType() == QgsProcessing.TypeVectorPoint:
-            options = self.dialog.getAvailableValuesOfType((QgsProcessingParameterFeatureSource, QgsProcessingParameterVectorLayer, QgsProcessingParameterMultipleLayers), QgsProcessingOutputVectorLayer,
-                                                           [QgsProcessing.TypeVectorPoint, QgsProcessing.TypeVectorAnyGeometry])
+            options = self.dialog.getAvailableValuesOfType((QgsProcessingParameterFeatureSource,
+                                                            QgsProcessingParameterVectorLayer,
+                                                            QgsProcessingParameterMultipleLayers),
+                                                           QgsProcessingOutputVectorLayer,
+                                                           [QgsProcessing.TypeVectorPoint,
+                                                            QgsProcessing.TypeVectorAnyGeometry])
         elif self.param.layerType() == QgsProcessing.TypeVectorLine:
-            options = self.dialog.getAvailableValuesOfType((QgsProcessingParameterFeatureSource, QgsProcessingParameterVectorLayer, QgsProcessingParameterMultipleLayers), QgsProcessingOutputVectorLayer,
-                                                           [QgsProcessing.TypeVectorLine, QgsProcessing.TypeVectorAnyGeometry])
+            options = self.dialog.getAvailableValuesOfType((QgsProcessingParameterFeatureSource,
+                                                            QgsProcessingParameterVectorLayer,
+                                                            QgsProcessingParameterMultipleLayers),
+                                                           QgsProcessingOutputVectorLayer,
+                                                           [QgsProcessing.TypeVectorLine,
+                                                            QgsProcessing.TypeVectorAnyGeometry])
         elif self.param.layerType() == QgsProcessing.TypeVectorPolygon:
-            options = self.dialog.getAvailableValuesOfType((QgsProcessingParameterFeatureSource, QgsProcessingParameterVectorLayer, QgsProcessingParameterMultipleLayers), QgsProcessingOutputVectorLayer,
-                                                           [QgsProcessing.TypeVectorPolygon, QgsProcessing.TypeVectorAnyGeometry])
+            options = self.dialog.getAvailableValuesOfType((QgsProcessingParameterFeatureSource,
+                                                            QgsProcessingParameterVectorLayer,
+                                                            QgsProcessingParameterMultipleLayers),
+                                                           QgsProcessingOutputVectorLayer,
+                                                           [QgsProcessing.TypeVectorPolygon,
+                                                            QgsProcessing.TypeVectorAnyGeometry])
         elif self.param.layerType() == QgsProcessing.TypeRaster:
-            options = self.dialog.getAvailableValuesOfType((QgsProcessingParameterRasterLayer, QgsProcessingParameterMultipleLayers), QgsProcessingOutputRasterLayer)
+            options = self.dialog.getAvailableValuesOfType(
+                (QgsProcessingParameterRasterLayer, QgsProcessingParameterMultipleLayers),
+                QgsProcessingOutputRasterLayer)
         elif self.param.layerType() == QgsProcessing.TypeVector:
-            options = self.dialog.getAvailableValuesOfType((QgsProcessingParameterFeatureSource, QgsProcessingParameterVectorLayer, QgsProcessingParameterMultipleLayers), OutputTable)
+            options = self.dialog.getAvailableValuesOfType((QgsProcessingParameterFeatureSource,
+                                                            QgsProcessingParameterVectorLayer,
+                                                            QgsProcessingParameterMultipleLayers), OutputTable)
         else:
             options = self.dialog.getAvailableValuesOfType(QgsProcessingParameterFile, OutputFile)
         options = sorted(options, key=lambda opt: self.dialog.resolveValueDescription(opt))
@@ -554,7 +585,8 @@ class MultipleInputWidgetWrapper(WidgetWrapper):
                 elif self.param.layerType() in (QgsProcessing.TypeVectorAnyGeometry, QgsProcessing.TypeVector):
                     options = QgsProcessingUtils.compatibleVectorLayers(QgsProject.instance(), [], False)
                 else:
-                    options = QgsProcessingUtils.compatibleVectorLayers(QgsProject.instance(), [self.param.layerType()], False)
+                    options = QgsProcessingUtils.compatibleVectorLayers(QgsProject.instance(), [self.param.layerType()],
+                                                                        False)
                 opts = [getExtendedLayerName(opt) for opt in options]
                 return MultipleInputPanel(opts, datatype=self.param.layerType())
         elif self.dialogType == DIALOG_BATCH:
@@ -572,7 +604,8 @@ class MultipleInputWidgetWrapper(WidgetWrapper):
             elif self.param.layerType() in (QgsProcessing.TypeVectorAnyGeometry, QgsProcessing.TypeVector):
                 options = QgsProcessingUtils.compatibleVectorLayers(QgsProject.instance(), [], False)
             else:
-                options = QgsProcessingUtils.compatibleVectorLayers(QgsProject.instance(), [self.param.layerType()], False)
+                options = QgsProcessingUtils.compatibleVectorLayers(QgsProject.instance(), [self.param.layerType()],
+                                                                    False)
             opts = [getExtendedLayerName(opt) for opt in options]
             self.widget.updateForOptions(opts)
 
@@ -608,13 +641,15 @@ class MultipleInputWidgetWrapper(WidgetWrapper):
                 elif self.param.layerType() in (QgsProcessing.TypeVectorAnyGeometry, QgsProcessing.TypeVector):
                     options = QgsProcessingUtils.compatibleVectorLayers(QgsProject.instance(), [], False)
                 else:
-                    options = QgsProcessingUtils.compatibleVectorLayers(QgsProject.instance(), [self.param.layerType()], False)
+                    options = QgsProcessingUtils.compatibleVectorLayers(QgsProject.instance(), [self.param.layerType()],
+                                                                        False)
                 return [options[i] if isinstance(i, int) else i for i in self.widget.selectedoptions]
         elif self.dialogType == DIALOG_BATCH:
             return self.widget.getText()
         else:
             options = self._getOptions()
-            values = [options[i] if isinstance(i, int) else QgsProcessingModelChildParameterSource.fromStaticValue(i) for i in self.widget.selectedoptions]
+            values = [options[i] if isinstance(i, int) else QgsProcessingModelChildParameterSource.fromStaticValue(i)
+                      for i in self.widget.selectedoptions]
             if len(values) == 0 and not self.param.flags() & QgsProcessing.FlagOptional:
                 raise InvalidParameterValue()
             return values
@@ -637,8 +672,24 @@ class NumberWidgetWrapper(WidgetWrapper):
         return self.widget.getValue()
 
 
-class MapLayerWidgetWrapper(WidgetWrapper):
+class RangeWidgetWrapper(WidgetWrapper):
 
+    def createWidget(self):
+        if self.dialogType in (DIALOG_STANDARD, DIALOG_BATCH):
+            widget = RangePanel(self.param)
+            widget.hasChanged.connect(lambda: self.widgetValueHasChanged.emit(self))
+            return widget
+        #else:
+        #    return ModellerNumberInputPanel(self.param, self.dialog)
+
+    def setValue(self, value):
+        self.widget.setValue(value)
+
+    def value(self):
+        return self.widget.getValue()
+
+
+class MapLayerWidgetWrapper(WidgetWrapper):
     NOT_SELECTED = '[Not selected]'
 
     def createWidget(self):
@@ -701,8 +752,9 @@ class MapLayerWidgetWrapper(WidgetWrapper):
         pass
 
     def getAvailableLayers(self):
-        return self.dialog.getAvailableValuesOfType([QgsProcessingParameterRasterLayer, QgsProcessingParameterVectorLayer, QgsProcessingParameterMapLayer],
-                                                    [QgsProcessingOutputRasterLayer, QgsProcessingOutputVectorLayer])
+        return self.dialog.getAvailableValuesOfType(
+            [QgsProcessingParameterRasterLayer, QgsProcessingParameterVectorLayer, QgsProcessingParameterMapLayer, QgsProcessingParameterString],
+            [QgsProcessingOutputRasterLayer, QgsProcessingOutputVectorLayer, QgsProcessingOutputString, QgsProcessingOutputFile])
 
     def selectFile(self):
         filename, selected_filter = self.getFileName(self.combo.currentText())
@@ -727,7 +779,7 @@ class MapLayerWidgetWrapper(WidgetWrapper):
         if self.dialogType == DIALOG_STANDARD:
             try:
                 layer = self.combo.currentLayer()
-                if layer:
+                if layer is not None:
                     return layer
                 else:
                     return self.combo.currentText()
@@ -741,13 +793,15 @@ class MapLayerWidgetWrapper(WidgetWrapper):
                     return self.param.flags() & QgsProcessingParameterDefinition.FlagOptional
                 else:
                     return os.path.exists(v)
+
             return self.comboValue(validator, combobox=self.combo)
 
 
 class RasterWidgetWrapper(MapLayerWidgetWrapper):
 
     def getAvailableLayers(self):
-        return self.dialog.getAvailableValuesOfType(QgsProcessingParameterRasterLayer, QgsProcessingOutputRasterLayer)
+        return self.dialog.getAvailableValuesOfType((QgsProcessingParameterRasterLayer, QgsProcessingParameterString),
+                                                    (QgsProcessingOutputRasterLayer, QgsProcessingOutputFile, QgsProcessingOutputString))
 
     def setComboBoxFilters(self, combo):
         combo.setFilters(QgsMapLayerProxyModel.RasterLayer)
@@ -766,9 +820,14 @@ class RasterWidgetWrapper(MapLayerWidgetWrapper):
                 self.combo.setEditText(filename)
 
 
-class SelectionWidgetWrapper(WidgetWrapper):
+class EnumWidgetWrapper(WidgetWrapper):
 
-    def createWidget(self):
+    def createWidget(self, useCheckBoxes=False, columns=1):
+        self._useCheckBoxes = useCheckBoxes
+        if self._useCheckBoxes and not self.dialogType == DIALOG_BATCH:
+            return CheckboxesPanel(options=self.param.options(),
+                                   multiple=self.param.allowMultiple(),
+                                   columns=columns)
         if self.param.allowMultiple():
             return MultipleInputPanel(options=self.param.options())
         else:
@@ -780,20 +839,24 @@ class SelectionWidgetWrapper(WidgetWrapper):
             return widget
 
     def setValue(self, value):
+        if self._useCheckBoxes and not self.dialogType == DIALOG_BATCH:
+            self.widget.setValue(value)
+            return
         if self.param.allowMultiple():
             self.widget.setSelectedItems(value)
         else:
             self.widget.setCurrentIndex(self.widget.findData(value))
 
     def value(self):
+        if self._useCheckBoxes and not self.dialogType == DIALOG_BATCH:
+            return self.widget.value()
         if self.param.allowMultiple():
             return self.widget.selectedoptions
         else:
             return self.widget.currentData()
 
 
-class VectorWidgetWrapper(WidgetWrapper):
-
+class FeatureSourceWidgetWrapper(WidgetWrapper):
     NOT_SELECTED = '[Not selected]'
 
     def createWidget(self):
@@ -862,7 +925,9 @@ class VectorWidgetWrapper(WidgetWrapper):
             return widget
         else:
             self.combo = QComboBox()
-            layers = self.dialog.getAvailableValuesOfType((QgsProcessingParameterFeatureSource, QgsProcessingParameterVectorLayer), QgsProcessingOutputVectorLayer)
+            layers = self.dialog.getAvailableValuesOfType(
+                (QgsProcessingParameterFeatureSource, QgsProcessingParameterVectorLayer),
+                (QgsProcessingOutputVectorLayer, QgsProcessingOutputString, QgsProcessingOutputFile), self.param.dataTypes())
             self.combo.setEditable(True)
             for layer in layers:
                 self.combo.addItem(self.dialog.resolveValueDescription(layer), layer)
@@ -933,10 +998,11 @@ class VectorWidgetWrapper(WidgetWrapper):
                     return self.param.flags() & QgsProcessingParameterDefinition.FlagOptional
                 else:
                     return os.path.exists(v)
+
             return self.comboValue(validator, combobox=self.combo)
 
 
-class StringWidgetWrapper(WidgetWrapper, ExpressionWidgetWrapperMixin):
+class StringWidgetWrapper(WidgetWrapper):
 
     def createWidget(self):
         if self.dialogType == DIALOG_STANDARD:
@@ -944,15 +1010,17 @@ class StringWidgetWrapper(WidgetWrapper, ExpressionWidgetWrapperMixin):
                 widget = QPlainTextEdit()
             else:
                 self._lineedit = QLineEdit()
-                return self.wrapWithExpressionButton(self._lineedit)
+                widget = self._lineedit
 
         elif self.dialogType == DIALOG_BATCH:
             widget = QLineEdit()
 
         else:
             # strings, numbers, files and table fields are all allowed input types
-            strings = self.dialog.getAvailableValuesOfType([QgsProcessingParameterString, QgsProcessingParameterNumber, QgsProcessingParameterFile,
-                                                            QgsProcessingParameterField, QgsProcessingParameterExpression], [QgsProcessingOutputString])
+            strings = self.dialog.getAvailableValuesOfType(
+                [QgsProcessingParameterString, QgsProcessingParameterNumber, QgsProcessingParameterFile,
+                 QgsProcessingParameterField, QgsProcessingParameterExpression],
+                [QgsProcessingOutputString, QgsProcessingOutputFile])
             options = [(self.dialog.resolveValueDescription(s), s) for s in strings]
             if self.param.multiLine():
                 widget = MultilineTextPanel(options)
@@ -1022,6 +1090,7 @@ class StringWidgetWrapper(WidgetWrapper, ExpressionWidgetWrapperMixin):
             else:
                 def validator(v):
                     return bool(v) or self.param.flags() & QgsProcessingParameterDefinition.FlagOptional
+
                 return self.comboValue(validator)
 
 
@@ -1036,7 +1105,9 @@ class ExpressionWidgetWrapper(WidgetWrapper):
             if self.param.defaultValue():
                 widget.setExpression(self.param.defaultValue())
         else:
-            strings = self.dialog.getAvailableValuesOfType([QgsProcessingParameterExpression, QgsProcessingParameterString, QgsProcessingParameterNumber], QgsProcessingOutputString)
+            strings = self.dialog.getAvailableValuesOfType(
+                [QgsProcessingParameterExpression, QgsProcessingParameterString, QgsProcessingParameterNumber],
+                (QgsProcessingOutputString, QgsProcessingOutputNumber))
             options = [(self.dialog.resolveValueDescription(s), s) for s in strings]
             widget = QComboBox()
             widget.setEditable(True)
@@ -1079,11 +1150,11 @@ class ExpressionWidgetWrapper(WidgetWrapper):
         else:
             def validator(v):
                 return bool(v) or self.param.flags() & QgsProcessingParameterDefinition.FlagOptional
+
             return self.comboValue(validator)
 
 
-class TableWidgetWrapper(WidgetWrapper):
-
+class VectorLayerWidgetWrapper(WidgetWrapper):
     NOT_SELECTED = '[Not selected]'
 
     def createWidget(self):
@@ -1103,19 +1174,22 @@ class TableWidgetWrapper(WidgetWrapper):
 
             widget.setLayout(layout)
 
+            if ProcessingConfig.getSetting(ProcessingConfig.SHOW_CRS_DEF):
+                self.combo.setShowCrs(True)
             if self.param.flags() & QgsProcessingParameterDefinition.FlagOptional:
                 self.combo.setAllowEmptyLayer(True)
 
             filters = QgsMapLayerProxyModel.Filters()
             if QgsProcessing.TypeVectorAnyGeometry in self.param.dataTypes() or len(self.param.dataTypes()) == 0:
-                filters = QgsMapLayerProxyModel.VectorLayer
+                filters = QgsMapLayerProxyModel.HasGeometry
             if QgsProcessing.TypeVectorPoint in self.param.dataTypes():
                 filters |= QgsMapLayerProxyModel.PointLayer
             if QgsProcessing.TypeVectorLine in self.param.dataTypes():
                 filters |= QgsMapLayerProxyModel.LineLayer
             if QgsProcessing.TypeVectorPolygon in self.param.dataTypes():
                 filters |= QgsMapLayerProxyModel.PolygonLayer
-            self.combo.setFilters(filters)
+            if filters:
+                self.combo.setFilters(filters)
 
             self.combo.setExcludedProviders(['grass'])
             try:
@@ -1133,7 +1207,8 @@ class TableWidgetWrapper(WidgetWrapper):
         else:
             self.combo = QComboBox()
             self.combo.setEditable(True)
-            tables = self.dialog.getAvailableValuesOfType(QgsProcessingParameterVectorLayer, QgsProcessingOutputVectorLayer)
+            tables = self.dialog.getAvailableValuesOfType((QgsProcessingParameterVectorLayer, QgsProcessingParameterString),
+                                                          (QgsProcessingOutputVectorLayer, QgsProcessingOutputFile, QgsProcessingOutputString))
             if self.param.flags() & QgsProcessingParameterDefinition.FlagOptional:
                 self.combo.addItem(self.NOT_SELECTED, None)
             for table in tables:
@@ -1177,7 +1252,7 @@ class TableWidgetWrapper(WidgetWrapper):
         if self.dialogType == DIALOG_STANDARD:
             try:
                 layer = self.combo.currentLayer()
-                if layer:
+                if layer is not None:
                     return layer
                 else:
                     return self.combo.currentText()
@@ -1188,11 +1263,11 @@ class TableWidgetWrapper(WidgetWrapper):
         else:
             def validator(v):
                 return bool(v) or self.param.flags() & QgsProcessingParameterDefinition.FlagOptional
+
             return self.comboValue(validator, combobox=self.combo)
 
 
 class TableFieldWidgetWrapper(WidgetWrapper):
-
     NOT_SET = '[Not set]'
 
     def createWidget(self):
@@ -1215,11 +1290,15 @@ class TableFieldWidgetWrapper(WidgetWrapper):
         else:
             widget = QComboBox()
             widget.setEditable(True)
-            fields = self.dialog.getAvailableValuesOfType([QgsProcessingParameterField, QgsProcessingParameterString], [QgsProcessingOutputString])
+            fields = self.dialog.getAvailableValuesOfType([QgsProcessingParameterField, QgsProcessingParameterString],
+                                                          [QgsProcessingOutputString])
             if self.param.flags() & QgsProcessingParameterDefinition.FlagOptional:
                 widget.addItem(self.NOT_SET, None)
             for f in fields:
                 widget.addItem(self.dialog.resolveValueDescription(f), f)
+            widget.setToolTip(
+                self.tr(
+                    'Input parameter, or name of field (separate field names with ; for multiple field parameters)'))
             return widget
 
     def postInitialize(self, wrappers):
@@ -1248,6 +1327,8 @@ class TableFieldWidgetWrapper(WidgetWrapper):
         else:
             self.widget.setLayer(self._layer)
             self.widget.setCurrentIndex(0)
+        if self.param.defaultValue() is not None:
+            self.setValue(self.param.defaultValue())
 
     def getFields(self):
         if self._layer is None:
@@ -1272,9 +1353,17 @@ class TableFieldWidgetWrapper(WidgetWrapper):
             if self.param.allowMultiple():
                 options = self.widget.options
                 selected = []
-                for i, opt in enumerate(options):
-                    if opt in value:
-                        selected.append(i)
+                if isinstance(value, str):
+                    value = value.split(';')
+
+                for v in value:
+                    for i, opt in enumerate(options):
+                        if opt == v:
+                            selected.append(i)
+                        # case insensitive check - only do if matching case value is not present
+                        elif v not in options and opt.lower() == v.lower():
+                            selected.append(i)
+
                 self.widget.setSelectedItems(selected)
             else:
                 self.widget.setField(value)
@@ -1293,11 +1382,11 @@ class TableFieldWidgetWrapper(WidgetWrapper):
         else:
             def validator(v):
                 return bool(v) or self.param.flags() & QgsProcessingParameterDefinition.FlagOptional
+
             return self.comboValue(validator)
 
 
 class BandWidgetWrapper(WidgetWrapper):
-
     NOT_SET = '[Not set]'
 
     def createWidget(self):
@@ -1311,7 +1400,8 @@ class BandWidgetWrapper(WidgetWrapper):
         else:
             widget = QComboBox()
             widget.setEditable(True)
-            fields = self.dialog.getAvailableValuesOfType([QgsProcessingParameterBand, QgsProcessingParameterNumber], [QgsProcessingOutputNumber])
+            fields = self.dialog.getAvailableValuesOfType([QgsProcessingParameterBand, QgsProcessingParameterNumber],
+                                                          [QgsProcessingOutputNumber])
             if self.param.flags() & QgsProcessingParameterDefinition.FlagOptional:
                 widget.addItem(self.NOT_SET, None)
             for f in fields:
@@ -1357,6 +1447,7 @@ class BandWidgetWrapper(WidgetWrapper):
         else:
             def validator(v):
                 return bool(v) or self.param.flags() & QgsProcessingParameterDefinition.FlagOptional
+
             return self.comboValue(validator)
 
 
@@ -1407,27 +1498,29 @@ class WidgetWrapperFactory:
         elif param.type() == 'file':
             wrapper = FileWidgetWrapper
         elif param.type() == 'multilayer':
-            wrapper = MultipleInputWidgetWrapper
+            wrapper = MultipleLayerWidgetWrapper
         elif param.type() == 'number':
             wrapper = NumberWidgetWrapper
         elif param.type() == 'raster':
             wrapper = RasterWidgetWrapper
         elif param.type() == 'enum':
-            wrapper = SelectionWidgetWrapper
+            wrapper = EnumWidgetWrapper
         elif param.type() == 'string':
             wrapper = StringWidgetWrapper
         elif param.type() == 'expression':
             wrapper = ExpressionWidgetWrapper
         elif param.type() == 'vector':
-            wrapper = TableWidgetWrapper
+            wrapper = VectorLayerWidgetWrapper
         elif param.type() == 'field':
             wrapper = TableFieldWidgetWrapper
         elif param.type() == 'source':
-            wrapper = VectorWidgetWrapper
+            wrapper = FeatureSourceWidgetWrapper
         elif param.type() == 'band':
             wrapper = BandWidgetWrapper
         elif param.type() == 'layer':
             wrapper = MapLayerWidgetWrapper
+        elif param.type() == 'range':
+            wrapper = RangeWidgetWrapper
         else:
             assert False, param.type()
         return wrapper(param, dialog, row, col)

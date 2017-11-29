@@ -23,13 +23,23 @@
 #include "qgis.h"
 #include "qgis_gui.h"
 
-/** \ingroup gui
+/**
+ * \ingroup gui
  * Dialog to set up parameters to create a new GeoPackage layer, and on accept() to create it and add it to the layers */
 class GUI_EXPORT QgsNewGeoPackageLayerDialog: public QDialog, private Ui::QgsNewGeoPackageLayerDialogBase
 {
     Q_OBJECT
 
   public:
+
+    //! Behavior to use when an existing geopackage already exists
+    enum OverwriteBehavior
+    {
+      Prompt, //!< Prompt user for action
+      Overwrite, //!< Overwrite whole geopackage
+      AddNewLayer, //!< Keep existing contents and add new layer
+    };
+
     //! Constructor
     QgsNewGeoPackageLayerDialog( QWidget *parent SIP_TRANSFERTHIS = nullptr, Qt::WindowFlags fl = QgsGuiUtils::ModalDialogFlags );
     ~QgsNewGeoPackageLayerDialog();
@@ -47,36 +57,52 @@ class GUI_EXPORT QgsNewGeoPackageLayerDialog: public QDialog, private Ui::QgsNew
     QString databasePath() const { return mDatabaseEdit->text(); }
 
     /**
-     * Sets the the database \a path
+     * Sets the initial database \a path
      * \since QGIS 3.0
      */
     void setDatabasePath( const QString &path ) { mDatabaseEdit->setText( path ); }
 
+    /**
+     * Sets the database path widgets to a locked and read-only mode.
+     * \since QGIS 3.0
+     */
+    void lockDatabasePath();
+
+    /**
+     * Sets the \a behavior to use when a path to an existing geopackage file is used.
+     *
+     * The default behavior is to prompt the user for an action to take.
+     *
+     * \since QGIS 3.0
+     */
+    void setOverwriteBehavior( OverwriteBehavior behavior );
+
   private slots:
-    void on_mAddAttributeButton_clicked();
-    void on_mRemoveAttributeButton_clicked();
-    void on_mFieldTypeBox_currentIndexChanged( int index );
-    void on_mGeometryTypeBox_currentIndexChanged( int index );
-    void on_mSelectDatabaseButton_clicked();
-    void on_mDatabaseEdit_textChanged( const QString &text );
-    void on_mTableNameEdit_textChanged( const QString &text );
-    void on_mTableNameEdit_textEdited( const QString &text );
-    void on_mLayerIdentifierEdit_textEdited( const QString &text );
+    void mAddAttributeButton_clicked();
+    void mRemoveAttributeButton_clicked();
+    void mFieldTypeBox_currentIndexChanged( int index );
+    void mGeometryTypeBox_currentIndexChanged( int index );
+    void mSelectDatabaseButton_clicked();
+    void mDatabaseEdit_textChanged( const QString &text );
+    void mTableNameEdit_textChanged( const QString &text );
+    void mTableNameEdit_textEdited( const QString &text );
+    void mLayerIdentifierEdit_textEdited( const QString &text );
     void fieldNameChanged( const QString & );
     void selectionChanged();
     void checkOk();
 
     void showHelp();
-    void on_buttonBox_accepted();
-    void on_buttonBox_rejected();
+    void buttonBox_accepted();
+    void buttonBox_rejected();
 
   private:
     bool apply();
 
     QPushButton *mOkButton = nullptr;
     QString mCrsId;
-    bool mTableNameEdited;
-    bool mLayerIdentifierEdited;
+    bool mTableNameEdited = false;
+    bool mLayerIdentifierEdited = false;
+    OverwriteBehavior mBehavior = Prompt;
 };
 
 #endif // QGSNEWVECTORLAYERDIALOG_H

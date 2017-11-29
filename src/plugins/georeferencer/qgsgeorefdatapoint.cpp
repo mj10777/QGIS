@@ -35,6 +35,7 @@ QgsGeorefDataPoint::QgsGeorefDataPoint( QgsMapCanvas *srcCanvas, QgsMapCanvas *d
 {
 }
 
+<<< <<< < HEAD
 QgsGeorefDataPoint::QgsGeorefDataPoint( const QgsPointXY &pixelCoords, const QgsPointXY &mapCoords, int i_srid, int id_gcp,
                                         int id_gcp_master, int iResultType, QString sTextInfo )
   : QObject()
@@ -67,6 +68,10 @@ QgsGeorefDataPoint::QgsGeorefDataPoint( QgsGeorefDataPoint &dataPoint )
   , mName( "" )
   , mNotes( "" )
   , mParseString( ";#;#" )
+    == == == =
+      QgsGeorefDataPoint::QgsGeorefDataPoint( const QgsGeorefDataPoint & p )
+        : QObject( nullptr )
+        >>> >>> > upstream_qgis / master32.spatialite_provider
 {
   // we share item representation on canvas between all points
   mPixelCoords = dataPoint.pixelCoords();

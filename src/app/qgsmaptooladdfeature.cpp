@@ -14,6 +14,7 @@
  ***************************************************************************/
 
 #include "qgsmaptooladdfeature.h"
+#include "qgsadvanceddigitizingdockwidget.h"
 #include "qgsapplication.h"
 #include "qgsattributedialog.h"
 #include "qgsexception.h"
@@ -42,10 +43,6 @@ QgsMapToolAddFeature::QgsMapToolAddFeature( QgsMapCanvas *canvas, CaptureMode mo
   mToolName = tr( "Add feature" );
   connect( QgisApp::instance(), &QgisApp::newProject, this, &QgsMapToolAddFeature::stopCapturing );
   connect( QgisApp::instance(), &QgisApp::projectRead, this, &QgsMapToolAddFeature::stopCapturing );
-}
-
-QgsMapToolAddFeature::~QgsMapToolAddFeature()
-{
 }
 
 bool QgsMapToolAddFeature::addFeature( QgsVectorLayer *vlayer, QgsFeature *f, bool showModal )
@@ -155,26 +152,31 @@ void QgsMapToolAddFeature::cadCanvasReleaseEvent( QgsMapMouseEvent *e )
       QgsGeometry g;
       if ( layerWKBType == QgsWkbTypes::Point )
       {
-        g = QgsGeometry::fromPoint( savePoint );
+        g = QgsGeometry::fromPointXY( savePoint );
       }
-      else if ( layerWKBType == QgsWkbTypes::Point25D )
+      else if ( !QgsWkbTypes::isMultiType( layerWKBType ) && QgsWkbTypes::hasZ( layerWKBType ) )
       {
         g = QgsGeometry( new QgsPoint( QgsWkbTypes::PointZ, savePoint.x(), savePoint.y(), defaultZValue() ) );
       }
-      else if ( layerWKBType == QgsWkbTypes::MultiPoint )
+      else if ( QgsWkbTypes::isMultiType( layerWKBType ) && !QgsWkbTypes::hasZ( layerWKBType ) )
       {
-        g = QgsGeometry::fromMultiPoint( QgsMultiPoint() << savePoint );
+        g = QgsGeometry::fromMultiPointXY( QgsMultiPointXY() << savePoint );
       }
-      else if ( layerWKBType == QgsWkbTypes::MultiPoint25D )
+      else if ( QgsWkbTypes::isMultiType( layerWKBType ) && QgsWkbTypes::hasZ( layerWKBType ) )
       {
-        QgsMultiPointV2 *mp = new QgsMultiPointV2();
+        QgsMultiPoint *mp = new QgsMultiPoint();
         mp->addGeometry( new QgsPoint( QgsWkbTypes::PointZ, savePoint.x(), savePoint.y(), defaultZValue() ) );
         g = QgsGeometry( mp );
       }
       else
       {
         // if layer supports more types (mCheckGeometryType is false)
-        g = QgsGeometry::fromPoint( savePoint );
+        g = QgsGeometry::fromPointXY( savePoint );
+      }
+
+      if ( QgsWkbTypes::hasM( layerWKBType ) )
+      {
+        g.get()->addMValue();
       }
 
       f.setGeometry( g );
@@ -182,7 +184,8 @@ void QgsMapToolAddFeature::cadCanvasReleaseEvent( QgsMapMouseEvent *e )
 
       addFeature( vlayer, &f, false );
 
-      vlayer->triggerRepaint();
+      // we are done with digitizing for now so instruct advanced digitizing dock to reset its CAD points
+      cadDockWidget()->clearPoints();
     }
   }
 
@@ -279,7 +282,7 @@ void QgsMapToolAddFeature::cadCanvasReleaseEvent( QgsMapMouseEvent *e )
         }
         else
         {
-          poly = new QgsPolygonV2();
+          poly = new QgsPolygon();
         }
         poly->setExteriorRing( curveToAdd );
         QgsGeometry g( poly );

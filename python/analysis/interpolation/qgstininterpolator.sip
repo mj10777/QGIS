@@ -10,43 +10,55 @@
 
 
 
-class QgsTINInterpolator: QgsInterpolator
+class QgsTinInterpolator: QgsInterpolator
 {
 %Docstring
-  Interpolation in a triangular irregular network*
+  Interpolation in a triangular irregular network
+.. versionadded:: 3.0
 %End
 
 %TypeHeaderCode
 #include "qgstininterpolator.h"
 %End
   public:
-    enum TINInterpolation
+
+    enum TinInterpolation
     {
       Linear,
-      CloughTocher
+      CloughTocher,
     };
 
-    QgsTINInterpolator( const QList<QgsInterpolator::LayerData> &inputData, TINInterpolation interpolation = Linear, QgsFeedback *feedback = 0 );
+    QgsTinInterpolator( const QList<QgsInterpolator::LayerData> &inputData, TinInterpolation interpolation = Linear, QgsFeedback *feedback = 0 );
 %Docstring
- Constructor for QgsTINInterpolator.
+ Constructor for QgsTinInterpolator.
  The ``feedback`` object specifies an optional QgsFeedback object for progress reports and cancelation support.
  Ownership of ``feedback`` is not transferred and callers must ensure that it exists for the lifetime of this object.
 %End
-    ~QgsTINInterpolator();
+    ~QgsTinInterpolator();
 
-    virtual int interpolatePoint( double x, double y, double &result );
+    virtual int interpolatePoint( double x, double y, double &result, QgsFeedback *feedback );
 
+
+    static QgsFields triangulationFields();
 %Docstring
- Calculates interpolation value for map coordinates x, y
-\param x x-coordinate (in map units)
-\param y y-coordinate (in map units)
-\param result out: interpolation result
-:return: 0 in case of success*
- :rtype: int
+ Returns the fields output by features when saving the triangulation.
+ These fields should be used when creating
+ a suitable feature sink for setTriangulationSink()
+.. seealso:: setTriangulationSink()
+.. versionadded:: 3.0
+ :rtype: QgsFields
 %End
 
-    void setExportTriangulationToFile( bool e );
-    void setTriangulationFilePath( const QString &filepath );
+    void setTriangulationSink( QgsFeatureSink *sink );
+%Docstring
+ Sets the optional ``sink`` for saving the triangulation features.
+
+ The sink must be setup to accept LineString features, with fields matching
+ those returned by triangulationFields().
+
+.. seealso:: triangulationFields()
+.. versionadded:: 3.0
+%End
 
 };
 

@@ -44,11 +44,19 @@ typedef QString protocolDrivers_t();
 //typedef int dataCapabilities_t();
 //typedef QgsDataItem * dataItem_t(QString);
 
-
+static QgsProviderRegistry *sInstance = nullptr;
 
 QgsProviderRegistry *QgsProviderRegistry::instance( const QString &pluginPath )
 {
-  static QgsProviderRegistry *sInstance( new QgsProviderRegistry( pluginPath ) );
+  if ( !sInstance )
+  {
+    static QMutex sMutex;
+    QMutexLocker locker( &sMutex );
+    if ( !sInstance )
+    {
+      sInstance = new QgsProviderRegistry( pluginPath );
+    }
+  }
   return sInstance;
 } // QgsProviderRegistry::instance
 
@@ -255,10 +263,13 @@ void QgsProviderRegistry::clean()
 QgsProviderRegistry::~QgsProviderRegistry()
 {
   clean();
+  if ( sInstance == this )
+    sInstance = nullptr;
 }
 
 
-/** Convenience function for finding any existing data providers that match "providerKey"
+/**
+ * Convenience function for finding any existing data providers that match "providerKey"
 
   Necessary because [] map operator will create a QgsProviderMetadata
   instance.  Also you cannot use the map [] operator in const members for that
@@ -315,7 +326,7 @@ QString QgsProviderRegistry::pluginList( bool asHTML ) const
     list += it->second->description();
 
     if ( asHTML )
-      list += "<br></li>";
+      list += QLatin1String( "<br></li>" );
     else
       list += '\n';
 

@@ -22,10 +22,107 @@
 #include "qgstest.h"
 #include "qgsproject.h"
 #include "qgsreadwritecontext.h"
+#include "qgslayoutitemundocommand.h"
+#include "qgslayoutitemmap.h"
+#include "qgslayoutitemshape.h"
+#include "qgslayouteffect.h"
+#include "qgsfillsymbollayer.h"
 #include <QObject>
 #include <QPainter>
 #include <QImage>
 #include <QtTest/QSignalSpy>
+
+
+//simple item for testing, since some methods in QgsLayoutItem are pure virtual
+class TestItem : public QgsLayoutItem
+{
+    Q_OBJECT
+
+  public:
+
+    TestItem( QgsLayout *layout ) : QgsLayoutItem( layout )
+    {
+      setFrameEnabled( false );
+      setBackgroundEnabled( false );
+    }
+
+    //implement pure virtual methods
+    int type() const override { return QgsLayoutItemRegistry::LayoutItem + 101; }
+    QString stringType() const override { return QStringLiteral( "TestItemType" ); }
+
+    bool forceResize = false;
+
+  protected:
+    void draw( QgsRenderContext &context, const QStyleOptionGraphicsItem * = nullptr ) override
+    {
+      QPainter *painter = context.painter();
+      painter->save();
+      painter->setRenderHint( QPainter::Antialiasing, false );
+      painter->setPen( Qt::NoPen );
+      painter->setBrush( QColor( 255, 100, 100, 200 ) );
+      painter->drawRect( rect() );
+      painter->restore();
+    }
+
+    QSizeF applyItemSizeConstraint( const QSizeF &targetSize ) override
+    {
+      if ( !forceResize )
+        return targetSize;
+
+      return QSizeF( 17, 27 );
+    }
+};
+
+//item with minimum size
+class MinSizedItem : public TestItem
+{
+    Q_OBJECT
+
+  public:
+    MinSizedItem( QgsLayout *layout ) : TestItem( layout )
+    {
+      setMinimumSize( QgsLayoutSize( 5.0, 10.0, QgsUnitTypes::LayoutCentimeters ) );
+    }
+
+    void updateMinSize( QgsLayoutSize size )
+    {
+      setMinimumSize( size );
+    }
+
+};
+
+//item with fixed size
+class FixedSizedItem : public TestItem
+{
+    Q_OBJECT
+
+  public:
+
+    FixedSizedItem( QgsLayout *layout ) : TestItem( layout )
+    {
+      setFixedSize( QgsLayoutSize( 2.0, 4.0, QgsUnitTypes::LayoutInches ) );
+    }
+
+    void updateFixedSize( QgsLayoutSize size )
+    {
+      setFixedSize( size );
+    }
+};
+
+//item with both conflicting fixed and minimum size
+class FixedMinSizedItem : public TestItem
+{
+    Q_OBJECT
+
+  public:
+
+    FixedMinSizedItem( QgsLayout *layout ) : TestItem( layout )
+    {
+      setFixedSize( QgsLayoutSize( 2.0, 4.0, QgsUnitTypes::LayoutCentimeters ) );
+      setMinimumSize( QgsLayoutSize( 5.0, 9.0, QgsUnitTypes::LayoutCentimeters ) );
+    }
+};
+
 
 class TestQgsLayoutItem: public QObject
 {
@@ -62,80 +159,15 @@ class TestQgsLayoutItem: public QObject
     void writeXml();
     void readXml();
     void writeReadXmlProperties();
+    void undoRedo();
+    void multiItemUndo();
+    void overlappingUndo();
+    void blendMode();
+    void opacity();
+    void excludeFromExports();
+    void setSceneRect();
 
   private:
-
-    //simple item for testing, since some methods in QgsLayoutItem are pure virtual
-    class TestItem : public QgsLayoutItem
-    {
-      public:
-
-        TestItem( QgsLayout *layout ) : QgsLayoutItem( layout ) {}
-        ~TestItem() {}
-
-        //implement pure virtual methods
-        int type() const override { return QgsLayoutItemRegistry::LayoutItem + 101; }
-        QString stringType() const override { return QStringLiteral( "TestItemType" ); }
-
-      protected:
-        void draw( QgsRenderContext &context, const QStyleOptionGraphicsItem * = nullptr ) override
-        {
-          QPainter *painter = context.painter();
-          painter->save();
-          painter->setRenderHint( QPainter::Antialiasing, false );
-          painter->setPen( Qt::NoPen );
-          painter->setBrush( QColor( 255, 100, 100, 200 ) );
-          painter->drawRect( rect() );
-          painter->restore();
-        }
-    };
-
-    //item with minimum size
-    class MinSizedItem : public TestItem
-    {
-      public:
-        MinSizedItem( QgsLayout *layout ) : TestItem( layout )
-        {
-          setMinimumSize( QgsLayoutSize( 5.0, 10.0, QgsUnitTypes::LayoutCentimeters ) );
-        }
-
-        void updateMinSize( QgsLayoutSize size )
-        {
-          setMinimumSize( size );
-        }
-
-        ~MinSizedItem() {}
-    };
-
-    //item with fixed size
-    class FixedSizedItem : public TestItem
-    {
-      public:
-
-        FixedSizedItem( QgsLayout *layout ) : TestItem( layout )
-        {
-          setFixedSize( QgsLayoutSize( 2.0, 4.0, QgsUnitTypes::LayoutInches ) );
-        }
-
-        void updateFixedSize( QgsLayoutSize size )
-        {
-          setFixedSize( size );
-        }
-        ~FixedSizedItem() {}
-    };
-
-    //item with both conflicting fixed and minimum size
-    class FixedMinSizedItem : public TestItem
-    {
-      public:
-
-        FixedMinSizedItem( QgsLayout *layout ) : TestItem( layout )
-        {
-          setFixedSize( QgsLayoutSize( 2.0, 4.0, QgsUnitTypes::LayoutCentimeters ) );
-          setMinimumSize( QgsLayoutSize( 5.0, 9.0, QgsUnitTypes::LayoutCentimeters ) );
-        }
-        ~FixedMinSizedItem() {}
-    };
 
     QString mReport;
 
@@ -147,7 +179,7 @@ class TestQgsLayoutItem: public QObject
 
 void TestQgsLayoutItem::initTestCase()
 {
-  mReport = "<h1>Layout Item Tests</h1>\n";
+  mReport = QStringLiteral( "<h1>Layout Item Tests</h1>\n" );
 }
 
 void TestQgsLayoutItem::cleanupTestCase()
@@ -212,7 +244,7 @@ void TestQgsLayoutItem::registry()
   QVERIFY( registry.itemTypes().isEmpty() );
   QVERIFY( !registry.createItem( 1, nullptr ) );
 
-  auto create = []( QgsLayout * layout, const QVariantMap & )->QgsLayoutItem*
+  auto create = []( QgsLayout * layout )->QgsLayoutItem*
   {
     return new TestItem( layout );
   };
@@ -317,7 +349,7 @@ void TestQgsLayoutItem::debugRect()
   l.render( &painter );
   painter.end();
 
-  bool result = renderCheck( "layoutitem_debugrect", image, 0 );
+  bool result = renderCheck( QStringLiteral( "layoutitem_debugrect" ), image, 0 );
   QVERIFY( result );
 }
 
@@ -336,7 +368,7 @@ void TestQgsLayoutItem::draw()
   QPainter painter( &image );
   l.render( &painter );
   painter.end();
-  bool result = renderCheck( "layoutitem_draw", image, 0 );
+  bool result = renderCheck( QStringLiteral( "layoutitem_draw" ), image, 0 );
   QVERIFY( result );
 }
 
@@ -347,7 +379,7 @@ bool TestQgsLayoutItem::renderCheck( QString testName, QImage &image, int mismat
   QString myFileName = myTmpDir + testName + ".png";
   image.save( myFileName, "PNG" );
   QgsRenderChecker myChecker;
-  myChecker.setControlPathPrefix( "layouts" );
+  myChecker.setControlPathPrefix( QStringLiteral( "layouts" ) );
   myChecker.setControlName( "expected_" + testName );
   myChecker.setRenderedImage( myFileName );
   bool myResultFlag = myChecker.compareImages( testName, mismatchCount );
@@ -360,7 +392,7 @@ void TestQgsLayoutItem::positionWithUnits()
   QgsProject p;
   QgsLayout l( &p );
 
-  TestItem *item = new TestItem( &l );
+  std::unique_ptr< TestItem > item( new TestItem( &l ) );
   item->attemptMove( QgsLayoutPoint( 60.0, 15.0, QgsUnitTypes::LayoutMillimeters ) );
   QCOMPARE( item->positionWithUnits().x(), 60.0 );
   QCOMPARE( item->positionWithUnits().y(), 15.0 );
@@ -675,10 +707,14 @@ void TestQgsLayoutItem::resize()
 
   //resize test item (no restrictions), same units as layout
   l.setUnits( QgsUnitTypes::LayoutMillimeters );
-  TestItem *item = new TestItem( &l );
+  std::unique_ptr< TestItem > item( new TestItem( &l ) );
+  QSignalSpy spySizeChanged( item.get(), &QgsLayoutItem::sizePositionChanged );
+
   item->setRect( 0, 0, 55, 45 );
   item->attemptMove( QgsLayoutPoint( 27, 29 ) );
+  QCOMPARE( spySizeChanged.count(), 1 );
   item->attemptResize( QgsLayoutSize( 100.0, 200.0, QgsUnitTypes::LayoutMillimeters ) );
+  QCOMPARE( spySizeChanged.count(), 2 );
   QCOMPARE( item->rect().width(), 100.0 );
   QCOMPARE( item->rect().height(), 200.0 );
   QCOMPARE( item->scenePos().x(), 27.0 ); //item should not move
@@ -690,36 +726,49 @@ void TestQgsLayoutItem::resize()
   item->attemptResize( QgsLayoutSize( 0.30, 0.45, QgsUnitTypes::LayoutMeters ) );
   QCOMPARE( item->rect().width(), 30.0 );
   QCOMPARE( item->rect().height(), 45.0 );
+  QCOMPARE( spySizeChanged.count(), 4 );
 
   //test pixel -> page conversion
   l.setUnits( QgsUnitTypes::LayoutInches );
   l.context().setDpi( 100.0 );
   item->refresh();
+  QCOMPARE( spySizeChanged.count(), 6 );
   item->setRect( 0, 0, 1, 2 );
   item->attemptResize( QgsLayoutSize( 140, 280, QgsUnitTypes::LayoutPixels ) );
   QCOMPARE( item->rect().width(), 1.4 );
   QCOMPARE( item->rect().height(), 2.8 );
+  QCOMPARE( spySizeChanged.count(), 7 );
   //changing the dpi should resize the item
   l.context().setDpi( 200.0 );
   item->refresh();
   QCOMPARE( item->rect().width(), 0.7 );
   QCOMPARE( item->rect().height(), 1.4 );
+  QCOMPARE( spySizeChanged.count(), 8 );
 
   //test page -> pixel conversion
   l.setUnits( QgsUnitTypes::LayoutPixels );
   l.context().setDpi( 100.0 );
   item->refresh();
   item->setRect( 0, 0, 2, 2 );
+  QCOMPARE( spySizeChanged.count(), 10 );
   item->attemptResize( QgsLayoutSize( 1, 3, QgsUnitTypes::LayoutInches ) );
   QCOMPARE( item->rect().width(), 100.0 );
   QCOMPARE( item->rect().height(), 300.0 );
+  QCOMPARE( spySizeChanged.count(), 11 );
   //changing dpi results in item resize
   l.context().setDpi( 200.0 );
   item->refresh();
   QCOMPARE( item->rect().width(), 200.0 );
   QCOMPARE( item->rect().height(), 600.0 );
+  QCOMPARE( spySizeChanged.count(), 13 );
 
   l.setUnits( QgsUnitTypes::LayoutMillimeters );
+
+  // try override item size in item
+  item->forceResize = true;
+  item->attemptResize( QgsLayoutSize( 10.0, 15.0, QgsUnitTypes::LayoutMillimeters ) );
+  QCOMPARE( item->rect().width(), 17.0 );
+  QCOMPARE( item->rect().height(), 27.0 );
 }
 
 void TestQgsLayoutItem::referencePoint()
@@ -728,7 +777,7 @@ void TestQgsLayoutItem::referencePoint()
   QgsLayout l( &p );
 
   //test setting/getting reference point
-  TestItem *item = new TestItem( &l );
+  std::unique_ptr< TestItem > item( new TestItem( &l ) );
   item->setReferencePoint( QgsLayoutItem::LowerMiddle );
   QCOMPARE( item->referencePoint(), QgsLayoutItem::LowerMiddle );
 
@@ -767,8 +816,7 @@ void TestQgsLayoutItem::referencePoint()
   QCOMPARE( item->positionWithUnits().x(), 3.0 );
   QCOMPARE( item->positionWithUnits().y(), 6.0 );
 
-  delete item;
-  item = new TestItem( &l );
+  item.reset( new TestItem( &l ) );
 
   //test that setting item position is done relative to reference point
   l.setUnits( QgsUnitTypes::LayoutMillimeters );
@@ -810,8 +858,7 @@ void TestQgsLayoutItem::referencePoint()
   QCOMPARE( item->scenePos().x(), -1.0 );
   QCOMPARE( item->scenePos().y(), -2.0 );
 
-  delete item;
-  item = new TestItem( &l );
+  item.reset( new TestItem( &l ) );
 
   //test that resizing is done relative to reference point
   item->attemptResize( QgsLayoutSize( 2, 4 ) );
@@ -852,6 +899,20 @@ void TestQgsLayoutItem::referencePoint()
   item->attemptResize( QgsLayoutSize( 4, 6 ) );
   QCOMPARE( item->scenePos().x(), 2.0 );
   QCOMPARE( item->scenePos().y(), 1.0 );
+
+  item.reset( new TestItem( &l ) );
+
+  //item with frame
+  item->attemptResize( QgsLayoutSize( 2, 4 ) );
+  item->attemptMove( QgsLayoutPoint( 1, 2 ) );
+  item->setFrameEnabled( true );
+  item->setFrameStrokeWidth( QgsLayoutMeasurement( 1 ) );
+  item->attemptResize( QgsLayoutSize( 4, 6 ) );
+  QCOMPARE( item->sizeWithUnits().width(), 4.0 );
+  QCOMPARE( item->sizeWithUnits().height(), 6.0 );
+  item->attemptResize( QgsLayoutSize( 4, 6 ), true );
+  QCOMPARE( item->sizeWithUnits().width(), 3.0 );
+  QCOMPARE( item->sizeWithUnits().height(), 5.0 );
 }
 
 void TestQgsLayoutItem::itemPositionReferencePoint()
@@ -896,7 +957,7 @@ void TestQgsLayoutItem::adjustPointForReference()
   QgsProject p;
   QgsLayout l( &p );
 
-  TestItem *item = new TestItem( &l );
+  std::unique_ptr< TestItem > item( new TestItem( &l ) );
   QPointF result = item->adjustPointForReferencePosition( QPointF( 5, 7 ), QSizeF( 2, 4 ), QgsLayoutItem::UpperLeft );
   QCOMPARE( result.x(), 5.0 );
   QCOMPARE( result.y(), 7.0 );
@@ -1001,7 +1062,7 @@ void TestQgsLayoutItem::fixedSize()
   QgsLayout l( &p );
 
   l.setUnits( QgsUnitTypes::LayoutMillimeters );
-  FixedSizedItem *item = new FixedSizedItem( &l );
+  std::unique_ptr< FixedSizedItem > item( new FixedSizedItem( &l ) );
   QCOMPARE( item->fixedSize().width(), 2.0 );
   QCOMPARE( item->fixedSize().height(), 4.0 );
   QCOMPARE( item->fixedSize().units(), QgsUnitTypes::LayoutInches );
@@ -1009,13 +1070,13 @@ void TestQgsLayoutItem::fixedSize()
   item->setRect( 0, 0, 5.0, 6.0 ); //temporarily set rect to random size
   item->attemptResize( QgsLayoutSize( 7.0, 8.0, QgsUnitTypes::LayoutPoints ) );
   //check size matches fixed item size converted to mm
-  QVERIFY( qgsDoubleNear( item->rect().width(), 2.0 * 25.4 ) );
-  QVERIFY( qgsDoubleNear( item->rect().height(), 4.0 * 25.4 ) );
+  QGSCOMPARENEAR( item->rect().width(), 2.0 * 25.4, 4 * DBL_EPSILON );
+  QGSCOMPARENEAR( item->rect().height(), 4.0 * 25.4, 4 * DBL_EPSILON );
 
   //check that setting a fixed size applies this size immediately
   item->updateFixedSize( QgsLayoutSize( 150, 250, QgsUnitTypes::LayoutMillimeters ) );
-  QVERIFY( qgsDoubleNear( item->rect().width(), 150.0 ) );
-  QVERIFY( qgsDoubleNear( item->rect().height(), 250.0 ) );
+  QGSCOMPARENEAR( item->rect().width(), 150.0, 4 * DBL_EPSILON );
+  QGSCOMPARENEAR( item->rect().height(), 250.0, 4 * DBL_EPSILON );
 }
 
 void TestQgsLayoutItem::minSize()
@@ -1024,7 +1085,7 @@ void TestQgsLayoutItem::minSize()
   QgsLayout l( &p );
 
   l.setUnits( QgsUnitTypes::LayoutMillimeters );
-  MinSizedItem *item = new MinSizedItem( &l );
+  std::unique_ptr< MinSizedItem > item( new MinSizedItem( &l ) );
   QCOMPARE( item->minimumSize().width(), 5.0 );
   QCOMPARE( item->minimumSize().height(), 10.0 );
   QCOMPARE( item->minimumSize().units(), QgsUnitTypes::LayoutCentimeters );
@@ -1033,21 +1094,21 @@ void TestQgsLayoutItem::minSize()
   //try to resize to less than minimum size
   item->attemptResize( QgsLayoutSize( 1.0, 0.5, QgsUnitTypes::LayoutPoints ) );
   //check size matches min item size converted to mm
-  QVERIFY( qgsDoubleNear( item->rect().width(), 50.0 ) );
-  QVERIFY( qgsDoubleNear( item->rect().height(), 100.0 ) );
+  QGSCOMPARENEAR( item->rect().width(), 50.0, 4 * DBL_EPSILON );
+  QGSCOMPARENEAR( item->rect().height(), 100.0, 4 * DBL_EPSILON );
 
   //check that resize to larger than min size works
   item->attemptResize( QgsLayoutSize( 0.1, 0.2, QgsUnitTypes::LayoutMeters ) );
-  QVERIFY( qgsDoubleNear( item->rect().width(), 100.0 ) );
-  QVERIFY( qgsDoubleNear( item->rect().height(), 200.0 ) );
+  QGSCOMPARENEAR( item->rect().width(), 100.0, 4 * DBL_EPSILON );
+  QGSCOMPARENEAR( item->rect().height(), 200.0, 4 * DBL_EPSILON );
 
   //check that setting a minimum size applies this size immediately
   item->updateMinSize( QgsLayoutSize( 150, 250, QgsUnitTypes::LayoutMillimeters ) );
-  QVERIFY( qgsDoubleNear( item->rect().width(), 150.0 ) );
-  QVERIFY( qgsDoubleNear( item->rect().height(), 250.0 ) );
+  QGSCOMPARENEAR( item->rect().width(), 150.0, 4 * DBL_EPSILON );
+  QGSCOMPARENEAR( item->rect().height(), 250.0, 4 * DBL_EPSILON );
 
   //also need check that fixed size trumps min size
-  FixedMinSizedItem *fixedMinItem = new FixedMinSizedItem( &l );
+  std::unique_ptr< FixedMinSizedItem > fixedMinItem( new FixedMinSizedItem( &l ) );
   QCOMPARE( fixedMinItem->minimumSize().width(), 5.0 );
   QCOMPARE( fixedMinItem->minimumSize().height(), 9.0 );
   QCOMPARE( fixedMinItem->minimumSize().units(), QgsUnitTypes::LayoutCentimeters );
@@ -1057,8 +1118,8 @@ void TestQgsLayoutItem::minSize()
   //try to resize to less than minimum size
   fixedMinItem->attemptResize( QgsLayoutSize( 1.0, 0.5, QgsUnitTypes::LayoutPoints ) );
   //check size matches fixed item size, not minimum size (converted to mm)
-  QVERIFY( qgsDoubleNear( fixedMinItem->rect().width(), 50.0 ) );
-  QVERIFY( qgsDoubleNear( fixedMinItem->rect().height(), 90.0 ) );
+  QGSCOMPARENEAR( fixedMinItem->rect().width(), 50.0, 4 * DBL_EPSILON );
+  QGSCOMPARENEAR( fixedMinItem->rect().height(), 90.0, 4 * DBL_EPSILON );
 }
 
 void TestQgsLayoutItem::move()
@@ -1068,7 +1129,7 @@ void TestQgsLayoutItem::move()
 
   //move test item, same units as layout
   l.setUnits( QgsUnitTypes::LayoutMillimeters );
-  TestItem *item = new TestItem( &l );
+  std::unique_ptr< TestItem > item( new TestItem( &l ) );
   item->setRect( 0, 0, 55, 45 );
   item->setPos( 27, 29 );
   item->attemptMove( QgsLayoutPoint( 60.0, 15.0, QgsUnitTypes::LayoutMillimeters ) );
@@ -1114,7 +1175,79 @@ void TestQgsLayoutItem::move()
 
   l.setUnits( QgsUnitTypes::LayoutMillimeters );
 
-  //TODO - reference points
+  //reference points
+  item->attemptMove( QgsLayoutPoint( 5, 9 ) );
+  item->attemptResize( QgsLayoutSize( 4, 6 ) );
+  item->setReferencePoint( QgsLayoutItem::LowerRight );
+  QCOMPARE( item->positionWithUnits().x(), 9.0 );
+  QCOMPARE( item->positionWithUnits().y(), 15.0 );
+
+  item->attemptMove( QgsLayoutPoint( 11, 13 ) );
+  QCOMPARE( item->positionWithUnits().x(), 11.0 );
+  QCOMPARE( item->positionWithUnits().y(), 13.0 );
+  QCOMPARE( item->scenePos().x(), 7.0 );
+  QCOMPARE( item->scenePos().y(), 7.0 );
+
+  item->attemptMove( QgsLayoutPoint( 10, 12 ), false );
+  QCOMPARE( item->positionWithUnits().x(), 14.0 );
+  QCOMPARE( item->positionWithUnits().y(), 18.0 );
+  QCOMPARE( item->scenePos().x(), 10.0 );
+  QCOMPARE( item->scenePos().y(), 12.0 );
+
+  //item with frame
+  item.reset( new TestItem( &l ) );
+  item->attemptResize( QgsLayoutSize( 2, 4 ) );
+  item->attemptMove( QgsLayoutPoint( 1, 2 ) );
+  item->setFrameEnabled( true );
+  item->setFrameStrokeWidth( QgsLayoutMeasurement( 1 ) );
+  item->attemptMove( QgsLayoutPoint( 1, 3 ) );
+  QCOMPARE( item->positionWithUnits().x(), 1.0 );
+  QCOMPARE( item->positionWithUnits().y(), 3.0 );
+  item->attemptMove( QgsLayoutPoint( 4, 6 ), false, true );
+  QCOMPARE( item->positionWithUnits().x(), 4.5 );
+  QCOMPARE( item->positionWithUnits().y(), 6.5 );
+}
+
+void TestQgsLayoutItem::setSceneRect()
+{
+  QgsProject p;
+  QgsLayout l( &p );
+
+  //resize test item (no restrictions), same units as layout
+  l.setUnits( QgsUnitTypes::LayoutMillimeters );
+  std::unique_ptr< TestItem > item( new TestItem( &l ) );
+  QSignalSpy spySizeChanged( item.get(), &QgsLayoutItem::sizePositionChanged );
+
+  item->attemptSetSceneRect( QRectF( 27.0, 29.0, 100, 200 ) );
+  QCOMPARE( spySizeChanged.count(), 1 );
+  QCOMPARE( item->rect().width(), 100.0 );
+  QCOMPARE( item->rect().height(), 200.0 );
+  QCOMPARE( item->scenePos().x(), 27.0 );
+  QCOMPARE( item->scenePos().y(), 29.0 );
+  QCOMPARE( item->positionWithUnits().x(), 27.0 );
+  QCOMPARE( item->positionWithUnits().y(), 29.0 );
+  QCOMPARE( item->positionWithUnits().units(), QgsUnitTypes::LayoutMillimeters );
+  QCOMPARE( item->sizeWithUnits().width(), 100.0 );
+  QCOMPARE( item->sizeWithUnits().height(), 200.0 );
+  QCOMPARE( item->sizeWithUnits().units(), QgsUnitTypes::LayoutMillimeters );
+
+  //test conversion of units
+  item->attemptMove( QgsLayoutPoint( 1, 2, QgsUnitTypes::LayoutCentimeters ) );
+  item->attemptResize( QgsLayoutSize( 3, 4, QgsUnitTypes::LayoutCentimeters ) );
+  QCOMPARE( spySizeChanged.count(), 3 );
+  item->attemptSetSceneRect( QRectF( 27.0, 29.0, 100, 200 ) );
+  QCOMPARE( item->rect().width(), 100.0 );
+  QCOMPARE( item->rect().height(), 200.0 );
+  QCOMPARE( item->scenePos().x(), 27.0 );
+  QCOMPARE( item->scenePos().y(), 29.0 );
+  QCOMPARE( spySizeChanged.count(), 4 );
+
+  QCOMPARE( item->positionWithUnits().x(), 2.70 );
+  QCOMPARE( item->positionWithUnits().y(), 2.90 );
+  QCOMPARE( item->positionWithUnits().units(), QgsUnitTypes::LayoutCentimeters );
+  QCOMPARE( item->sizeWithUnits().width(), 10.0 );
+  QCOMPARE( item->sizeWithUnits().height(), 20.0 );
+  QCOMPARE( item->sizeWithUnits().units(), QgsUnitTypes::LayoutCentimeters );
 }
 
 void TestQgsLayoutItem::rotation()
@@ -1123,6 +1256,9 @@ void TestQgsLayoutItem::rotation()
   QgsLayout l( &proj );
 
   TestItem *item = new TestItem( &l );
+
+  QSignalSpy spyRotationChanged( item, &QgsLayoutItem::rotationChanged );
+
   l.setUnits( QgsUnitTypes::LayoutMillimeters );
   item->setPos( 6.0, 10.0 );
   item->setRect( 0.0, 0.0, 10.0, 8.0 );
@@ -1141,6 +1277,9 @@ void TestQgsLayoutItem::rotation()
   QCOMPARE( bounds.right(), 15.0 );
   QCOMPARE( bounds.top(), 9.0 );
   QCOMPARE( bounds.bottom(), 19.0 );
+  QCOMPARE( spyRotationChanged.count(), 1 );
+  QCOMPARE( spyRotationChanged.at( 0 ).at( 0 ).toDouble(), 90.0 );
+
 
   //check that negative angles are preserved as negative
   item->setItemRotation( -90.0 );
@@ -1149,14 +1288,21 @@ void TestQgsLayoutItem::rotation()
   bounds = item->sceneBoundingRect();
   QCOMPARE( bounds.width(), 8.0 );
   QCOMPARE( bounds.height(), 10.0 );
+  QCOMPARE( spyRotationChanged.count(), 2 );
+  QCOMPARE( spyRotationChanged.at( 1 ).at( 0 ).toDouble(), -90.0 );
 
   //check that rotating changes stored item position for reference point
   item->setItemRotation( 0.0 );
+  QCOMPARE( spyRotationChanged.count(), 3 );
+  QCOMPARE( spyRotationChanged.at( 2 ).at( 0 ).toDouble(), 0.0 );
+
   item->attemptMove( QgsLayoutPoint( 5.0, 8.0 ) );
   item->attemptResize( QgsLayoutSize( 10.0, 6.0 ) );
   item->setItemRotation( 90.0 );
   QCOMPARE( item->positionWithUnits().x(), 13.0 );
   QCOMPARE( item->positionWithUnits().y(), 6.0 );
+  QCOMPARE( spyRotationChanged.count(), 4 );
+  QCOMPARE( spyRotationChanged.at( 3 ).at( 0 ).toDouble(), 90.0 );
 
   //setting item position (for reference point) respects rotation
   item->attemptMove( QgsLayoutPoint( 10.0, 8.0 ) );
@@ -1169,20 +1315,56 @@ void TestQgsLayoutItem::rotation()
   QCOMPARE( item->sceneBoundingRect().top(), 8.0 );
   QCOMPARE( item->sceneBoundingRect().bottom(), 18.0 );
 
+  // set rotation, using top left
+  std::unique_ptr< TestItem > item2( new TestItem( &l ) );
+  item2->attemptMove( QgsLayoutPoint( 5.0, 8.0 ) );
+  item2->attemptResize( QgsLayoutSize( 10.0, 6.0 ) );
+  item2->setItemRotation( 90, false );
+  QCOMPARE( item2->positionWithUnits().x(), 5.0 );
+  QCOMPARE( item2->positionWithUnits().y(), 8.0 );
+  QCOMPARE( item2->pos().x(), 5.0 );
+  QCOMPARE( item2->pos().y(), 8.0 );
+  item2->setItemRotation( 180, true );
+  QCOMPARE( item2->positionWithUnits().x(), 7.0 );
+  QCOMPARE( item2->positionWithUnits().y(), 16.0 );
+  QCOMPARE( item2->pos().x(), 7.0 );
+  QCOMPARE( item2->pos().y(), 16.0 );
+
+
   //TODO also changing size?
 
 
   //data defined rotation
   item->setItemRotation( 0.0 );
+  QCOMPARE( spyRotationChanged.count(), 5 );
+  QCOMPARE( spyRotationChanged.at( 4 ).at( 0 ).toDouble(), 0.0 );
+
   item->attemptMove( QgsLayoutPoint( 5.0, 8.0 ) );
   item->attemptResize( QgsLayoutSize( 10.0, 6.0 ) );
   item->dataDefinedProperties().setProperty( QgsLayoutObject::ItemRotation, QgsProperty::fromExpression( QStringLiteral( "90" ) ) );
   item->refreshDataDefinedProperty( QgsLayoutObject::ItemRotation );
-  QCOMPARE( item->itemRotation(), 90.0 );
+  QCOMPARE( item->itemRotation(), 0.0 ); // should be unchanged
+  QCOMPARE( item->rotation(), 90.0 );
+  QCOMPARE( spyRotationChanged.count(), 6 );
+  QCOMPARE( spyRotationChanged.at( 5 ).at( 0 ).toDouble(), 90.0 );
+
+  // rotation should have applied around item center
+  QCOMPARE( item->positionWithUnits().x(), 13.0 );
+  QCOMPARE( item->positionWithUnits().y(), 6.0 );
+  QCOMPARE( item->pos().x(), 13.0 );
+  QCOMPARE( item->pos().y(), 6.0 );
+
   //also check when refreshing all properties
-  item->dataDefinedProperties().setProperty( QgsLayoutObject::ItemRotation, QgsProperty::fromExpression( QStringLiteral( "45" ) ) );
+  item->dataDefinedProperties().setProperty( QgsLayoutObject::ItemRotation, QgsProperty::fromExpression( QStringLiteral( "180" ) ) );
   item->refreshDataDefinedProperty( QgsLayoutObject::AllProperties );
-  QCOMPARE( item->itemRotation(), 45.0 );
+  QCOMPARE( item->itemRotation(), 0.0 ); // should be unchanged
+  QCOMPARE( item->rotation(), 180.0 );
+  QCOMPARE( spyRotationChanged.count(), 7 );
+  QCOMPARE( spyRotationChanged.at( 6 ).at( 0 ).toDouble(), 180.0 );
+  QCOMPARE( item->positionWithUnits().x(), 15.0 );
+  QCOMPARE( item->positionWithUnits().y(), 14.0 );
+  QCOMPARE( item->pos().x(), 15.0 );
+  QCOMPARE( item->pos().y(), 14.0 );
 
   delete item;
 
@@ -1201,13 +1383,12 @@ void TestQgsLayoutItem::rotation()
   l.render( &painter );
   painter.end();
 
-  bool result = renderCheck( "layoutitem_rotation", image, 0 );
+  bool result = renderCheck( QStringLiteral( "layoutitem_rotation" ), image, 0 );
   delete item;
   QVERIFY( result );
 }
 
 //TODO rotation tests:
-//restoring item from xml respects rotation/position
 //rotate item around layout point
 
 
@@ -1216,7 +1397,7 @@ void TestQgsLayoutItem::writeXml()
   QDomImplementation DomImplementation;
   QDomDocumentType documentType =
     DomImplementation.createDocumentType(
-      "qgis", "http://mrcc.com/qgis.dtd", "SYSTEM" );
+      QStringLiteral( "qgis" ), QStringLiteral( "http://mrcc.com/qgis.dtd" ), QStringLiteral( "SYSTEM" ) );
   QDomDocument doc( documentType );
   QDomElement rootNode = doc.createElement( QStringLiteral( "qgis" ) );
 
@@ -1232,7 +1413,7 @@ void TestQgsLayoutItem::writeXml()
   QCOMPARE( element.attribute( "type", "" ), item->stringType() );
 
   //check that element has an object node
-  QDomNodeList objectNodeList = element.elementsByTagName( "LayoutObject" );
+  QDomNodeList objectNodeList = element.elementsByTagName( QStringLiteral( "LayoutObject" ) );
   QCOMPARE( objectNodeList.count(), 1 );
 
   delete item;
@@ -1243,7 +1424,7 @@ void TestQgsLayoutItem::readXml()
   QDomImplementation DomImplementation;
   QDomDocumentType documentType =
     DomImplementation.createDocumentType(
-      "qgis", "http://mrcc.com/qgis.dtd", "SYSTEM" );
+      QStringLiteral( "qgis" ), QStringLiteral( "http://mrcc.com/qgis.dtd" ), QStringLiteral( "SYSTEM" ) );
   QDomDocument doc( documentType );
 
   QgsProject proj;
@@ -1251,19 +1432,19 @@ void TestQgsLayoutItem::readXml()
   TestItem *item = new TestItem( &l );
 
   //try reading bad elements
-  QDomElement badElement = doc.createElement( "bad" );
+  QDomElement badElement = doc.createElement( QStringLiteral( "bad" ) );
   QDomElement noNode;
   QVERIFY( !item->readXml( badElement, doc, QgsReadWriteContext() ) );
   QVERIFY( !item->readXml( noNode, doc, QgsReadWriteContext() ) );
 
   //element with wrong type
-  QDomElement wrongType = doc.createElement( "LayoutItem" );
-  wrongType.setAttribute( QString( "type" ), "bad" );
+  QDomElement wrongType = doc.createElement( QStringLiteral( "LayoutItem" ) );
+  wrongType.setAttribute( QStringLiteral( "type" ), QStringLiteral( "bad" ) );
   QVERIFY( !item->readXml( wrongType, doc, QgsReadWriteContext() ) );
 
   //try good element
-  QDomElement goodElement = doc.createElement( "LayoutItem" );
-  goodElement.setAttribute( QString( "type" ), "TestItemType" );
+  QDomElement goodElement = doc.createElement( QStringLiteral( "LayoutItem" ) );
+  goodElement.setAttribute( QStringLiteral( "type" ), QStringLiteral( "TestItemType" ) );
   QVERIFY( item->readXml( goodElement, doc, QgsReadWriteContext() ) );
   delete item;
 }
@@ -1281,6 +1462,18 @@ void TestQgsLayoutItem::writeReadXmlProperties()
   original->attemptMove( QgsLayoutPoint( 0.05, 0.09, QgsUnitTypes::LayoutMeters ) );
   original->setItemRotation( 45.0 );
   original->setId( QStringLiteral( "test" ) );
+  original->setLocked( true );
+  original->setZValue( 55 );
+  original->setVisible( false );
+  original->setFrameEnabled( true );
+  original->setFrameStrokeColor( QColor( 100, 150, 200 ) );
+  original->setFrameStrokeWidth( QgsLayoutMeasurement( 5, QgsUnitTypes::LayoutCentimeters ) );
+  original->setFrameJoinStyle( Qt::MiterJoin );
+  original->setBackgroundEnabled( false );
+  original->setBackgroundColor( QColor( 200, 150, 100 ) );
+  original->setBlendMode( QPainter::CompositionMode_Darken );
+  original->setExcludeFromExports( true );
+  original->setItemOpacity( 0.75 );
 
   QgsLayoutItem *copy = createCopyViaXml( &l, original );
 
@@ -1294,9 +1487,251 @@ void TestQgsLayoutItem::writeReadXmlProperties()
   QCOMPARE( copy->sizeWithUnits(), original->sizeWithUnits() );
   QCOMPARE( copy->positionWithUnits(), original->positionWithUnits() );
   QCOMPARE( copy->itemRotation(), original->itemRotation() );
+  QVERIFY( copy->isLocked() );
+  QCOMPARE( copy->zValue(), 55.0 );
+  QVERIFY( !copy->isVisible() );
+  QVERIFY( copy->hasFrame() );
+  QCOMPARE( copy->frameStrokeColor(), QColor( 100, 150, 200 ) );
+  QCOMPARE( copy->frameStrokeWidth(), QgsLayoutMeasurement( 5, QgsUnitTypes::LayoutCentimeters ) );
+  QCOMPARE( copy->frameJoinStyle(), Qt::MiterJoin );
+  QVERIFY( !copy->hasBackground() );
+  QCOMPARE( copy->backgroundColor(), QColor( 200, 150, 100 ) );
+  QCOMPARE( copy->blendMode(), QPainter::CompositionMode_Darken );
+  QVERIFY( copy->excludeFromExports( ) );
+  QCOMPARE( copy->itemOpacity(), 0.75 );
 
   delete copy;
   delete original;
+}
+
+void TestQgsLayoutItem::undoRedo()
+{
+  QgsProject proj;
+  QgsLayout l( &proj );
+
+  QgsLayoutItemShape *item = new QgsLayoutItemShape( &l );
+  QString uuid = item->uuid();
+  QPointer< QgsLayoutItemShape > pItem( item ); // for testing deletion
+  item->setFrameStrokeColor( QColor( 255, 100, 200 ) );
+  l.addLayoutItem( item );
+
+  QVERIFY( pItem );
+  QVERIFY( l.items().contains( item ) );
+  QCOMPARE( l.itemByUuid( uuid ), item );
+
+  // undo should delete item
+  l.undoStack()->stack()->undo();
+  QgsApplication::sendPostedEvents( nullptr, QEvent::DeferredDelete );
+  QVERIFY( !pItem );
+  QVERIFY( !l.items().contains( item ) );
+  QVERIFY( !l.itemByUuid( uuid ) );
+
+  // redo should restore
+  l.undoStack()->stack()->redo();
+  QgsApplication::sendPostedEvents( nullptr, QEvent::DeferredDelete );
+  item = dynamic_cast< QgsLayoutItemShape * >( l.itemByUuid( uuid ) );
+  QVERIFY( item );
+  QVERIFY( l.items().contains( item ) );
+  pItem = item;
+  QCOMPARE( item->frameStrokeColor().name(), QColor( 255, 100, 200 ).name() );
+
+  //... and repeat!
+
+  // undo should delete item
+  l.undoStack()->stack()->undo();
+  QgsApplication::sendPostedEvents( nullptr, QEvent::DeferredDelete );
+  QVERIFY( !pItem );
+  QVERIFY( !l.items().contains( item ) );
+  QVERIFY( !l.itemByUuid( uuid ) );
+
+  // redo should restore
+  l.undoStack()->stack()->redo();
+  QgsApplication::sendPostedEvents( nullptr, QEvent::DeferredDelete );
+  item = dynamic_cast< QgsLayoutItemShape * >( l.itemByUuid( uuid ) );
+  QVERIFY( item );
+  QVERIFY( l.items().contains( item ) );
+  pItem = item;
+  QCOMPARE( item->frameStrokeColor().name(), QColor( 255, 100, 200 ).name() );
+
+  // delete item
+  l.removeLayoutItem( item );
+
+  QgsApplication::sendPostedEvents( nullptr, QEvent::DeferredDelete );
+  QVERIFY( !pItem );
+  QVERIFY( !l.items().contains( item ) );
+  QVERIFY( !l.itemByUuid( uuid ) );
+
+  // undo should restore
+  l.undoStack()->stack()->undo();
+  QgsApplication::sendPostedEvents( nullptr, QEvent::DeferredDelete );
+  item = dynamic_cast< QgsLayoutItemShape * >( l.itemByUuid( uuid ) );
+  QVERIFY( item );
+  QVERIFY( l.items().contains( item ) );
+  pItem = item;
+  QCOMPARE( item->frameStrokeColor().name(), QColor( 255, 100, 200 ).name() );
+
+  // another undo should delete item
+  l.undoStack()->stack()->undo();
+  QgsApplication::sendPostedEvents( nullptr, QEvent::DeferredDelete );
+  QVERIFY( !pItem );
+  QVERIFY( !l.items().contains( item ) );
+  QVERIFY( !l.itemByUuid( uuid ) );
+
+  // redo should restore
+  l.undoStack()->stack()->redo();
+  QgsApplication::sendPostedEvents( nullptr, QEvent::DeferredDelete );
+  item = dynamic_cast< QgsLayoutItemShape * >( l.itemByUuid( uuid ) );
+  QVERIFY( item );
+  QVERIFY( l.items().contains( item ) );
+  pItem = item;
+  QCOMPARE( item->frameStrokeColor().name(), QColor( 255, 100, 200 ).name() );
+
+  // another redo should delete item
+  l.undoStack()->stack()->redo();
+  QgsApplication::sendPostedEvents( nullptr, QEvent::DeferredDelete );
+  QVERIFY( !pItem );
+  QVERIFY( !l.items().contains( item ) );
+  QVERIFY( !l.itemByUuid( uuid ) );
+
+}
+
+void TestQgsLayoutItem::multiItemUndo()
+{
+  QgsProject proj;
+  QgsLayout l( &proj );
+
+  QgsLayoutItemShape *item = new QgsLayoutItemShape( &l );
+  l.addLayoutItem( item );
+  item->attemptMove( QgsLayoutPoint( 10, 10 ) );
+  QgsLayoutItemShape *item2 = new QgsLayoutItemShape( &l );
+  l.addLayoutItem( item2 );
+  item2->attemptMove( QgsLayoutPoint( 20, 20 ) );
+
+  l.undoStack()->beginCommand( item, tr( "Item moved" ), QgsLayoutItem::UndoIncrementalMove );
+  item->attemptMove( QgsLayoutPoint( 1, 1 ) );
+  l.undoStack()->endCommand();
+
+  l.undoStack()->beginCommand( item2, tr( "Item moved" ), QgsLayoutItem::UndoIncrementalMove );
+  item2->attemptMove( QgsLayoutPoint( 21, 21 ) );
+  l.undoStack()->endCommand();
+
+  // undo should only remove item2 move
+  l.undoStack()->stack()->undo();
+  QCOMPARE( item2->positionWithUnits(), QgsLayoutPoint( 20, 20 ) );
+  QCOMPARE( item->positionWithUnits(), QgsLayoutPoint( 1, 1 ) );
+  l.undoStack()->stack()->undo();
+  QCOMPARE( item2->positionWithUnits(), QgsLayoutPoint( 20, 20 ) );
+  QCOMPARE( item->positionWithUnits(), QgsLayoutPoint( 10, 10 ) );
+}
+
+void TestQgsLayoutItem::overlappingUndo()
+{
+  QgsProject proj;
+  QgsLayout l( &proj );
+
+  QgsLayoutItemShape *item = new QgsLayoutItemShape( &l );
+  l.addLayoutItem( item );
+  item->attemptMove( QgsLayoutPoint( 10, 10 ) );
+  QgsLayoutItemShape *item2 = new QgsLayoutItemShape( &l );
+  l.addLayoutItem( item2 );
+  item2->attemptMove( QgsLayoutPoint( 20, 20 ) );
+
+  //commands overlap
+  l.undoStack()->beginCommand( item, tr( "Item moved" ), QgsLayoutItem::UndoIncrementalMove );
+  item->attemptMove( QgsLayoutPoint( 1, 1 ) );
+  l.undoStack()->beginCommand( item2, tr( "Item moved" ), QgsLayoutItem::UndoIncrementalMove );
+  item2->attemptMove( QgsLayoutPoint( 21, 21 ) );
+  l.undoStack()->endCommand();
+  l.undoStack()->endCommand();
+
+  // undo should remove item move
+  l.undoStack()->stack()->undo();
+  QCOMPARE( item2->positionWithUnits(), QgsLayoutPoint( 21, 21 ) );
+  QCOMPARE( item->positionWithUnits(), QgsLayoutPoint( 10, 10 ) );
+  l.undoStack()->stack()->undo();
+  QCOMPARE( item2->positionWithUnits(), QgsLayoutPoint( 20, 20 ) );
+  QCOMPARE( item->positionWithUnits(), QgsLayoutPoint( 10, 10 ) );
+
+}
+
+void TestQgsLayoutItem::blendMode()
+{
+  QgsProject proj;
+  QgsLayout l( &proj );
+
+  QgsLayoutItemShape *item = new QgsLayoutItemShape( &l );
+  l.addLayoutItem( item );
+
+  item->setBlendMode( QPainter::CompositionMode_Darken );
+  QCOMPARE( item->blendMode(), QPainter::CompositionMode_Darken );
+  QVERIFY( item->mEffect->isEnabled() );
+
+  l.context().setFlag( QgsLayoutContext::FlagUseAdvancedEffects, false );
+  QVERIFY( !item->mEffect->isEnabled() );
+  l.context().setFlag( QgsLayoutContext::FlagUseAdvancedEffects, true );
+  QVERIFY( item->mEffect->isEnabled() );
+
+  item->dataDefinedProperties().setProperty( QgsLayoutObject::BlendMode, QgsProperty::fromExpression( "'lighten'" ) );
+  item->refreshDataDefinedProperty();
+  QCOMPARE( item->blendMode(), QPainter::CompositionMode_Darken ); // should not change
+  QCOMPARE( item->mEffect->compositionMode(), QPainter::CompositionMode_Lighten );
+}
+
+void TestQgsLayoutItem::opacity()
+{
+  QgsProject proj;
+  QgsLayout l( &proj );
+
+  QgsLayoutItemShape *item = new QgsLayoutItemShape( &l );
+  l.addLayoutItem( item );
+
+  item->setItemOpacity( 0.75 );
+  QCOMPARE( item->itemOpacity(), 0.75 );
+  QCOMPARE( item->opacity(), 0.75 );
+
+  item->dataDefinedProperties().setProperty( QgsLayoutObject::Opacity, QgsProperty::fromExpression( "35" ) );
+  item->refreshDataDefinedProperty();
+  QCOMPARE( item->itemOpacity(), 0.75 ); // should not change
+  QCOMPARE( item->opacity(), 0.35 );
+}
+
+void TestQgsLayoutItem::excludeFromExports()
+{
+  QgsProject proj;
+  QgsLayout l( &proj );
+
+  std::unique_ptr< QgsLayoutItemPage > page( new QgsLayoutItemPage( &l ) );
+  page->setPageSize( QgsLayoutSize( 297, 210, QgsUnitTypes::LayoutMillimeters ) );
+  l.pageCollection()->addPage( page.release() );
+
+  QgsSimpleFillSymbolLayer *simpleFill = new QgsSimpleFillSymbolLayer();
+  std::unique_ptr< QgsFillSymbol > fillSymbol( new QgsFillSymbol() );
+  fillSymbol->changeSymbolLayer( 0, simpleFill );
+  simpleFill->setColor( Qt::transparent );
+  simpleFill->setStrokeColor( Qt::transparent );
+  l.pageCollection()->setPageStyleSymbol( fillSymbol.get() );
+
+  QgsLayoutItemShape *item = new QgsLayoutItemShape( &l );
+  l.addLayoutItem( item );
+
+  item->setExcludeFromExports( true );
+  QVERIFY( item->excludeFromExports() );
+  item->setExcludeFromExports( false );
+  QVERIFY( !item->excludeFromExports() );
+
+  item->dataDefinedProperties().setProperty( QgsLayoutObject::ExcludeFromExports, QgsProperty::fromExpression( "1" ) );
+  item->refreshDataDefinedProperty();
+  QVERIFY( !item->excludeFromExports() ); // should not change
+  QVERIFY( item->mEvaluatedExcludeFromExports );
+
+  item->attemptMove( QgsLayoutPoint( 100, 100 ) );
+  item->attemptResize( QgsLayoutSize( 200, 200 ) );
+  l.updateBounds();
+
+  QgsLayoutChecker checker( QStringLiteral( "layoutitem_excluded" ), &l );
+  checker.setControlPathPrefix( QStringLiteral( "layouts" ) );
+  checker.setSize( QSize( 400, 400 ) );
+  QVERIFY( checker.testLayout( mReport ) );
 }
 
 QgsLayoutItem *TestQgsLayoutItem::createCopyViaXml( QgsLayout *layout, QgsLayoutItem *original )
@@ -1305,7 +1740,7 @@ QgsLayoutItem *TestQgsLayoutItem::createCopyViaXml( QgsLayout *layout, QgsLayout
   QDomImplementation DomImplementation;
   QDomDocumentType documentType =
     DomImplementation.createDocumentType(
-      "qgis", "http://mrcc.com/qgis.dtd", "SYSTEM" );
+      QStringLiteral( "qgis" ), QStringLiteral( "http://mrcc.com/qgis.dtd" ), QStringLiteral( "SYSTEM" ) );
   QDomDocument doc( documentType );
   QDomElement rootNode = doc.createElement( QStringLiteral( "qgis" ) );
 

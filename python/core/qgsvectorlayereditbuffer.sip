@@ -249,6 +249,9 @@ Signals emitted after committing changes
   protected:
 
     QgsVectorLayerEditBuffer();
+%Docstring
+Constructor for QgsVectorLayerEditBuffer
+%End
 
     void updateFields( QgsFields &fields );
 
@@ -280,6 +283,7 @@ Updates an index in an attribute map to a new value (for updates of changed attr
     void updateLayerFields();
 
   protected:
+
 
 
 

@@ -149,14 +149,15 @@ void QgsMeasureDialog::mouseMove( const QgsPointXY &point )
   // and adding moving point at the end
   if ( mMeasureArea && mTool->points().size() >= 2 )
   {
-    QList<QgsPointXY> tmpPoints = mTool->points();
+    QVector<QgsPointXY> tmpPoints = mTool->points();
     tmpPoints.append( point );
     double area = mDa.measurePolygon( tmpPoints );
     editTotal->setText( formatArea( area ) );
   }
-  else if ( !mMeasureArea && mTool->points().size() >= 1 )
+  else if ( !mMeasureArea && !mTool->points().empty() )
   {
-    QgsPointXY p1( mTool->points().last() ), p2( point );
+    QVector< QgsPointXY > tmpPoints = mTool->points();
+    QgsPointXY p1( tmpPoints.at( tmpPoints.size() - 1 ) ), p2( point );
     double d = mDa.measureLine( p1, p2 );
 
     editTotal->setText( formatDistance( mTotal + d ) );
@@ -204,7 +205,7 @@ void QgsMeasureDialog::removeLastPoint()
   {
     if ( numPoints > 1 )
     {
-      QList<QgsPointXY> tmpPoints = mTool->points();
+      QVector<QgsPointXY> tmpPoints = mTool->points();
       tmpPoints.append( mLastMousePoint );
       double area = mDa.measurePolygon( tmpPoints );
       editTotal->setText( formatArea( area ) );
@@ -224,7 +225,8 @@ void QgsMeasureDialog::removeLastPoint()
     if ( !mTool->done() )
     {
       // need to add the distance for the temporary mouse cursor point
-      QgsPointXY p1( mTool->points().last() );
+      QVector< QgsPointXY > tmpPoints = mTool->points();
+      QgsPointXY p1( tmpPoints.at( tmpPoints.size() - 1 ) );
       double d = mDa.measureLine( p1, mLastMousePoint );
 
       d = convertLength( d, mDistanceUnits );
@@ -280,8 +282,8 @@ QString QgsMeasureDialog::formatDistance( double distance, bool convertUnits ) c
   {
     // special handling for degrees - because we can't use smaller units (eg m->mm), we need to make sure there's
     // enough decimal places to show a usable measurement value
-    int minPlaces = qRound( log10( 1.0 / distance ) ) + 1;
-    decimals = qMax( decimals, minPlaces );
+    int minPlaces = std::round( std::log10( 1.0 / distance ) ) + 1;
+    decimals = std::max( decimals, minPlaces );
   }
   return QgsDistanceArea::formatDistance( distance, decimals, mDistanceUnits, baseUnit );
 }
@@ -476,12 +478,13 @@ void QgsMeasureDialog::updateUi()
   }
   else
   {
-    QList<QgsPointXY>::const_iterator it;
+    QVector<QgsPointXY>::const_iterator it;
     bool b = true; // first point
 
     QgsPointXY p1, p2;
     mTotal = 0;
-    for ( it = mTool->points().constBegin(); it != mTool->points().constEnd(); ++it )
+    QVector< QgsPointXY > tmpPoints = mTool->points();
+    for ( it = tmpPoints.constBegin(); it != tmpPoints.constEnd(); ++it )
     {
       p2 = *it;
       if ( !b )
@@ -490,7 +493,7 @@ void QgsMeasureDialog::updateUi()
         if ( forceCartesian )
         {
           //Cartesian calculation forced
-          d = sqrt( p2.sqrDist( p1 ) );
+          d = std::sqrt( p2.sqrDist( p1 ) );
           mTotal += d;
         }
         else

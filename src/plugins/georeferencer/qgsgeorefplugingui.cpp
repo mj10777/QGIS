@@ -95,14 +95,14 @@ QgsGeorefPluginGui::QgsGeorefPluginGui( QgisInterface *qgisInterface, QWidget *p
   , mMousePrecisionDecimalPlaces( 0 )
   , mTransformParam( QgsGeorefTransform::InvalidTransform )
   , mIface( qgisInterface )
+    <<< <<< < HEAD
   , mLayerRaster( nullptr )
+    == == == =
+      >>>>>>> upstream_qgis / master32.spatialite_provider
   , mAgainAddRaster( false )
-  , mMovingPoint( nullptr )
-  , mMovingPointQgis( nullptr )
   , mMapCoordsDialog( nullptr )
   , mUseZeroForTrans( false )
   , mLoadInQgis( false )
-  , mDock( nullptr )
 {
   setupUi( this );
   // mj10777: when false: old behavior with points file
@@ -260,10 +260,44 @@ QgsGeorefPluginGui::~QgsGeorefPluginGui()
 // ----------------------------- protected --------------------------------- //
 void QgsGeorefPluginGui::closeEvent( QCloseEvent *e )
 {
+  <<< <<< < HEAD
   Q_UNUSED( e );
   //will call clearGcpData() when needed and delete any old rasterlayers
   removeOldLayer();
   mRasterFileName = QLatin1String( "" );
+  == == == =
+    switch ( checkNeedGCPSave() )
+  {
+    case QgsGeorefPluginGui::GCPSAVE:
+      if ( mGCPpointsFileName.isEmpty() )
+        saveGCPsDialog();
+      else
+        saveGCPs();
+      writeSettings();
+      clearGCPData();
+      removeOldLayer();
+      mRasterFileName.clear();
+      e->accept();
+      return;
+    case QgsGeorefPluginGui::GCPSILENTSAVE:
+      if ( !mGCPpointsFileName.isEmpty() )
+        saveGCPs();
+      clearGCPData();
+      removeOldLayer();
+      mRasterFileName.clear();
+      return;
+    case QgsGeorefPluginGui::GCPDISCARD:
+      writeSettings();
+      clearGCPData();
+      removeOldLayer();
+      mRasterFileName.clear();
+      e->accept();
+      return;
+    case QgsGeorefPluginGui::GCPCANCEL:
+      e->ignore();
+      return;
+  }
+  >>> >>> > upstream_qgis / master32.spatialite_provider
 }
 
 void QgsGeorefPluginGui::reset()
@@ -296,6 +330,7 @@ void QgsGeorefPluginGui::openRasterDialog()
   QString filters = QgsProviderRegistry::instance()->fileRasterFilters();
   filters.prepend( otherFiles + ";;" );
   filters.chop( otherFiles.size() + 2 );
+  <<< <<< < HEAD
   QString sRasterFileName = QFileDialog::getOpenFileName( this, tr( "Open raster" ), dir, filters, &lastUsedFilter );
   QFileInfo raster_file( QString( "%1" ).arg( sRasterFileName ) );
   if ( raster_file.exists() )
@@ -308,7 +343,13 @@ void QgsGeorefPluginGui::openRaster( QFileInfo raster_file )
 {
   if ( ! raster_file.exists() )
   {
-    return;
+    == == == =
+      mRasterFileName = QFileDialog::getOpenFileName( this, tr( "Open raster" ), dir, filters, &lastUsedFilter );
+    mModifiedRasterFileName.clear();
+
+    if ( mRasterFileName.isEmpty() )
+      >>> >>> > upstream_qgis / master32.spatialite_provider
+      return;
   }
 
   mRasterFileName = raster_file.canonicalFilePath();
@@ -889,7 +930,7 @@ void QgsGeorefPluginGui::updateMouseCoordinatePrecision()
     // to show the difference in position between adjacent pixels.
     // Also avoid taking the log of 0.
     if ( mCanvas->mapUnitsPerPixel() != 0.0 )
-      dp = static_cast<int>( ceil( -1.0 * log10( mCanvas->mapUnitsPerPixel() ) ) );
+      dp = static_cast<int>( std::ceil( -1.0 * std::log10( mCanvas->mapUnitsPerPixel() ) ) );
   }
   else
     dp = QgsProject::instance()->readNumEntry( QStringLiteral( "PositionPrecision" ), QStringLiteral( "/DecimalPlaces" ) );
@@ -1973,10 +2014,10 @@ bool QgsGeorefPluginGui::writeWorldFile( const QgsPointXY &origin, double pixelX
 
   if ( !qgsDoubleNear( rotation, 0.0 ) )
   {
-    rotationX = pixelXSize * sin( rotation );
-    rotationY = pixelYSize * sin( rotation );
-    pixelXSize *= cos( rotation );
-    pixelYSize *= cos( rotation );
+    rotationX = pixelXSize * std::sin( rotation );
+    rotationY = pixelYSize * std::sin( rotation );
+    pixelXSize *= std::cos( rotation );
+    pixelYSize *= std::cos( rotation );
   }
 
   QTextStream stream( &file );
@@ -1989,6 +2030,55 @@ bool QgsGeorefPluginGui::writeWorldFile( const QgsPointXY &origin, double pixelX
   return true;
 }
 
+<<< <<< < HEAD
+== == == =
+  bool QgsGeorefPluginGui::calculateMeanError( double &error ) const
+{
+  if ( mGeorefTransform.transformParametrisation() == QgsGeorefTransform::InvalidTransform )
+  {
+    return false;
+  }
+
+  int nPointsEnabled = 0;
+  QgsGCPList::const_iterator gcpIt = mPoints.constBegin();
+  for ( ; gcpIt != mPoints.constEnd(); ++gcpIt )
+  {
+    if ( ( *gcpIt )->isEnabled() )
+    {
+      ++nPointsEnabled;
+    }
+  }
+
+  if ( nPointsEnabled == mGeorefTransform.getMinimumGCPCount() )
+  {
+    error = 0;
+    return true;
+  }
+  else if ( nPointsEnabled < mGeorefTransform.getMinimumGCPCount() )
+  {
+    return false;
+  }
+
+  double sumVxSquare = 0;
+  double sumVySquare = 0;
+
+  gcpIt = mPoints.constBegin();
+  for ( ; gcpIt != mPoints.constEnd(); ++gcpIt )
+  {
+    if ( ( *gcpIt )->isEnabled() )
+    {
+      sumVxSquare += ( ( *gcpIt )->residual().x() * ( *gcpIt )->residual().x() );
+      sumVySquare += ( ( *gcpIt )->residual().y() * ( *gcpIt )->residual().y() );
+    }
+  }
+
+  // Calculate the root mean square error, adjusted for degrees of freedom of the transform
+  // Caveat: The number of DoFs is assumed to be even (as each control point fixes two degrees of freedom).
+  error = std::sqrt( ( sumVxSquare + sumVySquare ) / ( nPointsEnabled - mGeorefTransform.getMinimumGCPCount() ) );
+  return true;
+}
+
+>>> >>> > upstream_qgis / master32.spatialite_provider
 bool QgsGeorefPluginGui::writePDFMapFile( const QString &fileName, const QgsGeorefTransform &transform )
 {
   Q_UNUSED( transform );
@@ -2002,7 +2092,7 @@ bool QgsGeorefPluginGui::writePDFMapFile( const QString &fileName, const QgsGeor
   {
     return false;
   }
-  double mapRatio =  rlayer->extent().width() / rlayer->extent().height();
+  double mapRatio = rlayer->extent().width() / rlayer->extent().height();
 
   QPrinter printer;
   printer.setOutputFormat( QPrinter::PdfFormat );
@@ -2236,7 +2326,7 @@ bool QgsGeorefPluginGui::writePDFReportFile( const QString &fileName, const QgsG
   {
     QStringList currentGCPStrings;
     QPointF residual = ( *gcpIt )->residual();
-    double residualTot = sqrt( residual.x() * residual.x() +  residual.y() * residual.y() );
+    double residualTot = std::sqrt( residual.x() * residual.x() +  residual.y() * residual.y() );
 
     currentGCPStrings << QString::number( ( *gcpIt )->id() );
     if ( ( *gcpIt )->isEnabled() )
@@ -2249,7 +2339,7 @@ bool QgsGeorefPluginGui::writePDFReportFile( const QString &fileName, const QgsG
     }
     currentGCPStrings << QString::number( ( *gcpIt )->pixelCoords().x(), 'f', 0 ) << QString::number( ( *gcpIt )->pixelCoords().y(), 'f', 0 ) << QString::number( ( *gcpIt )->mapCoords().x(), 'f', 3 )
                       <<  QString::number( ( *gcpIt )->mapCoords().y(), 'f', 3 ) <<  QString::number( residual.x() ) <<  QString::number( residual.y() ) << QString::number( residualTot );
-    gcpTableContents << currentGCPStrings ;
+    gcpTableContents << currentGCPStrings;
   }
 
   gcpTable->setContents( gcpTableContents );
@@ -2470,7 +2560,7 @@ QgsRectangle QgsGeorefPluginGui::transformViewportBoundingBox( const QgsRectangl
 {
   double minX, minY;
   double maxX, maxY;
-  minX = minY =  std::numeric_limits<double>::max();
+  minX = minY = std::numeric_limits<double>::max();
   maxX = maxY = -std::numeric_limits<double>::max();
 
   double oX = canvasExtent.xMinimum();
@@ -2500,10 +2590,10 @@ QgsRectangle QgsGeorefPluginGui::transformViewportBoundingBox( const QgsRectangl
           break;
       }
       t.transform( src, raster, rasterToWorld );
-      minX = qMin( raster.x(), minX );
-      maxX = qMax( raster.x(), maxX );
-      minY = qMin( raster.y(), minY );
-      maxY = qMax( raster.y(), maxY );
+      minX = std::min( raster.x(), minX );
+      maxX = std::max( raster.x(), maxX );
+      minY = std::min( raster.y(), minY );
+      maxY = std::max( raster.y(), maxY );
     }
   }
   return QgsRectangle( minX, minY, maxX, maxY );
@@ -2570,7 +2660,7 @@ int QgsGeorefPluginGui::polynomialOrder( QgsGeorefTransform::TransformParametris
 
 QString QgsGeorefPluginGui::guessWorldFileName( const QString &rasterFileName )
 {
-  QString worldFileName = QLatin1String( "" );
+  QString worldFileName;
   int point = rasterFileName.lastIndexOf( '.' );
   if ( point != -1 && point != rasterFileName.length() - 1 )
     worldFileName = rasterFileName.left( point + 1 ) + "wld";

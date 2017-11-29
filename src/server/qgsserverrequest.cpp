@@ -20,18 +20,9 @@
 #include "qgsserverrequest.h"
 #include <QUrlQuery>
 
-QgsServerRequest::QgsServerRequest()
-  : mUrl()
-  , mMethod( GetMethod )
-  , mDecoded( false )
-{
-
-}
-
 QgsServerRequest::QgsServerRequest( const QString &url, Method method, const Headers &headers )
   : mUrl( url )
   , mMethod( method )
-  , mDecoded( false )
   , mHeaders( headers )
 {
 
@@ -40,7 +31,6 @@ QgsServerRequest::QgsServerRequest( const QString &url, Method method, const Hea
 QgsServerRequest::QgsServerRequest( const QUrl &url, Method method, const Headers &headers )
   : mUrl( url )
   , mMethod( method )
-  , mDecoded( false )
   , mHeaders( headers )
 {
 
@@ -89,7 +79,11 @@ QMap<QString, QString> QgsServerRequest::parameters() const
     QList<pair_t> items = query.queryItems( QUrl::FullyDecoded );
     Q_FOREACH ( const pair_t &pair, items )
     {
-      mParams.insert( pair.first.toUpper(), pair.second );
+      // prepare the value
+      QString value = pair.second;
+      value.replace( "+", " " );
+
+      mParams.insert( pair.first.toUpper(), value );
     }
     mDecoded = true;
   }

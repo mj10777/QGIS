@@ -7,6 +7,10 @@ ENDIF(WITH_QSPATIALITE)
 
 SET(SPATIALITE_SRCS
   qgsspatialiteprovider.cpp
+<<<<<<< HEAD
+=======
+  qgsspatialitedataitems.cpp
+>>>>>>> upstream_qgis/master32.spatialite_provider
   qgsspatialitefeatureiterator.cpp
   qgsspatialitesourceselect.cpp
   qgsspatialitetablemodel.cpp
@@ -14,7 +18,11 @@ SET(SPATIALITE_SRCS
 
 SET(SPATIALITE_MOC_HDRS
   qgsspatialiteprovider.h
+<<<<<<< HEAD
   qgsspatialitesourceselect.h
+=======
+  qgsspatialitedataitems.h
+>>>>>>> upstream_qgis/master32.spatialite_provider
   qgsspatialitetablemodel.h
 )
 
@@ -22,6 +30,13 @@ SET(RASTERLITE2_SRCS
   qgsrasterlite2provider.cpp
 )
 
+<<<<<<< HEAD
+=======
+SET(RASTERLITE2_SRCS
+  qgsrasterlite2provider.cpp
+)
+
+>>>>>>> upstream_qgis/master32.spatialite_provider
 SET(RASTERLITE2_MOC_HDRS
   qgsrasterlite2provider.h
 )
@@ -62,23 +77,31 @@ ADD_LIBRARY (spatialiteprovider MODULE ${SPATIALITE_SRCS} ${SPATIALITE_MOC_SRCS}
 SET(SPATIALITE_LIBRARYS_PROVIDER
   ${SPATIALITE_LIBRARY}
 )
+<<<<<<< HEAD
 
 IF (RASTERLITE2_LIBRARY)
   SET(SPATIALITE_LIBRARYS_PROVIDE ${SPATIALITE_LIBRARYS_PROVIDER}
    ${RASTERLITE2_LIBRARY}
   )
 ENDIF (RASTERLITE2_LIBRARY)
+=======
+>>>>>>> upstream_qgis/master32.spatialite_provider
 
 TARGET_LINK_LIBRARIES(spatialiteprovider
   qgis_core
   ${SPATIALITE_LIBRARYS_PROVIDER}
 )
 
+<<<<<<< HEAD
 IF(RASTERLITE2_LIBRARY)
 ADD_LIBRARY (rasterlite2provider MODULE ${RASTERLITE2_SRCS} ${RASTERLITE2_MOC_SRCS})
 ENDIF(RASTERLITE2_LIBRARY)
 
 IF(RASTERLITE2_LIBRARY)
+=======
+ADD_LIBRARY (rasterlite2provider MODULE ${RASTERLITE2_SRCS} ${RASTERLITE2_MOC_SRCS})
+
+>>>>>>> upstream_qgis/master32.spatialite_provider
 TARGET_LINK_LIBRARIES(rasterlite2provider
   qgis_core
   ${SPATIALITE_LIBRARY}
@@ -92,13 +115,19 @@ IF (WITH_GUI)
   )
 ENDIF ()
 
+<<<<<<< HEAD
 IF(RASTERLITE2_LIBRARY)
+=======
+>>>>>>> upstream_qgis/master32.spatialite_provider
 IF (WITH_GUI)
   TARGET_LINK_LIBRARIES (rasterlite2provider
     qgis_gui
   )
 ENDIF ()
+<<<<<<< HEAD
 ENDIF(RASTERLITE2_LIBRARY)
+=======
+>>>>>>> upstream_qgis/master32.spatialite_provider
 
 # clang-tidy
 IF(CLANG_TIDY_EXE)
@@ -108,14 +137,20 @@ IF(CLANG_TIDY_EXE)
   )
 ENDIF(CLANG_TIDY_EXE)
 
+<<<<<<< HEAD
 IF(RASTERLITE2_LIBRARY)
+=======
+>>>>>>> upstream_qgis/master32.spatialite_provider
 IF(CLANG_TIDY_EXE)
   SET_TARGET_PROPERTIES(
     rasterlite2provider PROPERTIES
     CXX_CLANG_TIDY "${DO_CLANG_TIDY}"
   )
 ENDIF(CLANG_TIDY_EXE)
+<<<<<<< HEAD
 ENDIF(RASTERLITE2_LIBRARY)
+=======
+>>>>>>> upstream_qgis/master32.spatialite_provider
 
 ########################################################
 # Install
@@ -124,8 +159,14 @@ INSTALL(TARGETS spatialiteprovider
   RUNTIME DESTINATION ${QGIS_PLUGIN_DIR}
   LIBRARY DESTINATION ${QGIS_PLUGIN_DIR})
 
+<<<<<<< HEAD
 IF(RASTERLITE2_LIBRARY)
 INSTALL(TARGETS rasterlite2provider
   RUNTIME DESTINATION ${QGIS_PLUGIN_DIR}
   LIBRARY DESTINATION ${QGIS_PLUGIN_DIR})
 ENDIF(RASTERLITE2_LIBRARY)
+=======
+INSTALL(TARGETS rasterlite2provider
+  RUNTIME DESTINATION ${QGIS_PLUGIN_DIR}
+  LIBRARY DESTINATION ${QGIS_PLUGIN_DIR})
+>>>>>>> upstream_qgis/master32.spatialite_provider

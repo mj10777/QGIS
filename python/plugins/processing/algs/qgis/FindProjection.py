@@ -57,7 +57,7 @@ class FindProjection(QgisAlgorithm):
         return self.tr('crs,srs,coordinate,reference,system,guess,estimate,finder,determine').split(',')
 
     def group(self):
-        return self.tr('Vector general tools')
+        return self.tr('Vector general')
 
     def __init__(self):
         super().__init__()
@@ -95,7 +95,7 @@ class FindProjection(QgisAlgorithm):
                                                fields, QgsWkbTypes.NoGeometry, QgsCoordinateReferenceSystem())
 
         # make intersection tests nice and fast
-        engine = QgsGeometry.createGeometryEngine(target_geom.geometry())
+        engine = QgsGeometry.createGeometryEngine(target_geom.constGet())
         engine.prepareGeometry()
 
         layer_bounds = QgsGeometry.fromRect(source.sourceExtent())
@@ -121,12 +121,15 @@ class FindProjection(QgisAlgorithm):
             except:
                 continue
 
-            if engine.intersects(transformed_bounds.geometry()):
-                feedback.pushInfo(self.tr('Found candidate CRS: {}').format(candidate_crs.authid()))
-                f = QgsFeature(fields)
-                f.setAttributes([candidate_crs.authid()])
-                sink.addFeature(f, QgsFeatureSink.FastInsert)
-                found_results += 1
+            try:
+                if engine.intersects(transformed_bounds.constGet()):
+                    feedback.pushInfo(self.tr('Found candidate CRS: {}').format(candidate_crs.authid()))
+                    f = QgsFeature(fields)
+                    f.setAttributes([candidate_crs.authid()])
+                    sink.addFeature(f, QgsFeatureSink.FastInsert)
+                    found_results += 1
+            except:
+                continue
 
             feedback.setProgress(int(current * total))
 

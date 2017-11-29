@@ -8,7 +8,7 @@
 
 
 
-class QgsMultiPolygonV2: QgsMultiSurface
+class QgsMultiPolygon: QgsMultiSurface
 {
 %Docstring
  Multi polygon geometry collection.
@@ -19,41 +19,44 @@ class QgsMultiPolygonV2: QgsMultiSurface
 #include "qgsmultipolygon.h"
 %End
   public:
-    QgsMultiPolygonV2();
+    QgsMultiPolygon();
     virtual QString geometryType() const;
-    virtual QgsMultiPolygonV2 *clone() const /Factory/;
 
+    virtual void clear();
+
+    virtual QgsMultiPolygon *clone() const /Factory/;
 
     virtual bool fromWkt( const QString &wkt );
 
+    virtual QDomElement asGml2( QDomDocument &doc, int precision = 17, const QString &ns = "gml" ) const;
 
-    virtual QDomElement asGML2( QDomDocument &doc, int precision = 17, const QString &ns = "gml" ) const;
+    virtual QDomElement asGml3( QDomDocument &doc, int precision = 17, const QString &ns = "gml" ) const;
 
-    virtual QDomElement asGML3( QDomDocument &doc, int precision = 17, const QString &ns = "gml" ) const;
-
-    virtual QString asJSON( int precision = 17 ) const;
-
+    virtual QString asJson( int precision = 17 ) const;
 
     virtual bool addGeometry( QgsAbstractGeometry *g /Transfer/ );
-%Docstring
-Adds a geometry and takes ownership. Returns true in case of success
- :rtype: bool
-%End
 
-    virtual QgsAbstractGeometry *toCurveType() const /Factory/;
+    virtual bool insertGeometry( QgsAbstractGeometry *g /Transfer/, int index );
+
+
+    virtual QgsMultiSurface *toCurveType() const /Factory/;
 
 %Docstring
  Returns the geometry converted to the more generic curve type QgsMultiSurface
 :return: the converted geometry. Caller takes ownership*
- :rtype: QgsAbstractGeometry
+ :rtype: QgsMultiSurface
 %End
 
     virtual QgsAbstractGeometry *boundary() const /Factory/;
 
+
   protected:
+    virtual QgsMultiPolygon *createEmptyWithSameType() const /Factory/;
 
     virtual bool wktOmitChildType() const;
+
 };
+
 
 /************************************************************************
  * This file has been generated automatically from                      *

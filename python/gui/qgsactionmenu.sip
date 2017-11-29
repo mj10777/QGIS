@@ -30,7 +30,11 @@ class QgsActionMenu : QMenu
 
     struct ActionData
     {
+
       ActionData();
+%Docstring
+ Constructor for ActionData.
+%End
       ActionData( const QgsAction &action, QgsFeatureId featureId, QgsMapLayer *mapLayer );
       ActionData( QgsMapLayerAction *action, QgsFeatureId featureId, QgsMapLayer *mapLayer );
 
@@ -67,6 +71,21 @@ class QgsActionMenu : QMenu
 
  \param feature  A feature. Will not take ownership. It's the callers responsibility to keep the feature
                  as long as the menu is displayed and the action is running.
+%End
+
+    void setExpressionContextScope( const QgsExpressionContextScope &scope );
+%Docstring
+ Sets an expression context scope used to resolve underlying actions.
+
+.. versionadded:: 3.0
+%End
+
+    QgsExpressionContextScope expressionContextScope() const;
+%Docstring
+ Returns an expression context scope used to resolve underlying actions.
+
+.. versionadded:: 3.0
+ :rtype: QgsExpressionContextScope
 %End
 
   signals:

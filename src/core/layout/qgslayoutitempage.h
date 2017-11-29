@@ -65,10 +65,25 @@ class CORE_EXPORT QgsLayoutItemPage : public QgsLayoutItem
       Landscape //!< Landscape orientation
     };
 
+    //! Page item undo commands, used for collapsing undo commands
+    enum UndoCommand
+    {
+      UndoPageSymbol = 3000, //!< Layout page symbol change
+    };
+
     /**
      * Constructor for QgsLayoutItemPage, with the specified parent \a layout.
      */
     explicit QgsLayoutItemPage( QgsLayout *layout SIP_TRANSFERTHIS );
+
+    /**
+     * Returns a new page item for the specified \a layout.
+     *
+     * The caller takes responsibility for deleting the returned object.
+     */
+    static QgsLayoutItemPage *create( QgsLayout *layout ) SIP_FACTORY;
+
+
     int type() const override { return QgsLayoutItemRegistry::LayoutPage; }
     QString stringType() const override { return QStringLiteral( "ItemPaper" ); }
 
@@ -108,7 +123,9 @@ class CORE_EXPORT QgsLayoutItemPage : public QgsLayoutItem
     */
     static QgsLayoutItemPage::Orientation decodePageOrientation( const QString &string, bool *ok SIP_OUT = nullptr );
 
-    void attemptResize( const QgsLayoutSize &size ) override;
+    void attemptResize( const QgsLayoutSize &size, bool includesFrame = false ) override;
+
+    QgsAbstractLayoutUndoCommand *createCommand( const QString &text, int id, QUndoCommand *parent = nullptr ) override SIP_FACTORY;
 
   public slots:
 
@@ -117,6 +134,8 @@ class CORE_EXPORT QgsLayoutItemPage : public QgsLayoutItem
   protected:
 
     void draw( QgsRenderContext &context, const QStyleOptionGraphicsItem *itemStyle = nullptr ) override;
+    void drawFrame( QgsRenderContext &context ) override;
+    void drawBackground( QgsRenderContext &context ) override;
 
   private:
 

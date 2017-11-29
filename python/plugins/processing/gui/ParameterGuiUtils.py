@@ -59,25 +59,21 @@ def getFileFilter(param):
     elif param.type() == 'raster':
         return QgsProviderRegistry.instance().fileRasterFilters()
     elif param.type() == 'rasterDestination':
-        exts = dataobjects.getSupportedOutputRasterLayerExtensions()
-        for i in range(len(exts)):
-            exts[i] = tr('{0} files (*.{1})', 'QgsProcessingParameterRasterDestination').format(exts[i].upper(), exts[i].lower())
-        return tr('All files (*.*)') + ';;' + ';;'.join(exts)
-    elif param.type() == 'table':
-        exts = ['csv', 'dbf']
-        for i in range(len(exts)):
-            exts[i] = tr('{0} files (*.{1})', 'ParameterTable').format(exts[i].upper(), exts[i].lower())
-        return tr('All files (*.*)') + ';;' + ';;'.join(exts)
-    elif param.type() == 'sink':
-        exts = QgsVectorFileWriter.supportedFormatExtensions()
+        exts = dataobjects.getSupportedOutputRasterFilters()
+        return ';;'.join(exts) + ';;' + tr('All files (*.*)')
+    elif param.type() in ('sink', 'vectorDestination'):
+        if param.provider() is not None:
+            exts = param.provider().supportedOutputVectorLayerExtensions()
+        else:
+            exts = QgsVectorFileWriter.supportedFormatExtensions()
         for i in range(len(exts)):
             exts[i] = tr('{0} files (*.{1})', 'ParameterVector').format(exts[i].upper(), exts[i].lower())
-        return tr('All files (*.*)') + ';;' + ';;'.join(exts)
+        return ';;'.join(exts) + ';;' + tr('All files (*.*)')
     elif param.type() == 'source':
         return QgsProviderRegistry.instance().fileVectorFilters()
     elif param.type() == 'vector':
         return QgsProviderRegistry.instance().fileVectorFilters()
-    elif param.type() == 'fileOut':
-        return tr('All files (*.*)') + ';;' + param.fileFilter()
+    elif param.type() == 'fileDestination':
+        return param.fileFilter() + ';;' + tr('All files (*.*)')
 
     return ''

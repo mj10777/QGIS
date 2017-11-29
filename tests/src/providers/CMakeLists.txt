@@ -59,12 +59,14 @@ ADD_QGIS_TEST(wcsprovidertest testqgswcsprovider.cpp)
 # Temporarily set to old version until server is reconfigured
 #SET(TEST_SERVER_URL "http://wcs.qgis.org/${COMPLETE_VERSION}")
 SET(TEST_SERVER_URL "http://wcs.qgis.org/1.9.0")
-#ADD_DEFINITIONS(-DTEST_SERVER_URL="\\"${TEST_SERVER_URL}\\"")
+#ADD_DEFINITIONS(-DTEST_SERVER_URL="${TEST_SERVER_URL}")
 SET_TARGET_PROPERTIES(qgis_wcsprovidertest PROPERTIES
   COMPILE_FLAGS "-DTEST_SERVER_URL=\\\"${TEST_SERVER_URL}\\\""
 )
 
 ADD_QGIS_TEST(gdalprovidertest testqgsgdalprovider.cpp)
+
+ADD_QGIS_TEST(ogrprovidertest testqgsogrprovider.cpp)
 
 ADD_QGIS_TEST(wmscapabilititestest
               testqgswmscapabilities.cpp)

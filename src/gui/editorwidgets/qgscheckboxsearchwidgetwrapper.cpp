@@ -24,8 +24,7 @@
 
 QgsCheckboxSearchWidgetWrapper::QgsCheckboxSearchWidgetWrapper( QgsVectorLayer *vl, int fieldIdx, QWidget *parent )
   : QgsSearchWidgetWrapper( vl, fieldIdx, parent )
-  , mCheckBox( nullptr )
-  , mLayer( nullptr )
+
 {
 }
 
@@ -34,7 +33,7 @@ bool QgsCheckboxSearchWidgetWrapper::applyDirectly()
   return true;
 }
 
-QString QgsCheckboxSearchWidgetWrapper::expression()
+QString QgsCheckboxSearchWidgetWrapper::expression() const
 {
   return mExpression;
 }
@@ -125,8 +124,9 @@ bool QgsCheckboxSearchWidgetWrapper::valid() const
   return true;
 }
 
-void QgsCheckboxSearchWidgetWrapper::setExpression( QString exp )
+void QgsCheckboxSearchWidgetWrapper::setExpression( const QString &expression )
 {
+  QString exp = expression;
   QString fieldName = layer()->fields().at( mFieldIdx ).name();
 
   QString str = QStringLiteral( "%1 = '%3'" )

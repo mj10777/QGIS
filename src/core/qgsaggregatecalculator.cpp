@@ -434,7 +434,7 @@ QVariant QgsAggregateCalculator::calculateNumericAggregate( QgsFeatureIterator &
   }
   s.finalize();
   double val = s.statistic( stat );
-  return qIsNaN( val ) ? QVariant() : val;
+  return std::isnan( val ) ? QVariant() : val;
 }
 
 QVariant QgsAggregateCalculator::calculateStringAggregate( QgsFeatureIterator &fit, int attr, QgsExpression *expression,
@@ -468,7 +468,7 @@ QVariant QgsAggregateCalculator::calculateGeometryAggregate( QgsFeatureIterator 
   Q_ASSERT( expression );
 
   QgsFeature f;
-  QList< QgsGeometry > geometries;
+  QVector< QgsGeometry > geometries;
   while ( fit.nextFeature( f ) )
   {
     Q_ASSERT( context );

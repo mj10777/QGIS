@@ -22,16 +22,18 @@
 #include "qgseditorconfigwidget.h"
 #include "qgsfeature.h"
 #include "qgsvectordataprovider.h"
+#include "qgshelp.h"
 #include "qgis_app.h"
 
-class QDialog;
+class QWidget;
+class QStandardItem;
 
-class APP_EXPORT QgsAttributeTypeDialog: public QDialog, private Ui::QgsAttributeTypeDialog, QgsExpressionContextGenerator
+class APP_EXPORT QgsAttributeTypeDialog: public QWidget, private Ui::QgsAttributeTypeDialog, QgsExpressionContextGenerator
 {
     Q_OBJECT
 
   public:
-    QgsAttributeTypeDialog( QgsVectorLayer *vl, int fieldIdx );
+    QgsAttributeTypeDialog( QgsVectorLayer *vl, int fieldIdx, QWidget *parent = nullptr );
     ~QgsAttributeTypeDialog();
 
     /**
@@ -60,6 +62,21 @@ class APP_EXPORT QgsAttributeTypeDialog: public QDialog, private Ui::QgsAttribut
      * Getter for checkbox for label on top of field
      */
     bool labelOnTop() const;
+
+    /**
+     * Setter for lable alias
+     */
+    void setAlias( const QString &alias );
+
+    /**
+     * Getter for lable alias
+     */
+    QString alias() const;
+
+    /**
+     * Setter for lable comment
+     */
+    void setComment( const QString &comment );
 
     /**
      * Setter for checkbox for editable state of field
@@ -163,7 +180,15 @@ class APP_EXPORT QgsAttributeTypeDialog: public QDialog, private Ui::QgsAttribut
      */
     void setDefaultValueExpression( const QString &expression );
 
+    /**
+     * Returns the field id
+     */
+    int fieldIdx() const;
+
     QgsExpressionContext createExpressionContext() const override;
+
+    bool applyDefaultValueOnUpdate() const;
+    void setApplyDefaultValueOnUpdate( bool applyDefaultValueOnUpdate );
 
   private slots:
 
@@ -171,7 +196,7 @@ class APP_EXPORT QgsAttributeTypeDialog: public QDialog, private Ui::QgsAttribut
      * Slot to handle change of index in combobox to select correct page
      * \param index index of value in combobox
      */
-    void on_selectionListWidget_currentRowChanged( int index );
+    void onCurrentWidgetChanged( int index );
 
     void defaultExpressionChanged();
 
@@ -183,6 +208,8 @@ class APP_EXPORT QgsAttributeTypeDialog: public QDialog, private Ui::QgsAttribut
 
     //! Cached configuration dialog (lazy loaded)
     QMap< QString, QgsEditorConfigWidget * > mEditorConfigWidgets;
+
+    QStandardItem *currentItem() const;
 
     QgsFeature mPreviewFeature;
 };

@@ -57,20 +57,12 @@ const double QgsDecorationNorthArrow::TOL = 1e-8;
  */
 QgsDecorationNorthArrow::QgsDecorationNorthArrow( QObject *parent )
   : QgsDecorationItem( parent )
-  , mRotationInt( 0 )
-  , mAutomatic( true )
-  , mMarginHorizontal( 0 )
-  , mMarginVertical( 0 )
 {
   mPlacement = BottomLeft;
   mMarginUnit = QgsUnitTypes::RenderMillimeters;
 
   setName( "North Arrow" );
   projectRead();
-}
-
-QgsDecorationNorthArrow::~QgsDecorationNorthArrow()
-{
 }
 
 void QgsDecorationNorthArrow::projectRead()
@@ -131,18 +123,26 @@ void QgsDecorationNorthArrow::render( const QgsMapSettings &mapSettings, QgsRend
       // called when the projection or map extent changes
       if ( mAutomatic )
       {
-        mRotationInt = QgsBearingUtils:: bearingTrueNorth( mapSettings.destinationCrs(), context.extent().center() );
+        try
+        {
+          mRotationInt = QgsBearingUtils:: bearingTrueNorth( mapSettings.destinationCrs(), context.extent().center() );
+        }
+        catch ( QgsException & )
+        {
+          mRotationInt = 0.0;
+          //QgsDebugMsg( "Can not get direction to true north. Probably project CRS is not defined." );
+        }
         mRotationInt += mapSettings.rotation();
       }
 
       double myRadiansDouble = mRotationInt * M_PI / 180.0;
       int xShift = static_cast<int>( (
-                                       ( centerXDouble * cos( myRadiansDouble ) ) +
-                                       ( centerYDouble * sin( myRadiansDouble ) )
+                                       ( centerXDouble * std::cos( myRadiansDouble ) ) +
+                                       ( centerYDouble * std::sin( myRadiansDouble ) )
                                      ) - centerXDouble );
       int yShift = static_cast<int>( (
-                                       ( -centerXDouble * sin( myRadiansDouble ) ) +
-                                       ( centerYDouble * cos( myRadiansDouble ) )
+                                       ( -centerXDouble * std::sin( myRadiansDouble ) ) +
+                                       ( centerYDouble * std::cos( myRadiansDouble ) )
                                      ) - centerYDouble );
 
       // need width/height of paint device
@@ -218,5 +218,4 @@ void QgsDecorationNorthArrow::render( const QgsMapSettings &mapSettings, QgsRend
       context.painter()->drawText( 10, 20, tr( "North arrow pixmap not found" ) );
     }
   }
-
 }

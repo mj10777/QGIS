@@ -19,11 +19,12 @@
 #include "qgslayoututils.h"
 #include "qgspagesizeregistry.h"
 #include "qgssymbollayerutils.h"
+#include "qgslayoutitemundocommand.h"
 #include <QPainter>
 #include <QStyleOptionGraphicsItem>
 
 QgsLayoutItemPage::QgsLayoutItemPage( QgsLayout *layout )
-  : QgsLayoutItem( layout )
+  : QgsLayoutItem( layout, false )
 {
   setFlag( QGraphicsItem::ItemIsSelectable, false );
   setFlag( QGraphicsItem::ItemIsMovable, false );
@@ -36,10 +37,15 @@ QgsLayoutItemPage::QgsLayoutItemPage( QgsLayout *layout )
 
   QFont font;
   QFontMetrics fm( font );
-  mMaximumShadowWidth = fm.width( "X" );
+  mMaximumShadowWidth = fm.width( QStringLiteral( "X" ) );
 
   mGrid.reset( new QgsLayoutItemPageGrid( pos().x(), pos().y(), rect().width(), rect().height(), mLayout ) );
   mGrid->setParentItem( this );
+}
+
+QgsLayoutItemPage *QgsLayoutItemPage::create( QgsLayout *layout )
+{
+  return new QgsLayoutItemPage( layout );
 }
 
 void QgsLayoutItemPage::setPageSize( const QgsLayoutSize &size )
@@ -110,13 +116,44 @@ QgsLayoutItemPage::Orientation QgsLayoutItemPage::decodePageOrientation( const Q
   return Landscape;
 }
 
-void QgsLayoutItemPage::attemptResize( const QgsLayoutSize &size )
+void QgsLayoutItemPage::attemptResize( const QgsLayoutSize &size, bool includesFrame )
 {
-  QgsLayoutItem::attemptResize( size );
+  QgsLayoutItem::attemptResize( size, includesFrame );
   //update size of attached grid to reflect new page size and position
   mGrid->setRect( 0, 0, rect().width(), rect().height() );
 
   mLayout->guides().update();
+}
+
+///@cond PRIVATE
+class QgsLayoutItemPageUndoCommand: public QgsLayoutItemUndoCommand
+{
+  public:
+
+    QgsLayoutItemPageUndoCommand( QgsLayoutItemPage *page, const QString &text, int id = 0, QUndoCommand *parent SIP_TRANSFERTHIS = nullptr )
+      : QgsLayoutItemUndoCommand( page, text, id, parent )
+    {}
+
+    void restoreState( QDomDocument &stateDoc ) override
+    {
+      QgsLayoutItemUndoCommand::restoreState( stateDoc );
+      layout()->pageCollection()->reflow();
+    }
+
+  protected:
+
+    QgsLayoutItem *recreateItem( int, QgsLayout *layout ) override
+    {
+      QgsLayoutItemPage *page = new QgsLayoutItemPage( layout );
+      layout->pageCollection()->addPage( page );
+      return page;
+    }
+};
+///@endcond
+
+QgsAbstractLayoutUndoCommand *QgsLayoutItemPage::createCommand( const QString &text, int id, QUndoCommand *parent )
+{
+  return new QgsLayoutItemPageUndoCommand( this, text, id, parent );
 }
 
 void QgsLayoutItemPage::redraw()
@@ -127,7 +164,7 @@ void QgsLayoutItemPage::redraw()
 
 void QgsLayoutItemPage::draw( QgsRenderContext &context, const QStyleOptionGraphicsItem * )
 {
-  if ( !context.painter() || !mLayout /*|| !mLayout->pagesVisible() */ )
+  if ( !context.painter() || !mLayout || !mLayout->context().pagesVisible() )
   {
     return;
   }
@@ -140,9 +177,7 @@ void QgsLayoutItemPage::draw( QgsRenderContext &context, const QStyleOptionGraph
   QPainter *painter = context.painter();
   painter->save();
 
-#if 0 //TODO
-  if ( mComposition->plotStyle() ==  QgsComposition::Preview )
-#endif
+  if ( mLayout->context().isPreviewRender() )
   {
     //if in preview mode, draw page border and shadow so that it's
     //still possible to tell where pages with a transparent style begin and end
@@ -153,8 +188,8 @@ void QgsLayoutItemPage::draw( QgsRenderContext &context, const QStyleOptionGraph
     //shadow
     painter->setBrush( QBrush( QColor( 150, 150, 150 ) ) );
     painter->setPen( Qt::NoPen );
-    painter->drawRect( pageRect.translated( qMin( scale * mLayout->pageCollection()->pageShadowWidth(), mMaximumShadowWidth ),
-                                            qMin( scale * mLayout->pageCollection()->pageShadowWidth(), mMaximumShadowWidth ) ) );
+    painter->drawRect( pageRect.translated( std::min( scale * mLayout->pageCollection()->pageShadowWidth(), mMaximumShadowWidth ),
+                                            std::min( scale * mLayout->pageCollection()->pageShadowWidth(), mMaximumShadowWidth ) ) );
 
     //page area
     painter->setBrush( QColor( 215, 215, 215 ) );
@@ -186,6 +221,11 @@ void QgsLayoutItemPage::draw( QgsRenderContext &context, const QStyleOptionGraph
   painter->restore();
 }
 
+void QgsLayoutItemPage::drawFrame( QgsRenderContext & )
+{}
+
+void QgsLayoutItemPage::drawBackground( QgsRenderContext & )
+{}
 
 //
 // QgsLayoutItemPageGrid
@@ -211,6 +251,9 @@ void QgsLayoutItemPageGrid::paint( QPainter *painter, const QStyleOptionGraphics
 
   //draw grid
   if ( !mLayout )
+    return;
+
+  if ( !mLayout->context().isPreviewRender() )
     return;
 
   const QgsLayoutContext &context = mLayout->context();

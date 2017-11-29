@@ -54,7 +54,7 @@ class PointsFromPolygons(QgisAlgorithm):
     OUTPUT = 'OUTPUT'
 
     def group(self):
-        return self.tr('Vector analysis tools')
+        return self.tr('Vector creation')
 
     def __init__(self):
         super().__init__()
@@ -117,7 +117,7 @@ class PointsFromPolygons(QgisAlgorithm):
             (endRow, endColumn) = raster.mapToPixel(xMax, yMin, geoTransform)
 
             # use prepared geometries for faster intersection tests
-            engine = QgsGeometry.createGeometryEngine(geom.geometry())
+            engine = QgsGeometry.createGeometryEngine(geom.constGet())
             engine.prepareGeometry()
 
             for row in range(startRow, endRow + 1):

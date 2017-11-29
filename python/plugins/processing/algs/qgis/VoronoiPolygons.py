@@ -59,7 +59,7 @@ class VoronoiPolygons(QgisAlgorithm):
         return QIcon(os.path.join(pluginPath, 'images', 'ftools', 'voronoi.png'))
 
     def group(self):
-        return self.tr('Vector geometry tools')
+        return self.tr('Vector geometry')
 
     def __init__(self):
         super().__init__()
@@ -135,7 +135,7 @@ class VoronoiPolygons(QgisAlgorithm):
             inFeat = next(source.getFeatures(request))
             lines = self.clip_voronoi(edges, c, width, height, extent, extraX, extraY)
 
-            geom = QgsGeometry.fromMultiPoint(lines)
+            geom = QgsGeometry.fromMultiPointXY(lines)
             geom = QgsGeometry(geom.convexHull())
             outFeat.setGeometry(geom)
             outFeat.setAttributes(inFeat.attributes())

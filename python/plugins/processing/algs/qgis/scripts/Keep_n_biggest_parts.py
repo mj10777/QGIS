@@ -1,5 +1,5 @@
 from builtins import range
-##Vector geometry tools=group
+##Vector geometry=group
 
 #inputs
 
@@ -39,7 +39,7 @@ for n, feat in enumerate(Polygons.getFeatures()):
         else:
             features.setGeometry(geom)
             geomres = [geoms[i].asPolygon() for i, a in geomarea[-1 * To_keep:]]
-            features.setGeometry(QgsGeometry.fromMultiPolygon(geomres))
+            features.setGeometry(QgsGeometry.fromMultiPolygonXY(geomres))
         sink.addFeature(features)
     else:
         sink.addFeature(feat)

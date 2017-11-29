@@ -10,8 +10,9 @@ MAINTAINER Denis Rouzaud <denis.rouzaud@gmail.com>
 ENV CC=/usr/lib/ccache/clang
 ENV CXX=/usr/lib/ccache/clang++
 ENV QT_SELECT=5
+ENV LANG=C.UTF-8
 
-COPY  . /usr/src/QGIS
+COPY . /usr/src/QGIS
 
 WORKDIR /usr/src/QGIS/build
 
@@ -32,4 +33,6 @@ RUN cmake \
  -DDISABLE_DEPRECATED=ON \
  .. \
  && ninja install \
- && rm -rf /usr/src/QGIS/build/*
+ && rm -rf /usr/src/QGIS
+
+WORKDIR /

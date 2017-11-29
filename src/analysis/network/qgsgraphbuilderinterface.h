@@ -19,9 +19,9 @@
 #include <QVector>
 #include <QVariant>
 
-#include <qgspoint.h>
-#include <qgscoordinatereferencesystem.h>
-#include <qgsdistancearea.h>
+#include "qgspoint.h"
+#include "qgscoordinatereferencesystem.h"
+#include "qgsdistancearea.h"
 #include "qgis_analysis.h"
 
 #ifdef SIP_RUN
@@ -66,8 +66,7 @@ class ANALYSIS_EXPORT QgsGraphBuilderInterface
       mDa.setEllipsoid( ellipsoidID );
     }
 
-    virtual ~QgsGraphBuilderInterface()
-    { }
+    virtual ~QgsGraphBuilderInterface() = default;
 
     //! Returns destinaltion CRS
     QgsCoordinateReferenceSystem destinationCrs() const
@@ -133,5 +132,7 @@ class ANALYSIS_EXPORT QgsGraphBuilderInterface
     double mTopologyTolerance;
 
 };
+
+// clazy:excludeall=qstring-allocations
 
 #endif // QGSGRAPHBUILDERINTERFACE_H

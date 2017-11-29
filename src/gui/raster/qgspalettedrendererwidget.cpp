@@ -76,7 +76,7 @@ QgsPalettedRendererWidget::QgsPalettedRendererWidget( QgsRasterLayer *layer, con
   mTreeView->setSelectionBehavior( QAbstractItemView::SelectRows );
   mTreeView->setDefaultDropAction( Qt::MoveAction );
 
-  connect( mTreeView, &QTreeView::customContextMenuRequested,  [ = ]( const QPoint & ) { mContextMenu->exec( QCursor::pos() ); }
+  connect( mTreeView, &QTreeView::customContextMenuRequested, this, [ = ]( const QPoint & ) { mContextMenu->exec( QCursor::pos() ); }
          );
 
   btnColorRamp->setShowRandomColorRamp( true );
@@ -708,9 +708,9 @@ bool QgsPalettedRendererModel::insertRows( int row, int count, const QModelIndex
   for ( ; cIt != mData.constEnd(); ++cIt )
   {
     int value = cIt->value;
-    currentMaxValue = qMax( value, currentMaxValue );
+    currentMaxValue = std::max( value, currentMaxValue );
   }
-  int nextValue = qMax( 0, currentMaxValue + 1 );
+  int nextValue = std::max( 0, currentMaxValue + 1 );
 
   beginInsertRows( QModelIndex(), row, row + count - 1 );
   for ( int i = row; i < row + count; ++i, ++nextValue )

@@ -26,7 +26,6 @@
 #include "qgsgeometryfactory.h"
 #include "qgsgeometry.h"
 #include "qgis.h"
-#include "qgstestutils.h"
 #include <memory>
 
 class TestQgsDistanceArea: public QObject
@@ -206,7 +205,7 @@ void TestQgsDistanceArea::test_distances()
       // QgsDebugMsg( QString( "Distance from %1 to %2 is %3" ).arg( p1.toString( 15 ) ).arg( p2.toString( 15 ) ).arg( result, 0, 'g', 15 ) );
       // QgsDebugMsg( QString( "Distance should be %1" ).arg( myLineList[6] ) );
       // Check result is less than 0.5mm from expected.
-      QVERIFY( qAbs( result -  myLineList[6].toDouble() ) < 0.0005 );
+      QGSCOMPARENEAR( result, myLineList[6].toDouble(), 0.0005 );
     }
   }
 
@@ -234,14 +233,14 @@ void TestQgsDistanceArea::collections()
   double result = myDa.measureLength( lines );
   QGSCOMPARENEAR( result, 12006159, 1 );
   result = myDa.measureArea( lines );
-  QVERIFY( qgsDoubleNear( result, 0 ) );
+  QGSCOMPARENEAR( result, 0, 4 * DBL_EPSILON );
 
   //collection of polygons
   QgsGeometry polys( QgsGeometryFactory::geomFromWkt( QStringLiteral( "GeometryCollection( Polygon((0 36.53, 5.76 -48.16, 0 25.54, 0 36.53)), Polygon((10 20, 15 20, 15 10, 10 20)) )" ) ).release() );
   result = myDa.measureArea( polys );
   QGSCOMPARENEAR( result, 670434859475LL, 1 );
   result = myDa.measureLength( polys );
-  QVERIFY( qgsDoubleNear( result, 0 ) );
+  QGSCOMPARENEAR( result, 0, 4 * DBL_EPSILON );
 
   //mixed collection
   QgsGeometry mixed( QgsGeometryFactory::geomFromWkt( QStringLiteral( "GeometryCollection( LineString(0 36.53, 5.76 -48.16), LineString(0 25.54, 24.20 36.70), Polygon((0 36.53, 5.76 -48.16, 0 25.54, 0 36.53)), Polygon((10 20, 15 20, 15 10, 10 20)) )" ) ).release() );
@@ -284,7 +283,7 @@ void TestQgsDistanceArea::measureAreaAndUnits()
   da.setEllipsoid( QStringLiteral( "NONE" ) );
   QgsCoordinateReferenceSystem daCRS;
   daCRS.createFromSrsId( da.sourceCrs().srsid() );
-  QgsPolyline ring;
+  QgsPolylineXY ring;
   ring << QgsPointXY( 0, 0 )
        << QgsPointXY( 1, 0 )
        << QgsPointXY( 1, 1 )
@@ -292,10 +291,10 @@ void TestQgsDistanceArea::measureAreaAndUnits()
        << QgsPointXY( 2, 2 )
        << QgsPointXY( 0, 2 )
        << QgsPointXY( 0, 0 );
-  QgsPolygon poly;
+  QgsPolygonXY poly;
   poly << ring;
 
-  QgsGeometry polygon( QgsGeometry::fromPolygon( poly ) );
+  QgsGeometry polygon( QgsGeometry::fromPolygonXY( poly ) );
 
   // We check both the measured area AND the units, in case the logic regarding
   // ellipsoids and units changes in future
@@ -330,7 +329,7 @@ void TestQgsDistanceArea::measureAreaAndUnits()
        << QgsPointXY( 1850000, 4423000 );
   poly.clear();
   poly << ring;
-  polygon = QgsGeometry::fromPolygon( poly );
+  polygon = QgsGeometry::fromPolygonXY( poly );
 
   da.setSourceCrs( QgsCoordinateReferenceSystem::fromSrsId( 27469 ) );
   da.setEllipsoid( QStringLiteral( "NONE" ) );
@@ -366,7 +365,7 @@ void TestQgsDistanceArea::emptyPolygon()
   da.setEllipsoid( QStringLiteral( "WGS84" ) );
 
   //test that measuring an empty polygon doesn't crash
-  da.measurePolygon( QList< QgsPointXY >() );
+  da.measurePolygon( QVector< QgsPointXY >() );
 }
 
 void TestQgsDistanceArea::regression14675()

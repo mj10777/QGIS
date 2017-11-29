@@ -120,7 +120,7 @@ static QgsCircularString *parseCircularString( const QVariantMap &curveData, Qgs
   QVariantList coordsList = curveData[QStringLiteral( "c" )].toList();
   if ( coordsList.isEmpty() )
     return nullptr;
-  QList<QgsPoint> points;
+  QVector<QgsPoint> points;
   points.append( startPoint );
   foreach ( const QVariant &coordData, coordsList )
   {
@@ -201,7 +201,7 @@ static QgsAbstractGeometry *parseEsriGeometryMultiPoint( const QVariantMap &geom
   if ( coordsList.isEmpty() )
     return nullptr;
 
-  QgsMultiPointV2 *multiPoint = new QgsMultiPointV2();
+  QgsMultiPoint *multiPoint = new QgsMultiPoint();
   Q_FOREACH ( const QVariant &coordData, coordsList )
   {
     QVariantList coordList = coordData.toList();
@@ -287,7 +287,7 @@ static QgsAbstractGeometry *parseEsriEnvelope( const QVariantMap &geometryData )
   ext->addVertex( QgsPoint( xmax, ymax ) );
   ext->addVertex( QgsPoint( xmin, ymax ) );
   ext->addVertex( QgsPoint( xmin, ymin ) );
-  QgsPolygonV2 *poly = new QgsPolygonV2();
+  QgsPolygon *poly = new QgsPolygon();
   poly->setExteriorRing( ext );
   return poly;
 }
@@ -481,8 +481,6 @@ QVariantMap QgsArcGisRestUtils::queryServiceJSON( const QUrl &url, QString &erro
 
 QgsArcGisAsyncQuery::QgsArcGisAsyncQuery( QObject *parent )
   : QObject( parent )
-  , mReply( nullptr )
-  , mResult( nullptr )
 {
 }
 
@@ -537,8 +535,6 @@ void QgsArcGisAsyncQuery::handleReply()
 
 QgsArcGisAsyncParallelQuery::QgsArcGisAsyncParallelQuery( QObject *parent )
   : QObject( parent )
-  , mResults( nullptr )
-  , mPendingRequests( 0 )
 {
 }
 

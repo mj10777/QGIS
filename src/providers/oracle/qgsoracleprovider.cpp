@@ -33,6 +33,7 @@
 
 #ifdef HAVE_GUI
 #include "qgsoraclesourceselect.h"
+#include "qgssourceselectprovider.h"
 #endif
 
 #include <QSqlRecord>
@@ -1812,7 +1813,7 @@ void QgsOracleProvider::appendGeomParam( const QgsGeometry &geom, QSqlQuery &qry
 {
   QOCISpatialGeometry g;
 
-  QByteArray wkb = geom.exportToWkb();
+  QByteArray wkb = geom.asWkb();
 
   wkbPtr ptr;
   ptr.ucPtr = !geom.isEmpty() ? reinterpret_cast< unsigned char * >( const_cast<char *>( wkb.constData() ) ) : 0;
@@ -2458,7 +2459,7 @@ bool QgsOracleProvider::createSpatialIndex()
                 QVariantList() << r.xMinimum() << r.xMaximum() << r.yMinimum() << r.yMaximum() << mTableName << mGeometryColumn )
        )
     {
-      QgsMessageLog::logMessage( tr( "Could not update metadata for %1.%2.\nSQL:%3\nError: %4" )
+      QgsMessageLog::logMessage( tr( "Could not update metadata for %1.%2.\nSQL: %3\nError: %4" )
                                  .arg( mTableName )
                                  .arg( mGeometryColumn )
                                  .arg( qry.lastQuery() )
@@ -2477,7 +2478,7 @@ bool QgsOracleProvider::createSpatialIndex()
                   << r.xMinimum() << r.xMaximum() << r.yMinimum() << r.yMaximum() )
          )
       {
-        QgsMessageLog::logMessage( tr( "Could not insert metadata for %1.%2.\nSQL:%3\nError: %4" )
+        QgsMessageLog::logMessage( tr( "Could not insert metadata for %1.%2.\nSQL: %3\nError: %4" )
                                    .arg( quotedValue( mTableName ) )
                                    .arg( quotedValue( mGeometryColumn ) )
                                    .arg( qry.lastQuery() )
@@ -2507,7 +2508,7 @@ bool QgsOracleProvider::createSpatialIndex()
                 .arg( quotedIdentifier( mTableName ) )
                 .arg( quotedIdentifier( mGeometryColumn ) ), QVariantList() ) )
     {
-      QgsMessageLog::logMessage( tr( "Creation spatial index failed.\nSQL:%1\nError: %2" )
+      QgsMessageLog::logMessage( tr( "Creation spatial index failed.\nSQL: %1\nError: %2" )
                                  .arg( qry.lastQuery() )
                                  .arg( qry.lastError().text() ),
                                  tr( "Oracle" ) );
@@ -2520,7 +2521,7 @@ bool QgsOracleProvider::createSpatialIndex()
   {
     if ( !exec( qry, QString( "ALTER INDEX %1 REBUILD" ).arg( mSpatialIndexName ), QVariantList() ) )
     {
-      QgsMessageLog::logMessage( tr( "Rebuild of spatial index failed.\nSQL:%1\nError: %2" )
+      QgsMessageLog::logMessage( tr( "Rebuild of spatial index failed.\nSQL: %1\nError: %2" )
                                  .arg( qry.lastQuery() )
                                  .arg( qry.lastError().text() ),
                                  tr( "Oracle" ) );
@@ -2818,7 +2819,7 @@ QgsVectorLayerExporter::ExportError QgsOracleProvider::createEmptyLayer(
     {
       if ( !exec( qry, QString( "DROP TABLE %1" ).arg( ownerTableName ), QVariantList() ) )
       {
-        QgsMessageLog::logMessage( tr( "Drop created table %1 failed.\nSQL:%2\nError: %3" )
+        QgsMessageLog::logMessage( tr( "Drop created table %1 failed.\nSQL: %2\nError: %3" )
                                    .arg( qry.lastQuery() )
                                    .arg( qry.lastError().text() ), tr( "Oracle" ) );
       }
@@ -2984,7 +2985,7 @@ QgsCoordinateReferenceSystem QgsOracleProvider::crs() const
   }
   else
   {
-    QgsMessageLog::logMessage( tr( "Lookup of Oracle SRID %1 failed.\nSQL:%2\nError:%3" )
+    QgsMessageLog::logMessage( tr( "Lookup of Oracle SRID %1 failed.\nSQL: %2\nError: %3" )
                                .arg( mSrid )
                                .arg( qry.lastQuery() )
                                .arg( qry.lastError().text() ),
@@ -3029,7 +3030,8 @@ QGISEXTERN QgsOracleProvider *classFactory( const QString *uri )
   return new QgsOracleProvider( *uri );
 }
 
-/** Required key function (used to map the plugin to a data store type)
+/**
+ * Required key function (used to map the plugin to a data store type)
 */
 QGISEXTERN QString providerKey()
 {
@@ -3582,4 +3584,36 @@ QGISEXTERN QString getStyleById( const QString &uri, QString styleId, QString &e
   return style;
 }
 
-// vim: set sw=2 :
+
+#ifdef HAVE_GUI
+
+//! Provider for Oracle source select
+class QgsOracleSourceSelectProvider : public QgsSourceSelectProvider
+{
+  public:
+
+    virtual QString providerKey() const override { return QStringLiteral( "oracle" ); }
+    virtual QString text() const override { return QObject::tr( "Oracle" ); }
+    virtual int ordering() { return 80; }
+    virtual QIcon icon() const override { return QgsApplication::getThemeIcon( QStringLiteral( "/mActionAddOracleLayer.svg" ) ); }
+    virtual QgsAbstractDataSourceWidget *createDataSourceWidget( QWidget *parent = nullptr, Qt::WindowFlags fl = Qt::Widget, QgsProviderRegistry::WidgetMode widgetMode = QgsProviderRegistry::WidgetMode::Embedded ) const override
+    {
+      return new QgsOracleSourceSelect( parent, fl, widgetMode );
+    }
+};
+
+
+QGISEXTERN QList<QgsSourceSelectProvider *> *sourceSelectProviders()
+{
+  QList<QgsSourceSelectProvider *> *providers = new QList<QgsSourceSelectProvider *>();
+
+  *providers
+      << new QgsOracleSourceSelectProvider;
+
+  return providers;
+}
+
+#endif
+
+
+// vim: set sw=2

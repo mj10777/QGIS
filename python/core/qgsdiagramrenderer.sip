@@ -319,6 +319,10 @@ class QgsDiagramSettings
     };
 
     QgsDiagramSettings();
+%Docstring
+Constructor for QgsDiagramSettings
+%End
+
     bool enabled;
     QFont font;
     QList< QColor > categoryColors;
@@ -451,7 +455,6 @@ class QgsDiagramRenderer
 %TypeHeaderCode
 #include "qgsdiagramrenderer.h"
 %End
-
 %ConvertToSubClassCode
     if ( sipCpp->rendererName() == QStringLiteral( "SingleCategory" ) )
       sipType = sipType_QgsSingleCategoryDiagramRenderer;
@@ -463,6 +466,9 @@ class QgsDiagramRenderer
   public:
 
     QgsDiagramRenderer();
+%Docstring
+ Constructor for QgsDiagramRenderer.
+%End
     virtual ~QgsDiagramRenderer();
 
     virtual QgsDiagramRenderer *clone() const = 0 /Factory/;
@@ -611,7 +617,11 @@ class QgsSingleCategoryDiagramRenderer : QgsDiagramRenderer
 #include "qgsdiagramrenderer.h"
 %End
   public:
+
     QgsSingleCategoryDiagramRenderer();
+%Docstring
+Constructor for QgsSingleCategoryDiagramRenderer
+%End
 
     virtual QgsSingleCategoryDiagramRenderer *clone() const /Factory/;
 

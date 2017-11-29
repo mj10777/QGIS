@@ -65,7 +65,7 @@ class RegularPoints(QgisAlgorithm):
         return QIcon(os.path.join(pluginPath, 'images', 'ftools', 'regular_points.png'))
 
     def group(self):
-        return self.tr('Vector creation tools')
+        return self.tr('Vector creation')
 
     def __init__(self):
         super().__init__()
@@ -93,13 +93,12 @@ class RegularPoints(QgisAlgorithm):
         return self.tr('Regular points')
 
     def processAlgorithm(self, parameters, context, feedback):
-        extent = self.parameterAsExtent(parameters, self.EXTENT, context)
-
         spacing = self.parameterAsDouble(parameters, self.SPACING, context)
         inset = self.parameterAsDouble(parameters, self.INSET, context)
         randomize = self.parameterAsBool(parameters, self.RANDOMIZE, context)
         isSpacing = self.parameterAsBool(parameters, self.IS_SPACING, context)
         crs = self.parameterAsCrs(parameters, self.CRS, context)
+        extent = self.parameterAsExtent(parameters, self.EXTENT, context, crs)
 
         fields = QgsFields()
         fields.append(QgsField('id', QVariant.Int, '', 10, 0))
@@ -125,7 +124,7 @@ class RegularPoints(QgisAlgorithm):
         y = extent.yMaximum() - inset
 
         extent_geom = QgsGeometry.fromRect(extent)
-        extent_engine = QgsGeometry.createGeometryEngine(extent_geom.geometry())
+        extent_engine = QgsGeometry.createGeometryEngine(extent_geom.constGet())
         extent_engine.prepareGeometry()
 
         while y >= extent.yMinimum():
@@ -135,13 +134,13 @@ class RegularPoints(QgisAlgorithm):
                     break
 
                 if randomize:
-                    geom = QgsGeometry().fromPoint(QgsPointXY(
+                    geom = QgsGeometry().fromPointXY(QgsPointXY(
                         uniform(x - (pSpacing / 2.0), x + (pSpacing / 2.0)),
                         uniform(y - (pSpacing / 2.0), y + (pSpacing / 2.0))))
                 else:
-                    geom = QgsGeometry().fromPoint(QgsPointXY(x, y))
+                    geom = QgsGeometry().fromPointXY(QgsPointXY(x, y))
 
-                if extent_engine.intersects(geom.geometry()):
+                if extent_engine.intersects(geom.constGet()):
                     f.setAttribute('id', count)
                     f.setGeometry(geom)
                     sink.addFeature(f, QgsFeatureSink.FastInsert)

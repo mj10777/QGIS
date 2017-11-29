@@ -28,6 +28,7 @@ class QgsAuthMethod : QObject
       NetworkReply,
       DataSourceUri,
       GenericDataSourceUri,
+      NetworkProxy,
       All
     };
     typedef QFlags<QgsAuthMethod::Expansion> Expansions;
@@ -110,6 +111,18 @@ Increment this if method is significantly updated, allow updater code to be writ
  :rtype: bool
 %End
 
+    virtual bool updateNetworkProxy( QNetworkProxy &proxy, const QString &authcfg,
+                                     const QString &dataprovider = QString() );
+%Docstring
+ Update proxy settings with authentication components
+ \param proxy
+ \param authcfg Authentication configuration ID
+ \param dataprovider Textual key for a data provider, e.g. 'proxy', that allows
+ for custom updater code specific to the provider
+ :return: Whether the update succeeded
+ :rtype: bool
+%End
+
     virtual void clearCachedConfig( const QString &authcfg ) = 0;
 %Docstring
  Clear any cached configuration. Called when the QgsAuthManager deletes an authentication configuration (authcfg).
@@ -138,6 +151,7 @@ Increment this if method is significantly updated, allow updater code to be writ
    Non-public since this is an abstract base class
 %End
 
+
     static QString authMethodTag();
 %Docstring
 Tag signifying that this is an authentcation method (e.g. for use as title in message log panel output)
@@ -157,6 +171,7 @@ Set the support expansions (points in providers where the authentication is inje
 %Docstring
 Set list of data providers this auth method supports
 %End
+
 
 };
 QFlags<QgsAuthMethod::Expansion> operator|(QgsAuthMethod::Expansion f1, QFlags<QgsAuthMethod::Expansion> f2);

@@ -41,19 +41,6 @@ from osgeo.gdalconst import GA_ReadOnly
 from numpy import nan_to_num
 from copy import deepcopy
 
-import processing
-
-from processing.script.ScriptAlgorithm import ScriptAlgorithm  # NOQA
-
-from processing.modeler.ModelerAlgorithmProvider import ModelerAlgorithmProvider  # NOQA
-from processing.algs.qgis.QGISAlgorithmProvider import QGISAlgorithmProvider  # NOQA
-#from processing.algs.grass7.Grass7AlgorithmProvider import Grass7AlgorithmProvider  # NOQA
-#from processing.algs.gdal.GdalAlgorithmProvider import GdalAlgorithmProvider  # NOQA
-#from processing.algs.saga.SagaAlgorithmProvider import SagaAlgorithmProvider  # NOQA
-from processing.script.ScriptAlgorithmProvider import ScriptAlgorithmProvider  # NOQA
-#from processing.preconfigured.PreconfiguredAlgorithmProvider import PreconfiguredAlgorithmProvider  # NOQA
-
-
 from qgis.core import (QgsVectorLayer,
                        QgsRasterLayer,
                        QgsFeatureRequest,
@@ -65,8 +52,10 @@ from qgis.core import (QgsVectorLayer,
                        QgsProcessingFeedback)
 
 from qgis.testing import _UnexpectedSuccess
-
 from utilities import unitTestDataPath
+
+import processing
+from processing.script.ScriptAlgorithm import ScriptAlgorithm  # NOQA
 
 
 def processingTestDataPath():
@@ -83,7 +72,8 @@ class AlgorithmsTest(object):
             algorithm_tests = yaml.load(stream)
 
         if 'tests' in algorithm_tests and algorithm_tests['tests'] is not None:
-            for algtest in algorithm_tests['tests']:
+            for idx, algtest in enumerate(algorithm_tests['tests']):
+                print('About to start {} of {}: "{}"'.format(idx, len(algorithm_tests['tests']), algtest['name']))
                 yield self.check_algorithm, algtest['name'], algtest
 
     def check_algorithm(self, name, defs):
@@ -102,6 +92,7 @@ class AlgorithmsTest(object):
             alg = ScriptAlgorithm(filePath)
             alg.initAlgorithm()
         else:
+            print('Running alg: "{}"'.format(defs['algorithm']))
             alg = QgsApplication.processingRegistry().createAlgorithmById(defs['algorithm'])
 
         parameters = {}
@@ -197,7 +188,10 @@ class AlgorithmsTest(object):
         elif param['type'] == 'rasterhash':
             outdir = tempfile.mkdtemp()
             self.cleanup_paths.append(outdir)
-            basename = 'raster.tif'
+            if self.test_definition_file().lower().startswith('saga'):
+                basename = 'raster.sdat'
+            else:
+                basename = 'raster.tif'
             filepath = os.path.join(outdir, basename)
             return filepath
 
@@ -237,10 +231,14 @@ class AlgorithmsTest(object):
             if filepath in self.vector_layer_params:
                 return self.vector_layer_params[filepath]
 
-            lyr = QgsVectorLayer(filepath, param['name'], 'ogr', False)
+            options = QgsVectorLayer.LayerOptions()
+            options.loadDefaultStyle = False
+            lyr = QgsVectorLayer(filepath, param['name'], 'ogr', options)
             self.vector_layer_params[filepath] = lyr
         elif param['type'] == 'raster':
-            lyr = QgsRasterLayer(filepath, param['name'], 'gdal', False)
+            options = QgsRasterLayer.LayerOptions()
+            options.loadDefaultStyle = False
+            lyr = QgsRasterLayer(filepath, param['name'], 'gdal', options)
 
         self.assertTrue(lyr.isValid(), 'Could not load layer "{}" from param {}'.format(filepath, param))
         QgsProject.instance().addMapLayer(lyr)
@@ -307,7 +305,7 @@ class AlgorithmsTest(object):
                 strhash = hashlib.sha224(dataArray.data).hexdigest()
 
                 if not isinstance(expected_result['hash'], str):
-                    self.assertTrue(strhash in expected_result['hash'])
+                    self.assertIn(strhash, expected_result['hash'])
                 else:
                     self.assertEqual(strhash, expected_result['hash'])
             elif 'file' == expected_result['type']:

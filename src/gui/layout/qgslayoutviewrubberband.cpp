@@ -49,14 +49,14 @@ QRectF QgsLayoutViewRubberBand::updateRect( QPointF start, QPointF position, boo
 
   if ( constrainSquare )
   {
-    if ( fabs( dx ) > fabs( dy ) )
+    if ( std::fabs( dx ) > std::fabs( dy ) )
     {
-      width = fabs( dx );
+      width = std::fabs( dx );
       height = width;
     }
     else
     {
-      height = fabs( dy );
+      height = std::fabs( dy );
       width = height;
     }
 
@@ -149,7 +149,7 @@ void QgsLayoutViewRectangularRubberBand::start( QPointF position, Qt::KeyboardMo
   mRubberBandStartPos = position;
   t.translate( position.x(), position.y() );
   mRubberBandItem->setTransform( t );
-  mRubberBandItem->setZValue( QgsLayout::ZMapTool );
+  mRubberBandItem->setZValue( QgsLayout::ZViewTool );
   layout()->addItem( mRubberBandItem );
   layout()->update();
 }
@@ -214,7 +214,7 @@ void QgsLayoutViewEllipticalRubberBand::start( QPointF position, Qt::KeyboardMod
   mRubberBandStartPos = position;
   t.translate( position.x(), position.y() );
   mRubberBandItem->setTransform( t );
-  mRubberBandItem->setZValue( QgsLayout::ZMapTool );
+  mRubberBandItem->setZValue( QgsLayout::ZViewTool );
   layout()->addItem( mRubberBandItem );
   layout()->update();
 }
@@ -283,7 +283,7 @@ void QgsLayoutViewTriangleRubberBand::start( QPointF position, Qt::KeyboardModif
   mRubberBandStartPos = position;
   t.translate( position.x(), position.y() );
   mRubberBandItem->setTransform( t );
-  mRubberBandItem->setZValue( QgsLayout::ZMapTool );
+  mRubberBandItem->setZValue( QgsLayout::ZViewTool );
   layout()->addItem( mRubberBandItem );
   layout()->update();
 }

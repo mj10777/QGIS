@@ -54,7 +54,7 @@ class PointsFromLines(QgisAlgorithm):
     OUTPUT = 'OUTPUT'
 
     def group(self):
-        return self.tr('Vector analysis tools')
+        return self.tr('Vector creation')
 
     def __init__(self):
         super().__init__()
@@ -192,7 +192,7 @@ class PointsFromLines(QgisAlgorithm):
     def createPoint(self, pX, pY, geoTransform, writer, feature):
         (x, y) = raster.pixelToMap(pX, pY, geoTransform)
 
-        feature.setGeometry(QgsGeometry.fromPoint(QgsPointXY(x, y)))
+        feature.setGeometry(QgsGeometry.fromPointXY(QgsPointXY(x, y)))
         feature['id'] = self.fid
         feature['line_id'] = self.lineId
         feature['point_id'] = self.pointId

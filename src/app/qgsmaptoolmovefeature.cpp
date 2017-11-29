@@ -33,19 +33,9 @@
 
 QgsMapToolMoveFeature::QgsMapToolMoveFeature( QgsMapCanvas *canvas, MoveMode mode )
   : QgsMapToolAdvancedDigitizing( canvas, QgisApp::instance()->cadDockWidget() )
-  , mRubberBand( nullptr )
   , mMode( mode )
 {
   mToolName = tr( "Move feature" );
-  switch ( mode )
-  {
-    case Move:
-      mCaptureMode = QgsMapToolAdvancedDigitizing::CaptureSegment;
-      break;
-    case CopyMove:
-      mCaptureMode = QgsMapToolAdvancedDigitizing::CaptureLine; // we copy/move several times
-      break;
-  }
 }
 
 QgsMapToolMoveFeature::~QgsMapToolMoveFeature()
@@ -94,7 +84,7 @@ void QgsMapToolMoveFeature::cadCanvasReleaseEvent( QgsMapMouseEvent *e )
       QgsFeatureIterator fit = vlayer->getFeatures( QgsFeatureRequest().setFilterRect( selectRect ).setSubsetOfAttributes( QgsAttributeList() ) );
 
       //find the closest feature
-      QgsGeometry pointGeometry = QgsGeometry::fromPoint( layerCoords );
+      QgsGeometry pointGeometry = QgsGeometry::fromPointXY( layerCoords );
       if ( pointGeometry.isNull() )
       {
         cadDockWidget()->clear();
@@ -178,6 +168,7 @@ void QgsMapToolMoveFeature::cadCanvasReleaseEvent( QgsMapMouseEvent *e )
         }
         delete mRubberBand;
         mRubberBand = nullptr;
+        cadDockWidget()->clear();
         break;
 
       case CopyMove:

@@ -45,7 +45,11 @@ class QgsMultiRenderChecker
 #include "qgsmultirenderchecker.h"
 %End
   public:
+
     QgsMultiRenderChecker();
+%Docstring
+ Constructor for QgsMultiRenderChecker.
+%End
 
     virtual ~QgsMultiRenderChecker();
 
@@ -143,6 +147,44 @@ class QgsCompositionChecker : QgsMultiRenderChecker
 
     bool testComposition( QString &checkedReport, int page = 0, int pixelDiff = 0 );
 %Docstring
+ :rtype: bool
+%End
+
+};
+
+class QgsLayoutChecker : QgsMultiRenderChecker
+{
+%Docstring
+ Renders a layout to an image and compares with an expected output
+.. versionadded:: 3.0
+%End
+
+%TypeHeaderCode
+#include "qgsmultirenderchecker.h"
+%End
+  public:
+
+    QgsLayoutChecker( const QString &testName, QgsLayout *layout );
+%Docstring
+ Constructor for QgsLayoutChecker.
+%End
+
+    void setSize( QSize size );
+%Docstring
+ Sets the output (reference) image ``size``.
+%End
+
+    bool testLayout( QString &report, int page = 0, int pixelDiff = 0 );
+%Docstring
+ Runs a render check on the layout, adding results to the specified ``report``.
+
+ The maximum number of allowable pixels differing from the reference image is
+ specified via the ``pixelDiff`` argument.
+
+ The page number is specified via ``page``, where 0 corresponds to the first
+ page in the layout.
+
+ Returns false if the rendered layout differs from the expected reference image.
  :rtype: bool
 %End
 

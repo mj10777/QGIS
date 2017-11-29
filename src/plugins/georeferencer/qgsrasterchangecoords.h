@@ -24,7 +24,7 @@
 class QgsRasterChangeCoords
 {
   public:
-    QgsRasterChangeCoords();
+    QgsRasterChangeCoords() = default;
     void setRaster( const QString &fileRaster );
     bool hasCrs() const { return mHasCrs; }
     QVector<QgsPointXY> getPixelCoords( const QVector<QgsPointXY> &mapCoords );
@@ -34,10 +34,17 @@ class QgsRasterChangeCoords
 
   private:
     bool mHasCrs = false;
+    <<< <<< < HEAD
     double mUL_X;
     double mUL_Y;
     double mResX;
     double mResY;
+    == == == =
+      double mUL_X = 0.;
+    double mUL_Y = 0.;
+    double mResX = 1.;
+    double mResY = 1.;
+    >>> >>> > upstream_qgis / master32.spatialite_provider
 };
 
 #endif // QGSRASTERCHANGECOORDS_H

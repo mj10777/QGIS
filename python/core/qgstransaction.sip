@@ -11,6 +11,7 @@
 
 
 
+
 class QgsTransaction : QObject /Abstract/
 {
 %Docstring
@@ -22,7 +23,7 @@ class QgsTransaction : QObject /Abstract/
  and all layers need to be in read-only mode for a transaction to be committed
  or rolled back.
 
- Layers cannot only be included in one transaction at a time.
+ Layers can only be included in one transaction at a time.
 
  When editing layers which are part of a transaction group, all changes are
  sent directly to the data provider (bypassing the undo/redo stack), and the
@@ -47,23 +48,15 @@ class QgsTransaction : QObject /Abstract/
  :rtype: QgsTransaction
 %End
 
-    static QgsTransaction *create( const QStringList &layerIds ) /Factory/;
+    static QgsTransaction *create( const QSet<QgsVectorLayer *> &layers ) /Factory/;
 %Docstring
- Create a transaction which includes the layers specified with
- ``layerIds``.
+ Create a transaction which includes the ``layers``.
  All layers are expected to have the same connection string and data
  provider.
  :rtype: QgsTransaction
 %End
 
     virtual ~QgsTransaction();
-
-    bool addLayer( const QString &layerId );
-%Docstring
- Add the layer with ``layerId`` to the transaction. The layer must not be
- in edit mode and the connection string must match.
- :rtype: bool
-%End
 
     bool addLayer( QgsVectorLayer *layer );
 %Docstring
@@ -97,16 +90,65 @@ class QgsTransaction : QObject /Abstract/
  :rtype: bool
 %End
 
-    virtual bool executeSql( const QString &sql, QString &error /Out/ ) = 0;
+    virtual bool executeSql( const QString &sql, QString &error /Out/, bool isDirty = false ) = 0;
 %Docstring
- Execute the ``sql`` string. The result must not be a tuple, so running a
- ``SELECT`` query will return an error.
+ Execute the ``sql`` string.
+
+ \param sql The sql query to execute
+ \param error The error message
+ \param isDirty Flag to indicate if the underlying data will be modified
+
+ :return: true if everything is OK, false otherwise
  :rtype: bool
 %End
 
     static bool supportsTransaction( const QgsVectorLayer *layer );
 %Docstring
- Checks if a the provider of a given ``layer`` supports transactions.
+ Checks if the provider of a given ``layer`` supports transactions.
+ :rtype: bool
+%End
+
+    QString createSavepoint( QString &error /Out/ );
+%Docstring
+ creates a save point
+ returns empty string on error
+ returns the last created savepoint if it's not dirty
+.. versionadded:: 3.0
+ :rtype: str
+%End
+
+    QString createSavepoint( const QString &savePointId, QString &error /Out/ );
+%Docstring
+ creates a save point
+ returns empty string on error
+.. versionadded:: 3.0
+ :rtype: str
+%End
+
+    bool rollbackToSavepoint( const QString &name, QString &error /Out/ );
+%Docstring
+ rollback to save point, the save point is maintained and is "undertied"
+.. versionadded:: 3.0
+ :rtype: bool
+%End
+
+    void dirtyLastSavePoint();
+%Docstring
+ dirty save point such that next call to createSavepoint will create a new one
+.. versionadded:: 3.0
+%End
+
+    QList< QString > savePoints() const;
+%Docstring
+ returns savepoints
+.. versionadded:: 3.0
+ :rtype: list of str
+%End
+
+    bool lastSavePointIsDirty() const;
+%Docstring
+ returns the last created savepoint
+.. versionadded:: 3.0
  :rtype: bool
 %End
 
@@ -115,6 +157,11 @@ class QgsTransaction : QObject /Abstract/
     void afterRollback();
 %Docstring
  Emitted after a rollback
+%End
+
+    void dirtied( const QString &sql );
+%Docstring
+ Emitted if a sql query is executed and the underlying data is modified
 %End
 
   protected:
