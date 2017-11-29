@@ -5858,66 +5858,45 @@ bool QgisApp::openLayer( const QString &fileName, bool allowInteractive )
       return true;
     }
   }
-  <<< <<< < HEAD
-  qDebug().noquote() << QString( "-I-> QgisApp::openLayer: allowInteractive[%2] file[%1]" ).arg( fileName ).arg( allowInteractive );
-  SpatialiteDbInfo *spatialiteDbInfo = QgsSpatiaLiteUtils::CreateSpatialiteConnection( fileName, false );
+  bool bLoadLayers = false; // Minimal information. extended information will be retrieved only when needed
+  bool bShared = true; // Retain connection, connection will be closed after last usage
+  SpatialiteDbInfo *spatialiteDbInfo = QgsSpatiaLiteUtils::CreateSpatialiteDbInfo( fileName, bLoadLayers, bShared );
   if ( spatialiteDbInfo )
   {
-    // The file exists, is a Sqlite3-File and a connection has been made.
-    == == == =
-      bool bLoadLayers = false; // Minimal information. extended information will be retrieved only when needed
-    bool bShared = true; // Retain connection, connection will be closed after last usage
-    SpatialiteDbInfo *spatialiteDbInfo = QgsSpatiaLiteUtils::CreateSpatialiteDbInfo( fileName, bLoadLayers, bShared );
-    if ( spatialiteDbInfo )
+    // The file exists, check if it contains something we support
+    if ( ( spatialiteDbInfo->isDbSpatialite() ) || ( spatialiteDbInfo->isDbGdalOgr() ) )
     {
-      // The file exists, check if it contains something we support
-      >>> >>> > upstream_qgis / master32.spatialite_provider
-      if ( ( spatialiteDbInfo->isDbSpatialite() ) || ( spatialiteDbInfo->isDbGdalOgr() ) )
+      // The read Sqlite3 Container is supported by QgsSpatiaLiteProvider, QRasterLite2Provider,QgsOgrProvider or QgsGdalProvider.
+      bool bLoadGdalOgr = true;
+      if ( spatialiteDbInfo->isDbGdalOgr() )
       {
-        // The read Sqlite3 Container is supported by QgsSpatiaLiteProvider, QRasterLite2Provider,QgsOgrProvider or QgsGdalProvider.
-        bool bLoadGdalOgr = true;
-        if ( spatialiteDbInfo->isDbGdalOgr() )
+        // QgsSpatiaLiteSourceSelect/QgsSpatialiteLayerItem can display Gdal/Ogr sqlite3 based Sources (GeoPackage, MbTiles, FDO etc.)
+        //  and when selected call the needed QgsOgrProvider or QgsGdalProvider
+        // - if not desired (possible User-Setting), then this can be prevented here
+        // bLoadGdalOgr=false;
+      }
+      if ( ( bLoadGdalOgr ) && ( spatialiteDbInfo->dbLayersCount() > 0 ) )
+      {
+        if ( spatialiteDbInfo->dbLayersCount() > 1 )
         {
-          <<< <<< < HEAD
-          // QgsSpatiaLiteSourceSelect can display Gdal/Ogr sqlite3 based Sourses (GeoPackage, MbTiles, FDO etc)
-          == == == =
-            // QgsSpatiaLiteSourceSelect/QgsSpatialiteLayerItem can display Gdal/Ogr sqlite3 based Sources (GeoPackage, MbTiles, FDO etc.)
-            >>>>>>> upstream_qgis / master32.spatialite_provider
-            //  and when selected call the needed QgsOgrProvider or QgsGdalProvider
-            // - if not desired (possible User-Setting), then this can be prevented here
-            // bLoadGdalOgr=false;
-        }
-        if ( ( bLoadGdalOgr ) && ( spatialiteDbInfo->dbLayersCount() > 0 ) )
-        {
-          if ( spatialiteDbInfo->dbLayersCount() > 1 )
+          QgsAbstractDataSourceWidget *dbs = dynamic_cast<QgsAbstractDataSourceWidget *>( QgsProviderRegistry::instance()->createSelectionWidget( QStringLiteral( "spatialite" ), this ) );
+          if ( dbs )
           {
-            QgsAbstractDataSourceWidget *dbs = dynamic_cast<QgsAbstractDataSourceWidget *>( QgsProviderRegistry::instance()->createSelectionWidget( QStringLiteral( "spatialite" ), this ) );
-            if ( dbs )
-            {
-              // Load selected file into DataSourceWidget
-              emit dbs->addDatabaseLayers( QStringList( fileName ), QStringLiteral( "spatialite" ) );
-              dbs->exec();
-              return true;
-            }
-          }
-          else
-          {
-            // When only 1 Layer, load directly through spatialiteDbInfo [use only the absolute filename]
-            if ( spatialiteDbInfo->addDbMapLayers( QStringList( spatialiteDbInfo->getDatabaseFileName() ), QStringList( ) ) )
-            {
-              return true;
-            }
+            // Load selected file into DataSourceWidget
+            emit dbs->addDatabaseLayers( QStringList( fileName ), QStringLiteral( "spatialite" ) );
+            dbs->exec();
+            return true;
           }
         }
-        <<< <<< < HEAD
         else
         {
-          // - loading is not desired, close connection and free
-          delete spatialiteDbInfo;
-          spatialiteDbInfo = nullptr;
+          // When only 1 Layer, load directly through spatialiteDbInfo [use only the absolute filename]
+          if ( spatialiteDbInfo->addDbMapLayers( QStringList( spatialiteDbInfo->getDatabaseFileName() ), QStringList( ) ) )
+          {
+            return true;
+          }
         }
       }
-      == == == =
     }
     if ( !spatialiteDbInfo->checkConnectionNeeded() )
     {
@@ -5925,7 +5904,6 @@ bool QgisApp::openLayer( const QString &fileName, bool allowInteractive )
       delete spatialiteDbInfo;
     }
     spatialiteDbInfo = nullptr;
-    >>> >>> > upstream_qgis / master32.spatialite_provider
     // Not a Spatialite based source, continue
   }
   // try to load it as raster
@@ -5971,6 +5949,7 @@ bool QgisApp::openLayer( const QString &fileName, bool allowInteractive )
 
   return ok;
 }
+
 
 // Open a file specified by a commandline argument, Drop or FileOpen event.
 void QgisApp::openFile( const QString &fileName )
