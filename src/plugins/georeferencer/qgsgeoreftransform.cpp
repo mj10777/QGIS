@@ -508,7 +508,6 @@ bool QgsGDALGeorefTransform::updateParametersFromGCPs( const QVector<QgsPointXY>
   GDAL_GCP *GcpList = new GDAL_GCP[n];
   for ( int i = 0; i < n; i++ )
   {
-    <<< <<< < HEAD
     GcpList[i].pszId = new char[20];
     snprintf( GcpList[i].pszId, 19, "gcp%i", i );
     GcpList[i].pszInfo = nullptr;
@@ -517,16 +516,6 @@ bool QgsGDALGeorefTransform::updateParametersFromGCPs( const QVector<QgsPointXY>
     GcpList[i].dfGCPX = mapCoords[i].x();
     GcpList[i].dfGCPY = mapCoords[i].y();
     GcpList[i].dfGCPZ = 0;
-    == == == =
-      GCPList[i].pszId = new char[20];
-    snprintf( GCPList[i].pszId, 19, "gcp%i", i );
-    GCPList[i].pszInfo = nullptr;
-    GCPList[i].dfGCPPixel = pixelCoords[i].x();
-    GCPList[i].dfGCPLine  = -pixelCoords[i].y();
-    GCPList[i].dfGCPX = mapCoords[i].x();
-    GCPList[i].dfGCPY = mapCoords[i].y();
-    GCPList[i].dfGCPZ = 0;
-    >>> >>> > upstream_qgis / master32.spatialite_provider
   }
   destroy_gdal_args();
 

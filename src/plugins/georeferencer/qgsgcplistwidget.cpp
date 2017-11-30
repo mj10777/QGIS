@@ -27,11 +27,7 @@
 
 QgsGcpListWidget::QgsGcpListWidget( QWidget *parent )
   : QTableView( parent )
-    <<< <<< < HEAD
   , mGcpListModel( new QgsGcpListModel( this ) )
-    == == == =
-  , mGCPListModel( new QgsGCPListModel( this ) )
-      >>>>>>> upstream_qgis / master32.spatialite_provider
   , mNonEditableDelegate( new QgsNonEditableDelegate( this ) )
   , mDmsAndDdDelegate( new QgsDmsAndDdDelegate( this ) )
   , mCoordDelegate( new QgsCoordDelegate( this ) )

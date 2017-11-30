@@ -39,25 +39,19 @@ email                : a.furieri@lqt.it
 #endif
 
 #ifdef HAVE_GUI
-<<< <<< < HEAD
-== == == =
 //-----------------------------------------------------------------
 // QgsSpatiaLiteSourceSelect *selectWidget
 //-----------------------------------------------------------------
-  >>>>>>> upstream_qgis / master32.spatialite_provider
-  QGISEXTERN QgsSpatiaLiteSourceSelect * selectWidget( QWidget *parent, Qt::WindowFlags fl, QgsProviderRegistry::WidgetMode widgetMode )
+QGISEXTERN QgsSpatiaLiteSourceSelect *selectWidget( QWidget *parent, Qt::WindowFlags fl, QgsProviderRegistry::WidgetMode widgetMode )
 {
   return new QgsSpatiaLiteSourceSelect( parent, fl, widgetMode );
 }
 #endif
-<<< <<< < HEAD
-== == == =
 //-----------------------------------------------------------------
 // QgsSpatiaLiteSourceSelect::QgsSpatiaLiteSourceSelect
 //-----------------------------------------------------------------
-  >>>>>>> upstream_qgis / master32.spatialite_provider
-  QgsSpatiaLiteSourceSelect::QgsSpatiaLiteSourceSelect( QWidget *parent, Qt::WindowFlags fl, QgsProviderRegistry::WidgetMode theWidgetMode ):
-    QgsAbstractDataSourceWidget( parent, fl, theWidgetMode )
+QgsSpatiaLiteSourceSelect::QgsSpatiaLiteSourceSelect( QWidget *parent, Qt::WindowFlags fl, QgsProviderRegistry::WidgetMode theWidgetMode ):
+  QgsAbstractDataSourceWidget( parent, fl, theWidgetMode )
 {
   setupUi( this );
 
@@ -177,65 +171,13 @@ void QgsSpatiaLiteSourceSelect::on_btnSave_clicked()
       break;
   }
 
-  <<< <<< < HEAD
-  void QgsSpatiaLiteSourceSelect::on_btnSave_clicked()
-  {
-    QString sDbCreateOption = cmbDbCreateOption->currentText();
-    SpatialiteDbInfo::SpatialMetadata dbCreateOption = ( SpatialiteDbInfo::SpatialMetadata )cmbDbCreateOption->currentData().toInt();
-    QString sFileName = QString( "empty_Spatialite40.db" );
-    QString sDbType = "Spatialite";
-    QString sFileTypes = QString( "%1 (*.sqlite *.db *.sqlite3 *.db3 *.s3db *.atlas *.mbtiles *.gpkg);;%2 (*)" ).arg( sDbType ).arg( tr( "All files" ) );
-    switch ( dbCreateOption )
-    {
-      case SpatialiteDbInfo::Spatialite45:
-        sFileName = QString( "empty_Spatialite45.db" );
-        break;
-      case SpatialiteDbInfo::SpatialiteGpkg:
-        sFileName = QString( "empty_GeoPackage.gpkg" );
-        sDbType = "GeoPackage";
-        break;
-      case SpatialiteDbInfo::SpatialiteMBTiles:
-        sFileName = QString( "empty_MBTiles.mbtiles" );
-        sDbType = "MBTiles";
-        break;
-      case SpatialiteDbInfo::Spatialite40:
-      default:
-        sFileName = QString( "empty_Spatialite40.db" );
-        break;
-    }
+  QgsSettings settings;
+  QString lastUsedDir = settings.value( QStringLiteral( "UI/lastSpatiaLiteDir" ), QDir::currentPath() ).toString();
+  lastUsedDir = QString( "%1/%2" ).arg( lastUsedDir ).arg( sFileName );
+  QString sTitle = QString( tr( "Choose a Database to create [%1]" ) ).arg( sDbCreateOption );
+  QString fileSelect = QFileDialog::getSaveFileName( this, sTitle, lastUsedDir, sFileTypes );
 
-    == == == =
-      >>> >>> > upstream_qgis / master32.spatialite_provider
-      QgsSettings settings;
-    QString lastUsedDir = settings.value( QStringLiteral( "UI/lastSpatiaLiteDir" ), QDir::currentPath() ).toString();
-    lastUsedDir = QString( "%1/%2" ).arg( lastUsedDir ).arg( sFileName );
-    QString sTitle = QString( tr( "Choose a Database to create [%1]" ) ).arg( sDbCreateOption );
-    QString fileSelect = QFileDialog::getSaveFileName( this, sTitle, lastUsedDir, sFileTypes );
-    <<< <<< < HEAD
-
-    if ( fileSelect.isEmpty() )
-    {
-      return;
-    }
-    if ( mTableModel.createDatabase( fileSelect, dbCreateOption ) )
-    {
-      mTablesTreeView->setColumnHidden( mTableModel.getColumnSortHidden(), true );
-      mTablesTreeView->sortByColumn( mTableModel.getColumnSortHidden(), Qt::AscendingOrder );
-      mTablesTreeView->expandToDepth( 1 );
-    }
-  }
-
-// Slot for performing action when the Add button is clicked
-  void QgsSpatiaLiteSourceSelect::addClicked()
-  {
-    addTables();
-  }
-
-//! End Autoconnected SLOTS *
-  == == == =
-    >>> >>> > upstream_qgis / master32.spatialite_provider
-
-    if ( fileSelect.isEmpty() )
+  if ( fileSelect.isEmpty() )
   {
     return;
   }
@@ -309,23 +251,10 @@ void QgsSpatiaLiteSourceSelect::updateStatistics()
                            tr( "Error while updating internal statistics for: %1" ).arg( subKey ) );
   }
 }
-<<< <<< < HEAD
-#if 0
-void QgsSpatiaLiteSourceSelect::on_cbxAllowGeometrylessTables_stateChanged( int )
-{
-  if ( cbxAllowGeometrylessTables->isEnabled() )
-  {
-    on_btnConnect_clicked()
-  }
-}
-#endif
-
-== == == =
 //-----------------------------------------------------------------
 // QgsSpatiaLiteSourceSelect::on_mTablesTreeView_clicked
 //-----------------------------------------------------------------
-  >>> >>> > upstream_qgis / master32.spatialite_provider
-  void QgsSpatiaLiteSourceSelect::on_mTablesTreeView_clicked( const QModelIndex &index )
+void QgsSpatiaLiteSourceSelect::on_mTablesTreeView_clicked( const QModelIndex &index )
 {
   QModelIndex idx = mProxyModel.mapToSource( index );
   bool bValidSelection = false;
@@ -410,14 +339,10 @@ void QgsSpatiaLiteSourceSelect::on_mSearchModeComboBox_currentIndexChanged( cons
   Q_UNUSED( text );
   on_mSearchTableEdit_textChanged( mSearchTableEdit->text() );
 }
-<<< <<< < HEAD
-
-== == == =
 //-----------------------------------------------------------------
 // QgsSpatiaLiteSourceSelect::populateConnectionList
 //-----------------------------------------------------------------
-  >>>>>>> upstream_qgis / master32.spatialite_provider
-  void QgsSpatiaLiteSourceSelect::populateConnectionList()
+void QgsSpatiaLiteSourceSelect::populateConnectionList()
 {
   cmbConnections->clear();
   Q_FOREACH ( const QString &name, QgsSpatiaLiteConnection::connectionList() )
@@ -484,13 +409,10 @@ bool QgsSpatiaLiteSourceSelect::newConnection( QWidget *parent )
   settings.setValue( baseKey + savedName + "/sqlitepath", fileInfo.canonicalFilePath() );
   return true;
 }
-<<< <<< < HEAD
-== == == =
 //-----------------------------------------------------------------
 // QgsSpatiaLiteSourceSelect::layerUriSql
 //-----------------------------------------------------------------
-  >>>>>>> upstream_qgis / master32.spatialite_provider
-  QString QgsSpatiaLiteSourceSelect::layerUriSql( const QModelIndex &index )
+QString QgsSpatiaLiteSourceSelect::layerUriSql( const QModelIndex &index )
 {
   QString tableName = mTableModel.getTableName( index );
   QString geomColumnName = mTableModel.getGeometryName( index );
@@ -551,13 +473,10 @@ void QgsSpatiaLiteSourceSelect::on_btnDelete_clicked()
   populateConnectionList();
   emit connectionsChanged();
 }
-<<< <<< < HEAD
-== == == =
 //-----------------------------------------------------------------
 // QgsSpatiaLiteSourceSelect::collectSelectedTables
 //-----------------------------------------------------------------
-  >>>>>>> upstream_qgis / master32.spatialite_provider
-  int QgsSpatiaLiteSourceSelect::collectSelectedTables()
+int QgsSpatiaLiteSourceSelect::collectSelectedTables()
 {
   m_selectedLayers.clear();
   m_selectedLayersSql.clear();
@@ -594,13 +513,10 @@ void QgsSpatiaLiteSourceSelect::on_btnDelete_clicked()
   }
   return m_selectedLayers.size();
 }
-<<< <<< < HEAD
-== == == =
 //-----------------------------------------------------------------
 // QgsSpatiaLiteSourceSelect::addTables
 //-----------------------------------------------------------------
-  >>>>>>> upstream_qgis / master32.spatialite_provider
-  void QgsSpatiaLiteSourceSelect::addTables()
+void QgsSpatiaLiteSourceSelect::addTables()
 {
   collectSelectedTables();
   if ( m_selectedLayers.empty() )
@@ -609,11 +525,7 @@ void QgsSpatiaLiteSourceSelect::on_btnDelete_clicked()
   }
   else
   {
-    <<< <<< < HEAD
-    addDbMapLayers( );
-    == == == =
-      addDbMapLayers();
-    >>> >>> > upstream_qgis / master32.spatialite_provider
+    addDbMapLayers();
     if ( mWidgetMode == QgsProviderRegistry::WidgetMode::None && ! mHoldDialogOpen->isChecked() )
     {
       accept();
@@ -629,13 +541,6 @@ void QgsSpatiaLiteSourceSelect::on_btnConnect_clicked()
   // trying to connect to SpatiaLite DB
   QgsSpatiaLiteConnection connectionInfo( cmbConnections->currentText() );
   mSqlitePath = connectionInfo.dbPath();
-  <<< <<< < HEAD
-
-  addDatabaseSource( QStringList( mSqlitePath ) );
-
-}
-
-== == == =
 
   addDatabaseSource( QStringList( mSqlitePath ) );
 
@@ -643,7 +548,6 @@ void QgsSpatiaLiteSourceSelect::on_btnConnect_clicked()
 //-----------------------------------------------------------------
 // QgsSpatiaLiteSourceSelect::addDatabaseSource
 //-----------------------------------------------------------------
->>> >>> > upstream_qgis / master32.spatialite_provider
 void QgsSpatiaLiteSourceSelect::addDatabaseSource( QStringList const &paths, QString const &providerKey )
 {
   Q_UNUSED( providerKey );
@@ -651,12 +555,8 @@ void QgsSpatiaLiteSourceSelect::addDatabaseSource( QStringList const &paths, QSt
   QString fileName = paths.at( 0 );
   bool bLoadLayers = true;
   bool bShared = true;
-  <<< <<< < HEAD
-  SpatialiteDbInfo *spatialiteDbInfo = QgsSpatiaLiteUtils::CreateSpatialiteConnection( fileName, bLoadLayers, bShared );
-  == == == =
-    // Since all layer details will be needed, 'bLoadLayers = true' should be used [noticeably faster].
-    SpatialiteDbInfo * spatialiteDbInfo = QgsSpatiaLiteUtils::CreateSpatialiteDbInfo( fileName, bLoadLayers, bShared );
-  >>> >>> > upstream_qgis / master32.spatialite_provider
+  // Since all layer details will be needed, 'bLoadLayers = true' should be used [noticeably faster].
+  SpatialiteDbInfo *spatialiteDbInfo = QgsSpatiaLiteUtils::CreateSpatialiteDbInfo( fileName, bLoadLayers, bShared );
 
   QApplication::restoreOverrideCursor();
 
@@ -666,25 +566,13 @@ void QgsSpatiaLiteSourceSelect::addDatabaseSource( QStringList const &paths, QSt
     {
       QMessageBox::critical( this, tr( "SpatiaLite DB Open Error" ), tr( "Database does not exist: %1" ).arg( mSqlitePath ) );
     }
-    <<< <<< < HEAD
-    else
-    {
-      QMessageBox::critical( this, tr( "SpatiaLite DB Open Error" ), tr( " File is not a Sqlite3 Container: %1" ).arg( mSqlitePath ) );
-    }
-    delete spatialiteDbInfo;
-    spatialiteDbInfo = nullptr;
-    == == == =
-      >>> >>> > upstream_qgis / master32.spatialite_provider
-      return;
+    return;
   }
   else
   {
     if ( !spatialiteDbInfo->isDbValid() )
     {
-      <<< <<< < HEAD
-      QMessageBox::critical( this, tr( "SpatiaLite DB Open Error" ), tr( "The read Sqlite3 Container is not supported by QgsSpatiaLiteProvider,QgsOgrProvider or QgsGdalProvider: %1" ).arg( mSqlitePath ) );
-      == == == =
-        if ( spatialiteDbInfo->isDbLocked() )
+      if ( spatialiteDbInfo->isDbLocked() )
       {
         QMessageBox::critical( this, tr( "SpatiaLite DB Open Error" ), tr( "The read Sqlite3 Container [%2] is locked: [%1]" ).arg( mSqlitePath ).arg( spatialiteDbInfo->dbSpatialMetadataString() ) );
       }
@@ -692,7 +580,6 @@ void QgsSpatiaLiteSourceSelect::addDatabaseSource( QStringList const &paths, QSt
       {
         QMessageBox::critical( this, tr( "SpatiaLite DB Open Error" ), tr( "The read Sqlite3 Container [%2] is not supported by QgsSpatiaLiteProvider,QgsOgrProvider or QgsGdalProvider: [%1]" ).arg( mSqlitePath ).arg( spatialiteDbInfo->dbSpatialMetadataString() ) );
       }
-      >>> >>> > upstream_qgis / master32.spatialite_provider
       return;
     }
     if ( fileName != mSqlitePath )
@@ -704,143 +591,126 @@ void QgsSpatiaLiteSourceSelect::addDatabaseSource( QStringList const &paths, QSt
     setSpatialiteDbInfo( spatialiteDbInfo );
   }
 }
-<<< <<< < HEAD
-void QgsSpatiaLiteSourceSelect::setSpatialiteDbInfo( SpatialiteDbInfo *spatialiteDbInfo, bool setConnectionInfo )
-{
-  mTableModel.setSqliteDb( spatialiteDbInfo, true );
-  mTablesTreeView->setColumnHidden( mTableModel.getColumnSortHidden(), true );
-  mTablesTreeView->sortByColumn( mTableModel.getColumnSortHidden(), Qt::AscendingOrder );
-  mTablesTreeView->expandToDepth( 1 );
-  if ( setConnectionInfo )
-  {
-    mSqlitePath = spatialiteDbInfo->getDatabaseFileName();
-    // TODO: add to comboBox, if not there already
-    == == == =
 //-----------------------------------------------------------------
 // QgsSpatiaLiteSourceSelect::setSpatialiteDbInfo
 //-----------------------------------------------------------------
-      void QgsSpatiaLiteSourceSelect::setSpatialiteDbInfo( SpatialiteDbInfo * spatialiteDbInfo, bool setConnectionInfo )
+void QgsSpatiaLiteSourceSelect::setSpatialiteDbInfo( SpatialiteDbInfo *spatialiteDbInfo, bool setConnectionInfo )
+{
+  if ( ( spatialiteDbInfo ) && ( spatialiteDbInfo->isDbValid() ) )
+  {
+    mTableModel.setSqliteDb( spatialiteDbInfo, true );
+    mTablesTreeView->setColumnHidden( mTableModel.getColumnSortHidden(), true );
+    mTablesTreeView->sortByColumn( mTableModel.getColumnSortHidden(), Qt::AscendingOrder );
+    mTablesTreeView->expandToDepth( 1 );
+    if ( setConnectionInfo )
     {
-      if ( ( spatialiteDbInfo ) && ( spatialiteDbInfo->isDbValid() ) )
-      {
-        mTableModel.setSqliteDb( spatialiteDbInfo, true );
-        mTablesTreeView->setColumnHidden( mTableModel.getColumnSortHidden(), true );
-        mTablesTreeView->sortByColumn( mTableModel.getColumnSortHidden(), Qt::AscendingOrder );
-        mTablesTreeView->expandToDepth( 1 );
-        if ( setConnectionInfo )
-        {
-          mSqlitePath = spatialiteDbInfo->getDatabaseFileName();
-          // TODO: add to comboBox, if not there already
-        }
-        >>> >>> > upstream_qgis / master32.spatialite_provider
-      }
+      mSqlitePath = spatialiteDbInfo->getDatabaseFileName();
+      // TODO: add to comboBox, if not there already
     }
+  }
+}
 //-----------------------------------------------------------------
 // QgsSpatiaLiteSourceSelect::setSql
 //-----------------------------------------------------------------
-    void QgsSpatiaLiteSourceSelect::setSql( const QModelIndex & index )
-    {
-      QModelIndex idx = mProxyModel.mapToSource( index );
-      QString tableName = mTableModel.getTableName( idx );
-      QString sLayerNameUris = mTableModel.getLayerNameUris( idx );
-      if ( sLayerNameUris.isEmpty() )
-      {
-        return;
-      }
-      QgsVectorLayer *vlayer = new QgsVectorLayer( sLayerNameUris, tableName, QStringLiteral( "spatialite" ) );
+void QgsSpatiaLiteSourceSelect::setSql( const QModelIndex &index )
+{
+  QModelIndex idx = mProxyModel.mapToSource( index );
+  QString tableName = mTableModel.getTableName( idx );
+  QString sLayerNameUris = mTableModel.getLayerNameUris( idx );
+  if ( sLayerNameUris.isEmpty() )
+  {
+    return;
+  }
+  QgsVectorLayer *vlayer = new QgsVectorLayer( sLayerNameUris, tableName, QStringLiteral( "spatialite" ) );
 
-      if ( !vlayer->isValid() )
-      {
-        delete vlayer;
-        return;
-      }
+  if ( !vlayer->isValid() )
+  {
+    delete vlayer;
+    return;
+  }
 
-      // create a query builder object
-      QgsQueryBuilder *gb = new QgsQueryBuilder( vlayer, this );
-      if ( gb->exec() )
-      {
-        mTableModel.setSql( mProxyModel.mapToSource( index ), gb->sql() );
-      }
+  // create a query builder object
+  QgsQueryBuilder *gb = new QgsQueryBuilder( vlayer, this );
+  if ( gb->exec() )
+  {
+    mTableModel.setSql( mProxyModel.mapToSource( index ), gb->sql() );
+  }
 
-      delete gb;
-      delete vlayer;
-    }
+  delete gb;
+  delete vlayer;
+}
 //-----------------------------------------------------------------
 // QgsSpatiaLiteSourceSelect::fullDescription
 //-----------------------------------------------------------------
-    QString QgsSpatiaLiteSourceSelect::fullDescription( const QString & table, const QString & column, const QString & type )
-    {
-      QString full_desc = QLatin1String( "" );
-      full_desc += table + "\" (" + column + ") " + type;
-      return full_desc;
-    }
+QString QgsSpatiaLiteSourceSelect::fullDescription( const QString &table, const QString &column, const QString &type )
+{
+  QString full_desc = QLatin1String( "" );
+  full_desc += table + "\" (" + column + ") " + type;
+  return full_desc;
+}
 //-----------------------------------------------------------------
 // QgsSpatiaLiteSourceSelect::dbChanged
 //-----------------------------------------------------------------
-    void QgsSpatiaLiteSourceSelect::dbChanged()
-    {
-      // Remember which database was selected.
-      QgsSettings settings;
-      settings.setValue( QStringLiteral( "SpatiaLite/connections/selected" ), cmbConnections->currentText() );
-    }
-    <<< <<< < HEAD
-
-    == == == =
+void QgsSpatiaLiteSourceSelect::dbChanged()
+{
+  // Remember which database was selected.
+  QgsSettings settings;
+  settings.setValue( QStringLiteral( "SpatiaLite/connections/selected" ), cmbConnections->currentText() );
+}
 //-----------------------------------------------------------------
 // QgsSpatiaLiteSourceSelect::setConnectionListPosition
 //-----------------------------------------------------------------
-      >>>>>>> upstream_qgis / master32.spatialite_provider
-      void QgsSpatiaLiteSourceSelect::setConnectionListPosition()
-    {
-      QgsSettings settings;
-      // If possible, set the item currently displayed database
-      QString toSelect = settings.value( QStringLiteral( "SpatiaLite/connections/selected" ) ).toString();
+void QgsSpatiaLiteSourceSelect::setConnectionListPosition()
+{
+  QgsSettings settings;
+  // If possible, set the item currently displayed database
+  QString toSelect = settings.value( QStringLiteral( "SpatiaLite/connections/selected" ) ).toString();
 
-      toSelect += '@' + settings.value( "/SpatiaLite/connections/" + toSelect + "/sqlitepath" ).toString();
+  toSelect += '@' + settings.value( "/SpatiaLite/connections/" + toSelect + "/sqlitepath" ).toString();
 
-      cmbConnections->setCurrentIndex( cmbConnections->findText( toSelect ) );
+  cmbConnections->setCurrentIndex( cmbConnections->findText( toSelect ) );
 
-      if ( cmbConnections->currentIndex() < 0 )
-      {
-        if ( toSelect.isNull() )
-          cmbConnections->setCurrentIndex( 0 );
-        else
-          cmbConnections->setCurrentIndex( cmbConnections->count() - 1 );
-      }
-    }
+  if ( cmbConnections->currentIndex() < 0 )
+  {
+    if ( toSelect.isNull() )
+      cmbConnections->setCurrentIndex( 0 );
+    else
+      cmbConnections->setCurrentIndex( cmbConnections->count() - 1 );
+  }
+}
 //-----------------------------------------------------------------
 // QgsSpatiaLiteSourceSelect::setSearchExpression
 //-----------------------------------------------------------------
-    void QgsSpatiaLiteSourceSelect::setSearchExpression( const QString & regexp )
-    {
-      Q_UNUSED( regexp );
-    }
+void QgsSpatiaLiteSourceSelect::setSearchExpression( const QString &regexp )
+{
+  Q_UNUSED( regexp );
+}
 //-----------------------------------------------------------------
 // QgsSpatiaLiteSourceSelect::treeWidgetSelectionChanged
 //-----------------------------------------------------------------
-    void QgsSpatiaLiteSourceSelect::treeWidgetSelectionChanged( const QItemSelection & selected, const QItemSelection & deselected )
+void QgsSpatiaLiteSourceSelect::treeWidgetSelectionChanged( const QItemSelection &selected, const QItemSelection &deselected )
+{
+  Q_UNUSED( selected )
+  Q_UNUSED( deselected )
+  bool bValidSelection = false;
+  QItemSelection selection = mTablesTreeView->selectionModel()->selection();
+  QModelIndexList selectedIndices = selection.indexes();
+  QStandardItem *currentItem = nullptr;
+  QModelIndexList::const_iterator selected_it = selectedIndices.constBegin();
+  for ( ; selected_it != selectedIndices.constEnd(); ++selected_it )
+  {
+    if ( !selected_it->parent().isValid() )
     {
-      Q_UNUSED( selected )
-      Q_UNUSED( deselected )
-      bool bValidSelection = false;
-      QItemSelection selection = mTablesTreeView->selectionModel()->selection();
-      QModelIndexList selectedIndices = selection.indexes();
-      QStandardItem *currentItem = nullptr;
-      QModelIndexList::const_iterator selected_it = selectedIndices.constBegin();
-      for ( ; selected_it != selectedIndices.constEnd(); ++selected_it )
-      {
-        if ( !selected_it->parent().isValid() )
-        {
-          //top level items only contain the schema names
-          continue;
-        }
-        currentItem = mTableModel.itemFromIndex( mProxyModel.mapToSource( *selected_it ) );
-        if ( ( !currentItem ) || ( !currentItem->isSelectable() ) )
-        {
-          continue;
-        }
-        bValidSelection = true;
-        break;
-      }
-      mAddButton->setEnabled( bValidSelection );
+      //top level items only contain the schema names
+      continue;
     }
+    currentItem = mTableModel.itemFromIndex( mProxyModel.mapToSource( *selected_it ) );
+    if ( ( !currentItem ) || ( !currentItem->isSelectable() ) )
+    {
+      continue;
+    }
+    bValidSelection = true;
+    break;
+  }
+  mAddButton->setEnabled( bValidSelection );
+}

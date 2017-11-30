@@ -20,23 +20,19 @@
 #include <cfloat>
 #include <cmath>
 
-<<< <<< < HEAD
-QgsResidualPlotItem::QgsResidualPlotItem( QgsComposition *c ): QgsComposerItem( c )
-{
-
-}
-
-QgsResidualPlotItem::~QgsResidualPlotItem()
-== == == =
-  QgsResidualPlotItem::QgsResidualPlotItem( QgsComposition *c )
-    : QgsComposerItem( c )
+QgsResidualPlotItem::QgsResidualPlotItem( QgsComposition *c )
+  : QgsComposerItem( c )
   , mConvertScaleToMapUnits( false )
-      >>> >>> > upstream_qgis / master32.spatialite_provider
 {
 
 }
+#if 0
+QgsResidualPlotItem::~QgsResidualPlotItem()
+{
+}
+#endif
 
-void QgsResidualPlotItem::paint( QPainter * painter, const QStyleOptionGraphicsItem * itemStyle, QWidget * pWidget )
+void QgsResidualPlotItem::paint( QPainter *painter, const QStyleOptionGraphicsItem *itemStyle, QWidget *pWidget )
 {
   Q_UNUSED( itemStyle );
   Q_UNUSED( pWidget );

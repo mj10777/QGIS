@@ -26,10 +26,6 @@
 #include "qgsvectordataprovider.h"
 #include "qgsvectorfilewriter.h"
 #include "qgsproviderregistry.h"
-<<<<<<< HEAD
-#include "qgssqlitehandle.h"
-=======
->>>>>>> upstream_qgis/master32.spatialite_provider
 #include "qgslogger.h"
 #include "qgsspatialiteutils.h"
 
@@ -358,11 +354,7 @@ bool QgsWFSSharedData::createCache()
 
   spatialite_database_unique_ptr database;
   bool ret = true;
-<<<<<<< HEAD
-  int rc = QgsSqliteHandle::sqlite3_open( mCacheDbname.toUtf8(), &db );
-=======
   int rc = database.open( mCacheDbname );
->>>>>>> upstream_qgis/master32.spatialite_provider
   if ( rc == SQLITE_OK )
   {
     QString sql;
@@ -434,13 +426,7 @@ bool QgsWFSSharedData::createCache()
       }
     }
 
-<<<<<<< HEAD
-    ( void )sqlite3_exec( db, "COMMIT", nullptr, nullptr, nullptr );
-
-    QgsSqliteHandle::sqlite3_close( db );
-=======
     ( void )sqlite3_exec( database.get(), "COMMIT", nullptr, nullptr, nullptr );
->>>>>>> upstream_qgis/master32.spatialite_provider
   }
   else
   {

@@ -15,7 +15,6 @@
 
 #include "qgsgcplist.h"
 
-<<< <<< < HEAD
 QgsGcpList::QgsGcpList()
   : QList<QgsGeorefDataPoint *>()
 {
@@ -24,10 +23,6 @@ QgsGcpList::QgsGcpList()
 QgsGcpList::QgsGcpList( const QgsGcpList &list )
   : QList<QgsGeorefDataPoint *>()
   , mHasChanged( true )
-    == == == =
-      QgsGCPList::QgsGCPList( const QgsGCPList & list )
-        :  QList<QgsGeorefDataPoint *>()
-         >>> >>> > upstream_qgis / master32.spatialite_provider
 {
   clear();
   QgsGcpList::const_iterator it = list.constBegin();

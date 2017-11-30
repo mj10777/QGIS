@@ -4074,7 +4074,7 @@ double QgsSpatiaLiteGcpUtils::metersToMapPoint( GcpDbData *parmsGcpDbData )
         if ( i_isDegree == 1 )
         {
           // SELECT ST_Transform(MakePoint(24250.41,21182.19,3068),4326); SRID=4326;POINT(13.3934162138589 52.51751576264239)
-          QString s_GeomFromEWKT = QString( "GeomFromEWKT('SRID=%1;%2')" ).arg( parmsGcpDbData->mGcpSrid ).arg( parmsGcpDbData->mInputPoint.wellKnownText() );
+          QString s_GeomFromEWKT = QString( "GeomFromEWKT('SRID=%1;%2')" ).arg( parmsGcpDbData->mGcpSrid ).arg( parmsGcpDbData->mInputPoint.asWkt() );
           // SELECT ST_Transform(MakePoint(13.3934162138589,52.51751576264239,4326),3395)
           // SELECT ST_Length(MakeLine(MakePoint(13.3934162138589,52.51751576264239,4326),ST_Project(MakePoint(13.3934162138589,52.51751576264239,4326),5,PI()/2)))
           // 0.000074

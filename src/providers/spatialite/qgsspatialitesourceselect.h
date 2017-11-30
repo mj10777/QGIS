@@ -61,36 +61,14 @@ class QgsSpatiaLiteSourceSelect: public QgsAbstractDataSourceWidget, private Ui:
     //! Populate the connection list combo box
     void populateConnectionList();
 
-    <<< <<< < HEAD
-
     /**
      * Determines the tables the user selected and closes the dialog
-    =======
-
-    /**
-     * Determines the tables the user selected and closes the dialog
-    >>>>>>> upstream_qgis/master32.spatialite_provider
      * \note
      *  - as url
      * \see collectSelectedTables()
      * \since QGIS 1.8
      */
     void addTables();
-
-    <<< <<< < HEAD
-
-    /**
-     * List of selected Tabels
-     * \note
-     *  - as LayerName LayerName formatted as 'table_name(geometry_name)' or 'table_name'
-     * \see collectSelectedTables()
-     * \since QGIS 1.8
-     */
-    QString connectionInfo() {  return mTableModel.getDbConnectionInfo( ); }
-
-    /**
-     * Store the selected database
-    =======
 
     /**
      * Connection info (DB-path) without table and geometry
@@ -105,7 +83,6 @@ class QgsSpatiaLiteSourceSelect: public QgsAbstractDataSourceWidget, private Ui:
 
     /**
      * Store the selected database
-    >>>>>>> upstream_qgis/master32.spatialite_provider
      * \note
      *  - Remember which database was selected
      *  - in 'SpatiaLite/connections/selected'
@@ -117,30 +94,16 @@ class QgsSpatiaLiteSourceSelect: public QgsAbstractDataSourceWidget, private Ui:
 
   public slots:
 
-    <<< <<< < HEAD
-
     /**
      * Connects to the database using the stored connection parameters.
-    =======
-
-    /**
-     * Connects to the database using the stored connection parameters.
-    >>>>>>> upstream_qgis/master32.spatialite_provider
      * Once connected, available layers are displayed.
      */
     void on_btnConnect_clicked();
     void buildQuery();
     void addClicked();
 
-    <<< <<< < HEAD
-
     /**
      * Calls UpdateLayerStatistics for a Spatialite Database
-    =======
-
-    /**
-     * Calls UpdateLayerStatistics for a Spatialite Database
-    >>>>>>> upstream_qgis/master32.spatialite_provider
      *  - for selected Layers ar the whole Database
      * \note
      *  - Uses the SpatialiteDbInfo interface
@@ -150,15 +113,8 @@ class QgsSpatiaLiteSourceSelect: public QgsAbstractDataSourceWidget, private Ui:
      */
     void updateStatistics();
 
-    <<< <<< < HEAD
-
     /**
      * Select File-name for new Database
-    =======
-
-    /**
-     * Select File-name for new Database
-    >>>>>>> upstream_qgis/master32.spatialite_provider
      *  - for use with SpatialiteDbInfo::createDatabase
      * \note
      * - SpatialMetadata::Spatialite40: InitSpatialMetadata only
@@ -178,13 +134,7 @@ class QgsSpatiaLiteSourceSelect: public QgsAbstractDataSourceWidget, private Ui:
     void on_mSearchTableEdit_textChanged( const QString &text );
     void on_mSearchColumnComboBox_currentIndexChanged( const QString &text );
     void on_mSearchModeComboBox_currentIndexChanged( const QString &text );
-    <<< <<< < HEAD
-#if 0
-    void on_cbxAllowGeometrylessTables_stateChanged( int );
-#endif
-    == == == =
-      >>> >>> > upstream_qgis / master32.spatialite_provider
-      void setSql( const QModelIndex &index );
+    void setSql( const QModelIndex &index );
     void on_cmbConnections_activated( int );
     void on_mTablesTreeView_clicked( const QModelIndex &index );
     void on_mTablesTreeView_doubleClicked( const QModelIndex &index );
@@ -194,15 +144,8 @@ class QgsSpatiaLiteSourceSelect: public QgsAbstractDataSourceWidget, private Ui:
 
     void on_buttonBox_helpRequested() { QgsHelp::openHelp( QStringLiteral( "managing_data_source/opening_data.html#spatialite-layers" ) ); }
 
-    <<< <<< < HEAD
-
     /**
      * Load selected Database-Source
-    =======
-
-    /**
-     * Load selected Database-Source
-    >>>>>>> upstream_qgis/master32.spatialite_provider
      *  - load Database an fill the QgsSpatiaLiteTableModel with the result
      * \note
      *  - only the first entry of 'paths' will be used
@@ -223,15 +166,8 @@ class QgsSpatiaLiteSourceSelect: public QgsAbstractDataSourceWidget, private Ui:
      */
     void connectionsChanged();
 
-    <<< <<< < HEAD
-
     /**
      * Emitted when a DB layer has been selected for addition
-    =======
-
-    /**
-     * Emitted when a DB layer has been selected for addition
-    >>>>>>> upstream_qgis/master32.spatialite_provider
      * \note
      *  - this event is used to load a DB-Layer during a Drag and Drop
      * \see QgisApp::openLayer
@@ -242,15 +178,8 @@ class QgsSpatiaLiteSourceSelect: public QgsAbstractDataSourceWidget, private Ui:
 
   private:
 
-    <<< <<< < HEAD
-
     /**
      * Set the position of the database connection list to the last used one.
-    =======
-
-    /**
-     * Set the position of the database connection list to the last used one.
-    >>>>>>> upstream_qgis/master32.spatialite_provider
      * \note
      *  - from 'SpatiaLite/connections/selected'
      * \see populateConnectionList
@@ -258,45 +187,24 @@ class QgsSpatiaLiteSourceSelect: public QgsAbstractDataSourceWidget, private Ui:
      */
     void setConnectionListPosition();
 
-    <<< <<< < HEAD
-
     /**
      * Combine the table and column data into a single string
-    =======
-
-    /**
-     * Combine the table and column data into a single string
-    >>>>>>> upstream_qgis/master32.spatialite_provider
      * \note
      *  - useful for display to the user
      * \since QGIS 1.8
      */
     QString fullDescription( const QString &table, const QString &column, const QString &type );
 
-    <<< <<< < HEAD
-
     /**
      * The column labels
-    =======
-
-    /**
-     * The column labels
-    >>>>>>> upstream_qgis/master32.spatialite_provider
      * \note
      *  - not used
      * \since QGIS 1.8
      */
     QStringList mColumnLabels;
 
-    <<< <<< < HEAD
-
     /**
      * Absolute Path of the Connection
-    =======
-
-    /**
-     * Absolute Path of the Connection
-    >>>>>>> upstream_qgis/master32.spatialite_provider
      * - 'SpatiaLite/connections'
      * \note
      *  - retrieved from QgsSpatiaLiteConnection
@@ -306,15 +214,8 @@ class QgsSpatiaLiteSourceSelect: public QgsAbstractDataSourceWidget, private Ui:
      */
     QString mSqlitePath;
 
-    <<< <<< < HEAD
-
     /**
      * Function to collect selected layers
-    =======
-
-    /**
-     * Function to collect selected layers
-    >>>>>>> upstream_qgis/master32.spatialite_provider
      * \note
      *  - fills m_selectedTables with uri
      *  - fills m_selectedLayers with LayerName formatted as 'table_name(geometry_name)' or 'table_name'
@@ -324,15 +225,8 @@ class QgsSpatiaLiteSourceSelect: public QgsAbstractDataSourceWidget, private Ui:
      */
     int collectSelectedTables();
 
-    <<< <<< < HEAD
-
     /**
      * List of selected Tabels
-    =======
-
-    /**
-     * List of selected Tabels
-    >>>>>>> upstream_qgis/master32.spatialite_provider
      * \note
      *  - as LayerName LayerName formatted as 'table_name(geometry_name)' or 'table_name'
      * \see collectSelectedTables()
@@ -340,15 +234,8 @@ class QgsSpatiaLiteSourceSelect: public QgsAbstractDataSourceWidget, private Ui:
      */
     QStringList m_selectedLayers;
 
-    <<< <<< < HEAD
-
     /**
      * List of extra Sql-Query for selected Layers
-    =======
-
-    /**
-     * List of extra Sql-Query for selected Layers
-    >>>>>>> upstream_qgis/master32.spatialite_provider
      * \note
      *  - as extra Sql-Query
      * \see collectSelectedTables()
@@ -356,15 +243,8 @@ class QgsSpatiaLiteSourceSelect: public QgsAbstractDataSourceWidget, private Ui:
      */
     QStringList m_selectedLayersSql;
 
-    <<< <<< < HEAD
-
     /**
      * Add a list of database layers to the map
-    =======
-
-    /**
-     * Add a list of database layers to the map
-    >>>>>>> upstream_qgis/master32.spatialite_provider
      * - to fill a Map of QgsVectorLayers and/or QgsRasterLayers
      * -> can be for both QgsSpatiaLiteProvider or QgsOgr/GdalProvider
      * \note
@@ -377,17 +257,10 @@ class QgsSpatiaLiteSourceSelect: public QgsAbstractDataSourceWidget, private Ui:
      * \see collectSelectedTables()
      * \since QGIS 3.0
      */
-    <<< <<< < HEAD
-    int addDbMapLayers( ) const {  return mTableModel.addDbMapLayers( m_selectedLayers, m_selectedLayersSql );  }
-
-    /**
-     * Map of valid Selected Layers requested by the User
-    =======
     int addDbMapLayers() const {  return mTableModel.addDbMapLayers( m_selectedLayers, m_selectedLayersSql );  }
 
     /**
      * Map of valid Selected Layers requested by the User
-    >>>>>>> upstream_qgis/master32.spatialite_provider
      * - only Uris that created a valid QgsVectorLayer/QgsRasterLayer
      * -> filled during addDatabaseLayers
      * -> called through the SpatialiteDbInfo stored in QgsSpatiaLiteTableModel
@@ -402,15 +275,8 @@ class QgsSpatiaLiteSourceSelect: public QgsAbstractDataSourceWidget, private Ui:
      */
     QMap<QString, QString> getSelectedLayersUris() const { return mTableModel.getSelectedLayersUris(); }
 
-    <<< <<< < HEAD
-
     /**
      * Storage for the range of layer type icons
-    =======
-
-    /**
-     * Storage for the range of layer type icons
-    >>>>>>> upstream_qgis/master32.spatialite_provider
      * \note
      *  - fills m_selectedTables with uri
      *  - fills m_selectedLayers with LayerName formatted as 'table_name(geometry_name)' or 'table_name'
@@ -420,45 +286,24 @@ class QgsSpatiaLiteSourceSelect: public QgsAbstractDataSourceWidget, private Ui:
      */
     QMap < QString, QPair < QString, QIcon > >mLayerIcons;
 
-    <<< <<< < HEAD
-
     /**
      * Model that acts as datasource for mTableTreeWidget
-    =======
-
-    /**
-     * Model that acts as datasource for mTableTreeWidget
-    >>>>>>> upstream_qgis/master32.spatialite_provider
      * \note
      *  - filled by values contained in SpatialiteDbInfo
      * \since QGIS 1.8
      */
     QgsSpatiaLiteTableModel mTableModel;
 
-    <<< <<< < HEAD
-
     /**
      * QgsDatabaseFilterProxyMode
-    =======
-
-    /**
-     * QgsDatabaseFilterProxyMode
-    >>>>>>> upstream_qgis/master32.spatialite_provider
      * \note
      *  - does what ever needs to be done
      * \since QGIS 1.8
      */
     QgsDatabaseFilterProxyModel mProxyModel;
 
-    <<< <<< < HEAD
-
     /**
      * Creates extra Sql-Query for selected Layers
-    =======
-
-    /**
-     * Creates extra Sql-Query for selected Layers
-    >>>>>>> upstream_qgis/master32.spatialite_provider
      * \note
      *  - retrieves Table and Geometry Names with Sql from TableModel
      *  -> which know the needed index-number
@@ -473,15 +318,8 @@ class QgsSpatiaLiteSourceSelect: public QgsAbstractDataSourceWidget, private Ui:
      */
     QString layerUriSql( const QModelIndex &index );
 
-    <<< <<< < HEAD
-
     /**
      * Build Sql-Query
-    =======
-
-    /**
-     * Build Sql-Query
-    >>>>>>> upstream_qgis/master32.spatialite_provider
      * \note
      *  - calls setSql
      *  TODO for QGIS 3.0
@@ -493,15 +331,8 @@ class QgsSpatiaLiteSourceSelect: public QgsAbstractDataSourceWidget, private Ui:
      */
     QPushButton *mBuildQueryButton = nullptr;
 
-    <<< <<< < HEAD
-
     /**
      * Add selected Entries to Qgis
-    =======
-
-    /**
-     * Add selected Entries to Qgis
-    >>>>>>> upstream_qgis/master32.spatialite_provider
      * \note
      *  - calls addTables
      * \see addClicked
@@ -510,15 +341,8 @@ class QgsSpatiaLiteSourceSelect: public QgsAbstractDataSourceWidget, private Ui:
      */
     QPushButton *mAddButton = nullptr;
 
-    <<< <<< < HEAD
-
     /**
      * Button Interface for UpdateLayerStatitics
-    =======
-
-    /**
-     * Button Interface for UpdateLayerStatitics
-    >>>>>>> upstream_qgis/master32.spatialite_provider
      * \note
      *  - UpdateLayerStatitics is done through SpatialiteDbInfo
      * \see updateStatistics
@@ -526,15 +350,8 @@ class QgsSpatiaLiteSourceSelect: public QgsAbstractDataSourceWidget, private Ui:
      */
     QPushButton *mStatsButton = nullptr;
 
-    <<< <<< < HEAD
-
     /**
      * Will contain values to represent option to create a new Database
-    =======
-
-    /**
-     * Will contain values to represent option to create a new Database
-    >>>>>>> upstream_qgis/master32.spatialite_provider
      *  - for use with SpatialiteDbInfo::createDatabase
      * \note
      * - SpatialMetadata::Spatialite40: InitSpatialMetadata only
@@ -548,15 +365,8 @@ class QgsSpatiaLiteSourceSelect: public QgsAbstractDataSourceWidget, private Ui:
      */
     QComboBox *cmbDbCreateOption = nullptr;
 
-    <<< <<< < HEAD
-
     /**
      * QgsProviderRegistry::WidgetMode
-    =======
-
-    /**
-     * QgsProviderRegistry::WidgetMode
-    >>>>>>> upstream_qgis/master32.spatialite_provider
      * \note
      *  - does what ever needs to be done
      * \since QGIS 1.8

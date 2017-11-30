@@ -59,10 +59,6 @@
 #endif
 
 #include <sqlite3.h>
-<<<<<<< HEAD
-#include <qgssqlitehandle.h>
-=======
->>>>>>> upstream_qgis/master32.spatialite_provider
 
 Q_DECLARE_OPAQUE_POINTER(sqlite3*)
 Q_DECLARE_OPAQUE_POINTER(sqlite3_stmt*)
@@ -557,16 +553,11 @@ bool QSpatiaLiteDriver::open(const QString & db, const QString &, const QString 
 
     sqlite3_enable_shared_cache(sharedCache);
 
-<<<<<<< HEAD
-    if (QgsSqliteHandle::sqlite3_open_v2(db.toUtf8().constData(), &d->access, openMode, nullptr ) == SQLITE_OK) {
-        sqlite3_busy_timeout(d->access, timeOut);
-=======
     spatialite_database_unique_ptr database;
 
 
     if (d->access.open_v2(db, openMode, nullptr ) == SQLITE_OK) {
         sqlite3_busy_timeout(d->access.get(), timeOut);
->>>>>>> upstream_qgis/master32.spatialite_provider
         setOpen(true);
         setOpenError(false);
         return true;
@@ -584,14 +575,7 @@ void QSpatiaLiteDriver::close()
         foreach (QSpatiaLiteResult *result, d->results)
             result->d->finalize();
 
-<<<<<<< HEAD
-        if (QgsSqliteHandle::sqlite3_close(d->access) != SQLITE_OK)
-            setLastError(qMakeError(d->access, tr("Error closing database"),
-                                    QSqlError::ConnectionError));
-        d->access = 0;
-=======
         d->access.reset();
->>>>>>> upstream_qgis/master32.spatialite_provider
         setOpen(false);
         setOpenError(false);
     }

@@ -18,14 +18,10 @@
 #include "qgsspatialitetablemodel.h"
 #include "qgsapplication.h"
 #include "qgsdataitem.h" // for icons
-<<<<<<< HEAD
-
-=======
 #include "qgslogger.h"
 //-----------------------------------------------------------------
 // QgsSpatiaLiteTableModel::QgsSpatiaLiteTableModel
 //-----------------------------------------------------------------
->>>>>>> upstream_qgis/master32.spatialite_provider
 QgsSpatiaLiteTableModel::QgsSpatiaLiteTableModel(): QStandardItemModel(), mTableCount( 0 ), mDbRootItem( nullptr ), mLoadGeometrylessTables( true )
 {
   headerLabels << tr( "Table" );
@@ -40,12 +36,9 @@ QgsSpatiaLiteTableModel::QgsSpatiaLiteTableModel(): QStandardItemModel(), mTable
   i_field_sort_hidden = i_field_sql + 1;
   setHorizontalHeaderLabels( headerLabels );
 }
-<<<<<<< HEAD
-=======
 //-----------------------------------------------------------------
 // QgsSpatiaLiteTableModel::createDatabase
 //-----------------------------------------------------------------
->>>>>>> upstream_qgis/master32.spatialite_provider
 bool QgsSpatiaLiteTableModel::createDatabase( QString sDatabaseFileName, SpatialiteDbInfo::SpatialMetadata dbCreateOption )
 {
   bool bRc = false;
@@ -113,12 +106,9 @@ bool QgsSpatiaLiteTableModel::createDatabase( QString sDatabaseFileName, Spatial
   //----------------------------------------------------------
   return bRc;
 }
-<<<<<<< HEAD
-=======
 //-----------------------------------------------------------------
 // QgsSpatiaLiteTableModel::setSqliteDb
 //-----------------------------------------------------------------
->>>>>>> upstream_qgis/master32.spatialite_provider
 void QgsSpatiaLiteTableModel::setSqliteDb( SpatialiteDbInfo *spatialiteDbInfo, bool loadGeometrylessTables )
 {
   if ( ( spatialiteDbInfo ) && ( spatialiteDbInfo->isDbValid() ) )
@@ -147,18 +137,12 @@ void QgsSpatiaLiteTableModel::setSqliteDb( SpatialiteDbInfo *spatialiteDbInfo, b
     mDbLayersDataSourceUris = getDataSourceUris();
     mTableCounter = 0;
     mLoadGeometrylessTables = loadGeometrylessTables;
-<<<<<<< HEAD
-    addTableEntryTypes( );
-  }
-}
-=======
     addTableEntryTypes();
   }
 }
 //-----------------------------------------------------------------
 // QgsSpatiaLiteTableModel::createLayerTypeEntry
 //-----------------------------------------------------------------
->>>>>>> upstream_qgis/master32.spatialite_provider
 QList < QStandardItem * > QgsSpatiaLiteTableModel::createLayerTypeEntry( SpatialiteDbInfo::SpatialiteLayerType layerType, int amountLayers )
 {
   QString sTypeName = SpatialiteDbInfo::SpatialiteLayerTypeName( layerType );
@@ -221,15 +205,9 @@ QList < QStandardItem * > QgsSpatiaLiteTableModel::createLayerTypeEntry( Spatial
   QStandardItem *tbLayersItem = new QStandardItem( sLayerText );
   tbLayersItem->setFlags( Qt::ItemIsEnabled );
   //  Ever Columns must be filled (even if empty)
-<<<<<<< HEAD
-  QStandardItem *emptyItem_01 = new QStandardItem( );
-  emptyItem_01->setFlags( Qt::ItemIsEnabled );
-  QStandardItem *emptyItem_02 = new QStandardItem( );
-=======
   QStandardItem *emptyItem_01 = new QStandardItem();
   emptyItem_01->setFlags( Qt::ItemIsEnabled );
   QStandardItem *emptyItem_02 = new QStandardItem();
->>>>>>> upstream_qgis/master32.spatialite_provider
   emptyItem_02->setFlags( Qt::ItemIsEnabled );
   QStandardItem *sortHiddenItem = new QStandardItem( sSortTag );
   sortHiddenItem->setFlags( Qt::NoItemFlags );
@@ -242,14 +220,10 @@ QList < QStandardItem * > QgsSpatiaLiteTableModel::createLayerTypeEntry( Spatial
   tbItemList.push_back( sortHiddenItem );
   return tbItemList;
 }
-<<<<<<< HEAD
-void QgsSpatiaLiteTableModel::addRootEntry( )
-=======
 //-----------------------------------------------------------------
 // QgsSpatiaLiteTableModel::addRootEntry
 //-----------------------------------------------------------------
 void QgsSpatiaLiteTableModel::addRootEntry()
->>>>>>> upstream_qgis/master32.spatialite_provider
 {
   if ( ( mSpatialiteDbInfo ) && ( mSpatialiteDbInfo->isDbValid() ) )
   {
@@ -289,19 +263,11 @@ void QgsSpatiaLiteTableModel::addRootEntry()
     dbItems = findItems( mSpatialiteDbInfo->getFileName(), Qt::MatchExactly, 0 );
     //there is already an item
     if ( !dbItems.isEmpty() )
-<<<<<<< HEAD
     {
       dbItem = dbItems.at( 0 );
     }
     else  //create a new toplevel item
     {
-=======
-    {
-      dbItem = dbItems.at( 0 );
-    }
-    else  //create a new toplevel item
-    {
->>>>>>> upstream_qgis/master32.spatialite_provider
       QStandardItem *dbTypeItem = new QStandardItem( mSpatialiteDbInfo->getSpatialMetadataIcon(), mSpatialiteDbInfo->dbSpatialMetadataString() );
       dbTypeItem->setFlags( Qt::ItemIsEnabled );
       QString sLayerText = QString( "%1 Layers" ).arg( mTableCounter );
@@ -369,7 +335,6 @@ void QgsSpatiaLiteTableModel::addRootEntry()
       dbItem = new QStandardItem( mSpatialiteDbInfo->getSpatialMetadataIcon(), mSpatialiteDbInfo->getFileName() );
       dbItem->setFlags( Qt::ItemIsEnabled );
       if ( invisibleRootItem()->hasChildren() )
-<<<<<<< HEAD
       {
         invisibleRootItem()->removeRows( 0, invisibleRootItem()->rowCount() );
       }
@@ -378,36 +343,17 @@ void QgsSpatiaLiteTableModel::addRootEntry()
       //there is already an item
       if ( !dbItems.isEmpty() )
       {
-=======
-      {
-        invisibleRootItem()->removeRows( 0, invisibleRootItem()->rowCount() );
-      }
-      invisibleRootItem()->setChild( invisibleRootItem()->rowCount(), dbItem );
-      dbItems = findItems( mSpatialiteDbInfo->getFileName(), Qt::MatchExactly, 0 );
-      //there is already an item
-      if ( !dbItems.isEmpty() )
-      {
->>>>>>> upstream_qgis/master32.spatialite_provider
         mDbRootItem = dbItems.at( 0 );
         QStandardItem *dbMetaDataItem = nullptr;
         QIcon iconType = mSpatialiteDbInfo->getSpatialMetadataIcon();
         QStandardItem *tbTypeItem = new QStandardItem( iconType, "Metadata" );
         tbTypeItem->setFlags( Qt::ItemIsEnabled );
-<<<<<<< HEAD
-        QStandardItem *emptyItem_01 = new QStandardItem( );
-        emptyItem_01->setFlags( Qt::ItemIsEnabled );
-        //  Ever Columns must be filled (even if empty)
-        QStandardItem *emptyItem_02 = new QStandardItem( );
-        emptyItem_02->setFlags( Qt::ItemIsEnabled );
-        QStandardItem *emptyItem_03 = new QStandardItem( );
-=======
         QStandardItem *emptyItem_01 = new QStandardItem();
         emptyItem_01->setFlags( Qt::ItemIsEnabled );
         //  Ever Columns must be filled (even if empty)
         QStandardItem *emptyItem_02 = new QStandardItem();
         emptyItem_02->setFlags( Qt::ItemIsEnabled );
         QStandardItem *emptyItem_03 = new QStandardItem();
->>>>>>> upstream_qgis/master32.spatialite_provider
         emptyItem_03->setFlags( Qt::ItemIsEnabled );
         QStandardItem *sortHiddenItem = new QStandardItem( "ZZBB_Metadata" );
         sortHiddenItem->setFlags( Qt::NoItemFlags );
@@ -449,15 +395,9 @@ void QgsSpatiaLiteTableModel::addRootEntry()
                 tbTypeItem->setFlags( Qt::ItemIsEnabled );
                 QStandardItem *sortHiddenItem = new QStandardItem( QString( "AZZZ_%1" ).arg( itLayers.key() ) );
                 sortHiddenItem->setFlags( Qt::ItemIsEnabled );
-<<<<<<< HEAD
-                QStandardItem *emptyItem_01 = new QStandardItem( );
-                emptyItem_01->setFlags( Qt::ItemIsEnabled );
-                QStandardItem *emptyItem_02 = new QStandardItem( );
-=======
                 QStandardItem *emptyItem_01 = new QStandardItem();
                 emptyItem_01->setFlags( Qt::ItemIsEnabled );
                 QStandardItem *emptyItem_02 = new QStandardItem();
->>>>>>> upstream_qgis/master32.spatialite_provider
                 emptyItem_02->setFlags( Qt::ItemIsEnabled );
                 QStandardItem *emptyItem_03 = new QStandardItem( QString( "%1 Layers" ).arg( itLayers.value() ) );
                 emptyItem_03->setFlags( Qt::ItemIsEnabled );
@@ -521,18 +461,12 @@ void QgsSpatiaLiteTableModel::addRootEntry()
     }
   }
 }
-<<<<<<< HEAD
-void QgsSpatiaLiteTableModel::addTableEntryTypes( )
-{
-  addRootEntry( );
-=======
 //-----------------------------------------------------------------
 // QgsSpatiaLiteTableModel::addTableEntryTypes
 //-----------------------------------------------------------------
 void QgsSpatiaLiteTableModel::addTableEntryTypes()
 {
   addRootEntry();
->>>>>>> upstream_qgis/master32.spatialite_provider
   QMap<QString, QString> mapLayers;
   if ( mSpatialiteDbInfo->dbVectorLayersCount() > 0 )
   {
@@ -578,14 +512,6 @@ void QgsSpatiaLiteTableModel::addTableEntryTypes()
   if ( ( mLoadGeometrylessTables ) && ( mSpatialiteDbInfo->dbNonSpatialTablesCount() > 0 ) )
   {
     addTableEntryType( mSpatialiteDbInfo->getDbNonSpatialTables(), QgsSpatiaLiteTableModel::EntryTypeMap, SpatialiteDbInfo::NonSpatialTables );
-<<<<<<< HEAD
-    if ( mSpatialiteDbInfo->dbStylesCount() > 0 )
-    {
-      addTableEntryType( mSpatialiteDbInfo->getDbCoveragesStylesInfo(), QgsSpatiaLiteTableModel::EntryTypeMap, SpatialiteDbInfo::StyleVector );
-    }
-  }
-}
-=======
 #if 0
 // TODO: resolve changed QMap-Type
     if ( mSpatialiteDbInfo->dbVectorStylesCount() > 0 )
@@ -602,7 +528,6 @@ void QgsSpatiaLiteTableModel::addTableEntryTypes()
 //-----------------------------------------------------------------
 // QgsSpatiaLiteTableModel::addTableEntryType
 //-----------------------------------------------------------------
->>>>>>> upstream_qgis/master32.spatialite_provider
 void QgsSpatiaLiteTableModel::addTableEntryType( QMap<QString, QString> mapLayers, QgsSpatiaLiteTableModel::EntryType entryType, SpatialiteDbInfo::SpatialiteLayerType layerType )
 {
   QString sGroupLayerType = SpatialiteDbInfo::SpatialiteLayerTypeName( layerType );
@@ -632,22 +557,16 @@ void QgsSpatiaLiteTableModel::addTableEntryType( QMap<QString, QString> mapLayer
     }
   }
 }
-<<<<<<< HEAD
-=======
 //-----------------------------------------------------------------
 // QgsSpatiaLiteTableModel::addTableEntryMap
 //-----------------------------------------------------------------
->>>>>>> upstream_qgis/master32.spatialite_provider
 void QgsSpatiaLiteTableModel::addTableEntryMap( QString sKey, QString sValue, SpatialiteDbInfo::SpatialiteLayerType layerType )
 {
   QString sGroupLayerType = SpatialiteDbInfo::SpatialiteLayerTypeName( layerType );
   switch ( layerType )
   {
     case SpatialiteDbInfo::StyleVector:
-<<<<<<< HEAD
-=======
     case SpatialiteDbInfo::StyleRaster:
->>>>>>> upstream_qgis/master32.spatialite_provider
     {
       QString sSeSldStylesGroup = "Se/Sld-Styles";
       QString sGroupNonSpatialTables = SpatialiteDbInfo::SpatialiteLayerTypeName( SpatialiteDbInfo::NonSpatialTables );
@@ -662,22 +581,14 @@ void QgsSpatiaLiteTableModel::addTableEntryMap( QString sKey, QString sValue, Sp
       }
       // Key[fromosm_tiles] Value[GeoPackageRaster;3857]
       QStringList sa_style_info = sValue.split( SpatialiteDbInfo::ParseSeparatorCoverage );
-<<<<<<< HEAD
-      QString sStyleName = sKey;
-=======
       QString sStyleName; // = sKey;
->>>>>>> upstream_qgis/master32.spatialite_provider
       QString sStyleType;
       QString sStyleTitle;
       QString sStyleAbstract;
       QString sStyleValid;
       if ( sa_style_info.size() == 4 )
       {
-<<<<<<< HEAD
-        sStyleType = sa_style_info.at( 0 );
-=======
         sStyleName = sa_style_info.at( 0 );
->>>>>>> upstream_qgis/master32.spatialite_provider
         sStyleTitle = sa_style_info.at( 1 );
         sStyleAbstract = sa_style_info.at( 2 );
         sStyleValid = sa_style_info.at( 3 );
@@ -688,11 +599,7 @@ void QgsSpatiaLiteTableModel::addTableEntryMap( QString sKey, QString sValue, Sp
       }
       QString sSortTag;
       QStandardItem *styleSeSdlTypeItem = nullptr;
-<<<<<<< HEAD
-      QIcon iconType = SpatialiteDbInfo::SpatialiteLayerTypeIcon( SpatialiteDbInfo::SpatialiteLayerTypeFromName( sStyleType ) );
-=======
       QIcon iconType = SpatialiteDbInfo::SpatialiteLayerTypeIcon( layerType );
->>>>>>> upstream_qgis/master32.spatialite_provider
       dbItems = findItems( sSeSldStylesGroup, Qt::MatchExactly | Qt::MatchRecursive, 0 );
       if ( !dbItems.isEmpty() )
       {
@@ -704,21 +611,12 @@ void QgsSpatiaLiteTableModel::addTableEntryMap( QString sKey, QString sValue, Sp
         QIcon groupIconType = SpatialiteDbInfo::SpatialiteLayerTypeIcon( SpatialiteDbInfo::StyleVector );
         QStandardItem *tbTypeItem = new QStandardItem( groupIconType, sSeSldStylesGroup );
         tbTypeItem->setFlags( Qt::ItemIsEnabled );
-<<<<<<< HEAD
-        QStandardItem *emptyItem_01 = new QStandardItem( );
-        emptyItem_01->setFlags( Qt::ItemIsEnabled );
-        //  Ever Columns must be filled (even if empty)
-        QStandardItem *emptyItem_02 = new QStandardItem( );
-        emptyItem_02->setFlags( Qt::ItemIsEnabled );
-        QStandardItem *emptyItem_03 = new QStandardItem( );
-=======
         QStandardItem *emptyItem_01 = new QStandardItem();
         emptyItem_01->setFlags( Qt::ItemIsEnabled );
         //  Ever Columns must be filled (even if empty)
         QStandardItem *emptyItem_02 = new QStandardItem();
         emptyItem_02->setFlags( Qt::ItemIsEnabled );
         QStandardItem *emptyItem_03 = new QStandardItem();
->>>>>>> upstream_qgis/master32.spatialite_provider
         emptyItem_03->setFlags( Qt::ItemIsEnabled );
         QStandardItem *sortHiddenItem = new QStandardItem( sSortTag );
         sortHiddenItem->setFlags( Qt::NoItemFlags );
@@ -752,21 +650,12 @@ void QgsSpatiaLiteTableModel::addTableEntryMap( QString sKey, QString sValue, Sp
         sSortTag = QString( "ZZCBA_%1" ).arg( sStyleType );
         QStandardItem *tbTypeItem = new QStandardItem( iconType, sStyleType );
         tbTypeItem->setFlags( Qt::ItemIsEnabled );
-<<<<<<< HEAD
-        QStandardItem *emptyItem_01 = new QStandardItem( );
-        emptyItem_01->setFlags( Qt::ItemIsEnabled );
-        //  Ever Columns must be filled (even if empty)
-        QStandardItem *emptyItem_02 = new QStandardItem( );
-        emptyItem_02->setFlags( Qt::ItemIsEnabled );
-        QStandardItem *emptyItem_03 = new QStandardItem( );
-=======
         QStandardItem *emptyItem_01 = new QStandardItem();
         emptyItem_01->setFlags( Qt::ItemIsEnabled );
         //  Ever Columns must be filled (even if empty)
         QStandardItem *emptyItem_02 = new QStandardItem();
         emptyItem_02->setFlags( Qt::ItemIsEnabled );
         QStandardItem *emptyItem_03 = new QStandardItem();
->>>>>>> upstream_qgis/master32.spatialite_provider
         emptyItem_03->setFlags( Qt::ItemIsEnabled );
         QStandardItem *sortHiddenItem = new QStandardItem( sSortTag );
         sortHiddenItem->setFlags( Qt::NoItemFlags );
@@ -796,11 +685,7 @@ void QgsSpatiaLiteTableModel::addTableEntryMap( QString sKey, QString sValue, Sp
       styleTitleItem->setFlags( Qt::ItemIsEnabled | Qt::ItemIsSelectable );
       QStandardItem *styleAbstractItem = new QStandardItem( sStyleAbstract );
       styleAbstractItem->setFlags( Qt::ItemIsEnabled | Qt::ItemIsSelectable | Qt::ItemIsEditable );
-<<<<<<< HEAD
-      QStandardItem *emptyItem_03 = new QStandardItem( );
-=======
       QStandardItem *emptyItem_03 = new QStandardItem();
->>>>>>> upstream_qgis/master32.spatialite_provider
       emptyItem_03->setFlags( Qt::ItemIsEnabled );
       QStandardItem *sortHiddenItem = new QStandardItem( sSortTag );
       sortHiddenItem->setFlags( Qt::NoItemFlags );
@@ -932,21 +817,12 @@ void QgsSpatiaLiteTableModel::addTableEntryMap( QString sKey, QString sValue, Sp
         QIcon iconType = SpatialiteDbInfo::NonSpatialTablesTypeIcon( sGroup );
         QStandardItem *tbTypeItem = new QStandardItem( iconType, sGroup );
         tbTypeItem->setFlags( Qt::ItemIsEnabled );
-<<<<<<< HEAD
-        QStandardItem *emptyItem_01 = new QStandardItem( );
-        emptyItem_01->setFlags( Qt::ItemIsEnabled );
-        //  Ever Columns must be filled (even if empty)
-        QStandardItem *emptyItem_02 = new QStandardItem( );
-        emptyItem_02->setFlags( Qt::ItemIsEnabled );
-        QStandardItem *emptyItem_03 = new QStandardItem( );
-=======
         QStandardItem *emptyItem_01 = new QStandardItem();
         emptyItem_01->setFlags( Qt::ItemIsEnabled );
         //  Ever Columns must be filled (even if empty)
         QStandardItem *emptyItem_02 = new QStandardItem();
         emptyItem_02->setFlags( Qt::ItemIsEnabled );
         QStandardItem *emptyItem_03 = new QStandardItem();
->>>>>>> upstream_qgis/master32.spatialite_provider
         emptyItem_03->setFlags( Qt::ItemIsEnabled );
         QStandardItem *sortHiddenItem = new QStandardItem( sSortTag );
         sortHiddenItem->setFlags( Qt::NoItemFlags );
@@ -975,15 +851,9 @@ void QgsSpatiaLiteTableModel::addTableEntryMap( QString sKey, QString sValue, Sp
       QStandardItem *tbSubTypeItem = new QStandardItem( iconType, sValue );
       tbSubTypeItem->setFlags( Qt::ItemIsEnabled );
       //  Ever Columns must be filled (even if empty)
-<<<<<<< HEAD
-      QStandardItem *emptyItem_01 = new QStandardItem( );
-      emptyItem_01->setFlags( Qt::ItemIsEnabled );
-      QStandardItem *emptyItem_03 = new QStandardItem( );
-=======
       QStandardItem *emptyItem_01 = new QStandardItem();
       emptyItem_01->setFlags( Qt::ItemIsEnabled );
       QStandardItem *emptyItem_03 = new QStandardItem();
->>>>>>> upstream_qgis/master32.spatialite_provider
       emptyItem_03->setFlags( Qt::ItemIsEnabled );
       QStandardItem *sortHiddenItem = new QStandardItem( sSortTag );
       sortHiddenItem->setFlags( Qt::NoItemFlags );
@@ -999,12 +869,9 @@ void QgsSpatiaLiteTableModel::addTableEntryMap( QString sKey, QString sValue, Sp
     break;
   }
 }
-<<<<<<< HEAD
-=======
 //-----------------------------------------------------------------
 // QgsSpatiaLiteTableModel::addTableEntryLayer
 //-----------------------------------------------------------------
->>>>>>> upstream_qgis/master32.spatialite_provider
 void QgsSpatiaLiteTableModel::addTableEntryLayer( SpatialiteDbLayer *dbLayer, int iLayersCount )
 {
   if ( ( dbLayer ) && ( dbLayer->isLayerValid() ) )
@@ -1062,15 +929,9 @@ void QgsSpatiaLiteTableModel::addTableEntryLayer( SpatialiteDbLayer *dbLayer, in
           QStandardItem *layerItem = new QStandardItem( sLayerText );
           layerItem->setFlags( Qt::ItemIsEnabled );
           //  Ever Columns must be filled (even if empty)
-<<<<<<< HEAD
-          QStandardItem *emptyItem_02 = new QStandardItem( );
-          emptyItem_02->setFlags( Qt::ItemIsEnabled );
-          QStandardItem *emptyItem_03 = new QStandardItem( );
-=======
           QStandardItem *emptyItem_02 = new QStandardItem();
           emptyItem_02->setFlags( Qt::ItemIsEnabled );
           QStandardItem *emptyItem_03 = new QStandardItem();
->>>>>>> upstream_qgis/master32.spatialite_provider
           emptyItem_03->setFlags( Qt::ItemIsEnabled );
           QStandardItem *sortHiddenItem = new QStandardItem( sSortTag );
           sortHiddenItem->setFlags( Qt::NoItemFlags );
@@ -1100,24 +961,16 @@ void QgsSpatiaLiteTableModel::addTableEntryLayer( SpatialiteDbLayer *dbLayer, in
     }
     sSortTag = QString( "AZZZ_%1" ).arg( dbLayer->getLayerName() );
     QList < QStandardItem * >childItemList;
-<<<<<<< HEAD
-    QStandardItem *tableNameItem = new QStandardItem( dbLayer->getLayerTypeIcon(), dbLayer->getTableName() );
-    tableNameItem->setFlags( Qt::ItemIsEnabled | Qt::ItemIsSelectable );
-=======
     QString sTableName = dbLayer->getTableName();
->>>>>>> upstream_qgis/master32.spatialite_provider
     QString sGeomItemText = dbLayer->getGeometryColumn();
     QString sGeometryTypeString = dbLayer->getGeometryTypeString();
     if ( sSearchName == "MBTiles" )
     {
-<<<<<<< HEAD
-=======
       if ( !dbLayer->getTitle().isEmpty() )
       {
         // if Title is set, show it instead of the file-name [which TableName contains]
         sTableName = dbLayer->getTitle();
       }
->>>>>>> upstream_qgis/master32.spatialite_provider
       sGeomItemText = ""; // Must remain empty
       sGeometryTypeString = dbLayer->getAbstract();
     }
@@ -1126,11 +979,8 @@ void QgsSpatiaLiteTableModel::addTableEntryLayer( SpatialiteDbLayer *dbLayer, in
       sGeomItemText = ""; // Must remain empty
       sGeometryTypeString = dbLayer->getTitle();
     }
-<<<<<<< HEAD
-=======
     QStandardItem *tableNameItem = new QStandardItem( dbLayer->getLayerTypeIcon(), sTableName );
     tableNameItem->setFlags( Qt::ItemIsEnabled | Qt::ItemIsSelectable );
->>>>>>> upstream_qgis/master32.spatialite_provider
     QStandardItem *geomItem = new QStandardItem( sGeomItemText );
     geomItem->setFlags( Qt::ItemIsEnabled | Qt::ItemIsSelectable );
     QIcon iconType;
@@ -1189,12 +1039,9 @@ void QgsSpatiaLiteTableModel::addTableEntryLayer( SpatialiteDbLayer *dbLayer, in
     ++mTableCount;
   }
 }
-<<<<<<< HEAD
-=======
 //-----------------------------------------------------------------
 // QgsSpatiaLiteTableModel::setSql
 //-----------------------------------------------------------------
->>>>>>> upstream_qgis/master32.spatialite_provider
 void QgsSpatiaLiteTableModel::setSql( const QModelIndex &index, const QString &sql )
 {
   if ( !index.isValid() || !index.parent().isValid() )

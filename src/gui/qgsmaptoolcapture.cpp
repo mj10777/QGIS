@@ -310,27 +310,8 @@ void QgsMapToolCapture::cadCanvasMoveEvent( QgsMapMouseEvent *e )
 {
   QgsMapToolAdvancedDigitizing::cadCanvasMoveEvent( e );
   QgsPointXY point = e->mapPoint();
-  <<< <<< < HEAD
-  if ( !snapped )
-  {
-    delete mSnappingMarker;
-    mSnappingMarker = nullptr;
-  }
-  else
-  {
-    if ( !mSnappingMarker )
-    {
-      mSnappingMarker = new QgsVertexMarker( mCanvas );
-      mSnappingMarker->setIconType( QgsVertexMarker::ICON_CROSS );
-      mSnappingMarker->setColor( Qt::magenta );
-      mSnappingMarker->setPenWidth( 3 );
-    }
-    mSnappingMarker->setCenter( point );
-  }
-  == == == =
 
-    mSnapIndicator->setMatch( e->mapPointMatch() );
-  >>> >>> > upstream_qgis / master32.spatialite_provider
+  mSnapIndicator->setMatch( e->mapPointMatch() );
 
   if ( !mTempRubberBand && mCaptureCurve.numPoints() > 0 )
   {

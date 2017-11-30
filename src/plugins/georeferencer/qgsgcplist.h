@@ -30,13 +30,8 @@ class QgsPointXY;
 class QgsGcpList : public QList<QgsGeorefDataPoint *>
 {
   public:
-    <<< <<< < HEAD
     QgsGcpList();
     QgsGcpList( const QgsGcpList &list );
-    == == == =
-      QgsGCPList() = default;
-    QgsGCPList( const QgsGCPList &list );
-    >>> >>> > upstream_qgis / master32.spatialite_provider
 
     QgsGcpList &operator =( const QgsGcpList &list );
 

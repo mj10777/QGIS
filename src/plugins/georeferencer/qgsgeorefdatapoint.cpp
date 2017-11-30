@@ -35,7 +35,6 @@ QgsGeorefDataPoint::QgsGeorefDataPoint( QgsMapCanvas *srcCanvas, QgsMapCanvas *d
 {
 }
 
-<<< <<< < HEAD
 QgsGeorefDataPoint::QgsGeorefDataPoint( const QgsPointXY &pixelCoords, const QgsPointXY &mapCoords, int i_srid, int id_gcp,
                                         int id_gcp_master, int iResultType, QString sTextInfo )
   : QObject()
@@ -68,10 +67,6 @@ QgsGeorefDataPoint::QgsGeorefDataPoint( QgsGeorefDataPoint &dataPoint )
   , mName( "" )
   , mNotes( "" )
   , mParseString( ";#;#" )
-    == == == =
-      QgsGeorefDataPoint::QgsGeorefDataPoint( const QgsGeorefDataPoint & p )
-        : QObject( nullptr )
-        >>> >>> > upstream_qgis / master32.spatialite_provider
 {
   // we share item representation on canvas between all points
   mPixelCoords = dataPoint.pixelCoords();
@@ -195,20 +190,20 @@ QString QgsGeorefDataPoint::AsEWKT( int iPointType, int i_srid ) const
   switch ( iPointType )
   {
     case 0:
-      s_EWKT = QString( s_EWKT ).arg( -1 ).arg( mPixelCoords.wellKnownText() );
+      s_EWKT = QString( s_EWKT ).arg( -1 ).arg( mPixelCoords.asWkt() );
       break;
     case 2:
-      s_EWKT = QString( s_EWKT ).arg( -1 ).arg( mPixelCoordsReverse.wellKnownText() );
+      s_EWKT = QString( s_EWKT ).arg( -1 ).arg( mPixelCoordsReverse.asWkt() );
       break;
     case 3:
     {
       if ( ( i_srid > 0 ) && ( i_srid != getSrid() ) )
       {
-        s_EWKT = QString( "ST_Transform(%1,%2)" ).arg( QString( s_EWKT ).arg( i_srid ).arg( mMapCoordsReverse.wellKnownText() ) ).arg( getSrid() );
+        s_EWKT = QString( "ST_Transform(%1,%2)" ).arg( QString( s_EWKT ).arg( i_srid ).arg( mMapCoordsReverse.asWkt() ) ).arg( getSrid() );
       }
       else
       {
-        s_EWKT = QString( s_EWKT ).arg( getSrid() ).arg( mMapCoordsReverse.wellKnownText() );
+        s_EWKT = QString( s_EWKT ).arg( getSrid() ).arg( mMapCoordsReverse.asWkt() );
       }
     }
     break;
@@ -217,11 +212,11 @@ QString QgsGeorefDataPoint::AsEWKT( int iPointType, int i_srid ) const
     {
       if ( ( i_srid > 0 ) && ( i_srid != getSrid() ) )
       {
-        s_EWKT = QString( "ST_Transform(%1,%2)" ).arg( QString( s_EWKT ).arg( i_srid ).arg( mMapCoords.wellKnownText() ) ).arg( getSrid() );
+        s_EWKT = QString( "ST_Transform(%1,%2)" ).arg( QString( s_EWKT ).arg( i_srid ).arg( mMapCoords.asWkt() ) ).arg( getSrid() );
       }
       else
       {
-        s_EWKT = QString( s_EWKT ).arg( getSrid() ).arg( mMapCoords.wellKnownText() );
+        s_EWKT = QString( s_EWKT ).arg( getSrid() ).arg( mMapCoords.asWkt() );
       }
     }
     break;

@@ -28,11 +28,7 @@
 #include "qgsproject.h"
 #include "qgscoordinatereferencesystem.h"
 #include "qgsprojectionselectiondialog.h"
-<<< <<< < HEAD
-#include "qgssqlitehandle.h"
-== == == =
 #include "qgsspatialiteutils.h"
-  >>> >>> > upstream_qgis / master32.spatialite_provider
 #include "qgslogger.h"
 #include "qgssettings.h"
 
@@ -44,8 +40,8 @@
 
 #include <spatialite.h>
 
-  QgsNewSpatialiteLayerDialog::QgsNewSpatialiteLayerDialog( QWidget *parent, Qt::WindowFlags fl, const QgsCoordinateReferenceSystem &defaultCrs )
-    : QDialog( parent, fl )
+QgsNewSpatialiteLayerDialog::QgsNewSpatialiteLayerDialog( QWidget *parent, Qt::WindowFlags fl, const QgsCoordinateReferenceSystem &defaultCrs )
+  : QDialog( parent, fl )
 {
   setupUi( this );
   connect( mAddAttributeButton, &QToolButton::clicked, this, &QgsNewSpatialiteLayerDialog::mAddAttributeButton_clicked );
@@ -380,13 +376,8 @@ bool QgsNewSpatialiteLayerDialog::apply()
                                  quotedValue( leGeometryColumn->text() ) );
   QgsDebugMsg( sqlCreateIndex ); // OK
 
-  <<< <<< < HEAD
-  sqlite3 *db = nullptr;
-  int rc = QgsSqliteHandle::sqlite3_open( mDatabaseComboBox->currentText().toUtf8(), &db );
-  == == == =
-    spatialite_database_unique_ptr database;
+  spatialite_database_unique_ptr database;
   int rc = database.open( mDatabaseComboBox->currentText() );
-  >>> >>> > upstream_qgis / master32.spatialite_provider
   if ( rc != SQLITE_OK )
   {
     QMessageBox::warning( this,
@@ -449,11 +440,6 @@ bool QgsNewSpatialiteLayerDialog::apply()
         }
       }
     }
-    <<< <<< < HEAD
-
-    QgsSqliteHandle::sqlite3_close( db );
-    == == == =
-      >>> >>> > upstream_qgis / master32.spatialite_provider
   }
 
   return false;

@@ -17,13 +17,9 @@
 
 #include "qgsfeatureiterator.h"
 #include "qgsfields.h"
-<<< <<< < HEAD
-#include "qgsspatialiteutils.h"
-== == == =
 #include "qgsspatialiteconnpool.h"
-  >>> >>> > upstream_qgis / master32.spatialite_provider
 
-  extern "C"
+extern "C"
 {
 //#include <sys/types.h>
 #include <sqlite3.h>
@@ -39,41 +35,17 @@ class QgsSpatiaLiteFeatureSource : public QgsAbstractFeatureSource
     virtual QgsFeatureIterator getFeatures( const QgsFeatureRequest &request ) override;
 
   private:
-    <<< <<< < HEAD
-    //! wrapper of the SQLite database connection
-    QgsSqliteHandle *mHandle = nullptr;
-    SpatialiteDbInfo *mSpatialiteDbInfo = nullptr;
-    SpatialiteDbLayer *mDbLayer = nullptr;
-    //! The active Layer
-    SpatialiteDbLayer *getDbLayer() const { return mDbLayer; }
-    //! The sqlite handler
-    sqlite3 *dbSqliteHandle() const { return getDbLayer()->dbSqliteHandle(); }
-    QgsSqliteHandle *getQSqliteHandle() const { return mHandle; }
-    //! Name of the geometry column in the table
-    QString getGeometryColumn() const { return getDbLayer()->getGeometryColumn(); }
-    //! List of layer fields in the table
-    QgsFields getAttributeFields() const { return getDbLayer()->getAttributeFields(); }
-    //! Name of the primary key column in the table
-    QString getPrimaryKey() const { return getDbLayer()->getPrimaryKey(); }
-    //! Name of the Layer format: 'table_name(geometry_name)'
-    QString getLayerName() const { return getDbLayer()->getLayerName(); }
-    //! The Spatialite Geometry-Type being read (as String)
-    QString getGeometryTypeString() const { return getDbLayer()->getGeometryTypeString(); }
-    //! The SpatialiIndex used for the Geometry
-    int getSpatialIndexType() const { return getDbLayer()->getSpatialIndexType(); }
-    QString mSubsetString;
-    == == == =
 
-      /**
-       * The class allowing to reuse the same sqlite handle for more layers
-       * - containing all Information about Database file
-       * \note
-       * - isDbValid() return if the connection contains layers that are supported by
-       * -- QgsSpatiaLiteProvider, QgsGdalProvider and QgsOgrProvider
-       * \see SpatialiteDbInfo::isDbValid()
-       * \since QGIS 3.0
-       */
-      QgsSqliteHandle * mQSqliteHandle = nullptr;
+    /**
+     * The class allowing to reuse the same sqlite handle for more layers
+     * - containing all Information about Database file
+     * \note
+     * - isDbValid() return if the connection contains layers that are supported by
+     * -- QgsSpatiaLiteProvider, QgsGdalProvider and QgsOgrProvider
+     * \see SpatialiteDbInfo::isDbValid()
+     * \since QGIS 3.0
+     */
+    QgsSqliteHandle *mQSqliteHandle = nullptr;
 
     /**
      * The class allowing to reuse the same sqlite handle for more layers
@@ -222,7 +194,6 @@ class QgsSpatiaLiteFeatureSource : public QgsAbstractFeatureSource
      * \see checkQuery
      * \since QGIS 3.0
      */
-    >>> >>> > upstream_qgis / master32.spatialite_provider
     QString mQuery;
 
     /**
@@ -277,21 +248,18 @@ class QgsSpatiaLiteFeatureSource : public QgsAbstractFeatureSource
      * \since QGIS 3.0
      */
     QString mIndexGeometry;
-    <<< <<< < HEAD
-    == == == =
 
-      /**
-       * this Geometry is supported by an R*Tree spatial index
-       * \note
-       *  result of getDbLayer()->getSpatialIndexType() == SpatialiteDbInfo::SpatialIndexRTree
-       *  Used in QgsSpatiaLiteFeatureIterator
-       * \see setDbLayer
-       * \see QgsSpatiaLiteFeatureSource::mSpatialIndexRTree
-       * \see QgsSpatiaLiteFeatureIterator::whereClauseRect
-       * \since QGIS 3.0
-       */
-      >>>>>>> upstream_qgis / master32.spatialite_provider
-      bool mSpatialIndexRTree;
+    /**
+     * this Geometry is supported by an R*Tree spatial index
+     * \note
+     *  result of getDbLayer()->getSpatialIndexType() == SpatialiteDbInfo::SpatialIndexRTree
+     *  Used in QgsSpatiaLiteFeatureIterator
+     * \see setDbLayer
+     * \see QgsSpatiaLiteFeatureSource::mSpatialIndexRTree
+     * \see QgsSpatiaLiteFeatureIterator::whereClauseRect
+     * \since QGIS 3.0
+     */
+    bool mSpatialIndexRTree;
 
     /**
      * this Geometry is supported by an MBR cache spatial index

@@ -72,11 +72,8 @@ class QgsGeorefMapToolEmitPoint : public QgsMapTool
       return canvas()->snappingUtils()->snapToMap( pnt );
     }
 
-    <<< <<< < HEAD
     QgsVertexMarker *mSnappingMarker;
-    == == == =
-      std::unique_ptr<QgsSnapIndicator> mSnapIndicator;
-    >>> >>> > upstream_qgis / master32.spatialite_provider
+    std::unique_ptr<QgsSnapIndicator> mSnapIndicator;
 };
 
 class QgsMapCoordsDialog : public QDialog, private Ui::QgsMapCoordsDialogBase

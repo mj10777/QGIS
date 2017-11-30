@@ -22,7 +22,6 @@
 
 #include <QFile>
 
-<<< <<< < HEAD
 QgsRasterChangeCoords::QgsRasterChangeCoords()
   : mUL_X( 0. )
   , mUL_Y( 0. )
@@ -31,9 +30,7 @@ QgsRasterChangeCoords::QgsRasterChangeCoords()
 {
 }
 
-== == == =
-  >>> >>> > upstream_qgis / master32.spatialite_provider
-  void QgsRasterChangeCoords::setRaster( const QString &fileRaster )
+void QgsRasterChangeCoords::setRaster( const QString &fileRaster )
 {
   GDALAllRegister();
   gdal::dataset_unique_ptr hDS( GDALOpen( fileRaster.toUtf8().constData(), GA_ReadOnly ) );

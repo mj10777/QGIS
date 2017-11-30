@@ -55,16 +55,13 @@ class QgsStandardItem : public QStandardItem
 
 QgsGcpListModel::QgsGcpListModel( QObject *parent )
   : QStandardItemModel( parent )
-    <<< <<< < HEAD
   , mGcpList( new QgsGcpList() )
-    == == == =
-      >>>>>>> upstream_qgis / master32.spatialite_provider
 {
   // Use data provided by Qt::UserRole as sorting key (needed for numerical sorting).
   setSortRole( Qt::UserRole );
 }
 
-void QgsGcpListModel::setGcpList( QgsGcpList * gcpList )
+void QgsGcpListModel::setGcpList( QgsGcpList *gcpList )
 {
   mGcpList = gcpList;
   updateModel();
@@ -185,45 +182,39 @@ void QgsGcpListModel::updateModel()
           }
         }
       }
-      <<< <<< < HEAD
-      residual = sqrt( dX * dX + dY * dY );
-      == == == =
+      residual = std::sqrt( dX * dX + dY * dY );
+      dataPoint->setResidual( QPointF( dX, dY ) );
+      if ( residual >= 0.f )
+      {
+        setItem( i, j++, new QgsStandardItem( QString::number( dX, 'f', 10 ) ) );
+        setItem( i, j++, new QgsStandardItem( QString::number( dY, 'f', 10 ) ) );
+        setItem( i, j++, new QgsStandardItem( QString::number( residual, 'f', 10 ) ) );
+        setItem( i, j++, new QgsStandardItem( QString::number( dataPoint->pixelAzimuthReverse(), 'f', 4 ) ) );
+        setItem( i, j++, new QgsStandardItem( QString::number( dataPoint->mapAzimuthReverse(), 'f', 4 ) ) );
+      }
+      else
+      {
+        setItem( i, j++, new QgsStandardItem( "n/a" ) );
+        setItem( i, j++, new QgsStandardItem( "n/a" ) );
+        setItem( i, j++, new QgsStandardItem( "n/a" ) );
+        setItem( i, j++, new QgsStandardItem( "n/a" ) );
+        setItem( i, j++, new QgsStandardItem( "n/a" ) );
+      }
+      if ( !dataPoint->notes().isEmpty() )
+      {
+        sNotes = QString( "%1, %2" ).arg( sNotes ).arg( dataPoint->notes() );
+      }
+      setItem( i, j++, new QgsStandardItem( sNotes ) );
+      setItem( i, j++, new QgsStandardItem( dataPoint->pixelCoordsReverse().asWkt() ) );
+      setItem( i, j++, new QgsStandardItem( dataPoint->mapCoordsReverse().asWkt() ) );
     }
-    residual = std::sqrt( dX * dX + dY * dY );
-    >>> >>> > upstream_qgis / master32.spatialite_provider
-
-    dataPoint->setResidual( QPointF( dX, dY ) );
-
-    if ( residual >= 0.f )
+    if ( bTransformUpdated )
     {
-      setItem( i, j++, new QgsStandardItem( QString::number( dX, 'f', 10 ) ) );
-      setItem( i, j++, new QgsStandardItem( QString::number( dY, 'f', 10 ) ) );
-      setItem( i, j++, new QgsStandardItem( QString::number( residual, 'f', 10 ) ) );
-      setItem( i, j++, new QgsStandardItem( QString::number( dataPoint->pixelAzimuthReverse(), 'f', 4 ) ) );
-      setItem( i, j++, new QgsStandardItem( QString::number( dataPoint->mapAzimuthReverse(), 'f', 4 ) ) );
+      setClean();
     }
-    else
-    {
-      setItem( i, j++, new QgsStandardItem( "n/a" ) );
-      setItem( i, j++, new QgsStandardItem( "n/a" ) );
-      setItem( i, j++, new QgsStandardItem( "n/a" ) );
-      setItem( i, j++, new QgsStandardItem( "n/a" ) );
-      setItem( i, j++, new QgsStandardItem( "n/a" ) );
-    }
-    if ( !dataPoint->notes().isEmpty() )
-    {
-      sNotes = QString( "%1, %2" ).arg( sNotes ).arg( dataPoint->notes() );
-    }
-    setItem( i, j++, new QgsStandardItem( sNotes ) );
-    setItem( i, j++, new QgsStandardItem( dataPoint->pixelCoordsReverse().wellKnownText() ) );
-    setItem( i, j++, new QgsStandardItem( dataPoint->mapCoordsReverse().wellKnownText() ) );
-  }
-  if ( bTransformUpdated )
-  {
-    setClean();
   }
 }
-}
+
 bool QgsGcpListModel::calculateMeanError( double &error ) const
 {
   if ( mGeorefTransform->transformParametrisation() == QgsGeorefTransform::InvalidTransform )

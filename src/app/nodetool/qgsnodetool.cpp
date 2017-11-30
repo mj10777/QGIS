@@ -1254,6 +1254,7 @@ void QgsNodeTool::buildDragBandsForVertices( const QSet<Vertex> &movingVertices,
     {
       // this is a standalone point - we need to use a marker for it
       // to give some feedback to the user
+
       QgsPointXY ptMapPoint = toMapCoordinates( v.layer, pt );
       QgsVertexMarker *marker = new QgsVertexMarker( mCanvas );
       marker->setIconType( QgsVertexMarker::ICON_X );
@@ -1424,6 +1425,7 @@ void QgsNodeTool::moveVertex( const QgsPointXY &mapPoint, const QgsPointLocator:
   stopDragging();
 
   QgsPointXY layerPoint = matchToLayerPoint( dragLayer, mapPoint, mapPointMatch );
+
   QgsVertexId vid;
   if ( !geom.vertexIdFromVertexNr( dragVertexId, vid ) )
   {
@@ -1702,28 +1704,22 @@ void QgsNodeTool::setHighlightedNodes( QList<Vertex> listNodes )
   qDeleteAll( mSelectedNodesMarkers );
   mSelectedNodesMarkers.clear();
   mSelectedNodes.clear();
-  <<< <<< < HEAD
-  Q_FOREACH ( const Vertex &node, listNodes )
-    == == == =
 
-      for ( const Vertex &node : qgis::as_const( listNodes ) )
-        >>>>>>> upstream_qgis / master32.spatialite_provider
-    {
-      QgsGeometry geom = cachedGeometryForVertex( node );
-      QgsVertexId vid;
-      if ( !geom.vertexIdFromVertexNr( node.vertexId, vid ) )
-      {
-        continue;  // node may not exist anymore
-      }
-      QgsVertexMarker *marker = new QgsVertexMarker( canvas() );
-      marker->setIconType( QgsVertexMarker::ICON_CIRCLE );
-      marker->setPenWidth( 3 );
-      marker->setColor( Qt::blue );
-      marker->setFillColor( Qt::blue );
-      marker->setCenter( toMapCoordinates( node.layer, geom.vertexAt( node.vertexId ) ) );
-      mSelectedNodes.append( node );
-      mSelectedNodesMarkers.append( marker );
-    }
+  for ( const Vertex &node : qgis::as_const( listNodes ) )
+  {
+    QgsGeometry geom = cachedGeometryForVertex( node );
+    QgsVertexId vid;
+    if ( !geom.vertexIdFromVertexNr( node.vertexId, vid ) )
+      continue;  // node may not exist anymore
+    QgsVertexMarker *marker = new QgsVertexMarker( canvas() );
+    marker->setIconType( QgsVertexMarker::ICON_CIRCLE );
+    marker->setPenWidth( 3 );
+    marker->setColor( Qt::blue );
+    marker->setFillColor( Qt::blue );
+    marker->setCenter( toMapCoordinates( node.layer, geom.vertexAt( node.vertexId ) ) );
+    mSelectedNodes.append( node );
+    mSelectedNodesMarkers.append( marker );
+  }
 }
 
 void QgsNodeTool::setHighlightedNodesVisible( bool visible )
