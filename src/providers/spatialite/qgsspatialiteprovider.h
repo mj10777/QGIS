@@ -81,7 +81,7 @@ class QgsSpatiaLiteProvider: public QgsVectorDataProvider
     explicit QgsSpatiaLiteProvider( QString const &uri = "" );
 >>>>>>> Refactured version based master from 2017-11-17. Minimal Spatialite connection with load_extension. RasterLite2 without source dependency. Full QgsLayerItem and QgsLayerMetadata support.
 
-    ~ QgsSpatiaLiteProvider() override;
+    ~ QgsSpatiaLiteProvider();
 
     QgsAbstractFeatureSource *featureSource() const override;
     QString storageType() const override;
@@ -139,7 +139,7 @@ class QgsSpatiaLiteProvider: public QgsVectorDataProvider
      * \see getLayerExtent
      * \since QGIS 3.0
      */
-    void updateExtents() override;
+     void updateExtents() override;
 
     /**
      * List of fields
@@ -150,7 +150,6 @@ class QgsSpatiaLiteProvider: public QgsVectorDataProvider
      * \see getAttributeFields
      * \since QGIS 3.0
      */
->>>>>>> Refactured version based master from 2017-11-17. Minimal Spatialite connection with load_extension. RasterLite2 without source dependency. Full QgsLayerItem and QgsLayerMetadata support.
     QgsFields fields() const override;
 
     /**
@@ -180,14 +179,6 @@ class QgsSpatiaLiteProvider: public QgsVectorDataProvider
      * \since QGIS 3.0
      */
     QVariant maximumValue( int index ) const override;
-#if 0
-    QSet<QVariant> uniqueValues( int index, int limit = -1 ) const override;
-    QStringList uniqueStringsMatching( int index, const QString &substring, int limit = -1,
-                                       QgsFeedback *feedback = nullptr ) const override;
-
-    bool isValid() const override;
-    bool isSaveAndLoadStyleToDatabaseSupported() const override { return true; }
-#endif
 
     /**
      * Returns a list of unique values
@@ -200,7 +191,7 @@ class QgsSpatiaLiteProvider: public QgsVectorDataProvider
      * \see mSubsetString
      * \since QGIS 3.0
      */
-    virtual QSet<QVariant> uniqueValues( int index, int limit = -1 ) const override;
+     QSet<QVariant> uniqueValues( int index, int limit = -1 ) const override;
 
     /**
      * UniqueStringsMatching
@@ -210,13 +201,12 @@ class QgsSpatiaLiteProvider: public QgsVectorDataProvider
      * \see mSubsetString
     * \since QGIS 3.0
     */
-    virtual QStringList uniqueStringsMatching( int index, const QString &substring, int limit = -1,
+    QStringList uniqueStringsMatching( int index, const QString &substring, int limit = -1,
         QgsFeedback *feedback = nullptr ) const override;
 
     bool isValid() const override;
-    virtual bool isSaveAndLoadStyleToDatabaseSupported() const override { return true; }
-
-    bool addFeatures( QgsFeatureList &flist, QgsFeatureSink::Flags flags = nullptr ) override;
+    bool isSaveAndLoadStyleToDatabaseSupported() const override { return true; }
+    bool skipConstraintCheck( int fieldIndex, QgsFieldConstraints::Constraint constraint, const QVariant &value = QVariant() ) const override;
 
     /**
      * Adds features
@@ -228,7 +218,7 @@ class QgsSpatiaLiteProvider: public QgsVectorDataProvider
      * \see QgsSpatialiteDbLayer::addLayerFeatures
      * \since QGIS 3.0
      */
-    bool addFeatures( QgsFeatureList &flist, QgsFeatureSink::Flags flags = 0 ) override;
+    bool addFeatures( QgsFeatureList &flist, QgsFeatureSink::Flags flags = nullptr ) override;
 
     /**
      * Deletes features
@@ -240,7 +230,6 @@ class QgsSpatiaLiteProvider: public QgsVectorDataProvider
      * \see QgsSpatialiteDbLayer::deleteLayerFeatures
      * \since QGIS 3.0
      */
->>>>>>> Refactured version based master from 2017-11-17. Minimal Spatialite connection with load_extension. RasterLite2 without source dependency. Full QgsLayerItem and QgsLayerMetadata support.
     bool deleteFeatures( const QgsFeatureIds &id ) override;
 
     /**
@@ -312,7 +301,6 @@ class QgsSpatiaLiteProvider: public QgsVectorDataProvider
      * \since QGIS 3.0
     */
     QVariant defaultValue( int fieldId ) const override;
-    bool skipConstraintCheck( int fieldIndex, QgsFieldConstraints::Constraint constraint, const QVariant &value = QVariant() ) const override;
 
     /**
      * Creates attributes Index
@@ -1254,9 +1242,6 @@ class QgsSpatiaLiteProvider: public QgsVectorDataProvider
     //! Flag indicating whether the primary key is auto-generated
     bool mPrimaryKeyAutoIncrement = false;
 
-    //! List of primary key columns in the table
-    QgsAttributeList mPrimaryKeyAttrs;
-
     /**
      * Name of the geometry column in the table
      * \note
@@ -1599,11 +1584,10 @@ class QgsSpatiaLiteProvider: public QgsVectorDataProvider
     int computeSizeFromGeosWKB2D( const unsigned char *blob, int size,
                                   QgsWkbTypes::Type type, int nDims, int little_endian,
                                   int endian_arch );
-
+#endif
     void fetchConstraints();
 
     void insertDefaultValue( int fieldIndex, QString defaultVal );
-#endif
 
     /**
      * getFeature
