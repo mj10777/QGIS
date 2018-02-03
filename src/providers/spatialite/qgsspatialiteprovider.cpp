@@ -56,7 +56,7 @@ extern "C"
 //--> when creating inside a internal library [core library], create as class internal functions
 //-----------------------------------------------------------------
 const QString SPATIALITE_KEY = QStringLiteral( "spatialite" );
-const QString SPATIALITE_DESCRIPTION = QStringLiteral( "SpatiaLite data provider" );
+const QString SPATIALITE_DESCRIPTION = QStringLiteral( "SpatiaLite 5.0 data provider" );
 //-----------------------------------------------------------------
 // QGISEXTERN isProvider [Required Provider function]
 //-----------------------------------------------------------------
@@ -109,9 +109,9 @@ class QgsSpatiaLiteSourceSelectProvider : public QgsSourceSelectProvider
   public:
 
     virtual QString providerKey() const override { return QStringLiteral( "spatialite" ); }
-    virtual QString text() const override { return QObject::tr( "Spatialite" ); }
+    virtual QString text() const override { return QObject::tr( "SpatiaLite 5.0" ); }
     virtual int ordering() const override { return QgsSourceSelectProvider::OrderLocalProvider + 40; }
-    virtual QIcon icon() const override { return QgsApplication::getThemeIcon( QStringLiteral( "/mActionAddSpatiaLiteLayer.svg"" ) ); }
+    virtual QIcon icon() const override { return QgsApplication::getThemeIcon( QStringLiteral( "/mActionNewSpatiaLiteLayer.svg" ) ); }
     virtual QgsAbstractDataSourceWidget *createDataSourceWidget( QWidget *parent = nullptr, Qt::WindowFlags fl = Qt::Widget, QgsProviderRegistry::WidgetMode widgetMode = QgsProviderRegistry::WidgetMode::Embedded ) const override
     {
       return new QgsSpatiaLiteSourceSelect( parent, fl, widgetMode );
@@ -132,8 +132,8 @@ QGISEXTERN QList<QgsSourceSelectProvider *> *sourceSelectProviders()
 //-----------------------------------------------------------------
 // QgsSpatiaLiteProvider::QgsSpatiaLiteProvider
 //-----------------------------------------------------------------
-QgsSpatiaLiteProvider::QgsSpatiaLiteProvider( QString const &uri )
-  : QgsVectorDataProvider( uri )
+QgsSpatiaLiteProvider::QgsSpatiaLiteProvider( QString const &uri, const ProviderOptions &options )
+  : QgsVectorDataProvider( uri, options )
   , mIsQuery( false )
   , mTableBased( false )
   , mViewBased( false )
@@ -284,7 +284,7 @@ bool QgsSpatiaLiteProvider::setSqliteHandle( QgsSqliteHandle *qSqliteHandle )
             sLayerName = QString( "%1(%2)" ).arg( mUriTableName ).arg( mUriGeometryColumn );
           }
           bool bLoadLayer = true;
-          bRc = setDbLayer( getSpatialiteDbInfo()->getSpatialiteDbLayer( sLayerName, bLoadLayer ) );
+          bRc = setDbLayer( getSpatialiteDbInfo()->getQgsSpatialiteDbLayer( sLayerName, bLoadLayer ) );
         }
         else
         {
@@ -308,7 +308,7 @@ bool QgsSpatiaLiteProvider::setSqliteHandle( QgsSqliteHandle *qSqliteHandle )
     }
     else
     {
-      QgsDebugMsgLevel( QString( "QgsSpatiaLiteProvider failed SpatialiteDbInfo invalid LayerName[%1]" ).arg( mUriTableName ), 7 );
+      QgsDebugMsgLevel( QString( "QgsSpatiaLiteProvider failed QgsSpatialiteDbInfo invalid LayerName[%1]" ).arg( mUriTableName ), 7 );
     }
   }
   else
@@ -320,7 +320,7 @@ bool QgsSpatiaLiteProvider::setSqliteHandle( QgsSqliteHandle *qSqliteHandle )
 //-----------------------------------------------------------------
 // QgsSpatiaLiteProvider::setDbLayer
 //-----------------------------------------------------------------
-bool QgsSpatiaLiteProvider::setDbLayer( SpatialiteDbLayer *dbLayer )
+bool QgsSpatiaLiteProvider::setDbLayer( QgsSpatialiteDbLayer *dbLayer )
 {
   bool bRc = false;
   if ( ( dbLayer ) && ( dbLayer->isLayerValid() ) && ( dbLayer->isLayerSpatialite() ) )
@@ -357,7 +357,7 @@ bool QgsSpatiaLiteProvider::setDbLayer( SpatialiteDbLayer *dbLayer )
       mAuthId = getDbLayer()->getAuthId();
 
       //-----------------------------------------------------------------
-      if ( getLayerType() == SpatialiteDbInfo::SpatialView )
+      if ( getLayerType() == QgsSpatialiteDbInfo::SpatialView )
       {
         mIndexTable = mViewTableName;
         mIndexGeometry = getDbLayer()->getViewTableGeometryColumn();
@@ -372,24 +372,24 @@ bool QgsSpatiaLiteProvider::setDbLayer( SpatialiteDbLayer *dbLayer )
       // - then this should be done here
       setLayerMetadata( getDbLayer()->getLayerMetadata() );
 #endif
-      if ( getSpatialIndexType() == SpatialiteDbInfo::SpatialIndexRTree )
+      if ( getSpatialIndexType() == QgsSpatialiteDbInfo::SpatialIndexRTree )
       {
         mSpatialIndexRTree = true;
       }
-      if ( getSpatialIndexType() == SpatialiteDbInfo::SpatialIndexMbrCache )
+      if ( getSpatialIndexType() == QgsSpatialiteDbInfo::SpatialIndexMbrCache )
       {
         mSpatialIndexMbrCache = true;
       }
-      if ( ( getLayerType() == SpatialiteDbInfo::SpatialTable ) ||
-           ( getLayerType() == SpatialiteDbInfo::TopologyExport ) )
+      if ( ( getLayerType() == QgsSpatialiteDbInfo::SpatialTable ) ||
+           ( getLayerType() == QgsSpatialiteDbInfo::TopologyExport ) )
       {
         mTableBased = true;
       }
-      if ( getLayerType() == SpatialiteDbInfo::SpatialView )
+      if ( getLayerType() == QgsSpatialiteDbInfo::SpatialView )
       {
         mViewBased = true;
       }
-      if ( getLayerType() == SpatialiteDbInfo::VirtualShape )
+      if ( getLayerType() == QgsSpatialiteDbInfo::VirtualShape )
       {
         mVShapeBased = true;
       }
@@ -405,9 +405,9 @@ bool QgsSpatiaLiteProvider::setDbLayer( SpatialiteDbLayer *dbLayer )
                       << QgsVectorDataProvider::NativeType( tr( "Time" ), QStringLiteral( "time" ), QVariant::Time, -1, -1, -1, -1 )
                       << QgsVectorDataProvider::NativeType( tr( "Date & Time" ), QStringLiteral( "timestamp without time zone" ), QVariant::DateTime, -1, -1, -1, -1 )
 
-                      << QgsVectorDataProvider::NativeType( tr( "Array of text" ), SpatialiteDbInfo::SPATIALITE_ARRAY_PREFIX.toUpper() + "TEXT" + SpatialiteDbInfo::SPATIALITE_ARRAY_SUFFIX.toUpper(), QVariant::StringList, 0, 0, 0, 0, QVariant::String )
-                      << QgsVectorDataProvider::NativeType( tr( "Array of decimal numbers (double)" ), SpatialiteDbInfo::SPATIALITE_ARRAY_PREFIX.toUpper() + "REAL" + SpatialiteDbInfo::SPATIALITE_ARRAY_SUFFIX.toUpper(), QVariant::List, 0, 0, 0, 0, QVariant::Double )
-                      << QgsVectorDataProvider::NativeType( tr( "Array of whole numbers (integer)" ), SpatialiteDbInfo::SPATIALITE_ARRAY_PREFIX.toUpper() + "INTEGER" + SpatialiteDbInfo::SPATIALITE_ARRAY_SUFFIX.toUpper(), QVariant::List, 0, 0, 0, 0, QVariant::LongLong )
+                      << QgsVectorDataProvider::NativeType( tr( "Array of text" ), QgsSpatialiteDbInfo::SPATIALITE_ARRAY_PREFIX.toUpper() + "TEXT" + QgsSpatialiteDbInfo::SPATIALITE_ARRAY_SUFFIX.toUpper(), QVariant::StringList, 0, 0, 0, 0, QVariant::String )
+                      << QgsVectorDataProvider::NativeType( tr( "Array of decimal numbers (double)" ), QgsSpatialiteDbInfo::SPATIALITE_ARRAY_PREFIX.toUpper() + "REAL" + QgsSpatialiteDbInfo::SPATIALITE_ARRAY_SUFFIX.toUpper(), QVariant::List, 0, 0, 0, 0, QVariant::Double )
+                      << QgsVectorDataProvider::NativeType( tr( "Array of whole numbers (integer)" ), QgsSpatialiteDbInfo::SPATIALITE_ARRAY_PREFIX.toUpper() + "INTEGER" + QgsSpatialiteDbInfo::SPATIALITE_ARRAY_SUFFIX.toUpper(), QVariant::List, 0, 0, 0, 0, QVariant::LongLong )
                     );
       // bRc = checkQuery();
     }
@@ -476,7 +476,7 @@ bool QgsSpatiaLiteProvider::convertField( QgsField &field )
       subField.setType( field.subType() );
       subField.setSubType( QVariant::Invalid );
       if ( !convertField( subField ) ) return false;
-      fieldType = SpatialiteDbInfo::SPATIALITE_ARRAY_PREFIX + subField.typeName() + SpatialiteDbInfo::SPATIALITE_ARRAY_SUFFIX;
+      fieldType = QgsSpatialiteDbInfo::SPATIALITE_ARRAY_PREFIX + subField.typeName() + QgsSpatialiteDbInfo::SPATIALITE_ARRAY_SUFFIX;
       fieldSize = subField.length();
       fieldPrec = subField.precision();
       break;
@@ -806,8 +806,7 @@ QgsSpatiaLiteProvider::createEmptyLayer( const QString &uri,
   }
   return QgsVectorLayerExporter::NoError;
 }
-
-
+#if 0
 QgsSpatiaLiteProvider::QgsSpatiaLiteProvider( QString const &uri, const ProviderOptions &options )
   : QgsVectorDataProvider( uri, options )
 {
@@ -987,6 +986,7 @@ QgsSpatiaLiteProvider::~QgsSpatiaLiteProvider()
   closeDb();
   invalidateConnections( mSqlitePath );
 }
+#endif
 //-----------------------------------------------------------------
 // QgsSpatiaLiteProvider::featureSource
 //-----------------------------------------------------------------
@@ -1108,7 +1108,7 @@ QgsCoordinateReferenceSystem QgsSpatiaLiteProvider::crs() const
 //-----------------------------------------------------------------
 // QgsSpatiaLiteProvider::minimumValue
 //-----------------------------------------------------------------
-//  SpatialiteDbLayer should never store the
+//  QgsSpatialiteDbLayer should never store the
 // - mQuery and mSubsetString members
 // --> since other source may be using the Layer
 // Functions using these 'filters' must remain in QgsSpatiaLiteProvider
@@ -1543,9 +1543,8 @@ QGISEXTERN bool createDb( const QString &dbPath, QString &errCause )
   // Must be sure there is destination directory ~/.qgis
   QDir().mkpath( path.absolutePath() );
   QString sDatabaseFileName = dbPath;
-  SpatialiteDbInfo::SpatialMetadata dbCreateOption = SpatialiteDbInfo::Spatialite45;
+  QgsSpatialiteDbInfo::SpatialMetadata dbCreateOption = QgsSpatialiteDbInfo::Spatialite50;
   bRc = QgsSpatiaLiteUtils::createSpatialDatabase( sDatabaseFileName, errCause, dbCreateOption );
-
   return bRc;
 }
 //-----------------------------------------------------------------
@@ -1557,7 +1556,7 @@ QGISEXTERN bool deleteLayer( const QString &dbPath, const QString &tableName, QS
 
   bool bLoadLayers = false;
   bool bShared = true;
-  SpatialiteDbInfo *spatialiteDbInfo = QgsSpatiaLiteUtils::CreateSpatialiteDbInfo( dbPath, bLoadLayers, bShared );
+  QgsSpatialiteDbInfo *spatialiteDbInfo = QgsSpatiaLiteUtils::CreateQgsSpatialiteDbInfo( dbPath, bLoadLayers, bShared );
   if ( spatialiteDbInfo )
   {
     // TODO: remove after testing:  cp middle_earth.3035.RasterLite2.save.db middle_earth.3035.RasterLite2.db
