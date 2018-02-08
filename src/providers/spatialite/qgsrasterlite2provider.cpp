@@ -72,6 +72,11 @@ QGISEXTERN QString description()
 // Class factory to return a pointer to a newly created
 // RasterLite2 object
 //-----------------------------------------------------------------
+
+/**
+ * Class factory to return a pointer to a newly created
+ * RasterLite2Provider object
+ */
 QGISEXTERN QgsRasterLite2Provider *classFactory( const QString *uri )
 {
   return new QgsRasterLite2Provider( *uri );
@@ -340,22 +345,59 @@ int QgsRasterLite2Provider::createLayerMetadata( int i_debug )
     {
       return i_status;
     }
-    QString sMetadata = "";
-    QString sMetadataBands = "";
     //-----------------------------------------------------------
-    sMetadataBands += QStringLiteral( "Layer-Name: %1\n" ).arg( getLayerName() );
-    sMetadataBands += QStringLiteral( "Title     : %1\n" ).arg( getTitle() );
-    sMetadataBands += QStringLiteral( "Abstract  : %1\n" ).arg( getAbstract() );
-    sMetadataBands += QStringLiteral( "Copyright : %1\n" ).arg( getCopyright() );
-    sMetadataBands += QStringLiteral( "Srid\t  : %1\n" ).arg( getSridEpsg() );
-    sMetadataBands += QStringLiteral( "Extent\t  : %1\n" ).arg( getDbLayer()->getLayerExtentEWKT() );
-    sMetadataBands += QStringLiteral( "\tExtent - Width : %1\n" ).arg( QString::number( getDbLayer()->getLayerExtentWidth(), 'f', 7 ) );
-    sMetadataBands += QStringLiteral( "\tExtent - Height: %1\n" ).arg( QString::number( getDbLayer()->getLayerExtentHeight(), 'f', 7 ) );
-    sMetadataBands += QStringLiteral( "Image-Size: %1x%2\n" ).arg( getDbLayer()->getLayerImageWidth() ).arg( getDbLayer()->getLayerImageHeight() );
-    sMetadataBands += QStringLiteral( "\tPixels - Total  : %1\n" ).arg( getDbLayer()->getLayerCountImagePixels() );
-    sMetadataBands += QStringLiteral( "\tPixels - Valid  : %1\n" ).arg( getDbLayer()->getLayerCountImageValidPixels() );
-    sMetadataBands += QStringLiteral( "\tPixels - NoData : %1\n" ).arg( getDbLayer()->getLayerCountImageNodataPixels() );
-    sMetadataBands += QStringLiteral( "Bands\t  : %1\n" ).arg( getDbLayer()->getLayerNumBands() );
+    QString htmlTrTdStart = QStringLiteral( "<tr><td class=\"highlight\">" );
+    QString htmlTrTdEnd = QStringLiteral( "</td></tr>\n" );
+    QString htmlTdEndTdStart = QStringLiteral( "</td><td>" );
+    //-----------------------------------------------------------
+    QString sMetadataBuild = QString();
+    QString sMetadata = QString();
+    QString sMetadataBands = QString();
+    QString sHtmlMetadata = QString();
+    QString sHtmlMetadataBands = QString();
+    // TODO: add header information
+    // GDAL Driver description
+    //  myMetadata += QStringLiteral( "<tr><td class=\"highlight\">" ) + tr( "GDAL Driver Description" ) + QStringLiteral( "</td><td>" ) + QString( GDALGetDescription( GDALGetDatasetDriver( mGdalDataset ) ) ) + QStringLiteral( "</td></tr>\n" );
+    // GDAL Driver Metadata
+    // myMetadata += QStringLiteral( "<tr><td class=\"highlight\">" ) + tr( "GDAL Driver Metadata" ) + QStringLiteral( "</td><td>" ) + QString( GDALGetMetadataItem( GDALGetDatasetDriver( mGdalDataset ), GDAL_DMD_LONGNAME, nullptr ) ) + QStringLiteral( "</td></tr>\n" );
+    //-----------------------------------------------------------
+    sMetadataBuild = QStringLiteral( "Layer-Name: %1\n" ).arg( getLayerName() );
+    sMetadataBands += sMetadataBuild;
+    sHtmlMetadataBands += QString( "%1%2%3" ).arg( htmlTrTdStart ).arg( sMetadataBuild.replace( "\n", "" ).replace( ": ", htmlTdEndTdStart ) ).arg( htmlTrTdEnd );
+    sMetadataBuild = QStringLiteral( "Title     : %1\n" ).arg( getTitle() );
+    sMetadataBands += sMetadataBuild;
+    sHtmlMetadataBands += QString( "%1%2%3" ).arg( htmlTrTdStart ).arg( sMetadataBuild.replace( "\n", "" ).replace( ": ", htmlTdEndTdStart ) ).arg( htmlTrTdEnd );
+    sMetadataBuild = QStringLiteral( "Abstract  : %1\n" ).arg( getAbstract() );
+    sMetadataBands += sMetadataBuild;
+    sHtmlMetadataBands += QString( "%1%2%3" ).arg( htmlTrTdStart ).arg( sMetadataBuild.replace( "\n", "" ).replace( ": ", htmlTdEndTdStart ) ).arg( htmlTrTdEnd );
+    sMetadataBuild = QStringLiteral( "Copyright : %1\n" ).arg( getCopyright() );
+    sMetadataBands += sMetadataBuild;
+    sHtmlMetadataBands += QString( "%1%2%3" ).arg( htmlTrTdStart ).arg( sMetadataBuild.replace( "\n", "" ).replace( ": ", htmlTdEndTdStart ) ).arg( htmlTrTdEnd );
+    sMetadataBuild = QStringLiteral( "Srid\t  : %1\n" ).arg( getSridEpsg() );
+    sMetadataBands += sMetadataBuild;
+    sHtmlMetadataBands += QString( "%1%2%3" ).arg( htmlTrTdStart ).arg( sMetadataBuild.replace( "\n", "" ).replace( ": ", htmlTdEndTdStart ) ).arg( htmlTrTdEnd );
+    sMetadataBuild = QStringLiteral( "Extent\t  : %1\n" ).arg( getDbLayer()->getLayerExtentEWKT() );
+    sMetadataBands += sMetadataBuild;
+    sHtmlMetadataBands += QString( "%1%2%3" ).arg( htmlTrTdStart ).arg( sMetadataBuild.replace( "\n", "" ).replace( ": ", htmlTdEndTdStart ) ).arg( htmlTrTdEnd );
+    sMetadataBuild = QStringLiteral( "\tExtent - Width : %1\n" ).arg( QString::number( getDbLayer()->getLayerExtentWidth(), 'f', 7 ) );
+    sMetadataBands += sMetadataBuild;
+    sHtmlMetadataBands += QString( "%1%2%3" ).arg( htmlTrTdStart ).arg( sMetadataBuild.replace( "\n", "" ).replace( ": ", htmlTdEndTdStart ) ).arg( htmlTrTdEnd );
+    sMetadataBuild = QStringLiteral( "\tExtent - Height: %1\n" ).arg( QString::number( getDbLayer()->getLayerExtentHeight(), 'f', 7 ) );
+    sMetadataBands += sMetadataBuild;
+    sHtmlMetadataBands += QString( "%1%2%3" ).arg( htmlTrTdStart ).arg( sMetadataBuild.replace( "\n", "" ).replace( ": ", htmlTdEndTdStart ) ).arg( htmlTrTdEnd );
+    sMetadataBuild = QStringLiteral( "Image-Size: %1x%2\n" ).arg( getDbLayer()->getLayerImageWidth() ).arg( getDbLayer()->getLayerImageHeight() );
+    sMetadataBands += sMetadataBuild;
+    sHtmlMetadataBands += QString( "%1%2%3" ).arg( htmlTrTdStart ).arg( sMetadataBuild.replace( "\n", "" ).replace( ": ", htmlTdEndTdStart ) ).arg( htmlTrTdEnd );
+    sMetadataBuild = QStringLiteral( "\tPixels - Total  : %1\n" ).arg( getDbLayer()->getLayerCountImagePixels() );
+    sMetadataBands += sMetadataBuild;
+    sHtmlMetadataBands += QString( "%1%2%3" ).arg( htmlTrTdStart ).arg( sMetadataBuild.replace( "\n", "" ).replace( ": ", htmlTdEndTdStart ) ).arg( htmlTrTdEnd );
+    sMetadataBuild = QStringLiteral( "\tPixels - Valid  : %1\n" ).arg( getDbLayer()->getLayerCountImageValidPixels() );
+    sMetadataBands += sMetadataBuild;
+    sHtmlMetadataBands += QString( "%1%2%3" ).arg( htmlTrTdStart ).arg( sMetadataBuild.replace( "\n", "" ).replace( ": ", htmlTdEndTdStart ) ).arg( htmlTrTdEnd );
+    sMetadataBuild = QStringLiteral( "\tPixels - NoData : %1\n" ).arg( getDbLayer()->getLayerCountImageNodataPixels() );
+    sMetadataBuild = QStringLiteral( "Bands\t  : %1\n" ).arg( getDbLayer()->getLayerNumBands() );
+    sMetadataBands += sMetadataBuild;
+    sHtmlMetadataBands += QString( "%1%2%3" ).arg( htmlTrTdStart ).arg( sMetadataBuild.replace( "\n", "" ).replace( ": ", htmlTdEndTdStart ) ).arg( htmlTrTdEnd );
     // 3319x2701 = 8964619-7917158=1047461
     //-----------------------------------------------------------
     for ( int i = 0; i < getDbLayer()->getLayerNumBands(); i++ )
@@ -370,23 +412,46 @@ int QgsRasterLite2Provider::createLayerMetadata( int i_debug )
       sBandInfo += QStringLiteral( "Average/Mean[%1] StandardDeviation[%2] " ).arg( ( int )mLayerBandsPixelAverage.value( i ) ).arg( ( int )mLayerBandsPixelStandardDeviation.value( i ) );
       // RL2_GetBandStatistics_Var [estimated Variance value as double]
       sBandInfo += QStringLiteral( "Variance[%1] " ).arg( ( int )mLayerBandsPixelVariance.value( i ) );
-      sMetadataBands += QStringLiteral( "\t%1\n" ).arg( sBandInfo );
+      sMetadataBuild += QStringLiteral( "\t%1\n" ).arg( sBandInfo );
+      sMetadataBands += sMetadataBuild;
+      sHtmlMetadataBands += QString( "%1%2%3" ).arg( htmlTrTdStart ).arg( sMetadataBuild.replace( "\n", "" ).replace( ": ", htmlTdEndTdStart ) ).arg( htmlTrTdEnd );
     }
-    sMetadata += QStringLiteral( "%1\n" ).arg( sMetadataBands );
-    sMetadata += QStringLiteral( "Data-Type   : %1 [%2]\n" ).arg( getDbLayer()->getLayerRasterSampleType() ).arg( getDbLayer()->getLayerRasterDataTypeString() );
-    sMetadata += QStringLiteral( "Pixel-Type  : %1\n" ).arg( getDbLayer()->getLayerRasterPixelTypeString() );
-    sMetadata += QStringLiteral( "Compression : %1\n" ).arg( getDbLayer()->getLayerRasterCompressionType() );
-    sMetadata += QStringLiteral( "Tile-Size   : %1,%2\n" ).arg( getDbLayer()->getLayerTileWidth() ).arg( getDbLayer()->getLayerTileHeight() );
-    sMetadata += QStringLiteral( "Resolution  : horz=%1 vert=%2\n" ).arg( QString::number( getDbLayer()->getLayerImageResolutionX(), 'f', 7 ) ).arg( QString::number( getDbLayer()->getLayerImageResolutionY(), 'f', 7 ) );
-    sMetadata += QStringLiteral( "User Canvas background    : '%1'\n" ).arg( mDefaultImageBackground );
-    sMetadata += QStringLiteral( "NoData ImageBackground : '%1'\n" ).arg( mDbLayer->getLayerDefaultImageBackground() );
-    sMetadata += QStringLiteral( "DefaultRasterStyle : '%1' of %2 Styles\n" ).arg( mDbLayer->getLayerStyleSelected() ).arg( mDbLayer->getLayerCoverageStylesInfo().count() );
+    sMetadata = QStringLiteral( "%1\n" ).arg( sMetadataBands );
+    sHtmlMetadata = QStringLiteral( "%1\n" ).arg( sHtmlMetadataBands );
+    sMetadataBuild = QStringLiteral( "Data-Type   : %1 [%2]\n" ).arg( getDbLayer()->getLayerRasterSampleType() ).arg( getDbLayer()->getLayerRasterDataTypeString() );
+    sMetadata += sMetadataBuild;
+    sHtmlMetadata += QString( "%1%2%3" ).arg( htmlTrTdStart ).arg( sMetadataBuild.replace( "\n", "" ).replace( ": ", htmlTdEndTdStart ) ).arg( htmlTrTdEnd );
+    sMetadataBuild = QStringLiteral( "Pixel-Type  : %1\n" ).arg( getDbLayer()->getLayerRasterPixelTypeString() );
+    sMetadata += sMetadataBuild;
+    sHtmlMetadata += QString( "%1%2%3" ).arg( htmlTrTdStart ).arg( sMetadataBuild.replace( "\n", "" ).replace( ": ", htmlTdEndTdStart ) ).arg( htmlTrTdEnd );
+    sMetadataBuild = QStringLiteral( "Compression : %1\n" ).arg( getDbLayer()->getLayerRasterCompressionType() );
+    sMetadata += sMetadataBuild;
+    sHtmlMetadata += QString( "%1%2%3" ).arg( htmlTrTdStart ).arg( sMetadataBuild.replace( "\n", "" ).replace( ": ", htmlTdEndTdStart ) ).arg( htmlTrTdEnd );
+    sMetadataBuild = QStringLiteral( "Tile-Size   : %1,%2\n" ).arg( getDbLayer()->getLayerTileWidth() ).arg( getDbLayer()->getLayerTileHeight() );
+    sMetadata += sMetadataBuild;
+    sHtmlMetadata += QString( "%1%2%3" ).arg( htmlTrTdStart ).arg( sMetadataBuild.replace( "\n", "" ).replace( ": ", htmlTdEndTdStart ) ).arg( htmlTrTdEnd );
+    sMetadataBuild = QStringLiteral( "Resolution  : horz=%1 vert=%2\n" ).arg( QString::number( getDbLayer()->getLayerImageResolutionX(), 'f', 7 ) ).arg( QString::number( getDbLayer()->getLayerImageResolutionY(), 'f', 7 ) );
+    sMetadata += sMetadataBuild;
+    sHtmlMetadata += QString( "%1%2%3" ).arg( htmlTrTdStart ).arg( sMetadataBuild.replace( "\n", "" ).replace( ": ", htmlTdEndTdStart ) ).arg( htmlTrTdEnd );
+    sMetadataBuild = QStringLiteral( "User Canvas background    : '%1'\n" ).arg( mDefaultImageBackground );
+    sMetadata += sMetadataBuild;
+    sHtmlMetadata += QString( "%1%2%3" ).arg( htmlTrTdStart ).arg( sMetadataBuild.replace( "\n", "" ).replace( ": ", htmlTdEndTdStart ) ).arg( htmlTrTdEnd );
+    sMetadataBuild = QStringLiteral( "NoData ImageBackground : '%1'\n" ).arg( mDbLayer->getLayerDefaultImageBackground() );
+    sMetadata += sMetadataBuild;
+    sHtmlMetadata += QString( "%1%2%3" ).arg( htmlTrTdStart ).arg( sMetadataBuild.replace( "\n", "" ).replace( ": ", htmlTdEndTdStart ) ).arg( htmlTrTdEnd );
+    sMetadataBuild = QStringLiteral( "DefaultRasterStyle : '%1' of %2 Styles\n" ).arg( mDbLayer->getLayerStyleSelected() ).arg( mDbLayer->getLayerCoverageStylesInfo().count() );
+    sMetadata += sMetadataBuild;
+    sHtmlMetadata += QString( "%1%2%3" ).arg( htmlTrTdStart ).arg( sMetadataBuild.replace( "\n", "" ).replace( ": ", htmlTdEndTdStart ) ).arg( htmlTrTdEnd );
+    //-----------------------------------------------------------
+    sHtmlMetadata.replace( "\t", "" );
+    //-----------------------------------------------------------
     if ( i_debug > 0 )
     {
       QgsDebugMsgLevel( sMetadata, 5 );
     }
     //-----------------------------------------------------------
     mMetadata = sMetadata;
+    mHtmlMetadata = sHtmlMetadata;
 #if 0
     // If/When QgsLayerMetadata has been added to QgsDataProvider
     // - then this should be done here
@@ -400,9 +465,9 @@ int QgsRasterLite2Provider::createLayerMetadata( int i_debug )
 //-----------------------------------------------------------------
 // QgsRasterLite2Provider::metadata
 //-----------------------------------------------------------------
-QString QgsRasterLite2Provider::metadata()
+QString QgsRasterLite2Provider::htmlMetadata()
 {
-  return mMetadata;
+  return mHtmlMetadata;
 }
 //-----------------------------------------------------------------
 // QgsRasterLite2Provider::subLayerStyles

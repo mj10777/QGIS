@@ -73,7 +73,7 @@ INCLUDE_DIRECTORIES(SYSTEM
   ${GDAL_INCLUDE_DIR}
 )
 
-ADD_LIBRARY (spatialite45provider MODULE
+ADD_LIBRARY (spatialiteprovider MODULE
   ${SPATIALITE_SRCS}
   ${SPATIALITE_MOC_SRCS}
   ${SPATIALITE_UI_H}
@@ -82,7 +82,7 @@ SET(SPATIALITE_LIBRARYS_PROVIDER
   ${SPATIALITE_LIBRARY}
 )
 
-TARGET_LINK_LIBRARIES(spatialite45provider
+TARGET_LINK_LIBRARIES(spatialiteprovider
   qgis_core
   ${SPATIALITE_LIBRARYS_PROVIDER}
 )
@@ -95,7 +95,7 @@ TARGET_LINK_LIBRARIES(rasterlite2provider
 )
 
 IF (WITH_GUI)
-  TARGET_LINK_LIBRARIES (spatialite45provider
+  TARGET_LINK_LIBRARIES (spatialiteprovider
     qgis_gui
   )
 ENDIF ()
@@ -109,7 +109,7 @@ ENDIF ()
 # clang-tidy
 IF(CLANG_TIDY_EXE)
   SET_TARGET_PROPERTIES(
-    spatialite45provider PROPERTIES
+    spatialiteprovider PROPERTIES
     CXX_CLANG_TIDY "${DO_CLANG_TIDY}"
   )
 ENDIF(CLANG_TIDY_EXE)
@@ -124,7 +124,7 @@ ENDIF(CLANG_TIDY_EXE)
 ########################################################
 # Install
 
-INSTALL(TARGETS spatialite45provider
+INSTALL(TARGETS spatialiteprovider
   RUNTIME DESTINATION ${QGIS_PLUGIN_DIR}
   LIBRARY DESTINATION ${QGIS_PLUGIN_DIR})
 

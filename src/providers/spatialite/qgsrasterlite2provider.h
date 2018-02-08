@@ -309,7 +309,7 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      * into a subset of the GUI raster properties "Metadata" tab.
      * \since QGIS 3.0
      */
-    QString metadata() override;
+    QString htmlMetadata() override;
 
     /**
      * Returns whether the provider supplies a legend graphic
@@ -957,6 +957,14 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      * \since QGIS 3.0
      */
     QString mMetadata;
+
+    /**
+     * Get metadata in a format suitable for feeding directly
+     * into a subset of the GUI raster properties "Metadata" tab.
+     * \see QgsRasterDataProvider::metadata
+     * \since QGIS 3.0
+     */
+    QString mHtmlMetadata;
 
     /**
      * Query and build Metadata string about properties of the Rasterlite2 layer

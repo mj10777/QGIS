@@ -153,7 +153,7 @@ QGISEXTERN QgsDataItem *dataItem( QString path, QgsDataItem *parentItem )
 // - QgsRasterLayer/QgsVectorLayer->htmlMetadata()
 //-----------------------------------------------------------------
 QgsSpatialiteLayerItem::QgsSpatialiteLayerItem( QgsDataItem *parent, QString filePath, QString sLayerName, QgsSpatialiteDbInfo *spatialiteDbInfo )
-  : QgsLayerItem( parent, "", filePath, "", QgsLayerItem::Point, QStringLiteral( "spatialite45" ) ), mSpatialiteDbInfo( spatialiteDbInfo )
+  : QgsLayerItem( parent, "", filePath, "", QgsLayerItem::Point, QStringLiteral( "spatialite" ) ), mSpatialiteDbInfo( spatialiteDbInfo )
 {
   mLayerType = QgsLayerItem::NoType;
   if ( path() == QStringLiteral( "spatialite:" ) )
@@ -594,7 +594,7 @@ QList<QAction *> QgsSpatialiteRootItem::actions( QWidget *parent )
 QWidget *QgsSpatialiteRootItem::paramWidget()
 {
   QgsSpatiaLiteSourceSelect *select = new QgsSpatiaLiteSourceSelect( nullptr, nullptr, QgsProviderRegistry::WidgetMode::Manager );
-  connect( select, &QgsSpatiaLiteSourceSelect::connectionsChanged, this, &QgsSLRootItem::onConnectionsChanged );
+  connect( select, &QgsSpatiaLiteSourceSelect::connectionsChanged, this, &QgsSpatialiteRootItem::onConnectionsChanged );
   return select;
 }
 //-----------------------------------------------------------------

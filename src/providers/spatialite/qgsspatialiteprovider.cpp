@@ -616,8 +616,8 @@ QgsSpatiaLiteProvider::createEmptyLayer( const QString &uri,
       }
 
       sql = QStringLiteral( "CREATE TABLE %1 (%2 %3 PRIMARY KEY%4)" )
-            .arg( quotedIdentifier( tableName ),
-                  quotedIdentifier( primaryKey ),
+            .arg( QgsSpatiaLiteUtils::quotedIdentifier( tableName ),
+                  QgsSpatiaLiteUtils::quotedIdentifier( primaryKey ),
                   primaryKeyType,
                   primaryKeyType == QLatin1String( "INTEGER" ) ? QStringLiteral( " AUTOINCREMENT" ) : QString() );
 
@@ -1446,6 +1446,22 @@ QgsVectorDataProvider::Capabilities QgsSpatiaLiteProvider::capabilities() const
 QVariant QgsSpatiaLiteProvider::defaultValue( int fieldId ) const
 {
   return getDefaultValues().value( fieldId, QVariant() );
+}
+//-----------------------------------------------------------------
+// QgsSpatiaLiteProvider::skipConstraintCheck
+//-----------------------------------------------------------------
+bool QgsSpatiaLiteProvider::skipConstraintCheck( int fieldIndex, QgsFieldConstraints::Constraint constraint, const QVariant &value ) const
+{
+  Q_UNUSED( constraint );
+
+  // If the field is the primary key, skip in case it's autog-enerated / auto-incrementing
+  if ( mAttributeFields.at( fieldIndex ).name() == mPrimaryKey  && mPrimaryKeyAutoIncrement )
+  {
+    const QVariant defVal = getDefaultValues().value( fieldIndex );
+    return defVal.toInt() == value.toInt();
+  }
+
+  return false;
 }
 //-----------------------------------------------------------------
 // QgsSpatiaLiteProvider::checkQuery
