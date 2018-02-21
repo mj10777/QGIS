@@ -367,11 +367,7 @@ bool QgsSpatiaLiteProvider::setDbLayer( QgsSpatialiteDbLayer *dbLayer )
         mIndexTable = mTableName;
         mIndexGeometry = getDbLayer()->getGeometryColumn();;
       }
-#if 0
-      // If/When QgsLayerMetadata has been added to QgsDataProvider
-      // - then this should be done here
       setLayerMetadata( getDbLayer()->getLayerMetadata() );
-#endif
       if ( getSpatialIndexType() == QgsSpatialiteDbInfo::SpatialIndexRTree )
       {
         mSpatialIndexRTree = true;

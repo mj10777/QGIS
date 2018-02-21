@@ -446,6 +446,27 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
     QgsSpatialiteDbLayer *getDbLayer() const { return mDbLayer; }
 
     /**
+     * The active Layer
+     * - being read by the Provider
+     * \note
+     * - isLayerValid() return true if everything is considered correct
+     * \see QgsSpatialiteDbLayer::isLayerValid
+     * \since QGIS 3.0
+     */
+    QgsSpatialiteDbLayer *getDbLayer() const { return mDbLayer; }
+
+    /**
+     * Contains collected Metadata for the Layer
+     * \brief A structured metadata store for a map layer.
+     * \note
+     *  - QgsSpatialiteDbLayer will use a copy of QgsSpatialiteDbInfo  mLayerMetadata as starting point
+     * \see QgsSpatialiteDbLayer::getLayerMetadata
+     * \see setLayerMetadata
+    * \since QGIS 3.0
+    */
+    QgsLayerMetadata layerMetadata() const { return mLayerMetadata; };
+
+    /**
      * The sqlite handler
      * - contained in the QgsSqliteHandle class being used by the layer
      * \note
@@ -1177,6 +1198,18 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      * \since QGIS 3.0
      */
     bool mIsLayerValid;
+
+    /**
+     * Contains collected Metadata for the Layer
+     * \brief A structured metadata store for a map layer.
+     * \note
+     *  - QgsSpatialiteDbLayer will use a copy of QgsSpatialiteDbInfo  mLayerMetadata as starting point
+     * \see QgsSpatialiteDbLayer::getLayerMetadata
+     * \see setLayerMetadata
+     * \see layerMetadata
+    * \since QGIS 3.0
+    */
+    QgsLayerMetadata mLayerMetadata;
 
 };
 

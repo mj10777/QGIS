@@ -8899,7 +8899,7 @@ QString QgsSpatialiteDbLayer::setLayerExtent( QgsRectangle layerExtent, QgsPoint
     // Calculate value for EPSG:3857 'WGS 84 / Pseudo-Mercator' and reset Srid
     QgsCoordinateReferenceSystem sourceCRS = QgsCoordinateReferenceSystem::fromOgcWmsCrs( getSridEpsg() );
     QgsCoordinateReferenceSystem destCRS = QgsCoordinateReferenceSystem::fromOgcWmsCrs( QString( "EPSG:%1" ).arg( 3857 ) );
-    QgsCoordinateTransform t( sourceCRS, destCRS );
+    QgsCoordinateTransform t( sourceCRS, destCRS, getSrid(), 3857 );
     QgsRectangle mercatorExtent = t.transformBoundingBox( mLayerExtent );
     mSrid = 3857; // Gdal treats MbTiles as 'WGS 84 / Pseudo-Mercator' [meters resolution easier to understand/compair]
     // Set Wsg84 as alternative ReferenceSystem

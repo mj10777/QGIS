@@ -212,7 +212,8 @@ class APP_EXPORT QgisApp : public QMainWindow, private Ui::MainWindow
     /**
      * Open a raster or vector file, if supported by Spatialite; ignore other files.
       Used to process a commandline argument, FileOpen or Drop event.
-      \returns true if the file is successfully opened with Spatialite, otherwise continuw with openLayer
+      Called from openLayer to deal with files supported by QgsSpatialiteDbInfo (sqlite3 containers)
+      \returns true if the file is successfully opened with QgsSpatialiteDbInfo, otherwise continue with openLayer
     * \see openLayer
     * \since QGIS 3.0
       */

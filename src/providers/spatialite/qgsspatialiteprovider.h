@@ -139,7 +139,7 @@ class QgsSpatiaLiteProvider: public QgsVectorDataProvider
      * \see getLayerExtent
      * \since QGIS 3.0
      */
-     void updateExtents() override;
+    void updateExtents() override;
 
     /**
      * List of fields
@@ -191,7 +191,7 @@ class QgsSpatiaLiteProvider: public QgsVectorDataProvider
      * \see mSubsetString
      * \since QGIS 3.0
      */
-     QSet<QVariant> uniqueValues( int index, int limit = -1 ) const override;
+    QSet<QVariant> uniqueValues( int index, int limit = -1 ) const override;
 
     /**
      * UniqueStringsMatching
@@ -202,7 +202,7 @@ class QgsSpatiaLiteProvider: public QgsVectorDataProvider
     * \since QGIS 3.0
     */
     QStringList uniqueStringsMatching( int index, const QString &substring, int limit = -1,
-        QgsFeedback *feedback = nullptr ) const override;
+                                       QgsFeedback *feedback = nullptr ) const override;
 
     bool isValid() const override;
     bool isSaveAndLoadStyleToDatabaseSupported() const override { return true; }
@@ -614,6 +614,27 @@ class QgsSpatiaLiteProvider: public QgsVectorDataProvider
      * \since QGIS 3.0
      */
     QgsSpatialiteDbLayer *getDbLayer() const  { return mDbLayer; }
+
+    /**
+     * The active Layer
+     * - being read by the Provider
+     * \note
+     * - isLayerValid() return true if everything is considered correct
+     * \see QgsSpatialiteDbLayer::isLayerValid
+     * \since QGIS 3.0
+     */
+    QgsSpatialiteDbLayer *getDbLayer() const { return mDbLayer; }
+
+    /**
+     * Contains collected Metadata for the Layer
+     * \brief A structured metadata store for a map layer.
+     * \note
+     *  - QgsSpatialiteDbLayer will use a copy of QgsSpatialiteDbInfo  mLayerMetadata as starting point
+     * \see QgsSpatialiteDbLayer::getLayerMetadata
+     * \see setLayerMetadata
+    * \since QGIS 3.0
+    */
+    QgsLayerMetadata layerMetadata() const { return mLayerMetadata; };
 
     /**
      * The sqlite handler
@@ -1519,6 +1540,18 @@ class QgsSpatiaLiteProvider: public QgsVectorDataProvider
      * \since QGIS 3.0
      */
     bool mSpatialIndexMbrCache;
+
+    /**
+     * Contains collected Metadata for the Layer
+     * \brief A structured metadata store for a map layer.
+     * \note
+     *  - QgsSpatialiteDbLayer will use a copy of QgsSpatialiteDbInfo  mLayerMetadata as starting point
+     * \see QgsSpatialiteDbLayer::getLayerMetadata
+     * \see setLayerMetadata
+     * \see layerMetadata
+    * \since QGIS 3.0
+    */
+    QgsLayerMetadata mLayerMetadata;
 
     /**
      * Retrieve a specific of layer fields of the table

@@ -288,6 +288,7 @@ bool QgsRasterLite2Provider::setDbLayer( QgsSpatialiteDbLayer *dbLayer )
                                 .arg( QString::number( userSettings->value( QStringLiteral( "/qgis/default_canvas_color_red" ), 255 ).toInt(), 16 ) )
                                 .arg( QString::number( userSettings->value( QStringLiteral( "/qgis/default_canvas_color_green" ), 255 ).toInt(), 16 ) )
                                 .arg( QString::number( userSettings->value( QStringLiteral( "/qgis/default_canvas_color_blue" ), 255 ).toInt(), 16 ) );
+      setLayerMetadata( getDbLayer()->getLayerMetadata() );
       createLayerMetadata( 1 );
       bRc = true;
     }
@@ -452,11 +453,6 @@ int QgsRasterLite2Provider::createLayerMetadata( int i_debug )
     //-----------------------------------------------------------
     mMetadata = sMetadata;
     mHtmlMetadata = sHtmlMetadata;
-#if 0
-    // If/When QgsLayerMetadata has been added to QgsDataProvider
-    // - then this should be done here
-    setLayerMetadata( getDbLayer()->getLayerMetadata() );
-#endif
     i_status = 1;
   }
   //-----------------------------------------------------------
