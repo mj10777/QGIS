@@ -49,6 +49,7 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      *  'mod_rasterlite2' must have been called
      * QgsSpatialiteDbLayer must not be nullptr [possibly deleted]
      * \see isLayerValid
+     * \since QGIS 3.0
      */
     bool isValid() const override { return isLayerValid(); }
 
@@ -59,6 +60,7 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      * dialogs so that providers can be shown with their supported types. Thus
      * if more than one provider supports a given format, the user is able to
      * select a specific provider to open that file.
+     * \since QGIS 3.0
      */
     QString name() const override;
 
@@ -66,6 +68,7 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      * Return description
      *
      * Return a terse string describing what the provider is.
+     * \since QGIS 3.0
      */
     QString description() const override;
 
@@ -77,6 +80,7 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      * QgsCoordinateReferenceSystem will be returned.
      * \note
      *  readBlock parameter viewExtent will be that of this QgsCoordinateReferenceSystem
+     * \since QGIS 3.0
      */
     QgsCoordinateReferenceSystem crs() const override { return mCrs; }
 
@@ -85,11 +89,13 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      *
      * Sub-layers are used when the provider's source can combine layers
      * it knows about in some way before it hands them off to the provider.
+     * \since QGIS 3.0
      */
     QStringList subLayers() const override { return mSubLayers; }
 
     /**
      * return the number of layers for the current data source
+     * \since QGIS 3.0
      */
     uint subLayerCount() const override { return mSubLayers.size(); }
 
@@ -99,6 +105,7 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      *
      * Sub-layer styles are used to abstract the way the provider's source can symbolise
      * layers in some way at the server, before it serves them to the provider.
+     * \since QGIS 3.0
      */
     QStringList subLayerStyles() const override;
 
@@ -106,17 +113,20 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      * Reorder the list of layer names to be rendered by this provider
      * (in order from bottom to top)
      * \note   layers must have been previously added.
+     * \since QGIS 3.0
      */
     void setLayerOrder( const QStringList &layers ) override;
 
     /**
      * Set the visibility of the given sublayer name
+     * \since QGIS 3.0
      */
     void setSubLayerVisibility( const QString &name, bool vis ) override;
 
     /**
      * Reloads the data from the source. Needs to be implemented by providers with data caches to
      * synchronize with changes in the data source
+     * \since QGIS 3.0
      */
     void reloadData() override;
 
@@ -125,9 +135,11 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
     /**
      * Get number of bands
      *
+     * \see mBandCount
      * \see setDbLayer
      * \see QgsRasterInterface::bandCount
      * \see QgsSpatialiteDbLayer::getLayerNumBands
+     * \since QGIS 3.0
      */
     int bandCount() const override { return mBandCount; }
 
@@ -141,6 +153,7 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      *  - tile_height = mLayerBandsTileSize.height()
      * \see QgsRasterInterface::xBlockSize
      * \see QgsSpatialiteDbLayer::getLayerTileWidth
+     * \since QGIS 3.0
      */
     int xBlockSize() const override { return mXBlockSize; }
 
@@ -154,6 +167,7 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      *  - tile_height = mLayerBandsTileSize.height()
      * \see QgsRasterInterface::yBlockSize
      * \see QgsSpatialiteDbLayer::getLayerTileHeight
+     * \since QGIS 3.0
      */
     int yBlockSize() const override { return mYBlockSize; }
 
@@ -161,9 +175,11 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      * RasterLite2 Raster-Layer Image Width [QgsRasterInterface::xSize() ]
      * \note
      *  - based on LayerExtent and Resolution from raster_coverage table
+     * \see mWidth
      * \see setDbLayer
      * \see QgsRasterInterface::xSize
      * \see QgsSpatialiteDbLayer::getLayerImageWidth
+     * \since QGIS 3.0
      */
     int xSize() const override { return mWidth; }
 
@@ -171,15 +187,18 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      * RasterLite2 Raster-Layer Image Height [QgsRasterInterface::ySize() ]
      * \note
      *  - based on LayerExtent and Resolution from raster_coverage table
+     * \see mHeight
      * \see setDbLayer
      * \see QgsRasterInterface::ySize
      * \see QgsSpatialiteDbLayer::getLayerImageHeight
+     * \since QGIS 3.0
      */
     int ySize() const override { return mHeight; }
 
     /**
      * Returns a bitmask containing the supported capabilities
      *
+     * \since QGIS 3.0
      */
     int capabilities() const override;
 
@@ -187,6 +206,7 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
 
     /**
      * Return the extent for this data layer
+     * \since QGIS 3.0
      */
     QgsRectangle extent() const override { return getLayerExtent(); }
 
@@ -198,6 +218,7 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      * Interactive users of this provider can then, for example,
      * call a QMessageBox to display the contents.
      *
+     * \since QGIS 3.0
      */
     QString lastErrorTitle() override { return mErrorTitle; }
 
@@ -209,30 +230,35 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      * Interactive users of this provider can then, for example,
      * call a QMessageBox to display the contents.
      *
+     * \since QGIS 3.0
      */
     QString lastError() override { return mError; }
 #if 1
 
     /**
      * Returns data type for the band specified by number
+     * \since QGIS 3.0
      */
     Qgis::DataType dataType( int /*bandNo*/ ) const override { return getDbLayer()->getLayerRasterDataType(); }
 
     /**
      * Returns source data type for the band specified by number,
      *  source data type may be shorter than dataType
+     * \since QGIS 3.0
      */
     Qgis::DataType sourceDataType( int /*bandNo*/ ) const override { return getDbLayer()->getLayerRasterDataType(); }
 #else
 
     /**
      * Returns data type for the band specified by number
+     * \since QGIS 3.0
      */
     Qgis::DataType dataType( int /*bandNo*/ ) const override { return Qgis::ARGB32; }
 
     /**
      * Returns source data type for the band specified by number,
      *  source data type may be shorter than dataType
+     * \since QGIS 3.0
      */
     Qgis::DataType sourceDataType( int /*bandNo*/ ) const override { return Qgis::ARGB32; }
 #endif
@@ -240,6 +266,7 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
     /**
      * \brief helper function to create zero padded band names
      *  based on data-type and band number
+     * \since QGIS 3.0
      */
     QString generateBandName( int bandNumber ) const override;
 
@@ -273,17 +300,20 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
 
     /**
      * Clone itself, create deep copy
+     * \since QGIS 3.0
      */
     QgsRasterInterface *clone() const override;
 
     /**
      * Get metadata in a format suitable for feeding directly
      * into a subset of the GUI raster properties "Metadata" tab.
+     * \since QGIS 3.0
      */
-    QString htmlMetadata() override;
+    QString metadata() override;
 
     /**
      * Returns whether the provider supplies a legend graphic
+     * \since QGIS 3.0
      */
     bool supportsLegendGraphic() const override { return false; }
 
@@ -320,6 +350,7 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      * - isDbValid() return if the connection contains layers that are supported by
      * -- QgsSpatiaLiteProvider, QgsGdalProvider and QgsOgrProvider
      * \see QgsSpatialiteDbInfo::isDbValid()
+     * \since QGIS 3.0
      */
     QgsSqliteHandle *getQSqliteHandle() const { return mQSqliteHandle; }
 
@@ -330,6 +361,7 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      * - isDbValid() return if the connection contains layers that are supported by
      * -- QgsSpatiaLiteProvider, QgsGdalProvider and QgsOgrProvider
      * \see QgsSpatialiteDbInfo::isDbValid()
+     * \since QGIS 3.0
      */
     QgsSpatialiteDbInfo *getSpatialiteDbInfo() const { return mSpatialiteDbInfo; }
 
@@ -339,6 +371,7 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      * \note
      *  when false: the file is either a non-supported sqlite3 container
      *  or not a sqlite3 file (a fossil file would be a sqlite3 container not supported)
+     * \since QGIS 3.0
      */
     bool isDbValid() const { if ( getSpatialiteDbInfo() ) return getSpatialiteDbInfo()->isDbValid(); else return false;}
 
@@ -347,6 +380,7 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      * \note
      *  when false: the Layer should not be rendered
      * \see QgsSpatialiteDbLayer::isLayerValid
+     * \since QGIS 3.0
      */
     bool isLayerValid() const { if ( getDbLayer() ) return getDbLayer()->isLayerValid(); else return false;}
 
@@ -359,6 +393,7 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      *  -> will be started through the calling this, if not already active
      * the Provider will fail if not active
      * \see QgsSpatialiteDbInfo::readVectorRasterCoverages
+     * \since QGIS 3.0
      */
     bool isDbRasterLite2() const { return getSpatialiteDbInfo()->isDbRasterLite2(); }
 
@@ -372,6 +407,7 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      * \see dbHasSpatialite
      * \see QgsSqliteHandle::isDbSpatialiteActive
      * \see QgsSpatialiteDbInfo::isDbSpatialiteActive
+     * \since QGIS 3.0
      */
     bool isDbSpatialiteActive() const { return getSpatialiteDbInfo()->isDbSpatialiteActive(); }
 
@@ -383,6 +419,7 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      *  -> will be started through the calling of dbHasSpatialite, if not already active
      * the Provider will fail if not active
     * \see QgsSqliteHandle::isDbSpatialiteActive
+     * \since QGIS 3.0
      */
     bool isDbRasterLite2Active() const { return getSpatialiteDbInfo()->isDbRasterLite2Active(); }
 
@@ -393,6 +430,7 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      *   load Spatialite and RasterLite2-Drivers if not active
      * \returns true if Drivers are active
      * \see QgsSpatialiteDbInfo::dbHasSpatialite
+     * \since QGIS 3.0
      */
     bool dbHasSpatialite() const { return getSpatialiteDbInfo()->dbHasSpatialite( true, true ); }
     //!
@@ -403,18 +441,9 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      * \note
      * - isLayerValid() return true if everything is considered correct
      * \see QgsSpatialiteDbLayer::isLayerValid
+     * \since QGIS 3.0
      */
     QgsSpatialiteDbLayer *getDbLayer() const { return mDbLayer; }
-
-    /**
-     * Contains collected Metadata for the Layer
-     * \brief A structured metadata store for a map layer.
-     * \note
-     *  - QgsSpatialiteDbLayer will use a copy of QgsSpatialiteDbInfo  mLayerMetadata as starting point
-     * \see QgsSpatialiteDbLayer::getLayerMetadata
-    * \since QGIS 3.0
-    */
-    QgsLayerMetadata layerMetadata() const { return getDbLayer()->getLayerMetadata(); };
 
     /**
      * The sqlite handler
@@ -423,6 +452,7 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      * - isDbValid() return if the connection contains layers that are supported by
      * -- QgsSpatiaLiteProvider, QgsGdalProvider and QgsOgrProvider
      * \see QgsSpatialiteDbInfo::isDbValid()
+     * \since QGIS 3.0
      */
     sqlite3 *dbSqliteHandle() const { return getSpatialiteDbInfo()->dbSqliteHandle(); }
 
@@ -456,6 +486,7 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      * \note
      *  - extracted from spatialite_version()
      * \see QgsSpatialiteDbInfo::getSniffDatabaseType
+     * \since QGIS 3.0
     */
     int dbSpatialiteVersionMajor() const { return getSpatialiteDbInfo()->dbSpatialiteVersionMajor(); }
 
@@ -464,6 +495,7 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      * \note
      *  - extracted from spatialite_version()
      * \see QgsSpatialiteDbInfo::getSniffDatabaseType
+     * \since QGIS 3.0
     */
     int dbSpatialiteVersionMinor() const { return getSpatialiteDbInfo()->dbSpatialiteVersionMinor(); }
 
@@ -500,6 +532,7 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      * \note
      *  - extracted from RL2_Version()
      * \see QgsSpatialiteDbInfo::dbHasRasterlite2
+     * \since QGIS 3.0
     */
     int dbRasterLite2VersionMajor() const { return getSpatialiteDbInfo()->dbRasterLite2VersionMajor(); }
 
@@ -508,6 +541,7 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      * \note
      *  - extracted from RL2_Version()
      * \see QgsSpatialiteDbInfo::dbHasRasterlite2
+     * \since QGIS 3.0
     */
     int dbRasterLite2VersionMinor() const { return getSpatialiteDbInfo()->dbRasterLite2VersionMinor(); }
 
@@ -525,6 +559,7 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      * - from the raster_coverages table Table [-1 if Table not found]
      * \note
      * - this does not reflect the amount of RasterLite2 Raster-Coverages that have been loaded
+     * \since QGIS 3.0
      */
     int dbRasterCoveragesLayersCount() const { return getSpatialiteDbInfo()->dbRasterCoveragesLayersCount(); }
 
@@ -534,6 +569,7 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      *  Vector: Layer format: 'table_name(geometry_name)'
      *  Raster: Layer format: 'coverage_name'
      * \see QgsSpatialiteDbLayer::getLayerName
+     * \since QGIS 3.0
      */
     QString getLayerName() const { return mLayerName; }
 
@@ -548,6 +584,7 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      *  - FdoOgr: none
      * \see QgsSpatialiteDbLayer::getTitle
      * \see QgsSpatialiteDbInfo::readVectorRasterCoverages
+     * \since QGIS 3.0
      */
     QString getTitle() const { return mTitle; }
 
@@ -562,6 +599,7 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      *  - FdoOgr: none
      * \see QgsSpatialiteDbLayer::getAbstract
      * \see QgsSpatialiteDbInfo::readVectorRasterCoverages
+     * \since QGIS 3.0
      */
     QString getAbstract() const { return mAbstract; }
 
@@ -576,6 +614,7 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      *  - FdoOgr: none
      * \see QgsSpatialiteDbLayer::getCopyright
      * \see QgsSpatialiteDbInfo::readVectorRasterCoverages
+     * \since QGIS 3.0
      */
     QString getCopyright() const { return mCopyright; }
 
@@ -589,6 +628,7 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      *  - MbTiles: always 4326
      *  - FdoOgr: geometry_columns(srid)
      * \see QgsSpatialiteDbLayer::getSrid
+     * \since QGIS 3.0
      */
     int getSrid() const { return mSrid; }
 
@@ -607,7 +647,10 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      *  With UpdateLayerStatistics the Number of features will also be updated and retrieved
      * \param bUpdate force reading from Database
      * \param bUpdateStatistics UpdateLayerStatistics before reading
-    */
+     * \see mLayerExtent
+     * \see mNumberFeatures
+     * \since QGIS 3.0
+     */
     QgsRectangle getLayerExtent( bool bUpdate = false, bool bUpdateStatistics = false ) const { return getDbLayer()->getLayerExtent( bUpdate, bUpdateStatistics ); }
 
   protected:
@@ -615,6 +658,7 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
     /**
      * Read block of data using give extent and size
      * \note not available in Python bindings
+     * \since QGIS 3.0
      */
     void readBlock( int bandNo, const QgsRectangle &viewExtent, int width, int height, void *data, QgsRasterBlockFeedback *feedback = nullptr ) override;
 
@@ -625,6 +669,7 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      * to determine what constitutes a valid layer.
      * \note
      * QGis must be compiled with RasterLite2 support (RASTERLITE2_VERSION_GE_*)
+     * \since QGIS 3.0
      */
     bool mValid;
 
@@ -633,6 +678,7 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      * extracted from dataSourceUri()
      * \note
      * The Uri is based on the ogr version, which is NOT supported by QgsDataSourceUri
+     * \since QGIS 3.0
      */
     QString mUriTableName;
 
@@ -641,6 +687,7 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      * extracted from dataSourceUri()
      * \note
      * The Uri is based on the ogr version, which is NOT supported by QgsDataSourceUri
+     * \since QGIS 3.0
      */
     QString mUriSqlitePath;
 
@@ -651,6 +698,7 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      * created from value returned by getSridEpsg()
      * \see setDbLayer
      * \see QgsSpatialiteDbLayer::getSridEpsg
+     * \since QGIS 3.0
      */
     QgsCoordinateReferenceSystem mCrs;
 
@@ -661,6 +709,7 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      * it knows about in some way before it hands them off to the provider.
      * \see setLayerOrder
      * \see setSubLayerVisibility
+     * \since QGIS 3.0
      */
     QStringList mSubLayers;
 
@@ -671,6 +720,7 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      * it knows about in some way before it hands them off to the provider.
      * \see setLayerOrder
      * \see setSubLayerVisibility
+     * \since QGIS 3.0
      */
     QList<bool> mSubLayerVisibilities;
 
@@ -682,6 +732,7 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      * Interactive users of this provider can then, for example,
      * call a QMessageBox to display the contents.
      *
+     * \since QGIS 3.0
      */
     QString mErrorTitle;
 
@@ -693,6 +744,7 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      * Interactive users of this provider can then, for example,
      * call a QMessageBox to display the contents.
      *
+     * \since QGIS 3.0
      */
     QString mError;
 
@@ -700,6 +752,7 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      * mCachedImage
      *
      * Not used
+     * \since QGIS 3.0
      */
     QImage mCachedImage;
 
@@ -707,6 +760,7 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      * mCachedImage
      *
      * Not used
+     * \since QGIS 3.0
      */
     QgsRectangle mCachedImageExtent;
 
@@ -717,6 +771,7 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      * - isDbValid() return if the connection contains layers that are supported by
      * -- QgsSpatiaLiteProvider, QgsGdalProvider and QgsOgrProvider
      * \see getQSqliteHandle()
+     * \since QGIS 3.0
      */
     QgsSqliteHandle *mQSqliteHandle = nullptr;
 
@@ -726,6 +781,8 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      * \note
      * - isLayerValid() return true if everything is considered correct
      * \see QgsSpatialiteDbLayer::isLayerValid
+     * \see mDbLayer
+     * \since QGIS 3.0
      */
     bool setSqliteHandle( QgsSqliteHandle *qSqliteHandle );
 
@@ -736,6 +793,7 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      * - isDbValid() return if the connection contains layers that are supported by
      * -- QgsSpatiaLiteProvider, QgsGdalProvider and QgsOgrProvider
      * \see QgsSpatialiteDbInfo::isDbValid()
+     * \since QGIS 3.0
      */
     QgsSpatialiteDbInfo *mSpatialiteDbInfo = nullptr;
 
@@ -745,6 +803,8 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      * \note
      * - isLayerValid() return true if everything is considered correct
      * \see QgsSpatialiteDbLayer::isLayerValid
+     * \see mDbLayer
+     * \since QGIS 3.0
      */
     bool setDbLayer( QgsSpatialiteDbLayer *dbLayer );
 
@@ -755,6 +815,7 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      * - isLayerValid() return true if everything is considered correct
      * \see QgsSpatialiteDbLayer::isLayerValid
      * \see setDbLayer
+     * \since QGIS 3.0
      */
     QgsSpatialiteDbLayer *mDbLayer = nullptr;
 
@@ -764,6 +825,7 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      * \note
      * - if the connection is being shared and used elsewhere, the Database will not be closed
      * \see QgsSqliteHandle::closeDb
+     * \since QGIS 3.0
      */
     void closeDb();
 
@@ -780,6 +842,7 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      * - position 5: estimated Standard Deviation value as double
      * - position 6: the total count of valid pixels (excluding NoData pixels) value as integer
      * \see QgsSpatialiteDbInfo::GetRasterLite2RasterLayersInfo
+     * \since QGIS 3.0
      */
     QStringList mLayerBandsInfo;
 
@@ -790,6 +853,7 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      *  - QgsSpatialiteDbInfo::ParseSeparatorGeneral (';') is used a separator
      * - position 1: pixel_min value as integer
      * \see QgsSpatialiteDbInfo::GetRasterLite2RasterLayersInfo
+     * \since QGIS 3.0
      */
     QMap<int, double> mLayerBandsNodata;
 
@@ -800,6 +864,7 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      *  - QgsSpatialiteDbInfo::ParseSeparatorGeneral (';') is used a separator
      * - position 1: pixel_min value as integer
      * \see QgsSpatialiteDbInfo::GetRasterLite2RasterLayersInfo
+     * \since QGIS 3.0
      */
     QMap<int, double> mLayerBandsPixelMin;
 
@@ -810,6 +875,7 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      *  - QgsSpatialiteDbInfo::ParseSeparatorGeneral (';') is used a separator
      * - position 1: pixel_min value as integer
      * \see QgsSpatialiteDbInfo::GetRasterLite2RasterLayersInfo
+     * \since QGIS 3.0
      */
     QMap<int, double> mLayerBandsPixelMax;
 
@@ -820,6 +886,7 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      *  - QgsSpatialiteDbInfo::ParseSeparatorGeneral (';') is used a separator
      * - position 3: Average/Mean value as double
      * \see QgsSpatialiteDbInfo::GetRasterLite2RasterLayersInfo
+     * \since QGIS 3.0
      */
     QMap<int, double> mLayerBandsPixelAverage;
 
@@ -830,6 +897,7 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      *  - QgsSpatialiteDbInfo::ParseSeparatorGeneral (';') is used a separator
      * - position 4: estimated Variance value as double
      * \see QgsSpatialiteDbInfo::GetRasterLite2RasterLayersInfo
+     * \since QGIS 3.0
      */
     QMap<int, double> mLayerBandsPixelVariance;
 
@@ -840,6 +908,7 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      *  - QgsSpatialiteDbInfo::ParseSeparatorGeneral (';') is used a separator
      * - position 5: estimated Standard Deviation value as double
      * \see QgsSpatialiteDbInfo::GetRasterLite2RasterLayersInfo
+     * \since QGIS 3.0
      */
     QMap<int, double> mLayerBandsPixelStandardDeviation;
 
@@ -850,6 +919,7 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      *  - QgsSpatialiteDbInfo::ParseSeparatorGeneral (';') is used a separator
      * - position 6: the total count of valid pixels (excluding NoData pixels) value as integer
      * \see QgsSpatialiteDbInfo::GetRasterLite2RasterLayersInfo
+     * \since QGIS 3.0
      */
     QMap<int, int> mLayerBandsPixelValidPixelsCount;
 
@@ -859,6 +929,7 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      * \note
      *  - RL2_GetBandStatistics_Histogram
      * \see QgsSpatialiteDbInfo::GetRasterLite2RasterLayersInfo
+     * \since QGIS 3.0
      */
     QMap<int, QImage> mLayerBandsHistograms;
 
@@ -876,21 +947,16 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      * - position 6: the total count of valid pixels (excluding NoData pixels) value as integer
      * \see QgsSpatialiteDbInfo::GetRasterLite2RasterLayersInfo
      * \see QgsRasterDataProvider::mSrcNoDataValue
+     * \since QGIS 3.0
      */
     void setLayerBandsInfo( QStringList layerBandsInfo, QMap<int, QImage> layerBandsHistograms );
 
     /**
      * Get metadata in a format suitable for feeding directly
      * into a subset of the GUI raster properties "Metadata" tab.
+     * \since QGIS 3.0
      */
     QString mMetadata;
-
-    /**
-     * Get metadata in a format suitable for feeding directly
-     * into a subset of the GUI raster properties "Metadata" tab.
-     * \see QgsRasterDataProvider::metadata
-     */
-    QString mHtmlMetadata;
 
     /**
      * Query and build Metadata string about properties of the Rasterlite2 layer
@@ -899,6 +965,7 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      *  - at the moment it is not clear if we can really return the real internal information
      *   about bands, no data etc, since readBlock returns a complete image
      * \see QgsRasterDataProvider::metadata
+     * \since QGIS 3.0
      */
     int createLayerMetadata( int i_debug = 0 );
 
@@ -910,6 +977,7 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      * - The default Background only used when the image mime-type does not support transparity.
      * \see readBlock
      * \see setDbLayer
+     * \since QGIS 3.0
      */
     QString mDefaultImageBackground;
 
@@ -919,6 +987,7 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      * \note
      *  - only one Style can be rendered
      *  \see setLayerStyleSelected
+     * \since QGIS 3.0
      */
     QString mDefaultRasterStyle;
 
@@ -929,6 +998,7 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      * - fill data from requeded Band
      * \see readBlock
      * \see imageBands
+     * \since QGIS 3.0
      */
     QgsRectangle mImageBandsViewExtent;
 
@@ -942,6 +1012,7 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      * - 3=Blue
      * \see imageBandsViewExtent
      * \see readBlock
+     * \since QGIS 3.0
      */
     QList<QByteArray *> mImageBands;
 
@@ -953,6 +1024,7 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      * \see setDbLayer
      * \see QgsRasterInterface::xSize
      * \see QgsSpatialiteDbLayer::getLayerImageWidth
+     * \since QGIS 3.0
      */
     int mWidth = 0;
 
@@ -964,6 +1036,7 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      * \see setDbLayer
      * \see QgsRasterInterface::ySize
      * \see QgsSpatialiteDbLayer::getLayerImageHeight
+     * \since QGIS 3.0
      */
     int mHeight = 0;
 
@@ -979,6 +1052,7 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      * \see setDbLayer
      * \see QgsRasterInterface::xBlockSize
      * \see QgsSpatialiteDbLayer::getLayerTileWidth
+     * \since QGIS 3.0
      */
     int mXBlockSize = 0;
 
@@ -994,6 +1068,7 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      * \see setDbLayer
      * \see QgsRasterInterface::yBlockSize
      * \see QgsSpatialiteDbLayer::getLayerTileHeight
+     * \since QGIS 3.0
      */
     int mYBlockSize = 0;
 
@@ -1004,6 +1079,7 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      * \see setDbLayer
      * \see QgsRasterInterface::bandCount
      * \see QgsSpatialiteDbLayer::getLayerNumBands
+     * \since QGIS 3.0
      */
     int mBandCount = 1;
 
@@ -1013,6 +1089,7 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      *  Vector: Layer format: 'table_name(geometry_name)'
      *  Raster: Layer format: 'coverage_name'
      * \see QgsSpatialiteDbLayer::getLayerName
+     * \since QGIS 3.0
      */
     QString mLayerName;
 
@@ -1027,6 +1104,7 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      *  - FdoOgr: none
      * \see QgsSpatialiteDbLayer::getTitle
      * \see QgsSpatialiteDbInfo::readVectorRasterCoverages
+     * \since QGIS 3.0
      */
     QString mTitle;
 
@@ -1041,6 +1119,7 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      *  - FdoOgr: none
      * \see QgsSpatialiteDbLayer::getAbstract
      * \see QgsSpatialiteDbInfo::readVectorRasterCoverages
+     * \since QGIS 3.0
      */
     QString mAbstract;
 
@@ -1055,6 +1134,7 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      *  - FdoOgr: none
      * \see QgsSpatialiteDbLayer::getCopyright
      * \see QgsSpatialiteDbInfo::readVectorRasterCoverages
+     * \since QGIS 3.0
      */
     QString mCopyright;
 
@@ -1068,6 +1148,7 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      *  - MbTiles: always 4326
      *  - FdoOgr: geometry_columns(srid)
      * \see QgsSpatialiteDbLayer::getSrid
+     * \since QGIS 3.0
      */
     int mSrid;
 
@@ -1077,6 +1158,7 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      * \note
      *  - QgsOgrProvider: GeoPackage-Vector
      *  - QgsGdalProvider: GeoPackage-Raster, MbTiles, RasterLite1
+     * \since QGIS 3.0
      */
     bool mIsDbValid;
 
@@ -1084,6 +1166,7 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      * Is the Layer valid
      * \note
      *  when false: the Layer should not be rendered
+     * \since QGIS 3.0
      */
     bool mIsLayerValid;
 

@@ -25,15 +25,15 @@
 QgsSpatiaLiteTableModel::QgsSpatiaLiteTableModel(): QStandardItemModel(), mTableCount( 0 ), mDbRootItem( nullptr ), mLoadGeometrylessTables( true )
 {
   headerLabels << tr( "Table" );
-  mColumnTable = 0;
+  i_field_table = 0;
   headerLabels << tr( "Geometry column" );
-  mColumnGeometryName = mColumnTable + 1;
+  i_field_geometry_name = i_field_table + 1;
   headerLabels << tr( "Geometry-Type" );
-  mColumnGeometryType = mColumnGeometryName + 1;
+  i_field_geometry_type = i_field_geometry_name + 1;
   headerLabels << tr( "Sql" );
-  mColumnSql = mColumnGeometryType + 1;
+  i_field_sql = i_field_geometry_type + 1;
   headerLabels << tr( "ColumnSortHidden" );
-  mColumnSortHidden = mColumnSql + 1;
+  i_field_sort_hidden = i_field_sql + 1;
   setHorizontalHeaderLabels( headerLabels );
 }
 //-----------------------------------------------------------------
@@ -54,12 +54,12 @@ bool QgsSpatiaLiteTableModel::createDatabase( QString sDatabaseFileName, QgsSpat
       switch ( dbCreateOption )
       {
         case QgsSpatialiteDbInfo::Spatialite40:
-        case QgsSpatialiteDbInfo::Spatialite50:
+        case QgsSpatialiteDbInfo::Spatialite45:
           switch ( spatialiteDbInfo->dbSpatialMetadata() )
           {
             case QgsSpatialiteDbInfo::SpatialiteLegacy:
             case QgsSpatialiteDbInfo::Spatialite40:
-            case QgsSpatialiteDbInfo::Spatialite50:
+            case QgsSpatialiteDbInfo::Spatialite45:
               // this is a Database that can be used for QgsSpatiaLiteProvider
               bRc = true;
               break;
@@ -95,7 +95,7 @@ bool QgsSpatiaLiteTableModel::createDatabase( QString sDatabaseFileName, QgsSpat
     }
     if ( bRc )
     {
-      setSpatialiteDbInfo( spatialiteDbInfo, true );
+      setSqliteDb( spatialiteDbInfo, true );
     }
     else
     {
@@ -107,9 +107,9 @@ bool QgsSpatiaLiteTableModel::createDatabase( QString sDatabaseFileName, QgsSpat
   return bRc;
 }
 //-----------------------------------------------------------------
-// QgsSpatiaLiteTableModel::setSpatialiteDbInfo
+// QgsSpatiaLiteTableModel::setSqliteDb
 //-----------------------------------------------------------------
-void QgsSpatiaLiteTableModel::setSpatialiteDbInfo( QgsSpatialiteDbInfo *spatialiteDbInfo, bool loadGeometrylessTables )
+void QgsSpatiaLiteTableModel::setSqliteDb( QgsSpatialiteDbInfo *spatialiteDbInfo, bool loadGeometrylessTables )
 {
   if ( ( spatialiteDbInfo ) && ( spatialiteDbInfo->isDbValid() ) )
   {
@@ -350,7 +350,7 @@ void QgsSpatiaLiteTableModel::addRootEntry()
         tbTypeItem->setFlags( Qt::ItemIsEnabled );
         QStandardItem *emptyItem_01 = new QStandardItem();
         emptyItem_01->setFlags( Qt::ItemIsEnabled );
-        //  Every Column must be filled (even if empty)
+        //  Ever Columns must be filled (even if empty)
         QStandardItem *emptyItem_02 = new QStandardItem();
         emptyItem_02->setFlags( Qt::ItemIsEnabled );
         QStandardItem *emptyItem_03 = new QStandardItem();
@@ -380,7 +380,7 @@ void QgsSpatiaLiteTableModel::addRootEntry()
         {
           QList < QStandardItem *> tbItemList = createLayerTypeEntry( QgsSpatialiteDbInfo::SpatialView, mSpatialiteDbInfo->dbSpatialViewsLayersCount() );
           mDbRootItem->appendRow( tbItemList );
-          if ( mSpatialiteDbInfo->getMapGroupNames().size() > 0 )
+          if ( mSpatialiteDbInfo->getListGroupNames().size() > 0 )
           {
             QStandardItem *dbSpatialViewItem = nullptr;
             dbItems = findItems( "SpatialView", Qt::MatchExactly | Qt::MatchRecursive, 0 );
@@ -388,7 +388,7 @@ void QgsSpatiaLiteTableModel::addRootEntry()
             {
               dbSpatialViewItem = dbItems.at( 0 );
               QIcon groupIconType = QgsSpatialiteDbInfo::SpatialiteLayerTypeIcon( QgsSpatialiteDbInfo::StyleVector );
-              QMap<QString, int> mapGroupNames = mSpatialiteDbInfo->getMapGroupNames();
+              QMap<QString, int> mapGroupNames = mSpatialiteDbInfo->getListGroupNames();
               for ( QMap<QString, int>::iterator itLayers = mapGroupNames.begin(); itLayers != mapGroupNames.end(); ++itLayers )
               {
                 QStandardItem *tbTypeItem = new QStandardItem( groupIconType, itLayers.key() );
@@ -546,7 +546,7 @@ void QgsSpatiaLiteTableModel::addTableEntryType( QMap<QString, QString> mapLayer
         case QgsSpatiaLiteTableModel::EntryTypeLayer:
         default:
         {
-          QgsSpatialiteDbLayer *dbLayer = mSpatialiteDbInfo->getSpatialiteDbLayer( itLayers.key(), bLoadLayer );
+          QgsSpatialiteDbLayer *dbLayer = mSpatialiteDbInfo->getQgsSpatialiteDbLayer( itLayers.key(), bLoadLayer );
           if ( ( dbLayer ) && ( dbLayer->isLayerValid() ) )
           {
             addTableEntryLayer( dbLayer, mapLayers.count() );

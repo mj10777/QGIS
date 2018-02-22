@@ -380,7 +380,7 @@ void QgsSpatiaLiteTableModel::addRootEntry()
         {
           QList < QStandardItem *> tbItemList = createLayerTypeEntry( QgsSpatialiteDbInfo::SpatialView, mSpatialiteDbInfo->dbSpatialViewsLayersCount() );
           mDbRootItem->appendRow( tbItemList );
-          if ( mSpatialiteDbInfo->getMapGroupNames().size() > 0 )
+          if ( mSpatialiteDbInfo->getListGroupNames().size() > 0 )
           {
             QStandardItem *dbSpatialViewItem = nullptr;
             dbItems = findItems( "SpatialView", Qt::MatchExactly | Qt::MatchRecursive, 0 );
@@ -388,7 +388,7 @@ void QgsSpatiaLiteTableModel::addRootEntry()
             {
               dbSpatialViewItem = dbItems.at( 0 );
               QIcon groupIconType = QgsSpatialiteDbInfo::SpatialiteLayerTypeIcon( QgsSpatialiteDbInfo::StyleVector );
-              QMap<QString, int> mapGroupNames = mSpatialiteDbInfo->getMapGroupNames();
+              QMap<QString, int> mapGroupNames = mSpatialiteDbInfo->getListGroupNames();
               for ( QMap<QString, int>::iterator itLayers = mapGroupNames.begin(); itLayers != mapGroupNames.end(); ++itLayers )
               {
                 QStandardItem *tbTypeItem = new QStandardItem( groupIconType, itLayers.key() );
@@ -546,7 +546,7 @@ void QgsSpatiaLiteTableModel::addTableEntryType( QMap<QString, QString> mapLayer
         case QgsSpatiaLiteTableModel::EntryTypeLayer:
         default:
         {
-          QgsSpatialiteDbLayer *dbLayer = mSpatialiteDbInfo->getSpatialiteDbLayer( itLayers.key(), bLoadLayer );
+          QgsSpatialiteDbLayer *dbLayer = mSpatialiteDbInfo->getQgsSpatialiteDbLayer( itLayers.key(), bLoadLayer );
           if ( ( dbLayer ) && ( dbLayer->isLayerValid() ) )
           {
             addTableEntryLayer( dbLayer, mapLayers.count() );

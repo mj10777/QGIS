@@ -153,7 +153,7 @@ QGISEXTERN QgsDataItem *dataItem( QString path, QgsDataItem *parentItem )
 // - QgsRasterLayer/QgsVectorLayer->htmlMetadata()
 //-----------------------------------------------------------------
 QgsSpatialiteLayerItem::QgsSpatialiteLayerItem( QgsDataItem *parent, QString filePath, QString sLayerName, QgsSpatialiteDbInfo *spatialiteDbInfo )
-  : QgsLayerItem( parent, "", filePath, "", QgsLayerItem::Point, QStringLiteral( "spatialite" ) ), mSpatialiteDbInfo( spatialiteDbInfo )
+  : QgsLayerItem( parent, "", filePath, "", QgsLayerItem::Point, QStringLiteral( "spatialite45" ) ), mSpatialiteDbInfo( spatialiteDbInfo )
 {
   mLayerType = QgsLayerItem::NoType;
   if ( path() == QStringLiteral( "spatialite:" ) )
@@ -190,11 +190,11 @@ QgsSpatialiteLayerItem::QgsSpatialiteLayerItem( QgsDataItem *parent, QString fil
       }
     }
     setName( sLayerName );
-    mLayerInfo = mSpatialiteDbInfo->getDbLayerInfo( sLayerName );
+    mLayerInfo = mSpatialiteDbInfo->getDbLayerInfo( name() );
     QString sTableName  = QString::null;
     QString sGeometryColumn = QString::null;
     // Extract TableName/GeometryColumn from sent 'table_name' or 'table_name(field_name)' from LayerName
-    QgsSpatialiteDbInfo::parseLayerName( sLayerName, sTableName, sGeometryColumn );
+    QgsSpatialiteDbInfo::parseLayerName( name(), sTableName, sGeometryColumn );
     QString sGeometryType; // For Layers that contain no Geometries, this will be the Layer-Type
     QString sLayerTypeSpatialite;
     int iSpatialIndex = -1;
@@ -593,7 +593,7 @@ QList<QAction *> QgsSpatialiteRootItem::actions( QWidget *parent )
 //-----------------------------------------------------------------
 QWidget *QgsSpatialiteRootItem::paramWidget()
 {
-  QgsSpatiaLiteSourceSelect *select = new QgsSpatiaLiteSourceSelect( nullptr, nullptr, QgsProviderRegistry::WidgetMode::Manager );
+  QgsSpatiaLiteSourceSelect *select = new QgsSpatiaLiteSourceSelect( nullptr, 0, QgsProviderRegistry::WidgetMode::Manager );
   connect( select, &QgsSpatiaLiteSourceSelect::connectionsChanged, this, &QgsSpatialiteRootItem::onConnectionsChanged );
   return select;
 }

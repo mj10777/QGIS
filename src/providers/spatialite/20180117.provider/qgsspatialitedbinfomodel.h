@@ -54,19 +54,12 @@ class QgsSpatialiteDbInfoModel : public QAbstractItemModel
     QgsSpatialiteDbInfoModel( QObject *parent = nullptr );
     ~QgsSpatialiteDbInfoModel();
 
-    enum SpatialiteDbInfoModelType
-    {
-      ModelTypeConnections = 0,
-      ModelTypeLayerOrder = 1,
-      ModelTypeMaintenanceColumns = 2,
-      ModelTypeUnknown = 99999
-    };
-
     /**
      * General function to retrieve Data from Item
      * \note
      *  - should be used by specific column functions [candidate to be moved to private]
     * \returns QVariant of column value
+    * \since QGIS 3.0
     */
     QVariant data( const QModelIndex &index, int role ) const Q_DECL_OVERRIDE;
 
@@ -75,6 +68,7 @@ class QgsSpatialiteDbInfoModel : public QAbstractItemModel
      * \note
      *  - may not be needed [candidate to be removed]
     * \returns QVariant of column value
+    * \since QGIS 3.0
     */
     QVariant headerData( int section, Qt::Orientation orientation, int role = Qt::DisplayRole ) const Q_DECL_OVERRIDE;
 
@@ -88,6 +82,7 @@ class QgsSpatialiteDbInfoModel : public QAbstractItemModel
      * \note
      *  - set during construction. Avoid manual use of numeric value in code
     * \returns count of columns
+    * \since QGIS 3.0
     */
     int columnCount( const QModelIndex &parent = QModelIndex() ) const Q_DECL_OVERRIDE;
 
@@ -98,6 +93,7 @@ class QgsSpatialiteDbInfoModel : public QAbstractItemModel
     * \param index with row() and column() of Item
     * \returns flags for the given row and column of the Item
     * \see QgsSpatialiteDbInfoItem::flags
+    * \since QGIS 3.0
     */
     Qt::ItemFlags flags( const QModelIndex &index ) const Q_DECL_OVERRIDE;
     bool setData( const QModelIndex &index, const QVariant &value, int role = Qt::EditRole ) Q_DECL_OVERRIDE;
@@ -109,57 +105,13 @@ class QgsSpatialiteDbInfoModel : public QAbstractItemModel
     bool removeRows( int position, int rows, const QModelIndex &parent = QModelIndex() ) Q_DECL_OVERRIDE;
 
     /**
-     * Retrieve the Modul-Type
-     * Modul-Type being used
-     * \note
-     *  ModelTypeConnections
-     *  ModelTypeLayerOrder
-     */
-    SpatialiteDbInfoModelType getModelType() const { return mModelType; }
-
-    /**
-     * Returns the String value of the enum of Model-Types of the QgsSpatialiteDbInfoItem
-     * - QgsSpatialiteDbInfoModel::SpatialiteDbInfoModelType
-     * \note
-     * \see getItemTypeString
-     */
-    static QString SpatialiteDbInfoModelTypeName( QgsSpatialiteDbInfoModel::SpatialiteDbInfoModelType modelType );
-
-    /**
-     * Returns  the enum of Model-Type of the QgsSpatialiteDbInfoItem as String
-     * \note
-     *  -
-    * \returns Model-Type of the QgsSpatialiteDbInfoItem
-    * \see getItemType()
-    */
-    QString getModelTypeString() const { return QgsSpatialiteDbInfoModel::SpatialiteDbInfoModelTypeName( mModelType ); }
-
-    /**
-     * Placeholder for Model RootItem
-     * - used as insert point of child Spatial Items when building
-     * \note
-     * - removes all entries when a new Database is being opened
-     * \see setSpatialiteDbInfo
-     * \see addDatabaseEntry
-     */
-    QgsSpatialiteDbInfoItem *getModelRootItem() { return mModelRootItem; }
-
-
-    /**
-     * Set the Modul-Type
-     * Modul-Type being used
-     * \note
-     *  ModelTypeConnections
-     *  ModelTypeLayerOrder
-     */
-    QgsSpatialiteDbInfoItem *setModelType( SpatialiteDbInfoModelType modelType );
-
-    /**
      * Returns the Index of Column 'Hidden' from the selected Item
      * \note
      *  - set during construction. Avoid manual use of numeric value in code
     * \returns index-number of column being used in QgsSpatiaLiteSourceSelect
+    * \see mColumnSortHidden
     * \see QgsSpatiaLiteSourceSelect::on_mSearchColumnComboBox_currentIndexChanged
+    * \since QGIS 3.0
     */
     int getColumnSortHidden() const { return mColumnSortHidden; }
 
@@ -168,7 +120,9 @@ class QgsSpatialiteDbInfoModel : public QAbstractItemModel
      * \note
      *  - set during construction. Avoid manual use of numeric value in code
     * \returns index-number of column being used in QgsSpatiaLiteSourceSelect
+    * \see mColumnTable
     * \see QgsSpatiaLiteSourceSelect::on_mSearchColumnComboBox_currentIndexChanged
+    * \since QGIS 3.0
     */
     int getTableNameIndex() const { return mColumnTable; }
 
@@ -177,7 +131,9 @@ class QgsSpatialiteDbInfoModel : public QAbstractItemModel
      * \note
      *  - set during construction. Avoid manual use of numeric value in code
     * \returns index-number of column being used in QgsSpatiaLiteSourceSelect
+    * \see mColumnTable
     * \see QgsSpatiaLiteSourceSelect::QgsSpatiaLiteSourceSelect
+    * \since QGIS 3.0
     */
     QString getTableNameText() const;
 
@@ -188,6 +144,7 @@ class QgsSpatialiteDbInfoModel : public QAbstractItemModel
     * \returns QString-Value of column being used in QgsSpatiaLiteSourceSelect
     * \see getTableNameIndex
     * \see QgsSpatiaLiteSourceSelect::on_mSearchColumnComboBox_currentIndexChanged
+    * \since QGIS 3.0
     */
     QString getTableName( const QModelIndex &index ) const;
 
@@ -196,7 +153,9 @@ class QgsSpatialiteDbInfoModel : public QAbstractItemModel
      * \note
      *  - set during construction. Avoid manual use of numeric value in code
     * \returns index-number of column being used in QgsSpatiaLiteSourceSelect
+    * \see mColumnGeometryName
     * \see QgsSpatiaLiteSourceSelect::on_mSearchColumnComboBox_currentIndexChanged
+    * \since QGIS 3.0
     */
     int getGeometryNameIndex() const { return mColumnGeometryName; }
 
@@ -205,7 +164,9 @@ class QgsSpatialiteDbInfoModel : public QAbstractItemModel
      * \note
      *  - set during construction. Avoid manual use of numeric value in code
     * \returns index-number of column being used in QgsSpatiaLiteSourceSelect
+    * \see mColumnGeometryName
     * \see QgsSpatiaLiteSourceSelect::QgsSpatiaLiteSourceSelect
+    * \since QGIS 3.0
     */
     QString getGeometryNameText() const;
 
@@ -213,10 +174,10 @@ class QgsSpatialiteDbInfoModel : public QAbstractItemModel
      * Returns the Value of Column 'Geometry-Type' from the selected Item
      * \note
      *  - Index value set during construction. Avoid manual use of numeric value in code
-     * \param index QModelIndex to use to retrieve the Item
     * \returns QString-Value of column being used in QgsSpatiaLiteSourceSelect
     * \see getTableNameIndex
     * \see QgsSpatiaLiteSourceSelect::on_mSearchColumnComboBox_currentIndexChanged
+    * \since QGIS 3.0
     */
     QString getGeometryName( const QModelIndex &index ) const;
 
@@ -224,77 +185,20 @@ class QgsSpatialiteDbInfoModel : public QAbstractItemModel
      * Returns the LayerName based on  Values of the Columns 'Table' and 'Geometry' from the selected Item
      * \note
      *  - checking is done to insure the the retured value exists
-     * \param index QModelIndex to use to retrieve the Item
     * \returns QString Value of LayerName
     * \see getTableNameIndex
     * \see getLayerNameUris
+    * \since QGIS 3.0
     */
     QString getLayerName( const QModelIndex &index ) const;
-
-    /**
-     * Returns the LayerName based on  Values of the Columns 'Table' and 'Geometry' from the selected Item
-     * \note
-     *  - checking is done to insure the the retured value exists
-     * \param index QModelIndex to use to retrieve the Item
-     * \param iParm 0: return any Item found ; 1=specific Item-Type
-     * \returns layerItem* Item which contains a  QgsSpatialiteDbLayer
-     * \see getTableNameIndex
-     * \see getLayerNameUris
-     * \since QGIS 3.0
-    */
-    QgsSpatialiteDbInfoItem *getLayerItem( const QModelIndex &index, int iParm = 0 );
-
-    /**
-     * Remove a Item, inside its Parent/Group
-     *  - if, after the removal, the Parent/Group is empty: the Group will be removed
-     * \note
-     * Type: ModelTypeLayerOrder only
-     *  -beginRemoveRows and endRemoveRows are used to insure that the calling View does not become confused
-     * \param iMoveCount a +/- number away from present position inside the parent
-     * \returns QModelIndex of the next Item to be used for setCurrentIndex of the View, when valid
-     * \see QgsSpatialiteDbInfoItem::removeChild
-     * \see QgsSpatiaLiteSourceSelect::spatialiteDbInfoContextMenuRequest
-     * \since QGIS 3.0
-    */
-    QModelIndex removeLayerOrderChild( QgsSpatialiteDbInfoItem *layerChild );
-
-    /**
-     * Move a Item, inside its Parent, to a new position
-     *  - for Up/Down ; First to Last ; Last to First or a specific position inside the Parent
-     * \note
-     * Type: ModelTypeLayerOrder only
-     * presentPosition + (negative value) < 0 = Last Position
-     * presentPosition + (positive value) >= count = First Position
-     *  - beginMoveRows and endMoveRows are used to insure that the calling View does not become confused
-     * \param iMoveCount is a +/- number from the present position inside the parent
-     * \returns QModelIndex of the next Item to be used for setCurrentIndex of the View, when valid
-     * \see QgsSpatialiteDbInfoItem::moveChildPosition
-     * \see QgsSpatialiteDbInfoItem::moveChild
-     * \see QgsSpatiaLiteSourceSelect::moveLayerOrderUpDown
-     * \since QGIS 3.0
-    */
-    QModelIndex moveLayerOrderChild( QgsSpatialiteDbInfoItem *layerChild, int iMoveCount = 0 );
-
-    /**
-     * Set Selected Style
-     *  The selected style will be set in the Layer entry
-     * \note
-     * Emits layoutAboutToBeChanged before calling the Item function
-     * and layoutChanged after to insure that the change is shown
-     *  - This will be used for the 'addDbMapLayers' logic
-     * \see QgsSpatialiteDbInfoItem::setSelectedStyle
-     * \see QgsSpatiaLiteSourceSelect::onSourceSelectTreeView_doubleClicked
-     */
-    bool setSelectedStyle( QgsSpatialiteDbInfoItem *layerChild );
 
     /**
      * Returns the Urls based on  LayerName  from the selected Item
      * \note
      *  - checking is done to insure the the retured value exists
-     * \param index QModelIndex to use to retrieve the Item
-     * \returns QString Value of LayerName
-     * \see getLayerName
-     * \since QGIS 3.0
+    * \returns QString Value of LayerName
+    * \see getLayerName
+    * \since QGIS 3.0
     */
     QString getLayerNameUris( const QModelIndex &index ) const;
 
@@ -302,9 +206,10 @@ class QgsSpatialiteDbInfoModel : public QAbstractItemModel
      * Returns the Index of Column 'Geometry' from the selected Item
      * \note
      *  - set during construction. Avoid manual use of numeric value in code
-     * \returns index-number of column being used in QgsSpatiaLiteSourceSelect
-     * \see QgsSpatiaLiteSourceSelect::on_mSearchColumnComboBox_currentIndexChanged
-     * \since QGIS 3.0
+    * \returns index-number of column being used in QgsSpatiaLiteSourceSelect
+    * \see mColumnGeometryType
+    * \see QgsSpatiaLiteSourceSelect::on_mSearchColumnComboBox_currentIndexChanged
+    * \since QGIS 3.0
     */
     int getGeometryTypeIndex() const { return mColumnGeometryType; }
 
@@ -313,6 +218,7 @@ class QgsSpatialiteDbInfoModel : public QAbstractItemModel
      * \note
      *  - 3: ItemTypeHelpRoot: all level should be shown
      *  - 2: - ItemTypeDb: down to Table/View name, but not the Columns
+     * \since QGIS 3.0
      */
     int getExpandToDepth();
 
@@ -321,7 +227,9 @@ class QgsSpatialiteDbInfoModel : public QAbstractItemModel
      * \note
      *  - set during construction. Avoid manual use of numeric value in code
     * \returns index-number of column being used in QgsSpatiaLiteSourceSelect
+    * \see mColumnGeometryType
     * \see QgsSpatiaLiteSourceSelect::QgsSpatiaLiteSourceSelect
+    * \since QGIS 3.0
     */
     QString getGeometryTypeText() const;
 
@@ -332,6 +240,7 @@ class QgsSpatialiteDbInfoModel : public QAbstractItemModel
     * \returns QString Value of GeometryType
     * \see getTableNameIndex
     * \see getLayerNameUris
+    * \since QGIS 3.0
     */
     QString getGeometryType( const QModelIndex &index ) const;
 
@@ -342,6 +251,7 @@ class QgsSpatialiteDbInfoModel : public QAbstractItemModel
     * \returns index-number of column being used in QgsSpatiaLiteSourceSelect
     * \see getSqlQueryIndex
     * \see QgsSpatiaLiteSourceSelect::on_mSearchColumnComboBox_currentIndexChanged
+    * \since QGIS 3.0
     */
     int getSqlQueryIndex() const { return mColumnSql; }
 
@@ -350,7 +260,9 @@ class QgsSpatialiteDbInfoModel : public QAbstractItemModel
      * \note
      *  - set during construction. Avoid manual use of numeric value in code
     * \returns index-number of column being used in QgsSpatiaLiteSourceSelect
+    * \see mColumnSql
     * \see QgsSpatiaLiteSourceSelect::QgsSpatiaLiteSourceSelect
+    * \since QGIS 3.0
     */
     QString getSqlQueryText() const;
 
@@ -361,6 +273,7 @@ class QgsSpatialiteDbInfoModel : public QAbstractItemModel
     * \returns QString Value of GeometryType
     * \see getTableNameIndex
     * \see getLayerNameUris
+    * \since QGIS 3.0
     */
     QString getSqlQuery( const QModelIndex &index ) const;
 
@@ -369,21 +282,12 @@ class QgsSpatialiteDbInfoModel : public QAbstractItemModel
      * \note
      *  - checking is done that the Table and Geometry-Name are valid
     * \returns QString Value of GeometryType
-    * \see QgsSpatialiteDbInfoModel::setLayerSqlQuery
-    * \see QgsSpatialiteDbInfoModel::getLayerSqlQuery
-    * \see QgsSpatiaLiteSourceSelect::onSourceSelectTreeView_doubleClicked
-    */
-    void setLayerSqlQuery( const QModelIndex &index, const QString &sSelectedLayerSql );
-
-    /**
-     * Returns the Sql-Query based on  Value of the Column 'Sql' from the selected Item
-     * \note
-     *  - set during construction. Avoid manual use of numeric value in code
-    * \returns QString Value of GeometryType
     * \see getTableNameIndex
-    * \see getLayerNameUris
+    * \see getGeometryNameIndex
+    * \see QgsSpatiaLiteSourceSelect::on_mTablesTreeView_doubleClicked
+    * \since QGIS 3.0
     */
-    QString getLayerSqlQuery( const QModelIndex &index ) const;
+    void setSql( const QModelIndex &index, const QString &sql );
 
     /**
      * Set the active Database
@@ -392,19 +296,9 @@ class QgsSpatialiteDbInfoModel : public QAbstractItemModel
     * \returns QString Value of Database file
     * \see QgsSpatiaLiteSourceSelect::setQgsSpatialiteDbInfo
     * \see QgsSpatialiteDbInfoModel::createDatabase
+    * \since QGIS 3.0
     */
     void setSpatialiteDbInfo( QgsSpatialiteDbInfo *spatialiteDbInfo );
-
-    /**
-     * Add or Remove Items to 'LayerOrder'
-     * \note
-     *  - ModelTypeLayerOrder only
-    * \param bRemoveItems are the selected Item to be added or removed
-    * \returns iCountItems count of unique-Items added or removed
-    * \see QgsSpatialiteDbInfoItem::handelSelectedPrepairedChildren
-    * \see QgsSpatiaLiteSourceSelec::setLayerOrderData
-    */
-    int setLayerOrderData( bool bRemoveItems = false );
 
     /**
      * Returns the active Database file-path
@@ -413,6 +307,7 @@ class QgsSpatialiteDbInfoModel : public QAbstractItemModel
     * \param withPath default: full path of file, otherwise base-name of file
     * \returns QString Value of Database file
     * \see QgsSpatiaLiteSourceSelect::updateStatistics
+    * \since QGIS 3.0
     */
     QString getDbName( bool withPath = true ) const;
 
@@ -423,6 +318,7 @@ class QgsSpatialiteDbInfoModel : public QAbstractItemModel
      *  - to call for Database and Table/Geometry portion use: QgsSpatialiteDbLayer::getLayerDataSourceUri()
     * \returns uri with Database only
     * \see QgsSpatialiteDbLayer::getLayerDataSourceUri()
+    * \since QGIS 3.0
     */
     QString getDatabaseUri() const;
 
@@ -433,6 +329,7 @@ class QgsSpatialiteDbInfoModel : public QAbstractItemModel
      * - isDbValid() return if the connection contains layers that are supported by
      * -- QgsSpatiaLiteProvider, QgsGdalProvider and QgsOgrProvider
      * \see QgsSpatialiteDbInfo::isDbValid()
+     * \since QGIS 3.0
      */
     QgsSpatialiteDbInfo *getSpatialiteDbInfo() const { return mSpatialiteDbInfo; }
 
@@ -451,6 +348,7 @@ class QgsSpatialiteDbInfoModel : public QAbstractItemModel
      * \param saLayers List of LayerNames formatted as 'table_name(geometry_name)'
      * \returns result of the last returned rc
      * \see QgsSpatialiteDbInfo::::UpdateLayerStatistics
+     * \since QGIS 3.0
      */
     bool UpdateLayerStatistics( QStringList saLayers );
 
@@ -460,6 +358,7 @@ class QgsSpatialiteDbInfoModel : public QAbstractItemModel
      *  - Spatialite specific functions should not be called when false
      *  -> UpdateLayerStatistics()
      * \see QgsSpatialiteDbInfo::isDbSpatialite()
+     * \since QGIS 3.0
      */
     bool isSpatialite() const
     {
@@ -483,9 +382,12 @@ class QgsSpatialiteDbInfoModel : public QAbstractItemModel
      * -> RasterLite1 [Gdal]: 'RASTERLITE:/long/path/to/database/ItalyRail.atlas,table=srtm'
      * -> MBTiles [Gdal]: 'PathToFile'
      * -> FdoOgr [Ogr]:  'PathToFile|layername=table_name(geometry)'
-     * -> GeoPackage [Ogr]: 'PathToFile|layername=table_name'DataSourceUris
-     * \see getSpatialiteDbLayer
+     * -> GeoPackage [Ogr]: 'PathToFile|layername=table_name'
+     * \see mDbLayersDataSourceUris
+     * \see mDbLayers
+     * \see getQgsSpatialiteDbLayer
      * \see prepareDataSourceUris
+     * \since QGIS 3.0
      */
     QMap<QString, QString> getDataSourceUris() const { return mSpatialiteDbInfo->getDataSourceUris(); }
 
@@ -501,8 +403,9 @@ class QgsSpatialiteDbInfoModel : public QAbstractItemModel
      * \see QgsSpatialiteDbInfo::setSelectedDbLayers
      * \see QgsSpatialiteDbInfo::getSelectedDbRasterLayers
      * \see QgsSpatialiteDbInfo::getSelectedDbVectorLayers
+     * \since QGIS 3.0
      */
-    QMap<QString, QString>  getConnectionsSelectedLayersUris() const { return mSpatialiteDbInfo->getSelectedLayersUris(); }
+    QMap<QString, QString>  getSelectedLayersUris() const { return mSpatialiteDbInfo->getSelectedLayersUris(); }
 
     /**
      * Add a list of database layers to the map
@@ -515,8 +418,9 @@ class QgsSpatialiteDbInfoModel : public QAbstractItemModel
      * \param saSelectedLayersSql Extra Sql-Query for selected Layers
      * \returns amount of Uris entries
      * \see getSelectedLayersUris
+     * \since QGIS 3.0
      */
-    int addDbMapLayers( QStringList saSelectedLayers, QStringList saSelectedLayersStyles, QStringList saSelectedLayersSql ) const {  return mSpatialiteDbInfo->addDbMapLayers( saSelectedLayers, saSelectedLayersStyles, saSelectedLayersSql );  }
+    int addDbMapLayers( QStringList saSelectedLayers, QStringList saSelectedLayersSql ) const {  return mSpatialiteDbInfo->addDbMapLayers( saSelectedLayers, saSelectedLayersSql );  }
 
     /**
      * Create a new Database
@@ -528,6 +432,7 @@ class QgsSpatialiteDbInfoModel : public QAbstractItemModel
      * - SpatialMetadata::SpatialiteMBTiles: creating a view-base MbTiles file with grid tables
      * \returns true if the created Database is valid and of the Container-Type requested
      * \see QgsSpatialiteDbInfo::createDatabase
+     * \since QGIS 3.0
      */
     bool createDatabase( QString sDatabaseFileName, QgsSpatialiteDbInfo::SpatialMetadata dbCreateOption = QgsSpatialiteDbInfo::Spatialite40 );
 
@@ -536,6 +441,7 @@ class QgsSpatialiteDbInfoModel : public QAbstractItemModel
      * \note
      *  - set, but not not used [candidate to be removed]
     * \returns count of Tables in Database
+    * \since QGIS 3.0
     */
     int tableCount() const
     {
@@ -548,17 +454,20 @@ class QgsSpatialiteDbInfoModel : public QAbstractItemModel
      *  - QgsSpatialiteDbInfoItem
      * Can be used in the same way as 'itemFromIndex' in QStandardItemModel
     * \returns QgsSpatialiteDbInfoItem of type QgsSpatialiteDbInfoItem
+    * \since QGIS 3.0
     */
     QgsSpatialiteDbInfoItem *getItem( const QModelIndex &index ) const;
 
     /**
      * Return layer tree node for given index. Returns root node for invalid index.
      * Returns null pointer if index does not refer to a layer tree node (e.g. it is a legend node)
+    * \since QGIS 3.0
      */
     QgsSpatialiteDbInfoItem *index2node( const QModelIndex &index ) const;
 
     /**
      * Return index for a given node. If the node does not belong to the layer tree, the result is undefined
+    * \since QGIS 3.0
      */
     QModelIndex node2index( QgsSpatialiteDbInfoItem *node ) const;
 
@@ -569,46 +478,17 @@ class QgsSpatialiteDbInfoModel : public QAbstractItemModel
      *  This can only be called after 'connectToRootItem' has run
      *  - Will be removed when the first Database is loaded
      * \see setSpatialiteDbInfo
+    * \since QGIS 3.0
      */
     void loadItemHelp();
 
-    /**
-     * Returns a list of items that match the given \a text, using the given \a flags, in the given \a column.
-     * \note
-     * - taken from QStandardItemModel
-     */
-    QList<QgsSpatialiteDbInfoItem *> findItems( const QString &text, Qt::MatchFlags flags = Qt::MatchExactly, int column = 0 ) const;
-
   private:
 
-    /**
-     * The Modul-Type
-     * Modul-Type being used
-     * \note
-     *  ModelTypeConnections
-     *  ModelTypeLayerOrder
-     */
-    SpatialiteDbInfoModelType mModelType = SpatialiteDbInfoModelType::ModelTypeUnknown;
-
-    /**
-     * Placeholder for Model RootItem
-     * - used as insert point of child Spatial Items when building
-     * \note
-     * - removes all entries when a new Database is being opened
-     * \see setSpatialiteDbInfo
-     * \see addDatabaseEntry
-     */
-    QgsSpatialiteDbInfoItem *mModelRootItem = nullptr;
-
-    /**
-     * Placeholder for HelpItem
-     * - used as insert point of child Spatial Items when building
-     * \note
-     * - removes all entries when a new Database is being opened
-     * \see setSpatialiteDbInfo
-     * \see addDatabaseEntry
-     */
-    QgsSpatialiteDbInfoItem *mModelHelpItem = nullptr;
+    enum EntryType
+    {
+      EntryTypeLayer = 0,
+      EntryTypeMap = 1
+    };
 
     /**
      * Placeholder for RootItem
@@ -617,8 +497,41 @@ class QgsSpatialiteDbInfoModel : public QAbstractItemModel
      * - removes all entries when a new Database is being opened
      * \see setSpatialiteDbInfo
      * \see addDatabaseEntry
+     * \since QGIS 3.0
      */
-    QgsSpatialiteDbInfoItem *mModelDataItem = nullptr;
+    QgsSpatialiteDbInfoItem *mDbRootItem = nullptr;
+
+    /**
+     * Placeholder for HelpItem
+     * - used as insert point of child Spatial Items when building
+     * \note
+     * - removes all entries when a new Database is being opened
+     * \see setSpatialiteDbInfo
+     * \see addDatabaseEntry
+     * \since QGIS 3.0
+     */
+    QgsSpatialiteDbInfoItem *mDbHelpRoot = nullptr;
+
+    /**
+     * Placeholder for RootItem
+     * - used as insert point of child Spatial Items when building
+     * \note
+     * - removes all entries when a new Database is being opened
+     * \see setSpatialiteDbInfo
+     * \see addDatabaseEntry
+     * \since QGIS 3.0
+     */
+    QgsSpatialiteDbInfoItem *mDbItem = nullptr;
+
+    /**
+     * Placeholder for NonSpatial Items
+     * - used as insert point of child NonSpatial Items when building
+     * \note
+     * - removes all entries when a new Database is being opened
+     * \see addTableItemMap
+     * \since QGIS 3.0
+     */
+    QgsSpatialiteDbInfoItem *mNonSpatialItem = nullptr;
 
     /**
      * List of DataSourceUri of valid Layers
@@ -633,9 +546,12 @@ class QgsSpatialiteDbInfoModel : public QAbstractItemModel
      * -> RasterLite1 [Gdal]: 'RASTERLITE:/long/path/to/database/ItalyRail.atlas,table=srtm'
      * -> MBTiles [Gdal]: 'PathToFile'
      * -> FdoOgr [Ogr]:  'PathToFile|layername=table_name(geometry)'
-     * -> GeoPackage [Ogr]: 'PathToFile|layername=table_name'DataSourceUris
-     * \see getSpatialiteDbLayer
+     * -> GeoPackage [Ogr]: 'PathToFile|layername=table_name'
+     * \see mDbLayersDataSourceUris
+     * \see mDbLayers
+     * \see getQgsSpatialiteDbLayer
      * \see prepareDataSourceUris
+     * \since QGIS 3.0
      */
     QMap<QString, QString> mDbLayersDataSourceUris;
 
@@ -646,8 +562,9 @@ class QgsSpatialiteDbInfoModel : public QAbstractItemModel
     * \returns index-number of column being used in QgsSpatiaLiteSourceSelect
     * \see getColumnSortHidden
     * \see QgsSpatiaLiteSourceSelect::on_mSearchColumnComboBox_currentIndexChanged
+    * \since QGIS 3.0
     */
-    int mColumnSortHidden = -1;
+    int mColumnSortHidden;
 
     /**
      * Returns the Index of Column 'Table' from the selected Item
@@ -656,8 +573,9 @@ class QgsSpatialiteDbInfoModel : public QAbstractItemModel
     * \returns index-number of column being used in QgsSpatiaLiteSourceSelect
     * \see getTableNameIndex
     * \see getTableName
+    * \since QGIS 3.0
     */
-    int mColumnTable = -1;
+    int mColumnTable;
 
     /**
      * Returns the Index of Column 'Geometry' from the selected Item
@@ -666,8 +584,9 @@ class QgsSpatialiteDbInfoModel : public QAbstractItemModel
     * \returns index-number of column being used in QgsSpatiaLiteSourceSelect
     * \see getGeometryTypeIndex
     * \see QgsSpatiaLiteSourceSelect::on_mSearchColumnComboBox_currentIndexChanged
+    * \since QGIS 3.0
     */
-    int mColumnGeometryType = -1;
+    int mColumnGeometryType;
 
     /**
      * Returns the Index of Column 'Geometry' from the selected Item
@@ -676,8 +595,9 @@ class QgsSpatialiteDbInfoModel : public QAbstractItemModel
     * \returns index-number of column being used in QgsSpatiaLiteSourceSelect
     * \see getGeometryNameIndex
     * \see QgsSpatiaLiteSourceSelect::on_mSearchColumnComboBox_currentIndexChanged
+    * \since QGIS 3.0
     */
-    int mColumnGeometryName = -1;
+    int mColumnGeometryName;
 
     /**
      * Returns the Index of Column 'Sql' from the selected Item
@@ -686,8 +606,9 @@ class QgsSpatialiteDbInfoModel : public QAbstractItemModel
     * \returns index-number of column being used in QgsSpatiaLiteSourceSelect
     * \see getSqlQueryIndex
     * \see getSqlQuery
+    * \since QGIS 3.0
     */
-    int mColumnSql = -1;
+    int mColumnSql;
 
     /**
      * QgsSpatialiteDbInfo Object
@@ -696,24 +617,16 @@ class QgsSpatialiteDbInfoModel : public QAbstractItemModel
      * - isDbValid() return if the connection contains layers that are supported by
      * -- QgsSpatiaLiteProvider, QgsGdalProvider and QgsOgrProvider
      * \see QgsSpatialiteDbInfo::isDbValid()
+     * \since QGIS 3.0
      */
     QgsSpatialiteDbInfo *mSpatialiteDbInfo = nullptr;
-
-    /**
-     * Retrieve Layer of Item
-     * - contains Layer-Name and a QgsSpatialiteDbLayer-Pointer
-     * \note
-     * - child Item will receive Layer from Parent
-     * -- when  getDbLoadLayers is true, getSpatialiteDbLayer will load all layers
-     * \returns mDbLayer of active Layer
-     *  \see onInit
-     */
     QgsSpatialiteDbLayer *mDbLayer = nullptr;
 
     /**
      * Coulumn Names of Model
      * \note
      *  - set during construction.
+    * \since QGIS 3.0
     */
     QVector<QVariant> mRootData;
 
@@ -722,6 +635,7 @@ class QgsSpatialiteDbInfoModel : public QAbstractItemModel
      * \note
      *  - set, but not not used [candidate to be removed]
     * \returns count of Tables in Database
+    * \since QGIS 3.0
     */
     int mTableCount;
 
@@ -731,6 +645,7 @@ class QgsSpatialiteDbInfoModel : public QAbstractItemModel
      *  - set and used for display
     * \returns count of Tables in Database
     * \see QgsSpatialiteDbInfo::getTableCounter
+    * \since QGIS 3.0
     */
     int mTableCounter = 0;
 
@@ -740,51 +655,44 @@ class QgsSpatialiteDbInfoModel : public QAbstractItemModel
      *  - Used to show the total amount of Layers
      * - calculated only ItemTypeDb from onInit, retrieved from parent for others
     * \see sniffSpatialiteDbInfo
+    * \since QGIS 3.0
     */
     int mNonSpatialTablesCounter = 0;
 
     /**
-     * Count of used Srid's in  the Database
+     * Returns a list of items that match the given \a text, using the given \a flags, in the given \a column.
      * \note
-     *  - Used to build the SridGroup
-    * \see QgsSpatialiteDbInfo::getDbSridInfo
-    */
-    int mSridInfoCounter = 0;
-
-    /**
-     *  Total amount of Styles in Database
-     * \note
-     *  - Used to show the total amount of Layers
-     * - calculated only ItemTypeDb from onInit, retrieved from parent for others
-    * \see sniffSpatialiteDbInfo
-    */
-    int mStylesCounter = 0;
+     * - taken from QStandardItemModel
+     * \since QGIS 3.0
+     */
+    QList<QgsSpatialiteDbInfoItem *> findItems( const QString &text, Qt::MatchFlags flags = Qt::MatchExactly, int column = 0 ) const;
 
     /**
      * Connect the RootNode to signels for creation/removel and changes to the QgsSpatialiteDbInfoItem
      * \note
      * - taken from QgsLayerTreeModel
+     * \see mDbRootItem
+     * \since QGIS 3.0
      */
     void connectToRootItem();
 
     /**
      * Disconnect the RootNode to signels for creation/removel and changes to the QgsSpatialiteDbInfoItem
-     * - may not needed, since the mModelRootItem will remain constant
+     * - may not needed, since the mDbRootItem will remain constant
      * \note
      * - taken from QgsLayerTreeModel
+     * \see mDbRootItem
+     * \since QGIS 3.0
      */
     void disconnectFromRootItem();
 
     /**
      * ExpandToDepth
      * \note
-     *  - for use with mConnectionsTreeView->expandToDepth
+     *  - for use with mTablesTreeView->expandToDepth
      * \since QGIS 3.9
      */
     int mExpandToDepth = 3;
-
-  public slots:
-    // void spatialiteDbInfoMenuRequested( QPoint point_position );
 
   protected slots:
     void nodeWillAddChildren( QgsSpatialiteDbInfoItem *node, int indexFrom, int indexTo );
@@ -861,26 +769,11 @@ class QgsSpatialiteDbInfoItem : public QObject
       ItemTypeDb = 1,
       ItemTypeLayer = 2,
       ItemTypeColumn = 3,
-      ItemTypeCommonMetadata = 10,
-      ItemTypeMBTilesMetadata = 11,
-      ItemTypeStylesMetadata = 12,
-      ItemTypePointMetadata = 20,
-      ItemTypeRectangleMetadata = 21,
-      ItemTypeNonSpatialTable = 100,
-      ItemTypeNonSpatialTablesSubGroups = 101,
-      ItemTypeNonSpatialTablesSubGroup = 102,
-      ItemTypeSpatialRefSysAuxSubGroup = 200,
-      ItemTypeSpatialRefSysAux = 201,
-      ItemTypeLayerOrderRasterGroup = 500,
-      ItemTypeLayerOrderRasterLayer = 501,
-      ItemTypeLayerOrderRasterItem = 502,
-      ItemTypeLayerOrderVectorGroup = 520,
-      ItemTypeLayerOrderVectorLayer = 521,
-      ItemTypeLayerOrderVectorItem = 522,
+      ItemTypeMBTilesMetadata = 4,
+      ItemTypeAdmin = 100,
+      ItemTypeNonSpatialTablesGroup = 101,
       ItemTypeHelpText = 998,
       ItemTypeHelpRoot = 999,
-      ItemTypeMetadataRoot = 1000,
-      ItemTypeMetadataGroup = 1001,
       ItemTypeGroupSpatialTable = QgsSpatialiteDbInfo::SpatialTable + 10000,
       ItemTypeGroupSpatialView = QgsSpatialiteDbInfo::SpatialView + 10000,
       ItemTypeGroupVirtualShape = QgsSpatialiteDbInfo::VirtualShape + 10000,
@@ -899,24 +792,8 @@ class QgsSpatialiteDbInfoItem : public QObject
       ItemTypeGroupMetadata = QgsSpatialiteDbInfo::Metadata + 10000,
       ItemTypeGroupAllSpatialLayers = QgsSpatialiteDbInfo::AllSpatialLayers + 10000,
       ItemTypeGroupNonSpatialTables = QgsSpatialiteDbInfo::NonSpatialTables + 10000,
-      ItemTypeSpatialRefSysAuxGroups = QgsSpatialiteDbInfo::SpatialRefSysAux + 10000,
-      ItemTypeGroupWarning = 99980,
-      ItemTypeWarning = 99981,
-      ItemTypeGroupError = 99990,
-      ItemTypeError = 99991,
       ItemTypeUnknown = 99999
     };
-
-    /**
-     * QgsSpatialiteDbInfoItem Object
-     * - creating a Root with ModelType
-     * \note
-     * \param parent parent Item
-     * \param itemType Type of Item-Group
-     * \see createGroupLayerItem
-     * \see createGroupLayerItem
-     */
-    explicit QgsSpatialiteDbInfoItem( QgsSpatialiteDbInfoItem *parent, SpatialiteDbInfoItemType itemType, QgsSpatialiteDbInfoModel::SpatialiteDbInfoModelType modelType );
 
     /**
      * QgsSpatialiteDbInfoItem Object
@@ -928,6 +805,7 @@ class QgsSpatialiteDbInfoItem : public QObject
      * \param spatialiteDbInfo QgsSpatialiteDbInfo to represent/display [may be nullptr]
      * \see buildDbInfoItem
      * \see sniffSpatialiteDbInfo
+     * \since QGIS 3.0
      */
     explicit QgsSpatialiteDbInfoItem( QgsSpatialiteDbInfoItem *parent, QgsSpatialiteDbInfo *spatialiteDbInfo );
 
@@ -940,6 +818,7 @@ class QgsSpatialiteDbInfoItem : public QObject
      * \param parent parent Item
      * \param dbLayer QgsSpatialiteDbLayer to represent/display [may be nullptr]
      * \see QgsSpatialiteDbInfo::isDbValid()
+     * \since QGIS 3.0
      */
     explicit QgsSpatialiteDbInfoItem( QgsSpatialiteDbInfoItem *parent, QgsSpatialiteDbLayer *dbLayer );
 
@@ -951,6 +830,7 @@ class QgsSpatialiteDbInfoItem : public QObject
      * \param itemType Type of Item-Group
      * \see createGroupLayerItem
      * \see createGroupLayerItem
+     * \since QGIS 3.0
      */
     explicit QgsSpatialiteDbInfoItem( QgsSpatialiteDbInfoItem *parent, SpatialiteDbInfoItemType itemType );
 
@@ -963,6 +843,7 @@ class QgsSpatialiteDbInfoItem : public QObject
      * \param sGroupName Name of SubGroup
      * \param saTableNames List of TableName to add
      * \see addTableItemMap
+     * \since QGIS 3.0
      */
     explicit QgsSpatialiteDbInfoItem( QgsSpatialiteDbInfoItem *parent, SpatialiteDbInfoItemType itemType, QString sItemName, QStringList saItemInfos );
 
@@ -971,131 +852,48 @@ class QgsSpatialiteDbInfoItem : public QObject
      * \note
      * - imDbLayer /QgsSpatialiteDbLayer) will be set to nullptr
      * -> must never be deleted, may be used elsewhere
+     * \since QGIS 3.0
      */
     ~QgsSpatialiteDbInfoItem();
-
-    /**
-     * List of Non-Spatial Data Types
-     * -  only these Types will be supported for changing columns
-     * \note
-     * - Blobs of all types are not supported
-     * \see getSpatialiteTypes()
-     */
-    static QStringList mNonSpatialDataTypes;
-
-    /**
-     * Retrieve of Non-Spatial Data Types
-     * -  will be filled on demand
-     * \note
-     * - Blobs of all types are not supported
-     * \see getSpatialiteTypes()
-     */
-    static QStringList getNonSpatialDataTypes();
-
-    /**
-     * Retrieve the Modul-Type
-     * Modul-Type being used
-     * \note
-     *  ModelTypeConnections
-     *  ModelTypeLayerOrder
-     */
-    QgsSpatialiteDbInfoModel::SpatialiteDbInfoModelType getModelType() const { return mModelType; }
-
-    /**
-     * Returns  the enum of Model-Type of the QgsSpatialiteDbInfoItem as String
-     * \note
-     *  -
-    * \returns Model-Type of the QgsSpatialiteDbInfoItem
-    * \see getItemType()
-    */
-    QString getModelTypeString() const { return QgsSpatialiteDbInfoModel::SpatialiteDbInfoModelTypeName( mModelType ); }
-
-    /**
-     * Set the Modul-Type
-     * Modul-Type being used
-     * \note
-     *  ModelTypeConnections
-     *  ModelTypeLayerOrder
-     */
-    void setModelType( QgsSpatialiteDbInfoModel::SpatialiteDbInfoModelType modelType ) { mModelType = modelType; }
-
-    /**
-     * Retrieve MenuText and ToolTip Text for ContextMenue spatialiteDbInfoCopyCellText
-     * - setting for QAction
-     * \note
-     * \param iColumn IN Column selected
-     * \param iCommandRole OUT 0=no CommandRole ; 1=EditRole ; 2=RemoveRole
-     * \param sMenuText OUT Text for the QAction.setText
-     * \param sToolTip OUT Text for the QAction.setToolTip
-     * \returns if the Item-Type and Columns should support something
-     */
-    bool getCopyCellText( int iColumn, int &iCommandRole, QString &sMenuText, QString &sToolTip );
-
-    /**
-     * Returns the String value of the enum of Item-Types of the QgsSpatialiteDbInfoItem
-     * - QgsSpatialiteDbInfoItem::SpatialiteDbInfoItemType
-     * \note
-     * \see getItemTypeString
-     */
-    static QString SpatialiteDbInfoItemTypeName( QgsSpatialiteDbInfoItem::SpatialiteDbInfoItemType itemType );
 
     /**
      * Connect the Node to signels for creation/removel and changes to the QgsSpatialiteDbInfoItem
      * - forward the signal towards the root
      * \note
      * - taken from QgsLayerTreeModel
+     * \see mDbRootItem
+     * \since QGIS 3.0
      */
     void connectToChildItem( QgsSpatialiteDbInfoItem *node );
 
     /**
      * Add Columns Items to Geometry-Table entry
-     * - List other columns of the Layer, excluding the used geometry
      * \note
      * - mDbLayer must be set
      * -> displaying information about the columns
      * --> this does not include the geometry of the Layer
     * \returns count of colums the geometry belongs to
-     * \see buildMetadataGroupItem
-     * \see buildMetadataRootItem
-     * \see buildDbLayerItem
+     * \since QGIS 3.0
      */
     int addColumnItems();
 
     /**
      * Add Raster Metadata Items to RasterLite1, RasterLite2 and GeoPackage-Raster-Table entry
      * \note
-     * - can be any Layer container [Vecot/Raster]
+     * - must be a MBTiles-Container
      * -> displaying name, value of the metadata-Table
-     * \returns count of Child-Items added
-     * \see buildMetadataGroupItem
-     * \see buildMetadataRootItem
-     * \see buildDbLayerItem
+    * \returns count of entries found
+     * \since QGIS 3.0
      */
     int addCommonMetadataItems();
 
     /**
-     * Add Style-Items [Vector/Raster]
-     * - List registered Styles of the Layer
-     * \note
-     * - can be any Layer container [Vector/Raster]
-     * -> displaying name, value of the metadata-Table
-     * \returns count of Child-Items added
-     * \see buildMetadataGroupItem
-     * \see buildMetadataRootItem
-     * \see buildDbLayerItem
-     */
-    int addLayerStylesItems();
-
-    /**
      * Add Columns Items to MBTiles-Table entry
-     * - List the entries in the MbTiles specifice metadata TABLE
      * \note
      * - must be a MBTiles-Container
      * -> displaying name, value of the metadata-Table
-     * \returns count of Child-Items added
-     * \see buildMetadataGroupItem
-     * \see buildMetadataRootItem
-     * \see buildDbLayerItem
+    * \returns count of entries found
+     * \since QGIS 3.0
      */
     int addMbTilesMetadataItems();
 
@@ -1104,52 +902,20 @@ class QgsSpatialiteDbInfoItem : public QObject
      * \note
      * - mDbLayer /QgsSpatialiteDbLayer) will be set to nullptr
      * -> must never be deleted, may be used elsewhere
+     * \since QGIS 3.0
      */
     bool onInit();
 
     /**
      * Resolve unset settings
      * Goal: to (semi) Automate unresolved settings when needed
+     * \since QGIS 3.0
      */
     QgsSpatialiteDbInfoItem *child( int number );
 
     /**
-     * Remove the child inside a parent
-     * - logic test are done
-     * \note
-     *  - or are less or greater than count
-     *  QList.removeAt() can (possibly) not be called from outside the class
-     * \param iFrom 0 based position
-     * \returns iNextChildRow row of next Child after, otherwise before ; -1 if none ; -2 if out of range
-     * \see QgsSpatialiteDbInfoModel::moveLayerchild
-     */
-    int removeChild( int iFrom = -1 );
-
-    /**
-     * Move the child inside a parent
-     * - logic test are done
-     * \note
-     *  - iFrom and iTo must not be the same
-     *  - or are less or greater than count
-     *  QList.move() cannot be called from outside the class
-     * \param iFrom 0 based position
-     * \param iTo 0 based position
-     * \returns true of logic test are correct
-     * \see QgsSpatialiteDbInfoModel::moveLayerchild
-     */
-    bool moveChild( int iFrom = -1, int iTo = -1 );
-
-    /**
-     * Returns the stored Item-Children
-     * \note
-     *  -
-    * \returns List of Item-Type of the QgsSpatialiteDbInfoItem
-    * \see getItemTypeString()
-    */
-    QList<QgsSpatialiteDbInfoItem *> getChildItems() { return mChildItems; }
-
-    /**
      * How many children does this Item contain
+     * \since QGIS 3.0
      */
     int childCount() const;
 
@@ -1157,6 +923,7 @@ class QgsSpatialiteDbInfoItem : public QObject
      * How many columns does this Item contain
      * \note
      *  default: mColumnSortHidden + 1
+     * \since QGIS 3.0
      */
     int columnCount() const;
 
@@ -1170,6 +937,7 @@ class QgsSpatialiteDbInfoItem : public QObject
      * \param position At which position to insert child
      * \param bWillAddChildren emit willAddChildren  [default=false]
      * \see connectToChildItem
+     * \since QGIS 3.0
      */
     bool addChild( QgsSpatialiteDbInfoItem *child, int position = -1, bool bWillAddChildren = false );
 
@@ -1183,6 +951,7 @@ class QgsSpatialiteDbInfoItem : public QObject
      * \param columns amount of Columns to add [default=-1 (takes value of  columnCount())]
      * \see connectToChildItem
      * \see columnCount()
+     * \since QGIS 3.0
      */
     bool insertChildren( int position, int count = 1, SpatialiteDbInfoItemType itemType = ItemTypeUnknown, int columns = -1 );
 
@@ -1191,148 +960,39 @@ class QgsSpatialiteDbInfoItem : public QObject
      * \note
      *  willAddChildren and addedChildren will be emitted
      *  - calling connectToChildItem to each child
-     * \returns count of valid Child-Items added
      * \see connectToChildItem
+     * \since QGIS 3.0
      */
-    int insertPrepairedChildren();
-
-    /**
-     * Add a list of database layers to the map
-     * - to fill a Map of QgsVectorLayers and/or QgsRasterLayers
-     * -> can be for both QgsSpatiaLiteProvider or QgsOgr/GdalProvider
-     * \note
-     * - requested by User to add to main QGis
-     * -> emit addDatabaseLayers for each supported Provider
-     * \param saSelectedLayers formatted as 'table_name(geometry_name)'
-     * \param saSelectedLayersStyles Style-Name for selected Layers
-     * \param saSelectedLayersSql Extra Sql-Query for selected Layers
-     * \returns amount of SelectedLayers entries
-     * \see QgsSpatialiteDbInfo::addDbMapLayers
-     */
-    int addSelectedDbLayers( QStringList &saSelectedLayers, QStringList &saSelectedLayersStyles, QStringList &saSelectedLayersSql );
-
-    /**
-     * Add Prepaired children to this Item
-     * Type: ModelTypeLayerOrder
-     * \note
-     *  willAddChildren and addedChildren will be emitted
-     *  - calling connectToChildItem to each child
-     * \returns count of valid Child-Items added
-     * \see connectToChildItem
-     */
-    int handelSelectedPrepairedChildren( bool bRemoveItems = false );
-
-    /**
-     * Add Prepaired children to this Item
-     * Type: ModelTypeLayerOrder
-     * \note
-     *  willAddChildren and addedChildren will be emitted
-     *  - calling connectToChildItem to each child
-     * \returns count of valid Child-Items added
-     * \see connectToChildItem
-     */
-    int addConnectionLayer( QgsSpatialiteDbInfoItem *childItem );
-
-    /**
-     * Add Prepaired children to this Item
-     * Type: ModelTypeLayerOrder
-     * \note
-     *  willAddChildren and addedChildren will be emitted
-     *  - calling connectToChildItem to each child
-     * \returns count of valid Child-Items added
-     * \see connectToChildItem
-     */
-    int addPrepairedChildItem( QgsSpatialiteDbInfoItem *childItem );
+    bool insertPrepairedChildren();
 
     /**
      * Insert columns into Item
      * \note
      *  presently not used
      *  canditate to be removed
+     * \since QGIS 3.0
      */
     bool insertColumns( int position, int columns );
 
     /**
      * Retrieve Parent Item
-     * \note
-     *  - with const
+     * \since QGIS 3.0
      */
     QgsSpatialiteDbInfoItem *parent() const { return mParentItem; }
 
     /**
-     * Retrieve Cousin-LayerItem
-     * \note
-     *  - without const
-     */
-    QgsSpatialiteDbInfoItem *getCousinLayerItem() const { return mCousinLayerItem; }
-
-    /**
-     * Retrieve Selected LayersSql
-     * \note
-     *  - This will be used for the 'addDbMapLayers' logic
-     * \see addSelectedDbLayers
-     */
-    QString getLayerSqlQuery() const;
-
-    /**
-     * Set the created LayersSqlQuery
-     * \note
-     *  - This will be used for the 'addDbMapLayers' logic
-     */
-    bool setLayerSqlQuery( QString sLayerSqlQuery );
-
-    /**
-     * Set Selected Style in the Layer-Item entry
-     *  ModelTypeLayerOrder, ItemTypeStylesMetadata only
-     * \note
-     *  - This will be used for the 'addDbMapLayers' logic
-     * This function must be called from the Model to be rendered properly after the change
-     * \see QgsSpatialiteDbInfoModel::setSelectedStyle
-     * \see QgsSpatiaLiteSourceSelect::onSourceSelectTreeView_doubleClicked
-     */
-    bool setSelectedStyle();
-
-    /**
-     * Get Selected Style in the Layer-Item entry
-     *  ModelTypeLayerOrder, ItemTypeLayerOrderVector/RasterLayer only
-     * \note
-     *  - This will be used for the 'addDbMapLayers' logic
-     * \see addSelectedDbLayers
-     */
-    QString getSelectedStyle();
-
-    /**
-     * Retrieve Parent Item
-     * \note
-     *  - without const
-     */
-    QgsSpatialiteDbInfoItem *getParent()  { return mParentItem; }
-
-    /**
-     * Retrieve Grand-Parent Item
-     * \note
-     *  - without const
-     */
-    QgsSpatialiteDbInfoItem *getGrandParent()  { return getParent()->getParent(); }
-
-    /**
-     * Remove Children
+     * Insert columns into Item
      * \note
      *  presently not used
      *  canditate to be removed
+     * \since QGIS 3.0
      */
     bool removeChildren( int position, int count );
-
-    /**
-     * Remove Columns
-     * \note
-     *  presently not used
-     *  canditate to be removed
-     */
     bool removeColumns( int position, int columns );
 
     /**
      * Position of this Item in the Parent Item's Children
+     * \since QGIS 3.0
      */
     int childNumber() const;
 
@@ -1343,6 +1003,7 @@ class QgsSpatialiteDbInfoItem : public QObject
      * - isDbValid() return if the connection contains layers that are supported by
      * -- QgsSpatiaLiteProvider, QgsGdalProvider and QgsOgrProvider
      * \see QgsSpatialiteDbInfo::isDbValid()
+     * \since QGIS 3.0
      */
     QgsSpatialiteDbInfo *getSpatialiteDbInfo() const { return mSpatialiteDbInfo; }
 
@@ -1353,6 +1014,7 @@ class QgsSpatialiteDbInfoItem : public QObject
     * \returns QString Value of Database file
     * \see QgsSpatiaLiteSourceSelect::setQgsSpatialiteDbInfo
     * \see QgsSpatialiteDbInfoModel::createDatabase
+    * \since QGIS 3.0
     */
     bool setSpatialiteDbInfo( QgsSpatialiteDbInfo *spatialiteDbInfo );
 
@@ -1362,6 +1024,7 @@ class QgsSpatialiteDbInfoItem : public QObject
      *  -> format: 'table_name(geometry_name)', Error or Warning text
      * \param bWarnings default:false return Errors, else Warnings Messages
      * \returns QMape of Strings with function name and Text of Warning/Error
+     * \since QGIS 3.0
      */
     QMap<QString, QString> getSpatialiteDbInfoErrors( bool bWarnings = false ) const;
 
@@ -1370,51 +1033,83 @@ class QgsSpatialiteDbInfoItem : public QObject
      * - contains Layer-Name and a QgsSpatialiteDbLayer-Pointer
      * \note
      * - child Item will receive Layer from Parent
-     * -- when  getDbLoadLayers is true, getSpatialiteDbLayer will load all layers
+     * -- when  getDbLoadLayers is true, getQgsSpatialiteDbLayer will load all layers
      * \returns mDbLayer of active Layer
      *  \see onInit
+     * \since QGIS 3.0
      */
     QgsSpatialiteDbLayer *getDbLayer() const { return mDbLayer; }
-
-    /**
-     * Retrieve Layer of Item
-     * - contains Layer-Name and a QgsSpatialiteDbLayer-Pointer
-     * \note
-     * - child Item will receive Layer from Parent
-     * -- when  getDbLoadLayers is true, getSpatialiteDbLayer will load all layers
-     * \returns mDbLayer of active Layer
-     *  \see onInit
-     */
-    bool setDbLayer( QgsSpatialiteDbLayer *dbLayer );
 
     /**
      * The Spatialite Layer-Type of the Layer
      * - representing mLayerType
      *  \see setGeometryType
+     *  \see mLayerTypeString
+     * \since QGIS 3.0
      */
     QgsSpatialiteDbInfo::SpatialiteLayerType getLayerType() const { return mLayerType; }
 
     /**
-     * The Spatialite Layer-Type of the Layer
-     * - for geometries, this will be the Geometry-Type Icon
-     * - a Icon representing mLayerType
+     * Is the Layer-Type a Geometry or Raster
+     * - only with mLayerType
      *  \see setGeometryType
+     *  \see addCommonMetadataItems
+     *  \see mLayerTypeString
+     * \since QGIS 3.0
      */
-    QIcon getLayerTypeIcon() const;
+    bool mIsGeometryType = false;
 
     /**
-     * A standard (non-typed) Group Icon
-     * - for general use
-     *  \see buildSpatialSubGroup
-     *  \see addConnectionLayer
+     * Is the Layer-Type a RasterLite2 Layer
+     * - only with mLayerType
+     *  \see addCommonMetadataItems
+     *  \see mLayerTypeString
+     * \since QGIS 3.0
      */
-    QIcon getGroupIcon() const { return QgsSpatialiteDbInfo::NonSpatialTablesTypeIcon( QStringLiteral( "Group" ) ); }
+    bool mIsSpatialView = false;
+
+    /**
+     * Is the Layer-Type a RasterLite2 Layer
+     * - only with mLayerType
+     *  \see addCommonMetadataItems
+     *  \see mLayerTypeString
+     * \since QGIS 3.0
+     */
+    bool mIsRasterLite2 = false;
+
+    /**
+     * Is the Layer-Type a RasterLite1 Layer
+     * - Without title, Abstract and copywrite Information
+     *  \see addCommonMetadataItems
+     *  \see mLayerTypeString
+     * \since QGIS 3.0
+     */
+    bool mIsRasterLite1 = false;
+
+    /**
+     * Is the Layer-Type a MbTiles Layer
+     * - only with mLayerType
+     *  \see addCommonMetadataItems
+     *  \see mLayerTypeString
+     * \since QGIS 3.0
+     */
+    bool mIsMbTiles = false;
+
+    /**
+     * Is the Layer-Type a GeoPackage
+     * - only with mLayerType
+     *  \see addCommonMetadataItems
+     *  \see mLayerTypeString
+     * \since QGIS 3.0
+     */
+    bool mIsGeoPackage = false;
 
     /**
      * Layer-Name
      * \note
      *  Vector: Layer format: 'table_name(geometry_name)'
      *  Raster: Layer format: 'coverage_name'
+     * \since QGIS 3.0
      */
     QString getLayerName() const { return mLayerName; }
 
@@ -1423,6 +1118,7 @@ class QgsSpatialiteDbInfoItem : public QObject
      * - representing mLayerType
      *  \see setLayerType
      * \see SpatialiteLayerTypeName
+     * \since QGIS 3.0
      */
     QString getLayerTypeString() const { return mLayerTypeString; }
 
@@ -1431,6 +1127,7 @@ class QgsSpatialiteDbInfoItem : public QObject
      * \note
      *  -  based on result of CheckSpatialMetaData
      * \see getSniffDatabaseType
+    * \since QGIS 3.0
     */
     QgsSpatialiteDbInfo::SpatialMetadata dbSpatialMetadata() const { return mSpatialMetadata; }
 
@@ -1439,43 +1136,29 @@ class QgsSpatialiteDbInfoItem : public QObject
      * \note
      *  -  based on result of CheckSpatialMetaData
      * \see getSniffDatabaseType
+    * \since QGIS 3.0
     */
     QString dbSpatialMetadataString() const { return mSpatialMetadataString; }
-
-    /**
-     * Returns  the enum of Item-Type of the QgsSpatialiteDbInfoItem
-     * \note
-     *  -
-    * \returns Item-Type of the QgsSpatialiteDbInfoItem
-    * \see getItemTypeString()
-    */
-    SpatialiteDbInfoItemType getItemType() const { return mItemType; }
-
-    /**
-     * Returns  the enum of Item-Type of the QgsSpatialiteDbInfoItem as String
-     * \note
-     *  -
-    * \returns Item-Type of the QgsSpatialiteDbInfoItem
-    * \see getItemType()
-    */
-    QString getItemTypeString() const { return QgsSpatialiteDbInfoItem::SpatialiteDbInfoItemTypeName( mItemType ); }
-
-    /**
-     * Returnsthecollected Metadata for the Database or Layer
-     * \brief A structured metadata store for a map layer.
-     * \note
-     *  -
-    * \returns LayerMetadata of the QgsSpatialiteDbInfoItem
-    * \see QgsSpatiaLiteSourceSelect::onSourceSelectTreeView_SelectionChanged
-    */
-    QgsLayerMetadata getItemMetadata() const;
 
     /**
      * Returns the Index of Column 'Table' from the Header
      * \note
      *  - set during construction. Avoid manual use of numeric value in code
     * \returns index-number of column being used in QgsSpatiaLiteSourceSelect
+    * \see mColumnTable
     * \see QgsSpatiaLiteSourceSelect::on_mSearchColumnComboBox_currentIndexChanged
+    * \since QGIS 3.0
+    */
+    int getItemType() const { return mItemType; }
+
+    /**
+     * Returns the Index of Column 'Table' from the Header
+     * \note
+     *  - set during construction. Avoid manual use of numeric value in code
+    * \returns index-number of column being used in QgsSpatiaLiteSourceSelect
+    * \see mColumnTable
+    * \see QgsSpatiaLiteSourceSelect::on_mSearchColumnComboBox_currentIndexChanged
+    * \since QGIS 3.0
     */
     int getTableNameIndex() const { return mColumnTable; }
 
@@ -1484,7 +1167,9 @@ class QgsSpatialiteDbInfoItem : public QObject
      * \note
      *  - set during construction. Avoid manual use of numeric value in code
     * \returns index-number of column being used in QgsSpatiaLiteSourceSelect
+    * \see mColumnGeometryName
     * \see QgsSpatiaLiteSourceSelect::on_mSearchColumnComboBox_currentIndexChanged
+    * \since QGIS 3.0
     */
     int getGeometryNameIndex() const { return mColumnGeometryName; }
 
@@ -1493,7 +1178,9 @@ class QgsSpatialiteDbInfoItem : public QObject
      * \note
      *  - set during construction. Avoid manual use of numeric value in code
     * \returns index-number of column being used in QgsSpatiaLiteSourceSelect
+    * \see mColumnGeometryType
     * \see QgsSpatiaLiteSourceSelect::on_mSearchColumnComboBox_currentIndexChanged
+    * \since QGIS 3.0
     */
     int getGeometryTypeIndex() const { return mColumnGeometryType; }
 
@@ -1504,6 +1191,7 @@ class QgsSpatialiteDbInfoItem : public QObject
     * \returns index-number of column being used in QgsSpatiaLiteSourceSelect
     * \see getSqlQueryIndex
     * \see QgsSpatiaLiteSourceSelect::on_mSearchColumnComboBox_currentIndexChanged
+    * \since QGIS 3.0
     */
     int getSqlQueryIndex() const { return mColumnSql; }
 
@@ -1512,7 +1200,9 @@ class QgsSpatialiteDbInfoItem : public QObject
      * \note
      *  - set during construction. Avoid manual use of numeric value in code
     * \returns index-number of column being used in QgsSpatiaLiteSourceSelect
+    * \see mColumnSortHidden
     * \see QgsSpatiaLiteSourceSelect::on_mSearchColumnComboBox_currentIndexChanged
+    * \since QGIS 3.0
     */
     int getColumnSortHidden() const { return mColumnSortHidden; }
     //-----------------------------------------------------------------
@@ -1526,6 +1216,7 @@ class QgsSpatialiteDbInfoItem : public QObject
      * Based on logic used in QStandardItem
      * \see data
      * \see setFlags
+     * \see mItemData
      * \param column Column to set Value
      * \param value Value to set in Column
      * \param role Role-Tpe to set in Column
@@ -1540,6 +1231,7 @@ class QgsSpatialiteDbInfoItem : public QObject
      * Based on logic used in QStandardItem
      * \see data
      * \see setFlags
+     * \see mItemData
      * \param column Column to retrieve Value from [default=0]
      * \since QGIS 3.0
     */
@@ -1552,6 +1244,7 @@ class QgsSpatialiteDbInfoItem : public QObject
     * \param column of the Item [default=0]
     * \returns flags for the given column of the Item
     * \see QgsSpatialiteDbInfoModel::flags
+    * \since QGIS 3.0
     */
     Qt::ItemFlags flags( int column = 0 ) const;
 
@@ -1562,6 +1255,7 @@ class QgsSpatialiteDbInfoItem : public QObject
      *  - when column < 0: all columns will be set with the given value
      * \param column Column to set Value to
      * \param flags Value to set in Column
+    * \since QGIS 3.0
     */
     void setFlags( int column, Qt::ItemFlags flags );
 
@@ -1571,6 +1265,7 @@ class QgsSpatialiteDbInfoItem : public QObject
      * \note
      *  - default:  [Qt::ItemIsEnabled]
      * \param column Column to retrieve Value from [default=0]
+    * \since QGIS 3.0
     */
     inline bool isEnabled( int column = 0 ) const { return ( flags( column ) & Qt::ItemIsEnabled ) != 0; }
 
@@ -1582,6 +1277,7 @@ class QgsSpatialiteDbInfoItem : public QObject
      *  - default:  [Qt::ItemIsEnabled]
      * \param column Column to set Value to [default=0]
      * \param value Value to set to True or False
+    * \since QGIS 3.0
     */
     void setEnabled( int column, bool value );
 
@@ -1591,6 +1287,7 @@ class QgsSpatialiteDbInfoItem : public QObject
      * \note
      *  - default:  [false]
      * \param column Column to retrieve Value from [default=0]
+    * \since QGIS 3.0
     */
     inline bool isEditable( int column ) const { return ( flags( column ) & Qt::ItemIsEditable ) != 0; }
 
@@ -1601,7 +1298,7 @@ class QgsSpatialiteDbInfoItem : public QObject
      * \note
      *  - How the user can edit items in a view is determined by the view's edit triggers;
      *  - default:  [false]
-     *  - mConnectionsTreeView->setEditTriggers(QAbstractItemView::DoubleClicked | QAbstractItemView::EditKeyPressed);
+     *  - mTablesTreeView->setEditTriggers(QAbstractItemView::DoubleClicked | QAbstractItemView::EditKeyPressed);
      * \param column Column to set Value to [default=0]
      * \param value Value to set to True or False
      * \see setEnabled
@@ -1615,40 +1312,9 @@ class QgsSpatialiteDbInfoItem : public QObject
      * \note
      *  - default:  [Qt::ItemIsSelectable]
      * \param column Column to retrieve Value from [default=0]
+    * \since QGIS 3.0
     */
     inline bool isSelectable( int column = 0 ) const { return ( flags( column ) & Qt::ItemIsSelectable ) != 0; }
-
-    /**
-     * Is this a valid Database that can be displayed by a Provider
-     * - used within QgsSpatiaLiteSourceSelect
-     *  \see onInit
-     *  \see QgsSpatiaLiteSourceSelect::collectSelectedTables
-     */
-    bool isDbSelectable() const { return mIsDbSelectable; }
-
-    /**
-     * Is this a valid Layer-Type a Geometry or Raster that can be displayed by a Provider
-     * - used within QgsSpatiaLiteSourceSelect
-     *  \see onInit
-     *  \see QgsSpatiaLiteSourceSelect::collectSelectedTables
-     */
-    bool isLayerSelectable() const { return mIsLayerSelectable; }
-
-    /**
-     * Is the Layer-Type a Geometry or Raster
-     * - only with mLayerType
-     *  \see setGeometryType
-     *  \see addCommonMetadataItems
-     */
-    bool isVector() const { return mIsVectorType; }
-
-    /**
-     * Is the Layer-Type a Geometry or Raster
-     * - only with mLayerType
-     *  \see setGeometryType
-     *  \see addCommonMetadataItems
-     */
-    bool isRaster() const { return mIsRasterType; }
 
     /**
      * Sets whether the item is selectable
@@ -1660,30 +1326,6 @@ class QgsSpatialiteDbInfoItem : public QObject
      * \since QGIS 3.0
     */
     void setSelectable( int column, bool value );
-
-    /**
-     * Calculate new position to Move an LayerOrder-Item within the Raster/Vector Group to
-     *  - for Up/Down ; First to Last ; Last to First or a specific position inside the Parent
-     *  - ModelTypeLayerOrder only, where there is no sorting
-     *  - ItemTypeLayerOrderVectorLayer
-     *  - ItemTypeLayerOrderRasterLayer
-     * \note
-     * presentPosition + (negative value) < 0 = Last Position
-     * presentPosition + (positive value) >= count = First Position
-     * This does NOT move the Item
-     *  - For support of Up/down Buttion in Tab 'Layer Order'
-     *  - Out of range values will place the Item in the First or Last position
-     *  - beginMoveRows and endMoveRows are used to insure that the calling View does not become confused
-     *  iMoveToRows: beginMoveRows need to know the new position at a time when the old position still exists, thus +1
-     *  iMoveToChild: moveChild[QList.take] needs to know the old position (removeAt), and after removal,  position to insert
-     * \param  iMoveCount IN move the Item within the Group [+/- from childNumber() ]
-     * \param iMoveToChild OUT  new position needed for beginMoveRows
-     * \returns iMoveToRows new position needed for beginMoveRows
-     * \see moveChild
-     * \see QgsSpatialiteDbInfoModel::moveLayerchild
-     * \since QGIS 3.0
-    */
-    int moveChildPosition( int iMoveCount, int &iMoveToChild );
 
     /**
      * Returns the item's icon.
@@ -1816,6 +1458,7 @@ class QgsSpatialiteDbInfoItem : public QObject
      * - Used to show the total amount of Layers
      * - calculated only ItemTypeDb from onInit, retrieved from parent for others
     * \see sniffSpatialiteDbInfo
+    * \since QGIS 3.0
     */
     int getTableCounter() { return mTableCounter; }
 
@@ -1825,82 +1468,31 @@ class QgsSpatialiteDbInfoItem : public QObject
      *  - Used to show the total amount of Layers
      * - calculated only ItemTypeDb from onInit, retrieved from parent for others
     * \see sniffSpatialiteDbInfo
+    * \since QGIS 3.0
     */
     int getNonSpatialTablesCounter() { return mNonSpatialTablesCounter; }
 
     /**
-     *  Total amount of Styles in Database
-     * \note
-     *  - Used to show the total amount of Layers
-     * - calculated only ItemTypeDb from onInit, retrieved from parent for others
-    * \see sniffSpatialiteDbInfo
-    */
-    int getStylesCounter() { return mStylesCounter; }
-
-    /**
-     *  Total amount of Srid's in Database
-     * \note
-     *  - Used to show the total amount of Layers
-     * - calculated only ItemTypeDb from onInit, retrieved from parent for others
-    * \see sniffSpatialiteDbInfo
-    */
-    int getSridInfoCounter() { return mSridInfoCounter; }
-
-    /**
      *  Set Total amount of Layers in Database
-     * - Used mainly to set in value in mModelRootItem
+     * - Used mainly to set in value in mDbRootItem
      * \note
      * - Used to show the total amount of Layers
      * - calculated only ItemTypeDb from onInit, retrieved from parent for others
     * \see sniffSpatialiteDbInfo
+    * \since QGIS 3.0
     */
     void setTableCounter( int iTableCounter ) { mTableCounter = iTableCounter; }
 
     /**
      *  Set Total amount of non-SpatialTables/Views  in Database
-     * - Used mainly to set in value in mModelRootItem
+     * - Used mainly to set in value in mDbRootItem
      * \note
      * - Used to show the total amount of Layers
      * - calculated only ItemTypeDb from onInit, retrieved from parent for others
     * \see sniffSpatialiteDbInfo
+    * \since QGIS 3.0
     */
     void setNonSpatialTablesCounter( int iNonSpatialTablesCounter ) { mNonSpatialTablesCounter = iNonSpatialTablesCounter; }
-
-    /**
-     *  Set Total amount of Styles  in Database
-     * - Used mainly to set in value in mModelRootItem
-     * \note
-     * - Used to show the total amount of Layers
-     * - calculated only ItemTypeDb from onInit, retrieved from parent for others
-    * \see sniffSpatialiteDbInfo
-    */
-    void setStylesCounter( int iStylesCounter ) { mStylesCounter = iStylesCounter; }
-
-    /**
-     *  Set Total amount of Srids  in Database
-     * - Used mainly to set in value in mModelRootItem
-     * \note
-     * - Used to show the total amount of Layers
-     * - calculated only ItemTypeDb from onInit, retrieved from parent for others
-    * \see sniffSpatialiteDbInfo
-    */
-    void setSridInfoCounter( int iSridInfoCounter ) { mSridInfoCounter = iSridInfoCounter; }
-
-    /**
-     * Store the Item-Children
-     * \note
-     *
-     * \since QGIS 3.0
-    */
-    QList<QgsSpatialiteDbInfoItem *> getPrepairedChildItems() { return mPrepairedChildItems; }
-
-    /**
-     * Is this Item considered valid
-     * \note
-     *  - dependent on Item Type
-     *  - making checking after creation possible
-     */
-    bool isValid() const { return mIsItemValid; }
 
   signals:
     // - Based on QgsLayerTreeModel / QgsLayerTreeNode
@@ -1922,18 +1514,6 @@ class QgsSpatialiteDbInfoItem : public QObject
   private:
 
     /**
-     * Set Cousin-LayerItem
-     * \note
-     * When a LayerOrder-LayerItem is created from a Connections-Layer
-     * -> in 'addConnectionLayer'
-     * -> both must be isLayerSelectable() [i.e. Root of QgsSpatialiteDbLayer-Item]
-     * The creating Connections-Layer must be stored so the latest version
-     *  version of the (possibly create) Sql-Query can be retrieved.
-     * This will be used for the 'addDbMapLayers' logic
-     */
-    bool setCousinLayerItem( QgsSpatialiteDbInfoItem *cousinLayerItem );
-
-    /**
      * The Item-Type
      * - Item-Type being used
      * \since QGIS 3.0
@@ -1942,19 +1522,11 @@ class QgsSpatialiteDbInfoItem : public QObject
     SpatialiteDbInfoItemType mItemType = SpatialiteDbInfoItemType::ItemTypeUnknown;
 
     /**
-     * The Modul-Type
-     * Modul-Type being used
-     * \note
-     *  ModelTypeConnections
-     *  ModelTypeLayerOrder
-     */
-    QgsSpatialiteDbInfoModel::SpatialiteDbInfoModelType mModelType = QgsSpatialiteDbInfoModel::ModelTypeUnknown;
-
-    /**
      * The Spatialite Layer-Type of the Layer
      * - representing mLayerType
      * \note
      *  - The Layer-Type of a set mDblayer, otherwise SpatialiteUnknown
+     * \since QGIS 3.0
      */
     QgsSpatialiteDbInfo::SpatialiteLayerType mLayerType = QgsSpatialiteDbInfo::SpatialiteUnknown;
 
@@ -1963,6 +1535,7 @@ class QgsSpatialiteDbInfoItem : public QObject
      * - representing mLayerType
      *  \see setLayerType
      * \see SpatialiteLayerTypeName
+     * \since QGIS 3.0
      */
     QString mLayerTypeString = QString( "SpatialiteUnknown" );
 
@@ -1971,6 +1544,7 @@ class QgsSpatialiteDbInfoItem : public QObject
      * \note
      *  Vector: Layer format: 'table_name(geometry_name)'
      *  Raster: Layer format: 'coverage_name'
+     * \since QGIS 3.0
      */
     QString mLayerName = QString();
 
@@ -1979,6 +1553,7 @@ class QgsSpatialiteDbInfoItem : public QObject
      * \note
      *  -  based on result of CheckSpatialMetaData
      * \see getSniffDatabaseType
+    * \since QGIS 3.0
     */
     QgsSpatialiteDbInfo::SpatialMetadata mSpatialMetadata = QgsSpatialiteDbInfo::SpatialUnknown;
 
@@ -1987,6 +1562,7 @@ class QgsSpatialiteDbInfoItem : public QObject
      * \note
      *  -  based on result of CheckSpatialMetaData
      * \see getSniffDatabaseType
+    * \since QGIS 3.0
     */
     QString mSpatialMetadataString = QString( "SpatialUnknown" );
 
@@ -2000,7 +1576,7 @@ class QgsSpatialiteDbInfoItem : public QObject
      * \see QgsSpatiaLiteSourceSelect::on_mSearchColumnComboBox_currentIndexChanged
      * \since QGIS 3.0
     */
-    int mColumnSortHidden = -1;
+    int mColumnSortHidden;
 
     /**
      * Returns the Index of Column 'Table' from the selected Item
@@ -2011,7 +1587,7 @@ class QgsSpatialiteDbInfoItem : public QObject
      * \see getTableName
      * \since QGIS 3.0
     */
-    int mColumnTable = -1;
+    int mColumnTable;
 
     /**
      * Returns the Index of Column 'Geometry' from the selected Item
@@ -2033,7 +1609,7 @@ class QgsSpatialiteDbInfoItem : public QObject
      * \see QgsSpatiaLiteSourceSelect::on_mSearchColumnComboBox_currentIndexChanged
      * \since QGIS 3.0
     */
-    int mColumnGeometryName = -1;
+    int mColumnGeometryName;
 
     /**
      * Returns the Index of Column 'Sql' from the selected Item
@@ -2044,7 +1620,7 @@ class QgsSpatialiteDbInfoItem : public QObject
      * \see getSqlQuery
      * \since QGIS 3.0
     */
-    int mColumnSql = -1;
+    int mColumnSql;
 
     /**
      * Store the Item-Children
@@ -2083,13 +1659,6 @@ class QgsSpatialiteDbInfoItem : public QObject
     QgsSpatialiteDbInfoItem *mParentItem = nullptr;
 
     /**
-     * Retrieve Cousin-LayerItem
-     * \note
-     *  - without const
-     */
-    QgsSpatialiteDbInfoItem *mCousinLayerItem = nullptr;
-
-    /**
      * QgsSpatialiteDbInfo Object
      * - containing all Information about Database file
      * \note
@@ -2099,83 +1668,7 @@ class QgsSpatialiteDbInfoItem : public QObject
      * \since QGIS 3.0
     */
     QgsSpatialiteDbInfo *mSpatialiteDbInfo = nullptr;
-
-    /**
-     * The active Layer
-     * - being read by the Provider
-     * \note
-     * - isLayerValid() return true if everything is considered correct
-     * \see QgsSpatialiteDbLayer::isLayerValid
-     * \see setDbLayer
-     */
     QgsSpatialiteDbLayer *mDbLayer = nullptr;
-
-    /**
-     * Is this a valid Layer-Type a Geometry or Raster that can be displayed by a Provider
-     * - used within QgsSpatiaLiteSourceSelect
-     *  \see onInit
-     *  \see QgsSpatiaLiteSourceSelect::collectSelectedTables
-     */
-    bool mIsLayerSelectable = false;
-
-    /**
-     * Is this a valid Database that can be displayed by a Provider
-     * - used within QgsSpatiaLiteSourceSelect
-     *  \see onInit
-     *  \see QgsSpatiaLiteSourceSelect::collectSelectedTables
-     */
-    bool mIsDbSelectable = false;
-
-    /**
-     * Is the Layer-Type a Geometry or Raster
-     * - only with mLayerType
-     *  \see setGeometryType
-     *  \see addCommonMetadataItems
-     */
-    bool mIsVectorType = false;
-
-    /**
-     * Is the Layer-Type a Geometry or Raster
-     * - only with mLayerType
-     *  \see setGeometryType
-     *  \see addCommonMetadataItems
-     */
-    bool mIsRasterType = false;
-
-    /**
-     * Is the Layer-Type a RasterLite2 Layer
-     * - only with mLayerType
-     *  \see addCommonMetadataItems
-     */
-    bool mIsSpatialView = false;
-
-    /**
-     * Is the Layer-Type a RasterLite2 Layer
-     * - only with mLayerType
-     *  \see addCommonMetadataItems
-     */
-    bool mIsRasterLite2 = false;
-
-    /**
-     * Is the Layer-Type a RasterLite1 Layer
-     * - Without title, Abstract and copywrite Information
-     *  \see addCommonMetadataItems
-     */
-    bool mIsRasterLite1 = false;
-
-    /**
-     * Is the Layer-Type a MbTiles Layer
-     * - only with mLayerType
-     *  \see addCommonMetadataItems
-     */
-    bool mIsMbTiles = false;
-
-    /**
-     * Is the Layer-Type a GeoPackage
-     * - only with mLayerType
-     *  \see addCommonMetadataItems
-     */
-    bool mIsGeoPackage = false;
 
     /**
      * Helper Function to implement row() and column()
@@ -2193,6 +1686,7 @@ class QgsSpatialiteDbInfoItem : public QObject
      *  - Used to show the total amount of Layers
      * - calculated only ItemTypeDb from onInit, retrieved from parent for others
     * \see sniffSpatialiteDbInfo
+    * \since QGIS 3.0
     */
     int mTableCounter = 0;
 
@@ -2202,25 +1696,9 @@ class QgsSpatialiteDbInfoItem : public QObject
      *  - Used to show the total amount of Layers
      * - calculated only ItemTypeDb from onInit, retrieved from parent for others
     * \see sniffSpatialiteDbInfo
+    * \since QGIS 3.0
     */
     int mNonSpatialTablesCounter = 0;
-
-    /**
-     * Count of used Srid's in  the Database
-     * \note
-     *  - Used to build the SridGroup
-    * \see QgsSpatialiteDbInfo::getDbSridInfo
-    */
-    int mSridInfoCounter = 0;
-
-    /**
-     *  Total amount of Styles in Database
-     * \note
-     *  - Used to show the total amount of Layers
-     * - calculated only ItemTypeDb from onInit, retrieved from parent for others
-    * \see sniffSpatialiteDbInfo
-    */
-    int mStylesCounter = 0;
 
     /**
      * Sets the mTableCounter
@@ -2232,298 +1710,86 @@ class QgsSpatialiteDbInfoItem : public QObject
     bool sniffSpatialiteDbInfo();
 
     /**
-     * Add Items to display the Database
+     * Add Items to display as HelpText
      * \note
      * - called during creation of Model
      * -> removed during first Database loading
-     * \returns count of Child-Items added
      * \since QGIS 3.0
     */
     int buildDbInfoItem();
 
     /**
-     * Add Items to display the Layer
+     * Add Items to display as HelpText
      * \note
      * - called during creation of Model
      * -> removed during first Database loading
-     * \returns count of Child-Items added
-     * \see addMbTilesMetadataItems
-     * \see addCommonMetadataItems
      * \since QGIS 3.0
     */
     int buildDbLayerItem();
 
     /**
-     * Add Items to display the Layer
-     * \note
-     * - called during creation of Model
-     * -> removed during first Database loading
-     * \returns count of Child-Items added
-     * \see addMbTilesMetadataItems
-     * \see addCommonMetadataItems
-     * \since QGIS 3.0
-    */
-    int buildLayerOrderItem();
-
-    /**
      * Add Items to display as HelpText
      * \note
      * - called during creation of Model
      * -> removed during first Database loading
-     * \returns count of Child-Items added
      * \since QGIS 3.0
     */
     int buildHelpItem();
 
     /**
-     * Add Items to display as MetadataText
-     * \note
-     * - called during creation of Item with a Layer
-     * \returns count of Child-Items added
-     * \since QGIS 3.0
-    */
-    int buildMetadataRootItem();
-
-    /**
-     * Add Items to display as MetadataText
-     * \note
-     * - called during creation of Item with a Layer
-     * \returns count of Child-Items added
-     * \since QGIS 3.0
-    */
-    int buildMetadataGroupItem( QString sGroupName, QStringList saParmValues );
-
-    /**
-     * Add Items to display as MetadataText
-     * \note
-     * - called during creation of Item with a Layer
-     * \returns count of Child-Items added
-     * \since QGIS 3.0
-    */
-    int buildStylesSubGroups( );
-
-    /**
-     * Add Items to display as MetadataText
-     * \note
-     * - called during creation of Item with a Layer
-     * \returns count of Child-Items added
-     * \since QGIS 3.0
-    */
-    int buildStylesGroupItem( QString sGroupName, QStringList saParmValues );
-
-    /**
-     * Adding and filling SpatialTab Sub-Groups
-     ** within the [SpatialView,SpatialView,GeoPackageVector,GdalFdoOgr]
-     * \note
-     *  When: 'table_name' contains at least 2 '_' (such as 'berlin_streets_1650')
-     *  - assume it belongs to a group of 'berlin_streets' for QgsSpatialiteDbInfoItem
-     * \param sKey table name
-     * \param sValue Name of Sub-Group
-     * \returns count of Child-Items added
-     * \see sniffSpatialiteDbInfo()
-     * \see QgsSpatialiteDbInfo::dbNonSpatialTablesCount
-     * \see createGroupLayerItem
-     * \see QgsSpatialiteDbInfo::getDbLayersType
-     * \see addTableItemMap
-     * \since QGIS 3.0
-    */
-    int buildSpatialSubGroups();
-
-    /**
-     * Adding and filling SpatialTab Sub-Group
-     ** within the [SpatialView,SpatialView,GeoPackageVector,GdalFdoOgr]
-     * \note
-     *  When: 'table_name' contains at least 2 '_' (such as 'berlin_streets_1650')
-     *  - assume it belongs to a group of 'berlin_streets' for QgsSpatialiteDbInfoItem
-     * \param SubGroupName Name of the subgroup to be added
-     * \param saLayerNames List of SpatialLayers to be added Sub-Group
-     * \returns count of Items added
-     * \see sniffSpatialiteDbInfo()
-     * \see QgsSpatialiteDbInfo::dbNonSpatialTablesCount
-     * \see createGroupLayerItem
-     * \see QgsSpatialiteDbInfo::getDbLayersType
-     * \see QgsSpatialiteDbInfo::getListGroupNames
-     * \see QgsSpatialiteDbInfo::prepareGroupLayers
-     * \see addTableItemMap
-     * \since QGIS 3.0
-    */
-    int buildSpatialSubGroup( QString SubGroupName, QStringList saLayerNames );
-
-    /**
-     * Adding and filling SpatialTab Sub-Groups
-     ** within the [SpatialView,SpatialView,GeoPackageVector,GdalFdoOgr]
-     * \note
-     *  When: 'table_name' contains at least 2 '_' (such as 'berlin_streets_1650')
-     *  - assume it belongs to a group of 'berlin_streets' for QgsSpatialiteDbInfoItem
-     * \param sKey table name
-     * \param sValue Name of Sub-Group
-     * \returns count of Items added
-     * \see sniffSpatialiteDbInfo()
-     * \see QgsSpatialiteDbInfo::dbNonSpatialTablesCount
-     * \see createGroupLayerItem
-     * \see QgsSpatialiteDbInfo::getDbLayersType
-     * \see addTableItemMap
-     * \since QGIS 3.0
-    */
-    int buildNonSpatialSubGroups();
-
-    /**
      * Adding and filling NonSpatialTables Sub-Groups
-     *  or an NonSpatialTables-Item that does not belong to a Sub-Group
      * \note
-     * - called from createGroupLayerItem
-     * - calls buildNonSpatialTablesSubGroups for NonSpatialTables-Items that belong to a Sub-Group
-     * - calls buildNonSpatialTable for each NonSpatialTables-Item that does not belong to a Sub-Group
-     * \returns count of Child-Items added
+     * - called during creation of Model
+     * -> removed during first Database loading
+     * \param sKey table name
+     * \param sValue Name of Sub-Group
+     * \returns count of Items added
+     * \see sniffSpatialiteDbInfo()
+     * \see QgsSpatialiteDbInfo::dbNonSpatialTablesCount
      * \see createGroupLayerItem
-     * \see buildNonSpatialTablesSubGroups
-     * \see buildNonSpatialTable
+     * \see QgsSpatialiteDbInfo::getDbLayersType
+     * \see addTableItemMap
      * \since QGIS 3.0
     */
-    int buildNonSpatialTables();
-
-    /**
-     * Add Sub-Groups or an NonSpatialTables-Item that does not belong to a Sub-Group
-     * \note
-     * - called from buildNonSpatialTables
-     * - calls buildNonSpatialTablesSubGroup when Sub-Groups exist
-     * - calls buildNonSpatialTable for each NonSpatialTables-Item that does not belong to a Sub-Group
-     *  TableTypes structure
-     *  - field 0=TableType
-     *  - field 1=GroupName
-     *  - field 2=ParentGroupName
-     *  - field 3=GroupSort
-     *  - field 4=TableName  (added in buildNonSpatialTablesGroups)
-     * \param sGroupInfo table name
-     * \param saTableTypeInfo List of saTableTypeInfo to add to the Sub-Group
-     * \returns count of Child-Items added
-     * \see buildNonSpatialTables
-     * \see buildNonSpatialTablesSubGroup
-     * \see buildNonSpatialTable
-     * \since QGIS 3.0
-    */
-    int buildNonSpatialTablesSubGroups( QString sGroupInfo, QStringList saTableTypeInfo );
+    int buildNonSpatialTablesGroups();
 
     /**
      * Add Items to display as HelpText
      * \note
-     * - called from  buildNonSpatialTablesSubGroups
-     * - calls buildNonSpatialTable for each NonSpatialTables-Item
-     *  TableTypes structure
-     *  - field 0=TableType
-     *  - field 1=GroupName
-     *  - field 2=ParentGroupName
-     *  - field 3=GroupSort
-     *  - field 4=TableName  (added in buildNonSpatialTablesGroups
-     * \param sGroupInfo table name
-     * \param saListValues Name of Sub-Group
-     * \returns count of Child-Items added
-     * \see buildNonSpatialTablesSubGroups
+     * - called during creation of Model
+     * -> removed during first Database loading
+     * \see buildNonSpatialTablesGroups
      * \since QGIS 3.0
     */
-    int buildNonSpatialTablesSubGroup( QString sGroupInfo, QStringList saTableTypeInfo );
+    int buildNonSpatialTablesGroup( QString sGroupInfo, QStringList saListValues );
 
     /**
-     * Add NonSpatialTables-Item within the main NonSpatialTables group
+     * Add Items to display as HelpText
      * \note
-     * - called from buildNonSpatialTablesSubGroups when Item is within a Sub-Group
-     * - called from buildNonSpatialTables when Item does not belong to any Sub-Group
-     *  TableTypes structure
-     *  - field 0=TableType
-     *  - field 1=GroupName
-     *  - field 2=ParentGroupName
-     *  - field 3=GroupSort
-     *  - field 4=TableName  (added in buildNonSpatialTablesGroups
-     * \returns count of Child-Items added
-     * \see buildNonSpatialTables
-     * \see buildNonSpatialTablesSubGroup
+     * - called during creation of Model
+     * -> removed during first Database loading
      * \since QGIS 3.0
     */
-    int buildNonSpatialTable( QString sTableTypeInfo, QStringList saParmValues );
-
-    /**
-     * Adding and filling SpatialRefSysAux Group
-     *  or an NonSpatialTables-Item that does not belong to a Sub-Group
-     * \note
-     * - called from createGroupLayerItem
-     * - calls buildNonSpatialTablesSubGroups for NonSpatialTables-Items that belong to a Sub-Group
-     * - calls buildNonSpatialTable for each NonSpatialTables-Item that does not belong to a Sub-Group
-     * \returns count of Child-Items added
-     * \see createGroupLayerItem
-     * \see buildNonSpatialTablesSubGroups
-     * \see buildNonSpatialTable
-     * \since QGIS 3.0
-    */
-    int buildSpatialRefSysAuxGroup();
-
-    /**
-     * Add SpatialRefSysAux-Item within the main NonSpatialTables group
-     * \note
-     * - called from buildNonSpatialTablesSubGroups when Item is within a Sub-Group
-     * - called from buildNonSpatialTables when Item does not belong to any Sub-Group
-     *  TableTypes structure
-     *  - field 0=TableType
-     *  - field 1=GroupName
-     *  - field 2=ParentGroupName
-     *  - field 3=GroupSort
-     *  - field 4=TableName  (added in buildNonSpatialTablesGroups
-     * \returns count of Child-Items added
-     * \see buildNonSpatialTables
-     * \see buildNonSpatialTablesSubGroup
-     * \since QGIS 3.0
-    */
-    int buildSpatialRefSysAuxSubGroup( QString sTableTypeInfo, QStringList saParmValues );
+    int buildNonSpatialAdminTable( QString sTableInfo, QStringList saListValues );
 
     /**
      * Retrieve the  Layer-Type entries
-     * \note
-     *  Counter will be set for Items added
-     * \param layerType to be retrieved from SpatialiteDbInfo
-     * \returns true if a QgsSpatialiteDbInfoItem has been added to mPrepairedChildItems
+     * \see addTableEntry
+     * \since QGIS 3.0
      */
-    bool createGroupLayerItem( QgsSpatialiteDbInfo::SpatialiteLayerType layerType = QgsSpatialiteDbInfo::SpatialiteUnknown );
+    QgsSpatialiteDbInfoItem *createGroupLayerItem( QgsSpatialiteDbInfo::SpatialiteLayerType layerType = QgsSpatialiteDbInfo::SpatialiteUnknown );
 
     /**
-     * Create and fill Group(s) for Errors/Warnings
-     *  - collected by QgsSpatialiteDbInfo durring creation
-     * \note
-     *  information only
-     * \returns true if any errors or warning exist
-     * \see getSpatialiteDbInfoErrors
+     * Add the Item based on a Spatial-Layer
+     * \since QGIS 3.0
      */
-    bool createErrorWarningsGroups();
+    bool addTableItemLayer( QgsSpatialiteDbInfoItem *dbGroupLayerItem, QgsSpatialiteDbLayer *dbLayer );
 
     /**
-     * Is this Item considered valid
-     * \note
-     *  - dependent on Item Type
-     *  - making checking after creation possible
+     * Add the Item based on a non-Spatial-Layer
+     * \since QGIS 3.0
      */
-    bool mIsItemValid = false;
-
-    /**
-     * Can a column of the Layer Type be added
-     * \note
-     *  - dependent on Layer Type
-     *  - SpatialView, VirtualShape: false
-     */
-    bool mCanColumnAdd = false;
-
-    /**
-     * Can a column of the Layer Type be removed
-     * \note
-     *  - dependent on Item Type
-     *  - SpatialView, VirtualShape: false
-     */
-    bool mCanColumnRemove = false;
-
-    /**
-     * Can a column of the Layer Type be renamed
-     * \note
-     *  - dependent on Item Type
-     *  - SpatialView, VirtualShape: false
-     */
-    bool mCanColumnRename = false;
+    bool addTableItemMap( QgsSpatialiteDbInfoItem *dbGroupLayerItem, QString sKey, QString sValue, QgsSpatialiteDbInfo::SpatialiteLayerType layerType = QgsSpatialiteDbInfo::SpatialiteUnknown );
 
 };
 #endif // QGSSPATIALITEDBINFOMODEL_H

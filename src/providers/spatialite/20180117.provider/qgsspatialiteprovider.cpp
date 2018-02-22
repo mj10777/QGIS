@@ -90,13 +90,9 @@ QGISEXTERN QString description()
 // Class factory to return a pointer to a newly created
 // QgsSpatiaLiteProvider object
 //-----------------------------------------------------------------
-/**
- * Class factory to return a pointer to a newly created
- * QgsSpatiaLiteProvider object
- */
-QGISEXTERN QgsSpatiaLiteProvider *classFactory( const QString *uri, const QgsDataProvider::ProviderOptions &options )
+QGISEXTERN QgsSpatiaLiteProvider *classFactory( const QString *uri )
 {
-  return new QgsSpatiaLiteProvider( *uri, options );
+  return new QgsSpatiaLiteProvider( *uri );
 }
 #ifdef HAVE_GUI
 //-----------------------------------------------------------------
@@ -134,8 +130,8 @@ QGISEXTERN QList<QgsSourceSelectProvider *> *sourceSelectProviders()
 //-----------------------------------------------------------------
 // QgsSpatiaLiteProvider::QgsSpatiaLiteProvider
 //-----------------------------------------------------------------
-QgsSpatiaLiteProvider::QgsSpatiaLiteProvider( QString const &uri, const ProviderOptions &options )
-  : QgsVectorDataProvider( uri, options )
+QgsSpatiaLiteProvider::QgsSpatiaLiteProvider( QString const &uri )
+  : QgsVectorDataProvider( uri )
   , mIsQuery( false )
   , mTableBased( false )
   , mViewBased( false )
@@ -286,7 +282,7 @@ bool QgsSpatiaLiteProvider::setSqliteHandle( QgsSqliteHandle *qSqliteHandle )
             sLayerName = QString( "%1(%2)" ).arg( mUriTableName ).arg( mUriGeometryColumn );
           }
           bool bLoadLayer = true;
-          bRc = setDbLayer( getSpatialiteDbInfo()->getSpatialiteDbLayer( sLayerName, bLoadLayer ) );
+          bRc = setDbLayer( getSpatialiteDbInfo()->getQgsSpatialiteDbLayer( sLayerName, bLoadLayer ) );
         }
         else
         {
@@ -369,6 +365,11 @@ bool QgsSpatiaLiteProvider::setDbLayer( QgsSpatialiteDbLayer *dbLayer )
         mIndexTable = mTableName;
         mIndexGeometry = getDbLayer()->getGeometryColumn();;
       }
+#if 0
+      // If/When QgsLayerMetadata has been added to QgsDataProvider
+      // - then this should be done here
+      setLayerMetadata( getDbLayer()->getLayerMetadata() );
+#endif
       if ( getSpatialIndexType() == QgsSpatialiteDbInfo::SpatialIndexRTree )
       {
         mSpatialIndexRTree = true;
@@ -612,11 +613,10 @@ QgsSpatiaLiteProvider::createEmptyLayer( const QString &uri,
           throw QgsSpatiaLiteUtils::SLException( errMsg );
       }
 
-      sql = QStringLiteral( "CREATE TABLE %1 (%2 %3 PRIMARY KEY%4)" )
+      sql = QStringLiteral( "CREATE TABLE %1 (%2 %3 PRIMARY KEY)" )
             .arg( QgsSpatiaLiteUtils::quotedIdentifier( tableName ),
                   QgsSpatiaLiteUtils::quotedIdentifier( primaryKey ),
-                  primaryKeyType,
-                  primaryKeyType == QLatin1String( "INTEGER" ) ? QStringLiteral( " AUTOINCREMENT" ) : QString() );
+                  primaryKeyType );
 
       ret = sqlite3_exec( sqliteHandle, sql.toUtf8().constData(), nullptr, nullptr, &errMsg );
       if ( ret != SQLITE_OK )
@@ -730,9 +730,7 @@ QgsSpatiaLiteProvider::createEmptyLayer( const QString &uri,
 
   // use the provider to edit the table
   dsUri.setDataSource( QLatin1String( "" ), tableName, geometryColumn, QString(), primaryKey );
-
-  QgsDataProvider::ProviderOptions providerOptions;
-  QgsSpatiaLiteProvider *provider = new QgsSpatiaLiteProvider( dsUri.uri(), providerOptions );
+  QgsSpatiaLiteProvider *provider = new QgsSpatiaLiteProvider( dsUri.uri() );
   if ( !provider->isValid() )
   {
     QgsDebugMsgLevel( QString( "The layer %1 just created is not valid or not supported by the provider." ).arg( tableName ), 3 );
@@ -1254,7 +1252,7 @@ bool QgsSpatiaLiteProvider::changeGeometryValues( const QgsGeometryMap &geometry
 //-----------------------------------------------------------------
 QgsVectorDataProvider::Capabilities QgsSpatiaLiteProvider::capabilities() const
 {
-  return getVectorCapabilities();
+  return getCapabilities();
 }
 //-----------------------------------------------------------------
 // QgsSpatiaLiteProvider::defaultValue
@@ -1262,22 +1260,6 @@ QgsVectorDataProvider::Capabilities QgsSpatiaLiteProvider::capabilities() const
 QVariant QgsSpatiaLiteProvider::defaultValue( int fieldId ) const
 {
   return getDefaultValues().value( fieldId, QVariant() );
-}
-//-----------------------------------------------------------------
-// QgsSpatiaLiteProvider::skipConstraintCheck
-//-----------------------------------------------------------------
-bool QgsSpatiaLiteProvider::skipConstraintCheck( int fieldIndex, QgsFieldConstraints::Constraint constraint, const QVariant &value ) const
-{
-  Q_UNUSED( constraint );
-
-  // If the field is the primary key, skip in case it's autog-enerated / auto-incrementing
-  if ( mAttributeFields.at( fieldIndex ).name() == mPrimaryKey  && mPrimaryKeyAutoIncrement )
-  {
-    const QVariant defVal = getDefaultValues().value( fieldIndex );
-    return defVal.toInt() == value.toInt();
-  }
-
-  return false;
 }
 //-----------------------------------------------------------------
 // QgsSpatiaLiteProvider::checkQuery

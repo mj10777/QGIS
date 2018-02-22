@@ -131,15 +131,14 @@ class CORE_EXPORT QgsSqliteHandle
      * - setting certin capabilities and File-Path infoormation
      * \note
      *  Making the information available during a shutdown
-     * \see mDbValid
-     * \see mIsSpatialite
-     * \see mIsRasterLite2
-     * \see mIsGdalOgr
-     * \see mFileName
-     * \see mDirectoryName
-     * \see mDatabaseUri
-     * \see mUuid
-     * \since QGIS 3.0
+     * \see isDbValid
+     * \see isDbSpatialite
+     * \see isDbRasterLite2
+     * \see isDbGdalOgr
+     * \see getFileName
+     * \see getDirectoryName
+     * \see getDatabaseUri
+     * \see getUuid
      */
     bool setStatus()
     {
@@ -174,7 +173,6 @@ class CORE_EXPORT QgsSqliteHandle
      * \note
      *  - created with QUuid::createUuid().toString()
      * \see setStatus
-     * \since QGIS 3.0
      */
     QString getUuid() const { return mUuid; }
 
@@ -182,7 +180,6 @@ class CORE_EXPORT QgsSqliteHandle
      * Count on how often this Connection is being used when shared
      * \note
      *  -1 not being shared
-     * \since QGIS 3.0
      */
     int getRef() const { return ref; }
 
@@ -192,7 +189,6 @@ class CORE_EXPORT QgsSqliteHandle
      *  -1 not being shared
     * \returns Count on how often this Connection is being used
      * \see QgsSpatialiteDbInfo::getQSqliteHandle()
-     * \since QGIS 3.0
      */
     int removeRef()
     {
@@ -208,7 +204,6 @@ class CORE_EXPORT QgsSqliteHandle
      * Count on how many shared Spatialite Connections are active
      * \note
      *  Connections started with the static functions 'sqlite3_open' and 'sqlite3_open_v2' are not included
-     * \since QGIS 3.0
      */
     int getSharedSpatialiteConnectionsCount() const
     {
@@ -235,7 +230,6 @@ class CORE_EXPORT QgsSqliteHandle
      * - isDbValid() return if the connection contains layers that are supported by
      * -- QgsSpatiaLiteProvider, QgsGdalProvider and QgsOgrProvider
      * \see QgsSpatialiteDbInfo::isDbValid()
-     * \since QGIS 3.0
      */
     QgsSpatialiteDbInfo *getSpatialiteDbInfo() const { return mSpatialiteDbInfo; }
 
@@ -245,7 +239,6 @@ class CORE_EXPORT QgsSqliteHandle
      * \note
      *  when false: the file is either a non-supported sqlite3 container
      *  or not a sqlite3 file (a fossil file would be a sqlite3 container not supported)
-     * \since QGIS 3.0
      */
     bool isDbValid() const { return mDbValid; }
 
@@ -253,7 +246,6 @@ class CORE_EXPORT QgsSqliteHandle
      * The read Database only supported by the QgsRasterLite2Provider
      * \note
      *  - QgsRasterLite2Provider: RasterLite2Raster
-     * \since QGIS 3.0
      */
     bool isDbSpatialite() const { return mIsSpatialite; }
 
@@ -261,7 +253,6 @@ class CORE_EXPORT QgsSqliteHandle
      * Has 'mod_spatialite' been called for the QgsSpatialiteProvider and QgsRasterLite2Provider
      * \note
      *  - QgsSpatialiteProvider and QgsRasterLite2Provider
-     * \since QGIS 3.0
      */
     bool isDbSpatialiteActive() const { return mIsSpatialiteActive; }
 
@@ -271,7 +262,6 @@ class CORE_EXPORT QgsSqliteHandle
      *  - QgsOgrProvider: GeoPackage-Vector
      *  - QgsGdalProvider: GeoPackage-Raster, MbTiles
      *  - QgsGdalProvider: RasterLite1 [when Gdal-RasterLite Driver is active]
-     * \since QGIS 3.0
      */
     bool isDbGdalOgr() const { return mIsGdalOgr; }
 
@@ -279,7 +269,6 @@ class CORE_EXPORT QgsSqliteHandle
      * The read Database only supported by the QgsRasterLite2Provider
      * \note
      *  - QgsRasterLite2Provider: RasterLite2Raster
-     * \since QGIS 3.0
      */
     bool isDbRasterLite2() const { return mIsRasterLite2; }
 
@@ -287,7 +276,6 @@ class CORE_EXPORT QgsSqliteHandle
      * Has 'mod_rasterlite2' or 'rl2_init' been called for the QgsRasterLite2Provider
      * \note
      *  - QgsRasterLite2Provider: RasterLite2Raster
-     * \since QGIS 3.0
      */
     bool isDbRasterLite2Active() const { return mIsRasterLite2Active; }
 
@@ -297,7 +285,6 @@ class CORE_EXPORT QgsSqliteHandle
      * \note
      *  - if not shared: the reference value will be set to -1, if not allready
      * \see QgsSqliteHandle::openDb
-     * \since QGIS 3.0
      */
     bool isShared()
     {
@@ -315,7 +302,6 @@ class CORE_EXPORT QgsSqliteHandle
     /**
      * Set the QgsSqliteHandle Connection to be shared
      * \see QgsSqliteHandle::openDb
-     * \since QGIS 3.0
      */
     bool setShared( bool bIsShared );
 
@@ -343,10 +329,8 @@ class CORE_EXPORT QgsSqliteHandle
      *  -> which will be called from QgsSpatialiteDbInfo when needed
      * \param bRasterLite2 load with RasterLite2 [default=false]
      * \returns true if 'mod_spatialite' succeeded
-     * \see mIsSpatialiteActive
      * \see initSpatialite
      * \see initRasterlite2
-     * \since QGIS 3.0
      */
     bool loadSpatialite( bool bRasterLite2 = false );
 
@@ -358,9 +342,6 @@ class CORE_EXPORT QgsSqliteHandle
      *  - during 'mod_rasterlite2' these will be replaced with the real functions
      *  -> which will be called from QgsSpatialiteDbInfo when needed
      * \returns true if 'mod_rasterlite2' succeeded
-     * \see mIsRasterLite2Active
-     * \see mIsSpatialiteActive
-     * \since QGIS 3.0
      */
     bool initRasterlite2();
 
@@ -431,7 +412,6 @@ class CORE_EXPORT QgsSqliteHandle
      * \see sqlite3_open_v2
      * \see initRasterlite2
      * \see loadExtension
-     * \since QGIS 3.0
      */
     static bool initSpatialite( sqlite3 *sqlite_handle, QString sFileName = QString() );
 
@@ -445,7 +425,6 @@ class CORE_EXPORT QgsSqliteHandle
      * \param psqlite_handle OUT: SQLite db handle
      * \param bInitSpatialite: true: start with Spatialite connection ('mod_spatialite')
      * \see initSpatialite
-     * \since QGIS 3.0
      */
     static int sqlite3_open( const char *filename, sqlite3 **psqlite_handle, bool bInitSpatialite = true );
 
@@ -461,7 +440,6 @@ class CORE_EXPORT QgsSqliteHandle
      * \param zVfs Name of VFS module to use
      * \param bInitSpatialite true: start with Spatialite connection ('mod_spatialite')
      * \see initSpatialite
-     * \since QGIS 3.0
      */
     static int sqlite3_open_v2( const char *filename, sqlite3 **psqlite_handle, int flags, const char *zVfs = nullptr, bool bInitSpatialite = true );
 
@@ -474,7 +452,6 @@ class CORE_EXPORT QgsSqliteHandle
      * \param sqlite_handle : SQLite db handle [not previously closed]
      * \param sFileName FileName, without path [for messages only]
      * \returns SQLITE_BUSY when unfinalized prepared statements or unfinished sqlite3_backup objects, otherwise SQLITE_OK (0)
-     * \since QGIS 3.0
      */
     static int sqlite3_close( sqlite3 *sqlite_handle, QString sFileName = QString() );
 
@@ -487,7 +464,6 @@ class CORE_EXPORT QgsSqliteHandle
      * \param sqlite_handle : SQLite db handle [not previously closed]
      * \param sFileName FileName, without path [for messages only]
      * \returns SQLITE_OK (0), will be destroyed only after completing tasks
-     * \since QGIS 3.0
      */
     static int sqlite3_close_v2( sqlite3 *sqlite_handle, QString sFileName = QString() );
 
@@ -498,7 +474,6 @@ class CORE_EXPORT QgsSqliteHandle
      * \see https://sqlite.org/c3ref/c_abort.html
      * \see https://sqlite.org/c3ref/c_abort_rollback.html
      * \returns Text representation of sqlite3 return code
-     * \since QGIS 3.0
      */
     static QString get_sqlite3_result_code_string( int i_rc = 0 );
   private:
@@ -568,7 +543,6 @@ class CORE_EXPORT QgsSqliteHandle
      * The read Database only supported by the QgsSpatialiteProvider
      * \note
      *  - QgsSpatialiteProvider:
-     * \since QGIS 3.0
      */
     bool mIsSpatialite;
 
@@ -576,7 +550,6 @@ class CORE_EXPORT QgsSqliteHandle
      * Has 'mod_spatialite' or 'spatialite_init' been called for the QgsSpatialiteProvider and QgsRasterLite2Provider
      * \note
      *  - QgsSpatialiteProvider and QgsRasterLite2Provider
-     * \since QGIS 3.0
      */
     bool mIsSpatialiteActive;
 
@@ -586,7 +559,6 @@ class CORE_EXPORT QgsSqliteHandle
      *  - QgsOgrProvider: GeoPackage-Vector
      *  - QgsGdalProvider: GeoPackage-Raster, MbTiles
      *  - QgsGdalProvider: RasterLite1 [when Gdal-RasterLite Driver is active]
-     * \since QGIS 3.0
      */
     bool mIsGdalOgr;
 
@@ -594,7 +566,6 @@ class CORE_EXPORT QgsSqliteHandle
      * The read Database only supported by the QgsRasterLite2Provider
      * \note
      *  - QgsRasterLite2Provider: RasterLite2Raster
-     * \since QGIS 3.0
      */
     bool mIsRasterLite2;
 
@@ -603,7 +574,6 @@ class CORE_EXPORT QgsSqliteHandle
      * \note
      *  - QgsRasterLite2Provider: RasterLite2Raster
      * \see initRasterlite2
-     * \since QGIS 3.0
      */
     bool mIsRasterLite2Active;
 
@@ -613,7 +583,6 @@ class CORE_EXPORT QgsSqliteHandle
      * \note
      *  when false: the file is either a non-supported sqlite3 container
      *  or not a sqlite3 file (a fossil file would be a sqlite3 container not supported)
-     * \since QGIS 3.0
      */
     bool mDbValid;
 
@@ -624,7 +593,6 @@ class CORE_EXPORT QgsSqliteHandle
      * - isDbValid() return if the connection contains layers that are supported by
      * -- QgsSpatiaLiteProvider, QgsGdalProvider and QgsOgrProvider
      * \see QgsSpatialiteDbInfo::isDbValid()
-     * \since QGIS 3.0
      */
     QgsSpatialiteDbInfo *mSpatialiteDbInfo = nullptr;
 
@@ -653,7 +621,6 @@ class CORE_EXPORT QgsSqliteHandle
      * \see initSpatialite
      * \see loadSpatialite
      * \see initRasterlite2
-     * \since QGIS 3.0
      */
     static bool loadExtension( sqlite3 *sqlite_handle, bool bRasterLite2 = false, QString sFileName = QString() );
 
@@ -663,7 +630,6 @@ class CORE_EXPORT QgsSqliteHandle
      * \note
      *  - created with QUuid::createUuid().toString()
      * \see setStatus
-     * \since QGIS 3.0
      */
     QString mUuid = QString();
 

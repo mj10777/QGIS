@@ -2,7 +2,7 @@
 # Files
 
 IF(WITH_QSPATIALITE)
-  SUBDIRS(${CMAKE_SOURCE_DIR}/external/qspatialite)
+  SUBDIRS(qspatialite)
 ENDIF(WITH_QSPATIALITE)
 
 SET(SPATIALITE_SRCS
@@ -19,7 +19,6 @@ SET(SPATIALITE_MOC_HDRS
   qgsspatialitedbinfomodel.h
   qgsspatialitetablemodel.h
 )
-
 
 IF (WITH_GUI)
   SET(SPATIALITE_SRCS ${SPATIALITE_SRCS}
@@ -41,8 +40,6 @@ SET(RASTERLITE2_MOC_HDRS
 ########################################################
 # Build
 
-QT5_WRAP_UI(SPATIALITE_UI_H qgsspatialitesourceselectbase.ui)
-
 QT5_WRAP_CPP(SPATIALITE_MOC_SRCS ${SPATIALITE_MOC_HDRS})
 QT5_WRAP_CPP(RASTERLITE2_MOC_SRCS ${RASTERLITE2_MOC_HDRS})
 
@@ -60,12 +57,10 @@ INCLUDE_DIRECTORIES(
   ${CMAKE_SOURCE_DIR}/src/core/providers/spatialite
   ${CMAKE_SOURCE_DIR}/src/core/raster
   ${CMAKE_SOURCE_DIR}/src/gui
-  ${CMAKE_SOURCE_DIR}/src/gui/editorwidgets
 
   ${CMAKE_BINARY_DIR}/src/core
   ${CMAKE_BINARY_DIR}/src/gui
   ${CMAKE_BINARY_DIR}/src/ui
-  ${CMAKE_CURRENT_BINARY_DIR} # ui_xxx_dlg.h
 )
 INCLUDE_DIRECTORIES(SYSTEM
   ${SQLITE3_INCLUDE_DIR}
@@ -74,11 +69,7 @@ INCLUDE_DIRECTORIES(SYSTEM
   ${GDAL_INCLUDE_DIR}
 )
 
-ADD_LIBRARY (spatialiteprovider MODULE
-  ${SPATIALITE_SRCS}
-  ${SPATIALITE_MOC_SRCS}
-  ${SPATIALITE_UI_H}
-)
+ADD_LIBRARY (spatialiteprovider MODULE ${SPATIALITE_SRCS} ${SPATIALITE_MOC_SRCS})
 SET(SPATIALITE_LIBRARYS_PROVIDER
   ${SPATIALITE_LIBRARY}
 )

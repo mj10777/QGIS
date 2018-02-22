@@ -56,7 +56,7 @@ class QgsSpatiaLiteSourceSelect: public QgsAbstractDataSourceWidget, private Ui:
     //! Constructor
     QgsSpatiaLiteSourceSelect( QWidget *parent, Qt::WindowFlags fl = QgsGuiUtils::ModalDialogFlags, QgsProviderRegistry::WidgetMode widgetMode = QgsProviderRegistry::WidgetMode::None );
 
-    ~QgsSpatiaLiteSourceSelect() override;
+    ~QgsSpatiaLiteSourceSelect();
     //! Populate the connection list combo box
     void populateConnectionList();
 
@@ -97,65 +97,85 @@ class QgsSpatiaLiteSourceSelect: public QgsAbstractDataSourceWidget, private Ui:
      *  - to call for Database and Table/Geometry portion use: QgsSpatialiteDbLayer::getLayerDataSourceUri()
     * \returns uri with Database only
     * \see QgsSpatialiteDbLayer::getLayerDataSourceUri()
-    * \since QGIS 3.0
     */
     QString getDatabaseUri() {  return mConnectionsSpatialiteDbInfoModel.getDatabaseUri(); }
 
     /**
-     * Retrieve the current active Tab if the TabWodget
+     * Retrieve the current active Tab if the TabWodget SourceSelect
      *  - Tab 'Connections'
      * - this will be called from classes using QgsSpatialiteDbInfo
      * \note
      *  - to call for Database and Table/Geometry portion use: QgsSpatialiteDbLayer::getLayerDataSourceUri()
     * \returns uri with Database only
     * \see QgsSpatialiteDbLayer::getLayerDataSourceUri()
-    * \since QGIS 3.0
     */
-    int getCurrentTabIndex() {  return mTabWidget->currentIndex(); }
+    int getCurrentTabSourceSelectIndex() {  return mTabWidgetSourceSelect->currentIndex(); }
 
     /**
      * Index of Tab 'Connections'
      * - use to determine which Tab is active when a Button is pushed
      * \note
-     *  - used with  getCurrentTabIndex
-    * \see mTabConnections
-    * \see getCurrentTabIndex
-    * \since QGIS 3.0
+     *  - used with  getCurrentTabSourceSelectIndex
+    * \see getCurrentTabSourceSelectIndex
     */
-    int getTabConnectionsIndex() {  return mTabWidget->indexOf( mTabConnections ); }
+    int getTabConnectionsIndex() {  return mTabWidgetSourceSelect->indexOf( mTabConnections ); }
 
     /**
      * Index of Tab 'Layer Order'
      * - use to determine which Tab is active when a Button is pushed
      * \note
-     *  - used with  getCurrentTabIndex
-    * \see mTabLayerOrder
-    * \see getCurrentTabIndex
-    * \since QGIS 3.0
+     *  - used with  getCurrentTabSourceSelectIndex
+    * \see getCurrentTabSourceSelectIndex
     */
-    int getTabLayerOrderIndex() {  return mTabWidget->indexOf( mTabLayerOrder ); }
+    int getTabLayerOrderIndex() {  return mTabWidgetSourceSelect->indexOf( mTabLayerOrder ); }
 
     /**
-     * Index of Tab 'Layer Tilesets'
+     * Index of Tab 'Layer Metadata'
      * - use to determine which Tab is active when a Button is pushed
      * \note
-     *  - used with  getCurrentTabIndex
-    * \see mTabLayerTilesets
-    * \see getCurrentTabIndex
-    * \since QGIS 3.0
+     *  - used with  getCurrentTabSourceSelectIndex
+    * \see getCurrentTabSourceSelectIndex
     */
-    int getTabLayerTilesetsIndex() {  return mTabWidget->indexOf( mTabLayerTilesets ); }
+    int getTabLayerMetadataIndex() {  return mTabWidgetSourceSelect->indexOf( mTabLayerMetadata ); }
 
     /**
      * Index of Tab 'Server Search'
      * - use to determine which Tab is active when a Button is pushed
      * \note
-     *  - used with  getCurrentTabIndex
-    * \see mTabServerSearch
-    * \see getCurrentTabIndex
-    * \since QGIS 3.0
+     *  - used with  getCurrentTabSourceSelectIndex
+    * \see getCurrentTabSourceSelectIndex
     */
-    int getTabServerSearchIndex() {  return mTabWidget->indexOf( mTabServerSearch ); }
+    int getTabLayerMaintenanceIndex() {  return mTabWidgetSourceSelect->indexOf( mTabLayerMaintenance ); }
+
+    /**
+     * Retrieve the current active Tab if the TabWodget LayerMaintenance
+     *  - Tab 'Connections'
+     * - this will be called from classes using QgsSpatialiteDbInfo
+     * \note
+     *  - to call for Database and Table/Geometry portion use: QgsSpatialiteDbLayer::getLayerDataSourceUri()
+    * \returns uri with Database only
+    * \see QgsSpatialiteDbLayer::getLayerDataSourceUri()
+    */
+    int getCurrentTabLayerMaintenanceIndex() {  return mTabWidgetLayerMaintenance->currentIndex(); }
+
+    /**
+     * Index of Tab 'Columns' in TabWidget LayerMaintenance
+     * - use to determine which Tab is active when a Button is pushed
+     * \note
+     *  - used with  getCurrentTabLayerMaintenanceIndex
+    * \see spatialiteDbInfoContextMenuRequested
+    * \see getCurrentTabLayerMaintenanceIndex
+    */
+    int getTabMaintenanceLayerColumnsIndex() {  return mTabWidgetLayerMaintenance->indexOf( mTabMaintenanceLayerColumns ); }
+
+    /**
+     * Index of Tab 'Database / Layer Information' in TabWidget LayerMaintenance
+     * - use to determine which Tab is active when a Button is pushed
+     * \note
+     *  - used with  getCurrentTabLayerMaintenanceIndex
+    * \see getCurrentTabLayerMaintenanceIndex
+    */
+    int getTabMaintenanceLayerDatabaseLayerInfoIndex() {  return mTabWidgetLayerMaintenance->indexOf( mTabMaintenanceDatabaseLayerInfo ); }
 
     /**
      * Store the selected database
@@ -166,7 +186,54 @@ class QgsSpatiaLiteSourceSelect: public QgsAbstractDataSourceWidget, private Ui:
      * \since QGIS 1.8
      */
     void dbChanged();
+
+    /**
+     * Store the QgsSpatialiteDbInfo in the Model
+     * \note
+     *  - fills the TreeView and other forms
+     *  - call setMaintenanceDatabaseLayerInfo to fill the Database Info and clear LayerInfo
+     * \param spatialiteDbInfo QgsSpatialiteDbInfo from the loaded Database
+     * \see addConnectionsDatabaseSource
+     * \see setMaintenanceDatabaseLayerInfo
+     */
     void setSpatialiteDbInfo( QgsSpatialiteDbInfo *spatialiteDbInfo, bool setConnectionInfo = false );
+
+    /**
+     * Fill in MaintenanceDatabaseLayerInfo
+     * \note
+     *  - either the Database of the Layer Information or the the Layer Information
+     *  - major setting of the controls, befor filling
+     * \param spatialiteDbInfo QgsSpatialiteDbInfo from the loaded Database (will be nullptr when filling in LayerInfo)
+     * \param dbLayer QgsSpatialiteDbLayer after being selected in the gui (will be nullptr when filling in DatabaseInfo)
+     * \see setSpatialiteDbInfo
+     * \see setSpatialiteDbInfo
+     * \see setMaintenanceDatabaseInfo
+     * \see setMaintenanceLayerInfo
+     */
+    void setMaintenanceDatabaseLayerInfo( QgsSpatialiteDbInfo *spatialiteDbInfo = nullptr, QgsSpatialiteDbLayer *dbLayer = nullptr );
+
+    /**
+     * Fill in MaintenanceDatabaseInfo
+     * Called after loading the Database
+     * \note
+     *  - Fill the Database of the Layer Information
+     *  - should only be called by setMaintenanceDatabaseLayerInfo
+     * \param spatialiteDbInfo QgsSpatialiteDbInfo from the loaded Database (will be nullptr when filling in LayerInfo)
+     * \param dbLayer QgsSpatialiteDbLayer after being selected in the gui (will be nullptr when filling in DatabaseInfo)
+     * \see setMaintenanceDatabaseLayerInfo
+     */
+    void setMaintenanceDatabaseInfo( QgsSpatialiteDbInfo *spatialiteDbInfo = nullptr );
+
+    /**
+     * Fill in MaintenanceLayerInfo
+     * Called after selecting a Layer
+     * \note
+     *  - Fill the the Layer Information
+     *  - should only be called by setMaintenanceDatabaseLayerInfo
+     * \param dbLayer QgsSpatialiteDbLayer after being selected in the gui (will be nullptr when filling in DatabaseInfo)
+     * \see setMaintenanceDatabaseLayerInfo
+     */
+    void setMaintenanceLayerInfo( QgsSpatialiteDbLayer *dbLayer = nullptr );
 
     /**
      * Add or Remove Items for 'LayerOrder'
@@ -176,7 +243,6 @@ class QgsSpatiaLiteSourceSelect: public QgsAbstractDataSourceWidget, private Ui:
     * \returns iCountItems count of unique-Items added or removed
     * \see onSourceSelectTreeView_SelectionChanged
     * \see QgsSpatialiteDbInfoModel::setLayerOrderData
-    * \since QGIS 3.0
     */
     int setLayerOrderData( bool bRemoveItems = false );
 
@@ -217,7 +283,6 @@ class QgsSpatiaLiteSourceSelect: public QgsAbstractDataSourceWidget, private Ui:
      *  - Uses the QgsSpatialiteDbInfo interface
      *  -> UpdateLayerStatistics()
      * \see QgsSpatialiteDbInfo::isDbSpatialite()
-     * \since QGIS 3.0
      */
     void onUpdateLayerStatitics();
 
@@ -243,7 +308,6 @@ class QgsSpatiaLiteSourceSelect: public QgsAbstractDataSourceWidget, private Ui:
      * \see onSourceSelectButtons_clicked
      * \see QgsSpatialiteDbInfo::SpatialMetadata
     * \returns true if created and loaded
-     * \since QGIS 3.0
      */
     bool createEmptySpatialiteDb( QgsSpatialiteDbInfo::SpatialMetadata dbCreateOption, QString sDbCreateOption = QString() );
 
@@ -261,8 +325,6 @@ class QgsSpatiaLiteSourceSelect: public QgsAbstractDataSourceWidget, private Ui:
      * \param providerKey
      * \see onSourceSelectButtons_clicked
      * \see addConnectionsDatabaseSource
-     * \see mSqlitePath
-     * \since QGIS 3.0
      */
     void addConnectionDatabaseSource( QString const &path, QString const &providerKey = QStringLiteral( "spatialite" ) );
 
@@ -274,7 +336,6 @@ class QgsSpatiaLiteSourceSelect: public QgsAbstractDataSourceWidget, private Ui:
      * \param paths absolute path to file(s) to load
      * \param providerKey
      * \see addConnectionDatabaseSource
-     * \since QGIS 3.0
      */
     void addConnectionsDatabaseSource( QStringList const &paths, QString const &providerKey = QStringLiteral( "spatialite" ) );
 
@@ -309,7 +370,6 @@ class QgsSpatiaLiteSourceSelect: public QgsAbstractDataSourceWidget, private Ui:
      * \see addSelectedDbLayers
      * \see onUpdateLayerStatitics
      * \see setLayerSqlQuery
-     * \since QGIS 3.0
      */
     void onSourceSelectButtons_clicked();
 
@@ -325,7 +385,6 @@ class QgsSpatiaLiteSourceSelect: public QgsAbstractDataSourceWidget, private Ui:
      *  - mLayerOrderTreeView: Displaying the selected Layers of the opended Database
      * outside of Tabs: none
      * \see on_mConnectButton_clicked
-     * \since QGIS 3.0
      */
     void onSourceSelectTreeView_clicked( const QModelIndex &index );
 
@@ -341,7 +400,6 @@ class QgsSpatiaLiteSourceSelect: public QgsAbstractDataSourceWidget, private Ui:
      *  - mLayerOrderTreeView: Displaying the selected Layers of the opended Database
      * outside of Tabs: none
      * \see on_mConnectButton_clicked
-     * \since QGIS 3.0
      */
     void onSourceSelectTreeView_doubleClicked( const QModelIndex &index );
 
@@ -357,7 +415,6 @@ class QgsSpatiaLiteSourceSelect: public QgsAbstractDataSourceWidget, private Ui:
      *  - mLayerOrderTreeView: Displaying the selected Layers of the opended Database
      * outside of Tabs: none
      * \see on_mConnectButton_clicked
-     * \since QGIS 3.0
      */
     void onSourceSelectTreeView_SelectionChanged( const QItemSelection &selected, const QItemSelection &deselected );
 
@@ -366,7 +423,6 @@ class QgsSpatiaLiteSourceSelect: public QgsAbstractDataSourceWidget, private Ui:
     /**
      * Emitted when the provider's connections have changed
      * This signal is normally forwarded the app and used to refresh browser items
-     * \since QGIS 3.0
      */
     void connectionsChanged();
 
@@ -376,7 +432,6 @@ class QgsSpatiaLiteSourceSelect: public QgsAbstractDataSourceWidget, private Ui:
      *  - this event is used to load a DB-Layer during a Drag and Drop
      * \see QgisApp::openLayer
      * \see addConnectionsDatabaseSource
-     * \since QGIS 3.0
      */
     void addDatabaseLayers( QStringList const &paths, QString const &providerKey );
 
@@ -426,7 +481,6 @@ class QgsSpatiaLiteSourceSelect: public QgsAbstractDataSourceWidget, private Ui:
      *  - fills m_selectedLayers with LayerName formatted as 'table_name(geometry_name)' or 'table_name'
      * \see addSelectedDbLayers()
      * \see onUpdateLayerStatitics()
-     * \since QGIS 3.0
      */
     int collectConnectionsSelectedTables();
 
@@ -435,7 +489,6 @@ class QgsSpatiaLiteSourceSelect: public QgsAbstractDataSourceWidget, private Ui:
      * \note
      *  - as LayerName LayerName formatted as 'table_name(geometry_name)' or 'table_name'
      * \see collectConnectionsSelectedTables()
-     * \since QGIS 3.0
      */
     QStringList m_selectedLayers;
 
@@ -470,7 +523,6 @@ class QgsSpatiaLiteSourceSelect: public QgsAbstractDataSourceWidget, private Ui:
      * \returns amount of Uris entries
      * \see getSelectedLayersUris
      * \see collectConnectionsSelectedTables()
-     * \since QGIS 3.0
      */
     int addConnectionsDbMapLayers() const {  return mConnectionsSpatialiteDbInfoModel.addDbMapLayers( m_selectedLayers, m_selectedLayersStyles, m_selectedLayersSql );  }
 
@@ -487,9 +539,28 @@ class QgsSpatiaLiteSourceSelect: public QgsAbstractDataSourceWidget, private Ui:
      * \returns mSelectedLayersUris  Map of LayerNames and  valid Layer-Uris entries
      * \see QgsSpatiaLiteTableModel:;getSpatialiteDbInfo
      * \see addDatabaseLayers
-     * \since QGIS 3.0
      */
     QMap<QString, QString> getConnectionsSelectedLayersUris() const { return mConnectionsSpatialiteDbInfoModel.getConnectionsSelectedLayersUris(); }
+
+    /**
+     * Set either the Database or Layer LayerMetadata
+     * \note
+     *  - Tab will be activated in setMaintenanceDatabaseLayerInfo
+     *  - after checking that the same has not already been loaded
+     * \see setMaintenanceDatabaseLayerInfo
+    */
+    void setSelectedMetadata( QgsLayerMetadata selectedMetadata );
+
+    /**
+     * Contains collected Metadata for the Database
+     * \brief A structured metadata store for a map layer.
+     * \note
+     *  - QgsSpatialiteDbLayer will use a copy this as starting point
+     * \see QgsMapLayer::htmlMetadata()
+     * \see QgsMapLayer::metadata
+     * \see QgsMapLayer::setMetadata
+    */
+    QgsLayerMetadata mSelectedMetadata;
 
     /**
      * Storage for the range of layer type icons
@@ -498,7 +569,6 @@ class QgsSpatiaLiteSourceSelect: public QgsAbstractDataSourceWidget, private Ui:
      *  - fills m_selectedLayers with LayerName formatted as 'table_name(geometry_name)' or 'table_name'
      * \see addSelectedDbLayers()
      * \see onUpdateLayerStatitics()
-     * \since QGIS 3.0
      */
     QMap < QString, QPair < QString, QIcon > >mLayerIcons;
 
@@ -520,7 +590,6 @@ class QgsSpatiaLiteSourceSelect: public QgsAbstractDataSourceWidget, private Ui:
      * - removes all entries when a new Database is being opened
      * \see setSpatialiteDbInfo
      * \see addDatabaseEntry
-     * \since QGIS 3.0
      */
     QgsSpatialiteDbInfoItem *mConnectionsRootItem = nullptr;
 
@@ -552,7 +621,6 @@ class QgsSpatiaLiteSourceSelect: public QgsAbstractDataSourceWidget, private Ui:
      * - removes all entries when a new Database is being opened
      * \see setSpatialiteDbInfo
      * \see addDatabaseEntry
-     * \since QGIS 3.0
      */
     QgsSpatialiteDbInfoItem *mLayerOrderRootItem = nullptr;
 
@@ -567,6 +635,37 @@ class QgsSpatiaLiteSourceSelect: public QgsAbstractDataSourceWidget, private Ui:
     QgsDatabaseFilterProxyModel mLayerOrderProxyModel;
 
     /**
+     * Placeholder for Model RootItem of 'Layer Order'
+     *  - Tab 'MaintenanceColumns Columns'
+     * - used as insert point of child Spatial Items when building
+     * \note
+     * - filling columns of selected table/view
+     * \see setSpatialiteDbInfo
+     * \see addDatabaseEntry
+     */
+    QgsSpatialiteDbInfoItem *mMaintenanceColumnsRootItem = nullptr;
+
+    /**
+     * Model that acts as datasource for mMaintenanceColumnsTreeView
+     *  - Tab 'Layer Order'
+     * \note
+     * Type: ModelTypeLayerOrder
+     *  - filled by selected Items from mConnectionsTreeView
+     * \since QGIS 1.8
+     */
+    QgsSpatialiteDbInfoModel mMaintenanceColumnsSpatialiteDbInfoModel;
+
+    /**
+     * QgsDatabaseFilterProxyMode for mLayerOrderTreeView
+     *  - Tab 'Layer Order'
+     * \note
+     *  - does what ever needs to be done
+     * QgsDatabaseFilterProxyModel, QSortFilterProxyModel
+     * \since QGIS 1.8
+     */
+    QgsDatabaseFilterProxyModel mMaintenanceColumnsProxyModel;
+
+    /**
      * Creates extra Sql-Query for selected Layers
      * \note
      *  - retrieves Table and Geometry Names with Sql from TableModel
@@ -577,7 +676,6 @@ class QgsSpatiaLiteSourceSelect: public QgsAbstractDataSourceWidget, private Ui:
      * \see QgsSpatiaLiteTableModel::getTableName
      * \see QgsSpatiaLiteTableModel::getGeometryName
      * \see QgsSpatiaLiteTableModel::getSqlQuery
-     * \see m_selectedLayersSql
      * \since QGIS 1.8
      */
     QString layerUriSql( const QModelIndex &index );
@@ -624,9 +722,7 @@ class QgsSpatiaLiteSourceSelect: public QgsAbstractDataSourceWidget, private Ui:
      * - SpatialMetadata::SpatialiteGpkg: using spatialite 'gpkgCreateBaseTables' function
      * - SpatialMetadata::SpatialiteMBTiles: creating a view-base MbTiles file with grid tables
      * \returns true if the Database was created
-     * \see mDbCreateOption
      * \see QgsSpatialiteDbInfo::createDatabase
-     * \since QGIS 3.0
      */
     // QComboBox *cmbDbCreateOption = nullptr;
 
@@ -645,9 +741,8 @@ class QgsSpatiaLiteSourceSelect: public QgsAbstractDataSourceWidget, private Ui:
      *  - Spatialite-Geometries
     * \see createDbLayerInfoUri
     * \see addConnectionsDbMapLayers
-    * \since QGIS 3.0
     */
-    const QString mSpatialiteProviderKey = QStringLiteral( "spatialite50" );
+    const QString mSpatialiteProviderKey = QStringLiteral( "spatialite" );
 
 };
 

@@ -687,22 +687,22 @@ bool QgsSpatialiteDbInfo::attachQSqliteHandle( QgsSqliteHandle *qSqliteHandle )
 QgsSpatialiteDbInfo::TypeSubType QgsSpatialiteDbInfo::GetVariantType( const QString &type )
 {
   // making some assumptions in order to guess a more realistic type
-  if ( type == QLatin1String( "int" ) ||
-       type == QLatin1String( "integer" ) ||
-       type == QLatin1String( "integer64" ) ||
-       type == QLatin1String( "bigint" ) ||
-       type == QLatin1String( "smallint" ) ||
-       type == QLatin1String( "tinyint" ) ||
-       type == QLatin1String( "boolean" ) )
+  if ( type == QStringLiteral( "int" ) ||
+       type == QStringLiteral( "integer" ) ||
+       type == QStringLiteral( "integer64" ) ||
+       type == QStringLiteral( "bigint" ) ||
+       type == QStringLiteral( "smallint" ) ||
+       type == QStringLiteral( "tinyint" ) ||
+       type == QStringLiteral( "boolean" ) )
     return TypeSubType( QVariant::LongLong, QVariant::Invalid );
-  else if ( type == QLatin1String( "real" ) ||
-            type == QLatin1String( "double" ) ||
-            type == QLatin1String( "double precision" ) ||
-            type == QLatin1String( "float" ) )
+  else if ( type == QStringLiteral( "real" ) ||
+            type == QStringLiteral( "double" ) ||
+            type == QStringLiteral( "double precision" ) ||
+            type == QStringLiteral( "float" ) )
     return TypeSubType( QVariant::Double, QVariant::Invalid );
-  else if ( type == QLatin1String( "date" ) )
+  else if ( type == QStringLiteral( "date" ) )
     return TypeSubType( QVariant::Date, QVariant::Invalid );
-  else if ( type == QLatin1String( "datetime" ) )
+  else if ( type == QStringLiteral( "datetime" ) )
     return TypeSubType( QVariant::DateTime, QVariant::Invalid );
   else if ( type.startsWith( QgsSpatialiteDbInfo::SPATIALITE_ARRAY_PREFIX ) && type.endsWith( QgsSpatialiteDbInfo::SPATIALITE_ARRAY_SUFFIX ) )
   {
@@ -1076,128 +1076,128 @@ QMap<QString, QString> QgsSpatialiteDbInfo::getSpatialiteTableTypes()
 //-----------------------------------------------------------------
 QIcon QgsSpatialiteDbInfo::NonSpatialTablesTypeIcon( QString typeName )
 {
-  if ( typeName.startsWith( QLatin1String( "Table" ), Qt::CaseInsensitive ) )
+  if ( typeName.startsWith( QStringLiteral( "Table" ), Qt::CaseInsensitive ) )
   {
     return QgsApplication::getThemeIcon( QStringLiteral( "/mActionAddTable.svg" ) );
   }
-  else if ( typeName.startsWith( QLatin1String( "View" ), Qt::CaseInsensitive ) )
+  else if ( typeName.startsWith( QStringLiteral( "View" ), Qt::CaseInsensitive ) )
   {
     return QgsApplication::getThemeIcon( QStringLiteral( "/mActionCalculateField.svg" ) );
   }
-  else if ( typeName.startsWith( QLatin1String( "SpatialTable" ), Qt::CaseInsensitive ) )
+  else if ( typeName.startsWith( QStringLiteral( "SpatialTable" ), Qt::CaseInsensitive ) )
   {
     return QgsApplication::getThemeIcon( QStringLiteral( "/mActionNewVectorLayer.svg" ) );
   }
-  else if ( typeName.startsWith( QLatin1String( "SpatialView" ), Qt::CaseInsensitive ) )
+  else if ( typeName.startsWith( QStringLiteral( "SpatialView" ), Qt::CaseInsensitive ) )
   {
     return QgsApplication::getThemeIcon( QStringLiteral( "/mActionNodeTool.svg" ) );
   }
-  else if ( typeName.startsWith( QLatin1String( "VirtualShapes" ), Qt::CaseInsensitive ) )
+  else if ( typeName.startsWith( QStringLiteral( "VirtualShapes" ), Qt::CaseInsensitive ) )
   {
     return QgsApplication::getThemeIcon( QStringLiteral( "/rendererPointDisplacementSymbol.svg" ) );
   }
-  else if ( typeName.startsWith( QLatin1String( "Virtual" ), Qt::CaseInsensitive ) )
+  else if ( typeName.startsWith( QStringLiteral( "Virtual" ), Qt::CaseInsensitive ) )
   {
     return QgsApplication::getThemeIcon( QStringLiteral( "/rendererGraduatedSymbol.svg" ) );
   }
-  else if ( typeName.startsWith( QLatin1String( "SpatialIndex" ), Qt::CaseInsensitive ) )
+  else if ( typeName.startsWith( QStringLiteral( "SpatialIndex" ), Qt::CaseInsensitive ) )
   {
-    if ( typeName.endsWith( QLatin1String( "-Rowid" ), Qt::CaseInsensitive ) )
+    if ( typeName.endsWith( QStringLiteral( "-Rowid" ), Qt::CaseInsensitive ) )
     {
       return QgsApplication::getThemeIcon( QStringLiteral( "/mActionFormAnnotation.svg" ) );
     }
-    else if ( typeName.endsWith( QLatin1String( "-Parent" ), Qt::CaseInsensitive ) )
+    else if ( typeName.endsWith( QStringLiteral( "-Parent" ), Qt::CaseInsensitive ) )
     {
       return QgsApplication::getThemeIcon( QStringLiteral( "/mActionPropertyItem.svg" ) );
     }
-    else if ( typeName.endsWith( QLatin1String( "-Node" ), Qt::CaseInsensitive ) )
+    else if ( typeName.endsWith( QStringLiteral( "-Node" ), Qt::CaseInsensitive ) )
     {
       return QgsApplication::getThemeIcon( QStringLiteral( "/mActionMergeFeatureAttributes.svg" ) );
     }
     return QgsApplication::getThemeIcon( QStringLiteral( "/mActionFilterTableFields.svg" ) );
   }
-  else if ( typeName.startsWith( QLatin1String( "Geometries" ), Qt::CaseInsensitive ) )
+  else if ( typeName.startsWith( QStringLiteral( "Geometries" ), Qt::CaseInsensitive ) )
   {
     return QgsApplication::getThemeIcon( QStringLiteral( "/mActionAddWfsLayer.svg" ) );
   }
-  else if ( typeName.startsWith( QLatin1String( "RasterLite2Raster" ), Qt::CaseInsensitive ) )
+  else if ( typeName.startsWith( QStringLiteral( "RasterLite2Raster" ), Qt::CaseInsensitive ) )
   {
     return QgsApplication::getThemeIcon( QStringLiteral( "/mIconColorSwatches.svg" ) );
   }
-  else if ( typeName.startsWith( QLatin1String( "RasterLite2" ), Qt::CaseInsensitive ) )
+  else if ( typeName.startsWith( QStringLiteral( "RasterLite2" ), Qt::CaseInsensitive ) )
   {
-    if ( typeName.endsWith( QLatin1String( "-Admin" ), Qt::CaseInsensitive ) )
+    if ( typeName.endsWith( QStringLiteral( "-Admin" ), Qt::CaseInsensitive ) )
     {
       return QgsApplication::getThemeIcon( QStringLiteral( "/mIconColorSwatches.svg" ) );
     }
-    else if ( typeName.endsWith( QLatin1String( "-Metadata" ), Qt::CaseInsensitive ) )
+    else if ( typeName.endsWith( QStringLiteral( "-Metadata" ), Qt::CaseInsensitive ) )
     {
       return QgsApplication::getThemeIcon( QStringLiteral( "/mIconColorSwatches.svg" ) );
     }
-    else if ( typeName.endsWith( QLatin1String( "-Tiles" ), Qt::CaseInsensitive ) )
+    else if ( typeName.endsWith( QStringLiteral( "-Tiles" ), Qt::CaseInsensitive ) )
     {
       return QgsApplication::getThemeIcon( QStringLiteral( "/mIconRasterGroup.svg" ) );
     }
     return QgsApplication::getThemeIcon( QStringLiteral( "/mIconColorSwatches.svg" ) );
   }
-  else if ( typeName.startsWith( QLatin1String( "RasterLite1-Metadata" ), Qt::CaseInsensitive ) )
+  else if ( typeName.startsWith( QStringLiteral( "RasterLite1-Metadata" ), Qt::CaseInsensitive ) )
   {
     return QgsApplication::getThemeIcon( QStringLiteral( "/mActionNewAttribute.svg" ) );
   }
-  else if ( typeName.startsWith( QLatin1String( "RasterLite1-Tiles" ), Qt::CaseInsensitive ) )
+  else if ( typeName.startsWith( QStringLiteral( "RasterLite1-Tiles" ), Qt::CaseInsensitive ) )
   {
     return QgsApplication::getThemeIcon( QStringLiteral( "/rendererGraduatedSymbol.svg" ) );
   }
-  else if ( ( typeName.startsWith( QLatin1String( "RasterLite1" ), Qt::CaseInsensitive ) ) ||
-            ( typeName.endsWith( QLatin1String( "RasterLite1" ), Qt::CaseInsensitive ) ) )
+  else if ( ( typeName.startsWith( QStringLiteral( "RasterLite1" ), Qt::CaseInsensitive ) ) ||
+            ( typeName.endsWith( QStringLiteral( "RasterLite1" ), Qt::CaseInsensitive ) ) )
   {
     return QgsApplication::getThemeIcon( QStringLiteral( "/mIconColorBox.svg" ) );
   }
-  else if ( typeName.startsWith( QLatin1String( "MBTiles" ), Qt::CaseInsensitive ) )
+  else if ( typeName.startsWith( QStringLiteral( "MBTiles" ), Qt::CaseInsensitive ) )
   {
     return QgsApplication::getThemeIcon( QStringLiteral( "/mIconRasterGroup.svg" ) );
   }
-  else if ( typeName.startsWith( QLatin1String( "GeoPackage-Tiles" ), Qt::CaseInsensitive ) )
+  else if ( typeName.startsWith( QStringLiteral( "GeoPackage-Tiles" ), Qt::CaseInsensitive ) )
   {
     return QgsApplication::getThemeIcon( QStringLiteral( "/mIconRasterGroup.svg" ) );
   }
-  else if ( typeName.startsWith( QLatin1String( "GeoPackage-Vector" ), Qt::CaseInsensitive ) )
+  else if ( typeName.startsWith( QStringLiteral( "GeoPackage-Vector" ), Qt::CaseInsensitive ) )
   {
     return QgsApplication::getThemeIcon( QStringLiteral( "/mActionNewVectorLayer.svg" ) );
   }
-  else if ( typeName.startsWith( QLatin1String( "GeoPackage-Admin" ), Qt::CaseInsensitive ) )
+  else if ( typeName.startsWith( QStringLiteral( "GeoPackage-Admin" ), Qt::CaseInsensitive ) )
   {
     return QgsApplication::getThemeIcon( QStringLiteral( "/providerGdal.svg" ) );
   }
-  else if ( typeName.startsWith( QLatin1String( "GeoPackage" ), Qt::CaseInsensitive ) )
+  else if ( typeName.startsWith( QStringLiteral( "GeoPackage" ), Qt::CaseInsensitive ) )
   {
     return QgsApplication::getThemeIcon( QStringLiteral( "/providerGdal.svg" ) );
   }
-  else if ( typeName.startsWith( QLatin1String( "EPSG" ), Qt::CaseInsensitive ) )
+  else if ( typeName.startsWith( QStringLiteral( "EPSG" ), Qt::CaseInsensitive ) )
   {
     return QgsApplication::getThemeIcon( QStringLiteral( "/mIconProjectionEnabled.svg" ) );
   }
-  else if ( typeName.startsWith( QLatin1String( "SpatialRefSysAux" ), Qt::CaseInsensitive ) )
+  else if ( typeName.startsWith( QStringLiteral( "SpatialRefSysAux" ), Qt::CaseInsensitive ) )
   {
     return QgsApplication::getThemeIcon( QStringLiteral( "/mIconProjectionEnabled.svg" ) );
   }
-  else if ( typeName.startsWith( QLatin1String( "Trigger" ), Qt::CaseInsensitive ) )
+  else if ( typeName.startsWith( QStringLiteral( "Trigger" ), Qt::CaseInsensitive ) )
   {
     return QgsApplication::getThemeIcon( QStringLiteral( "/mActionMergeFeatureAttributes.svg" ) );
   }
-  else if ( typeName.startsWith( QLatin1String( "Sqlite3" ), Qt::CaseInsensitive ) )
+  else if ( typeName.startsWith( QStringLiteral( "Sqlite3" ), Qt::CaseInsensitive ) )
   {
     return QgsApplication::getThemeIcon( QStringLiteral( "/mActionDataSourceManager.svg" ) );
   }
-  else if ( typeName.startsWith( QLatin1String( "Topology" ), Qt::CaseInsensitive ) )
+  else if ( typeName.startsWith( QStringLiteral( "Topology" ), Qt::CaseInsensitive ) )
   {
-    if ( typeName.startsWith( QLatin1String( "Topology-View" ), Qt::CaseInsensitive ) )
+    if ( typeName.startsWith( QStringLiteral( "Topology-View" ), Qt::CaseInsensitive ) )
     {
-      if ( typeName.endsWith( QLatin1String( "Edges_Seeds" ), Qt::CaseInsensitive ) )
+      if ( typeName.endsWith( QStringLiteral( "Edges_Seeds" ), Qt::CaseInsensitive ) )
       {
         return QgsApplication::getThemeIcon( QStringLiteral( "/mActionFormView.svg" ) );
       }
-      else if ( typeName.endsWith( QLatin1String( "Face_Seeds" ), Qt::CaseInsensitive ) )
+      else if ( typeName.endsWith( QStringLiteral( "Face_Seeds" ), Qt::CaseInsensitive ) )
       {
         return QgsApplication::getThemeIcon( QStringLiteral( "/mActionFormView.svg" ) );
       }
@@ -1205,15 +1205,15 @@ QIcon QgsSpatialiteDbInfo::NonSpatialTablesTypeIcon( QString typeName )
     }
     else
     {
-      if ( typeName.endsWith( QLatin1String( "Face" ), Qt::CaseInsensitive ) )
+      if ( typeName.endsWith( QStringLiteral( "Face" ), Qt::CaseInsensitive ) )
       {
         return QgsApplication::getThemeIcon( QStringLiteral( "/mActionFormView.svg" ) );
       }
-      else if ( typeName.endsWith( QLatin1String( "Edge" ), Qt::CaseInsensitive ) )
+      else if ( typeName.endsWith( QStringLiteral( "Edge" ), Qt::CaseInsensitive ) )
       {
         return QgsApplication::getThemeIcon( QStringLiteral( "/mActionFormView.svg" ) );
       }
-      else if ( typeName.endsWith( QLatin1String( "Node" ), Qt::CaseInsensitive ) )
+      else if ( typeName.endsWith( QStringLiteral( "Node" ), Qt::CaseInsensitive ) )
       {
         return QgsApplication::getThemeIcon( QStringLiteral( "/mActionMergeFeatureAttributes.svg" ) );
       }
@@ -1222,35 +1222,71 @@ QIcon QgsSpatialiteDbInfo::NonSpatialTablesTypeIcon( QString typeName )
     }
     return QgsApplication::getThemeIcon( QStringLiteral( "/rendererPointClusterSymbol.svg" ) );
   }
-  else if ( typeName.startsWith( QLatin1String( "Styles" ), Qt::CaseInsensitive ) )
+  else if ( typeName.startsWith( QStringLiteral( "Styles" ), Qt::CaseInsensitive ) )
   {
     return QgsApplication::getThemeIcon( QStringLiteral( "/rendererRuleBasedSymbol.svg" ) );
   }
-  else if ( typeName.startsWith( QLatin1String( "Coverages-" ), Qt::CaseInsensitive ) )
+  else if ( typeName.startsWith( QStringLiteral( "Coverages-" ), Qt::CaseInsensitive ) )
   {
-    if ( typeName.endsWith( QLatin1String( "Vector" ), Qt::CaseInsensitive ) )
+    if ( typeName.endsWith( QStringLiteral( "Vector" ), Qt::CaseInsensitive ) )
     {
       return QgsApplication::getThemeIcon( QStringLiteral( "/mActionNewVectorLayer.svg" ) );
     }
-    else if ( typeName.endsWith( QLatin1String( "Raster" ), Qt::CaseInsensitive ) )
+    else if ( typeName.endsWith( QStringLiteral( "Raster" ), Qt::CaseInsensitive ) )
     {
       return QgsApplication::getThemeIcon( QStringLiteral( "/mIconColorSwatches.svg" ) );
     }
     return QgsApplication::getThemeIcon( QStringLiteral( "/mActionSelectAllTree.svg" ) );
   }
-  else if ( typeName.startsWith( QLatin1String( "Spatialite2" ), Qt::CaseInsensitive ) )
+  else if ( typeName.startsWith( QStringLiteral( "Spatialite2" ), Qt::CaseInsensitive ) )
   {
     return QgsApplication::getThemeIcon( QStringLiteral( "/mActionAddLegend.svg" ) );
   }
-  else if ( typeName.startsWith( QLatin1String( "Spatialite" ), Qt::CaseInsensitive ) )
+  else if ( typeName.startsWith( QStringLiteral( "Spatialite" ), Qt::CaseInsensitive ) )
   {
     // mIconSpatialite.svg, mActionNewSpatiaLiteLayer.svg
     return QgsApplication::getThemeIcon( QStringLiteral( "/mActionAddSpatiaLiteLayer.svg" ) );
   }
-  else if ( typeName.startsWith( QLatin1String( "Group" ), Qt::CaseInsensitive ) )
+  else if ( typeName.startsWith( QStringLiteral( "Group" ), Qt::CaseInsensitive ) )
   {
     // General Group-Icon for Groups/SubGroups without any special type
     return QgsApplication::getThemeIcon( QStringLiteral( "/rendererRuleBasedSymbol.svg" ) );
+  }
+  else if ( typeName == QStringLiteral( "TEXT" ) )
+  {
+    return QgsApplication::getThemeIcon( QStringLiteral( "/mIconFieldText.svg" ) );
+  }
+  else if ( typeName == QStringLiteral( "INTEGER" ) )
+  {
+    return QgsApplication::getThemeIcon( QStringLiteral( "/mIconFieldInteger.svg" ) );
+  }
+  else if ( typeName == QStringLiteral( "DOUBLE" ) )
+  {
+    return QgsApplication::getThemeIcon( QStringLiteral( "/mIconFieldFloat.svg" ) );
+  }
+  else if ( typeName == QStringLiteral( "DATE" ) )
+  {
+    return QgsApplication::getThemeIcon( QStringLiteral( "/mIconFieldDate.svg" ) );
+  }
+  else if ( typeName == QStringLiteral( "DATETIME" ) )
+  {
+    return QgsApplication::getThemeIcon( QStringLiteral( "/mIconFieldDateTime.svg" ) );
+  }
+  else if ( typeName.startsWith( QStringLiteral( "TIME" ) ) )
+  {
+    return QgsApplication::getThemeIcon( QStringLiteral( "/mIconFieldTime.svg" ) );
+  }
+  else if ( typeName == QStringLiteral( "BLOB" ) )
+  {
+    return QgsApplication::getThemeIcon( QStringLiteral( "rendererInvertedSymbol.svg" ) );
+  }
+  else if ( typeName == QStringLiteral( "PRIMARY KEY" ) )
+  {
+    return QgsApplication::getThemeIcon( QStringLiteral( "rendererPointDisplacementSymbol.svg" ) );
+  }
+  else if ( typeName == QStringLiteral( "FOREIGN KEY" ) )
+  {
+    return QgsApplication::getThemeIcon( QStringLiteral( "rendererPointClusterSymbol.svg" ) );
   }
   else
   {
@@ -1769,6 +1805,7 @@ int QgsSpatialiteDbInfo::setDatabaseInvalid( QString sLayerName, QString errCaus
 bool QgsSpatialiteDbInfo::prepare()
 {
   bool bChanged = false;
+  QgsDebugMsgLevel( QStringLiteral( "QgsSpatialiteDbInfo::prepare DbValid[%1]" ).arg( isDbValid() ), 7 );
   if ( isDbValid() )
   {
     //----------------------------------------------------------
@@ -1811,6 +1848,10 @@ bool QgsSpatialiteDbInfo::setLayerMetadata()
 //-----------------------------------------------------------------
 QString QgsSpatialiteDbInfo::getDbLayerUris( QString sLayerName )
 {
+  if ( mDbDataSourcesLayerInfo.count() == 0 )
+  {
+    prepare();
+  }
   return mDbLayersDataSourceUris.value( sLayerName ); // QString() if not found
 }
 //-----------------------------------------------------------------
@@ -1818,7 +1859,211 @@ QString QgsSpatialiteDbInfo::getDbLayerUris( QString sLayerName )
 //-----------------------------------------------------------------
 QString QgsSpatialiteDbInfo::getDbLayerInfo( QString sLayerName )
 {
-  return mDbLayersDataSourceInfo.value( sLayerName ); // QString() if not found
+  return getDbLayerInfos().value( sLayerName ); // QString() if not found
+}
+//-----------------------------------------------------------------
+// QgsSpatialiteDbInfo::setDbLayerInfo
+// - part of 'Alter Table Interface'
+// This will update the internal lists to reflect the changes made
+// - The LayerInfo and LayerUrl will be updated
+// -> with a LayerName change : will be replaced
+//-----------------------------------------------------------------
+bool QgsSpatialiteDbInfo::setDbLayerInfo( QString sLayerName, QString sLayerInfo, QString sLayerNameAltered )
+{
+  bool bRc = false;
+  if ( getDbLayerInfos().contains( sLayerName ) )
+  {
+    QString sGeometryType;
+    int iSrid = -1;
+    QString sProviderKey;
+    QString sLayerType;
+    int iSpatialIndex = GAIA_VECTOR_UNKNOWN;
+    int iIsHidden = 0;
+    QString sDataSourceUri;
+    if ( QgsSpatialiteDbInfo::parseLayerInfo( sLayerInfo, sGeometryType, iSrid, sProviderKey, sLayerType, iSpatialIndex, iIsHidden ) )
+    {
+      // sLayerInfo contains a valid structure
+      QgsSpatialiteDbInfo::SpatialiteLayerType layerType = QgsSpatialiteDbInfo::SpatialiteLayerTypeFromName( sLayerType );
+      if ( ( sLayerNameAltered.isEmpty() ) || ( sLayerName == sLayerNameAltered ) )
+      {
+        mDbDataSourcesLayerInfo[sLayerName] = sLayerInfo;
+        createDbLayerInfoUri( sLayerInfo, sDataSourceUri, sLayerName, layerType, sGeometryType, iSrid, iSpatialIndex, iIsHidden );
+        mDbLayersDataSourceUris[sLayerName] = sDataSourceUri;
+      }
+      else
+      {
+        mDbDataSourcesLayerInfo.remove( sLayerName );
+        mDbLayersDataSourceUris.remove( sLayerName );
+        mDbDataSourcesLayerInfo.insert( sLayerNameAltered, sLayerInfo );
+        createDbLayerInfoUri( sLayerInfo, sDataSourceUri, sLayerNameAltered, layerType, sGeometryType, iSrid, iSpatialIndex, iIsHidden );
+        mDbLayersDataSourceUris.insert( sLayerNameAltered, sDataSourceUri );
+      }
+      switch ( layerType )
+      {
+        case QgsSpatialiteDbInfo::SpatialTable:
+        case QgsSpatialiteDbInfo::SpatialView:
+        case QgsSpatialiteDbInfo::VirtualShape:
+          if ( mVectorLayers.contains( sLayerName ) )
+          {
+            if ( ( sLayerNameAltered.isEmpty() ) || ( sLayerName == sLayerNameAltered ) )
+            {
+              mVectorLayers[sLayerName] = sLayerInfo;
+            }
+            else
+            {
+              mVectorLayers.remove( sLayerName );
+              mVectorLayers.insert( sLayerNameAltered, sLayerInfo );
+            }
+          }
+          break;
+        case QgsSpatialiteDbInfo::RasterLite1:
+          if ( mRasterLite1Layers.contains( sLayerName ) )
+          {
+            if ( ( sLayerNameAltered.isEmpty() ) || ( sLayerName == sLayerNameAltered ) )
+            {
+              mRasterLite1Layers[sLayerName] = sLayerInfo;
+            }
+            else
+            {
+              mRasterLite1Layers.remove( sLayerName );
+              mRasterLite1Layers.insert( sLayerNameAltered, sLayerInfo );
+            }
+          }
+          break;
+        case QgsSpatialiteDbInfo::TopologyExport:
+          if ( mTopologyExportLayers.contains( sLayerName ) )
+          {
+            if ( ( sLayerNameAltered.isEmpty() ) || ( sLayerName == sLayerNameAltered ) )
+            {
+              mTopologyExportLayers[sLayerName] = sLayerInfo;
+            }
+            else
+            {
+              mTopologyExportLayers.remove( sLayerName );
+              mTopologyExportLayers.insert( sLayerNameAltered, sLayerInfo );
+            }
+          }
+          break;
+        case QgsSpatialiteDbInfo::MBTilesTable:
+        case QgsSpatialiteDbInfo::MBTilesView:
+          if ( mMBTilesMetaData.contains( sLayerName ) )
+          {
+            if ( ( sLayerNameAltered.isEmpty() ) || ( sLayerName == sLayerNameAltered ) )
+            {
+              mMBTilesMetaData[sLayerName] = sLayerInfo;
+            }
+            else
+            {
+              mMBTilesMetaData.remove( sLayerName );
+              mMBTilesMetaData.insert( sLayerNameAltered, sLayerInfo );
+            }
+          }
+          break;
+        case QgsSpatialiteDbInfo::GeoPackageVector:
+        case QgsSpatialiteDbInfo::GeoPackageRaster:
+          if ( mGeoPackageLayers.contains( sLayerName ) )
+          {
+            if ( ( sLayerNameAltered.isEmpty() ) || ( sLayerName == sLayerNameAltered ) )
+            {
+              mGeoPackageLayers[sLayerName] = sLayerInfo;
+            }
+            else
+            {
+              mGeoPackageLayers.remove( sLayerName );
+              mGeoPackageLayers.insert( sLayerNameAltered, sLayerInfo );
+            }
+          }
+          break;
+        case QgsSpatialiteDbInfo::GdalFdoOgr:
+          if ( mFdoOgrLayers.contains( sLayerName ) )
+          {
+            if ( ( sLayerNameAltered.isEmpty() ) || ( sLayerName == sLayerNameAltered ) )
+            {
+              mFdoOgrLayers[sLayerName] = sLayerInfo;
+            }
+            else
+            {
+              mFdoOgrLayers.remove( sLayerName );
+              mFdoOgrLayers.insert( sLayerNameAltered, sLayerInfo );
+            }
+          }
+          break;
+        // Only: mVectorCoveragesLayers
+        case QgsSpatialiteDbInfo::RasterLite2Vector:
+        // Only: mRasterCoveragesLayers
+        case QgsSpatialiteDbInfo::RasterLite2Raster:
+        default:
+          break;
+      }
+      bRc = true;
+    }
+  }
+  return bRc;
+}
+//-----------------------------------------------------------------
+// QgsSpatialiteDbInfo::getDbLayerInfos
+//-----------------------------------------------------------------
+QMap<QString, QString> QgsSpatialiteDbInfo::getDbLayerInfos()
+{
+  if ( mDbDataSourcesLayerInfo.count() == 0 )
+  {
+    prepare();
+#if 0
+    QgsDebugMsgLevel( QStringLiteral( "QgsSpatialiteDbInfo::getDbLayerInfos: LayerInfo mDbDataSourcesLayerInfo.count[%1]" ).arg( mDbDataSourcesLayerInfo.count() ), 7 );
+    for ( QMap<QString, QString>::iterator itLayers = mDbDataSourcesLayerInfo.begin(); itLayers != mDbDataSourcesLayerInfo.end(); ++itLayers )
+    {
+      QgsDebugMsgLevel( QStringLiteral( "QgsSpatialiteDbInfo::getDbLayerInfos: mDbDataSourcesLayerInfo Key[%1] Value[%2]" ).arg( itLayers.key() ).arg( itLayers.value() ), 7 );
+    }
+#endif
+  }
+  return mDbDataSourcesLayerInfo;
+}
+//-----------------------------------------------------------------
+// QgsSpatialiteDbInfo::setDbCoverageInfo
+// - part of 'Alter Table Interface'
+//-----------------------------------------------------------------
+bool QgsSpatialiteDbInfo::setDbCoverageInfo( QString sLayerName, QString sCoverageInfo, QString sLayerNameAltered )
+{
+  bool bRc = false;
+  QString sLayerType = QString();
+  QString sTableName = QString();
+  QString sTitle = QString();
+  QString sAbstract = QString();
+  QString sCopyright = QString();
+  QString sLicense = QString();
+  int iLayerSrid = -2;
+  // Only Spatialite-Layers that are registered in the Vector/Raster Coverages will have this information
+  if ( QgsSpatialiteDbInfo::parseLayerCoverage( sCoverageInfo, sLayerType, sTableName, sTitle, sAbstract, sCopyright, sLicense, iLayerSrid ) )
+  {
+    // sCoverageInfo contains a valid structure
+    if ( mVectorCoveragesLayers.contains( sLayerName ) )
+    {
+      if ( ( sLayerNameAltered.isEmpty() ) || ( sLayerName == sLayerNameAltered ) )
+      {
+        mVectorCoveragesLayers[sLayerName] = sCoverageInfo;
+      }
+      else
+      {
+        mVectorCoveragesLayers.remove( sLayerName );
+        mVectorCoveragesLayers.insert( sLayerNameAltered, sCoverageInfo );
+      }
+      bRc = true;
+    }
+    if ( mRasterCoveragesLayers.contains( sLayerName ) )
+    {
+      if ( ( sLayerNameAltered.isEmpty() ) || ( sLayerName == sLayerNameAltered ) )
+      {
+        mRasterCoveragesLayers[sLayerName] = sCoverageInfo;
+      }
+      else
+      {
+        mRasterCoveragesLayers.remove( sLayerName );
+        mRasterCoveragesLayers.insert( sLayerNameAltered, sCoverageInfo );
+      }
+      bRc = true;
+    }
+  }
+  return bRc;
 }
 //-----------------------------------------------------------------
 // QgsSpatialiteDbInfo::addGroupLayerEntry
@@ -1876,7 +2121,10 @@ int QgsSpatialiteDbInfo::addGroupLayerEntry( QString sGroupLayerEntry, QString s
         if ( !mMapGroupNames.contains( sGroupLayerEntry ) )
         {
           // sListGroupInfo[middle_earth;GeoPackageVector;2]
-          QString sListGroupInfo = QString( "%2%1%3%1%4" ).arg( QgsSpatialiteDbInfo::ParseSeparatorGeneral ).arg( sListGroupName.toLower() ).arg( sLayerType ).arg( iGroupSeperatorCount );
+          sListGroupName = sListGroupName.toLower();
+          QString sListGroupInfo = QString();
+          // This will fill sListGroupInfo with the formated list [sListGroupInfo must be empty]
+          QgsSpatialiteDbInfo::parseGroupLayerEntry( sListGroupInfo, sListGroupName, sLayerType, iGroupSeperatorCount );
           mListGroupNames.append( sListGroupInfo );
           mMapGroupNames.insert( sGroupLayerEntry, 0 );
           // GroupSeperatorCount[2] ListGroupInfo[middle_earth_;GeoPackageVector;2] GroupLayerEntry[middle_earth_points(geom)]
@@ -1902,20 +2150,28 @@ int QgsSpatialiteDbInfo::addGroupLayerEntry( QString sGroupLayerEntry, QString s
 // and used in
 // - getListSubGroupNames
 //-----------------------------------------------------------------
-bool QgsSpatialiteDbInfo::parseGroupLayerEntry( QString sListGroupInfo, QString &sListGroupName, QString &sLayerType, int &iGroupSeperatorCount )
+bool QgsSpatialiteDbInfo::parseGroupLayerEntry( QString &sListGroupInfo, QString &sListGroupName, QString &sLayerType, int &iGroupSeperatorCount )
 {
   bool bRc = false;
-  QStringList sa_list_info = sListGroupInfo.split( QgsSpatialiteDbInfo::ParseSeparatorGeneral );
-  if ( sa_list_info.count() == 3 )
+  if ( sListGroupInfo.isEmpty() )
   {
-    // sListGroupInfo[middle_earth;GeoPackageVector;2]
-    // sListGroupInfoy[rtree_middle_earth;SpatialIndex-Admin;3]
-    sListGroupName = sa_list_info.at( 0 );
-    sLayerType = sa_list_info.at( 1 );
-    iGroupSeperatorCount = sa_list_info.at( 2 ).toInt();
-    if ( iGroupSeperatorCount > 0 )
+    sListGroupInfo = QString( "%2%1%3%1%4" ).arg( QgsSpatialiteDbInfo::ParseSeparatorGeneral ).arg( sListGroupName.toLower() ).arg( sLayerType ).arg( iGroupSeperatorCount );
+    bRc = true;
+  }
+  else
+  {
+    QStringList saListInfo = sListGroupInfo.split( QgsSpatialiteDbInfo::ParseSeparatorGeneral );
+    if ( saListInfo.count() == 3 )
     {
-      bRc = true;
+      // sListGroupInfo[middle_earth;GeoPackageVector;2]
+      // sListGroupInfoy[rtree_middle_earth;SpatialIndex-Admin;3]
+      sListGroupName = saListInfo.at( 0 );
+      sLayerType = saListInfo.at( 1 );
+      iGroupSeperatorCount = saListInfo.at( 2 ).toInt();
+      if ( iGroupSeperatorCount > 0 )
+      {
+        bRc = true;
+      }
     }
   }
   return bRc;
@@ -1991,13 +2247,15 @@ QStringList QgsSpatialiteDbInfo::getListSubGroupNames( QString sGroupName, int &
     }
     QString sSubGroupName;
     QString sLayerType;
+    QString sListGroupInfo;
     int iAddGroupSeperatorCount = 0;
     QStringList saGroupKeys = getMapGroupNames().keys();
     for ( int i = 0; i < saGroupKeys.count(); i++ )
     {
+      sListGroupInfo = saGroupKeys.at( i );
       // GroupName[GeoPackageVector]  key[middle_earth;GeoPackageVector;2] value[22]
       // GroupName[SpatialIndex-Admin] key[rtree_middle_earth;SpatialIndex-Admin;3] value[220]
-      if ( QgsSpatialiteDbInfo::parseGroupLayerEntry( saGroupKeys.at( i ), sSubGroupName, sLayerType, iAddGroupSeperatorCount ) )
+      if ( QgsSpatialiteDbInfo::parseGroupLayerEntry( sListGroupInfo, sSubGroupName, sLayerType, iAddGroupSeperatorCount ) )
       {
         if ( sLayerType == sGroupName )
         {
@@ -2073,6 +2331,161 @@ bool QgsSpatialiteDbInfo::checkSubGroupNames( QString sLayerName, QString sSearc
   return bInSubGroup;
 }
 //-----------------------------------------------------------------
+// QgsSpatialiteDbInfo::parseForeignKeyList [static]
+// - part of 'Alter Table Interface'
+//-----------------------------------------------------------------
+// Seperator: ';' [QgsSpatialiteDbInfo::ParseSeparatorGeneral]
+// PRAGMA foreign_key_list(vector_coverages)
+// PRAGMA foreign_key_list(gpkg_contents)
+//-----------------------------------------------------------------
+QString QgsSpatialiteDbInfo::parseForeignKeyList( QString sForeignKeyList, QString &sTableNameFrom, QString &sColummNameFrom, QString &sTableNameTo, QString &sColummNameTo, int &iTableToId, int &iTableToSeq, QString &sOnUpdateAction, QString &sOnDeleteAction, QString &sMatchType )
+{
+  QString sFkConstraintDef = QString();
+  if ( sForeignKeyList.isEmpty() )
+  {
+    sFkConstraintDef = QString( "%2%1%3%1%4%1%5%1%6%1%7%1%8%1%9%1%10" ).arg( QgsSpatialiteDbInfo::ParseSeparatorGeneral ).arg( sTableNameFrom ).arg( sColummNameFrom ).arg( sTableNameTo ).arg( sColummNameTo ).arg( iTableToId ).arg( iTableToSeq ).arg( sOnUpdateAction ).arg( sOnDeleteAction ).arg( sMatchType );
+  }
+  else
+  {
+    sTableNameFrom = QString(); // 0 - not part of the foreign_key_list result
+    sColummNameFrom = QString(); // 1
+    sTableNameTo = QString(); // 2
+    sColummNameTo = QString(); // 3
+    iTableToId = -1; // 4
+    iTableToSeq = -1; // 5
+    sOnUpdateAction = QString(); // 6
+    sOnDeleteAction = QString(); // 7
+    sMatchType = QString(); // 8
+    QStringList saForeignKeyList = sForeignKeyList.split( QgsSpatialiteDbInfo::ParseSeparatorGeneral );
+    if ( saForeignKeyList.count() == 9 )
+    {
+      sTableNameFrom = saForeignKeyList.at( 0 );
+      sColummNameFrom = saForeignKeyList.at( 1 );
+      sTableNameTo = saForeignKeyList.at( 2 );
+      sColummNameTo = saForeignKeyList.at( 3 );
+      iTableToId = saForeignKeyList.at( 4 ).toInt();
+      iTableToSeq = saForeignKeyList.at( 5 ).toInt();
+      sOnUpdateAction = saForeignKeyList.at( 6 );
+      sOnDeleteAction = saForeignKeyList.at( 7 );
+      sMatchType = saForeignKeyList.at( 8 );
+      QString sIdSql = QString( "%1%2" ).arg( QStringLiteral( "%1" ).arg( iTableToId, 5, 10, QChar( '0' ) ) ).arg( QStringLiteral( "%1" ).arg( iTableToSeq, 5, 10, QChar( '0' ) ) );
+      // Constraint-Names are not used in sqlite ; attempt will only be made to insure that it is unique
+      sFkConstraintDef = QString( "CONSTRAINT fk_%1_%2_%3_%4 FOREIGN KEY (%2)  REFERENCES %3(%4)" ).arg( sIdSql ).arg( sColummNameFrom ).arg( sTableNameTo ).arg( sColummNameTo );
+      if ( ( !sOnUpdateAction.isEmpty() ) && ( sOnUpdateAction != QStringLiteral( "NO ACTION" ) ) )
+      {
+        sFkConstraintDef = QString( "%1 ON UPDATE %2" ).arg( sFkConstraintDef ).arg( sOnUpdateAction );
+      }
+      if ( ( !sOnDeleteAction.isEmpty() ) && ( sOnDeleteAction != QStringLiteral( "NO ACTION" ) ) )
+      {
+        sFkConstraintDef = QString( "%1 ON DELETE %2" ).arg( sFkConstraintDef ).arg( sOnDeleteAction );
+      }
+      if ( ( !sMatchType.isEmpty() ) && ( sMatchType != QStringLiteral( "NONE" ) ) )
+      {
+        // https://www.sqlite.org/syntax/foreign-key-clause.html [I have never seen this]
+        sFkConstraintDef = QString( "%1 MATCH %2" ).arg( sFkConstraintDef ).arg( sMatchType );
+      }
+    }
+  }
+  return sFkConstraintDef;
+}
+//-----------------------------------------------------------------
+// QgsSpatialiteDbInfo::parseTableInfo [static]
+// - part of 'Alter Table Interface'
+//-----------------------------------------------------------------
+// Seperator: ';' [QgsSpatialiteDbInfo::ParseSeparatorGeneral]
+// A column definition, for CREATE TABLE, is returned
+//-----------------------------------------------------------------
+QString QgsSpatialiteDbInfo::parseTableInfo( QString sTableInfo, QString &sColumnName, QString &sColummType, bool &bNotNull, QString &sDefaultValue, int &iPrimaryKey, int &iForeignKey )
+{
+  QString sSqlColumnDef = QString();
+  if ( sTableInfo.isEmpty() )
+  {
+    sSqlColumnDef = QString( "%2%1%3%1%4%1%5%1%6%1%7%1" ).arg( QgsSpatialiteDbInfo::ParseSeparatorGeneral ).arg( sColumnName ).arg( sColummType ).arg( ( int )bNotNull ).arg( sDefaultValue ).arg( iPrimaryKey ).arg( iForeignKey );
+  }
+  else
+  {
+    sColumnName = QString();
+    sColummType = QString();
+    sDefaultValue = QString();
+    bNotNull = false;
+    iPrimaryKey = 0;
+    iForeignKey = 0;
+    QStringList saTableInfo = sTableInfo.split( QgsSpatialiteDbInfo::ParseSeparatorGeneral );
+    if ( saTableInfo.count() == 7 )
+    {
+      sColumnName = saTableInfo.at( 0 );
+      sColummType = saTableInfo.at( 1 );
+      if ( saTableInfo.at( 2 ).toInt() == 1 )
+      {
+        bNotNull = true;
+      }
+      sDefaultValue = saTableInfo.at( 3 );
+      iPrimaryKey = saTableInfo.at( 4 ).toInt();
+      iForeignKey = saTableInfo.at( 5 ).toInt();
+      // id_admin INTEGER 0 NULL  1
+      // id_admin INTEGER , [PRIMARY KEY (id_admin)]
+      // 5  valid_until DATE  0 '7052-10-06'  0
+      sSqlColumnDef = QStringLiteral( "%1 %2" ).arg( sColumnName ).arg( sColummType );
+      if ( bNotNull )
+      {
+        sSqlColumnDef = QStringLiteral( "%1 NOT NULL" ).arg( sSqlColumnDef );
+      }
+      if ( ( sDefaultValue.count() > 0 ) && ( sDefaultValue != QStringLiteral( "NULL" ) ) )
+      {
+        // As received from table_info, with possibly needed '' ['7052-10-06']
+        sSqlColumnDef = QStringLiteral( "%1 DEFAULT %2" ).arg( sSqlColumnDef ).arg( sDefaultValue );
+      }
+      if ( iPrimaryKey == 1 )
+      {
+        //  Is the index of the column in the primary key for columns that are part of the primary key.
+        // The purpose of AUTOINCREMENT is to prevent the reuse of ROWIDs from previously deleted rows.
+        sSqlColumnDef = QStringLiteral( "%1 PRIMARY KEY" ).arg( sSqlColumnDef );
+      }
+      if ( iForeignKey == 1 )
+      {
+        // Since we do not have the sTableNameTo and sColummNameTo, this cannot be added
+        // sSqlColumnDef = QStringLiteral( "%1 REFERENCES %2(%3)" ).arg( sSqlColumnDef ).arg( sTableNameTo ).arg( sColummNameTo );
+      }
+    }
+  }
+  return sSqlColumnDef;
+}
+//-----------------------------------------------------------------
+// QgsSpatialiteDbInfo::getLayerTypeProviderKey
+//-----------------------------------------------------------------
+QString QgsSpatialiteDbInfo::getLayerTypeProviderKey( QgsSpatialiteDbInfo::SpatialiteLayerType layerType )
+{
+  QString sProviderKey = QString();
+  switch ( layerType )
+  {
+    case QgsSpatialiteDbInfo::SpatialTable:
+    case QgsSpatialiteDbInfo::SpatialView:
+    case QgsSpatialiteDbInfo::VirtualShape:
+    case QgsSpatialiteDbInfo::TopologyExport:
+    case QgsSpatialiteDbInfo::SpatialiteTopology:
+    {
+      sProviderKey = mSpatialiteProviderKey;
+    }
+    break;
+    case QgsSpatialiteDbInfo::RasterLite2Raster:
+      sProviderKey = mRasterLite2ProviderKey;
+      break;
+    case QgsSpatialiteDbInfo::RasterLite1:
+    case QgsSpatialiteDbInfo::GeoPackageRaster:
+    case QgsSpatialiteDbInfo::MBTilesTable:
+    case QgsSpatialiteDbInfo::MBTilesView:
+      sProviderKey = mGdalProviderKey;
+      break;
+    case QgsSpatialiteDbInfo::GdalFdoOgr:
+    case QgsSpatialiteDbInfo::GeoPackageVector:
+      sProviderKey = mOgrProviderKey;
+      break;
+    default:
+      break;
+  }
+  return sProviderKey;
+}
+//-----------------------------------------------------------------
 // QgsSpatialiteDbInfo::createDbLayerInfoUri
 //-----------------------------------------------------------------
 // Self contained function to create Uri + LayerInfo for all types
@@ -2106,6 +2519,8 @@ QString QgsSpatialiteDbInfo::createDbLayerInfoUri( QString &sLayerInfo, QString 
   QString sTableName  = QString::null;
   QString sGeometryColumn = QString::null;
   QString sLayerType = QgsSpatialiteDbInfo::SpatialiteLayerTypeName( layerType );
+  sLayerInfo = QString();
+  QString sProviderKey = getLayerTypeProviderKey( layerType );
 //----------------------------------------------------------
   // Extract TableName/GeometryColumn from sent 'table_name' or 'table_name(field_name)' from LayerName
   QgsSpatialiteDbInfo::parseLayerName( sLayerName, sTableName, sGeometryColumn );
@@ -2118,7 +2533,8 @@ QString QgsSpatialiteDbInfo::createDbLayerInfoUri( QString &sLayerInfo, QString 
     case QgsSpatialiteDbInfo::TopologyExport:
     case QgsSpatialiteDbInfo::SpatialiteTopology:
     {
-      sLayerInfo = QString( "%2%1%3%1%4%1%5%1%6%1%7" ).arg( QgsSpatialiteDbInfo::ParseSeparatorGeneral ).arg( sGeometryType ).arg( iSrid ).arg( mSpatialiteProviderKey ).arg( sLayerType ).arg( iSpatialIndex ).arg( iIsHidden );
+      // This will create the formated list in sLayerInfo [sLayerInfo must be empty]
+      QgsSpatialiteDbInfo::parseLayerInfo( sLayerInfo, sGeometryType, iSrid, sProviderKey, sLayerType, iSpatialIndex, iIsHidden );
       sDataSourceUri = QString( sDataSourceUriBase.arg( getDatabaseUri() ).arg( sTableName ) );
       if ( !sGeometryColumn.isEmpty() )
       {
@@ -2129,39 +2545,45 @@ QString QgsSpatialiteDbInfo::createDbLayerInfoUri( QString &sLayerInfo, QString 
     case QgsSpatialiteDbInfo::RasterLite2Raster:
     {
       // Note: the gdal notation will be retained, so that only one connection string exists. QgsDataSourceUri does not work with this gdal version [will fail].
-      sLayerInfo = QString( "%2%1%3%1%4%1%5%1%6%1%7" ).arg( QgsSpatialiteDbInfo::ParseSeparatorGeneral ).arg( sGeometryType ).arg( iSrid ).arg( mRasterLite2ProviderKey ).arg( sLayerType ).arg( iSpatialIndex ).arg( iIsHidden );
+      // This will create the formated list in sLayerInfo [sLayerInfo must be empty]
+      QgsSpatialiteDbInfo::parseLayerInfo( sLayerInfo, sGeometryType, iSrid, sProviderKey, sLayerType, iSpatialIndex, iIsHidden );
       sDataSourceUri = QString( "%4%1%2%1%3" ).arg( QgsSpatialiteDbInfo::ParseSeparatorUris ).arg( getDatabaseFileName() ).arg( sTableName ).arg( QStringLiteral( "RASTERLITE2" ) );
     }
     break;
     case QgsSpatialiteDbInfo::RasterLite1:
     {
-      sLayerInfo = QString( "%2%1%3%1%4%1%5%1%6%1%7" ).arg( QgsSpatialiteDbInfo::ParseSeparatorGeneral ).arg( sGeometryType ).arg( iSrid ).arg( mGdalProviderKey ).arg( sLayerType ).arg( iSpatialIndex ).arg( iIsHidden );
+      // This will create the formated list in sLayerInfo [sLayerInfo must be empty]
+      QgsSpatialiteDbInfo::parseLayerInfo( sLayerInfo, sGeometryType, iSrid, sProviderKey, sLayerType, iSpatialIndex, iIsHidden );
       sDataSourceUriBase = QString( "%1,table=%2" );
       sDataSourceUri = QString( sDataSourceUriBase.arg( QString( "%3%1%2" ).arg( QgsSpatialiteDbInfo::ParseSeparatorUris ).arg( getDatabaseFileName() ).arg( QStringLiteral( "RASTERLITE" ) ) ).arg( sTableName ) );
     }
     break;
     case QgsSpatialiteDbInfo::GdalFdoOgr:
     {
-      sLayerInfo = QString( "%2%1%3%1%4%1%5%1%6%1%7" ).arg( QgsSpatialiteDbInfo::ParseSeparatorGeneral ).arg( sGeometryType ).arg( iSrid ).arg( mOgrProviderKey ).arg( sLayerType ).arg( iSpatialIndex ).arg( iIsHidden );
+      // This will create the formated list in sLayerInfo [sLayerInfo must be empty]
+      QgsSpatialiteDbInfo::parseLayerInfo( sLayerInfo, sGeometryType, iSrid, sProviderKey, sLayerType, iSpatialIndex, iIsHidden );
       sDataSourceUri = QString( "%1|%2=%3" ).arg( getDatabaseFileName() ).arg( QStringLiteral( "layername" ) ).arg( sTableName );
     }
     break;
     case QgsSpatialiteDbInfo::GeoPackageVector:
     {
-      sLayerInfo = QString( "%2%1%3%1%4%1%5%1%6%1%7" ).arg( QgsSpatialiteDbInfo::ParseSeparatorGeneral ).arg( sGeometryType ).arg( iSrid ).arg( mOgrProviderKey ).arg( sLayerType ).arg( iSpatialIndex ).arg( iIsHidden );
+      // This will create the formated list in sLayerInfo [sLayerInfo must be empty]
+      QgsSpatialiteDbInfo::parseLayerInfo( sLayerInfo, sGeometryType, iSrid, sProviderKey, sLayerType, iSpatialIndex, iIsHidden );
       sDataSourceUri = QString( "%1|%3=%2" ).arg( getDatabaseFileName() ).arg( sTableName ).arg( QStringLiteral( "layername" ) );
     }
     break;
     case QgsSpatialiteDbInfo::GeoPackageRaster:
     {
-      sLayerInfo = QString( "%2%1%3%1%4%1%5%1%6%1%7" ).arg( QgsSpatialiteDbInfo::ParseSeparatorGeneral ).arg( sGeometryType ).arg( iSrid ).arg( mGdalProviderKey ).arg( sLayerType ).arg( iSpatialIndex ).arg( iIsHidden );
+      // This will create the formated list in sLayerInfo [sLayerInfo must be empty]
+      QgsSpatialiteDbInfo::parseLayerInfo( sLayerInfo, sGeometryType, iSrid, sProviderKey, sLayerType, iSpatialIndex, iIsHidden );
       sDataSourceUri = QString( "%4%1%2%1%3" ).arg( QgsSpatialiteDbInfo::ParseSeparatorUris ).arg( getDatabaseFileName() ).arg( sTableName ).arg( QStringLiteral( "GPKG" ) );
     }
     break;
     case QgsSpatialiteDbInfo::MBTilesTable:
     case QgsSpatialiteDbInfo::MBTilesView:
     {
-      sLayerInfo = QString( "%2%1%3%1%4%1%5%1%6%1%7" ).arg( QgsSpatialiteDbInfo::ParseSeparatorGeneral ).arg( sGeometryType ).arg( iSrid ).arg( mGdalProviderKey ).arg( sLayerType ).arg( iSpatialIndex ).arg( iIsHidden );
+      // This will create the formated list in sLayerInfo [sLayerInfo must be empty]
+      QgsSpatialiteDbInfo::parseLayerInfo( sLayerInfo, sGeometryType, iSrid, sProviderKey, sLayerType, iSpatialIndex, iIsHidden );
       sDataSourceUri = getDatabaseFileName();
     }
     break;
@@ -2205,21 +2627,40 @@ QString QgsSpatialiteDbInfo::createDbLayerInfoUri( QString &sLayerInfo, QString 
 // -> MBTiles [Gdal]: 'PathToFile'
 // --> LayerInfo[MBTilesTable;4326;gdal;MBTilesTable;0;0]
 //-----------------------------------------------------------------
-bool QgsSpatialiteDbInfo::parseLayerInfo( QString sLayerInfo, QString &sGeometryType, int &iSrid, QString &sProvider, QString &sLayerType, int &iSpatialIndex, int &iIsHidden )
+bool QgsSpatialiteDbInfo::parseLayerInfo( QString &sLayerInfo, QString &sGeometryType, int &iSrid, QString &sProviderKey, QString &sLayerType, int &iSpatialIndex, int &iIsHidden )
 {
   bool bRc = false;
-  QStringList sa_list_info = sLayerInfo.split( QgsSpatialiteDbInfo::ParseSeparatorGeneral );
-  if ( sa_list_info.count() == 6 )
+  if ( sLayerInfo.isEmpty() )
   {
-    // For Layers that contain no Geometries, this will be the Layer-Type
-    sGeometryType = sa_list_info.at( 0 );
-    iSrid = sa_list_info.at( 1 ).toInt();
-    sProvider = sa_list_info.at( 2 );
-    // Needed by QgsSpatialiteLayerItem, where no QgsSpatialiteDbLayer exists
-    sLayerType = sa_list_info.at( 3 );
-    iSpatialIndex = sa_list_info.at( 4 ).toInt();
-    iIsHidden = sa_list_info.at( 5 ).toInt();
-    bRc = true;
+    sLayerInfo = QString( "%2%1%3%1%4%1%5%1%6%1%7" ).arg( QgsSpatialiteDbInfo::ParseSeparatorGeneral ).arg( sGeometryType ).arg( iSrid ).arg( sProviderKey ).arg( sLayerType ).arg( iSpatialIndex ).arg( iIsHidden );
+    if ( sLayerInfo != QStringLiteral( ";-1;;;-1;0" ) )
+    {
+      bRc = true;
+    }
+  }
+  else
+  {
+    sGeometryType = QString();
+    sProviderKey = QString();
+    sLayerType = QString();
+    iSpatialIndex = -1;
+    iIsHidden = -1;
+    QStringList saListInfo = sLayerInfo.split( QgsSpatialiteDbInfo::ParseSeparatorGeneral );
+    if ( saListInfo.count() == 6 )
+    {
+      // For Layers that contain no Geometries, this will be the Layer-Type
+      sGeometryType = saListInfo.at( 0 );
+      iSrid = saListInfo.at( 1 ).toInt();
+      sProviderKey = saListInfo.at( 2 );
+      // Needed by QgsSpatialiteLayerItem, where no QgsSpatialiteDbLayer exists
+      sLayerType = saListInfo.at( 3 );
+      iSpatialIndex = saListInfo.at( 4 ).toInt();
+      iIsHidden = saListInfo.at( 5 ).toInt();
+      if ( ( iSpatialIndex >= 0 ) && ( !sGeometryType.isEmpty() ) && ( sLayerInfo != QStringLiteral( ";-1;;;-1;0" ) ) )
+      {
+        bRc = true;
+      }
+    }
   }
   return bRc;
 }
@@ -2234,21 +2675,34 @@ bool QgsSpatialiteDbInfo::parseLayerInfo( QString sLayerInfo, QString &sGeometry
 // - [3]  GroupSort
 // - [4]  TableName  (added in buildNonSpatialTablesGroups)
 //-----------------------------------------------------------------
-bool QgsSpatialiteDbInfo::parseSpatialiteTableTypes( QString sSpatialiteTableTypes, QString &sTableType, QString &sGroupName, QString &sParentGroupName, QString &sGroupSort, QString &sTableName )
+bool QgsSpatialiteDbInfo::parseSpatialiteTableTypes( QString &sSpatialiteTableTypes, QString &sTableType, QString &sGroupName, QString &sParentGroupName, QString &sGroupSort, QString &sTableName )
 {
   bool bRc = false;
-  QStringList saParseValues = sSpatialiteTableTypes.split( QgsSpatialiteDbInfo::ParseSeparatorGeneral );
-  if ( saParseValues.count() >= 4 )
+  if ( sSpatialiteTableTypes.isEmpty() )
   {
-    sTableType = saParseValues.at( 0 );
-    sGroupName = saParseValues.at( 1 );
-    sParentGroupName = saParseValues.at( 2 );
-    sGroupSort = saParseValues.at( 3 );
-    if ( saParseValues.count() == 5 )
-    {
-      sTableName = saParseValues.at( 4 );
-    }
+    sSpatialiteTableTypes = QString( "%2%1%3%1%4%1%5%1%6" ).arg( QgsSpatialiteDbInfo::ParseSeparatorGeneral ).arg( sTableType ).arg( sGroupName ).arg( sParentGroupName ).arg( sGroupSort ).arg( sTableName );
     bRc = true;
+  }
+  else
+  {
+    sTableType = QString();
+    sGroupName = QString();
+    sParentGroupName = QString();
+    sGroupSort = QString();
+    sTableName = QString();
+    QStringList saParseValues = sSpatialiteTableTypes.split( QgsSpatialiteDbInfo::ParseSeparatorGeneral );
+    if ( saParseValues.count() >= 4 )
+    {
+      sTableType = saParseValues.at( 0 );
+      sGroupName = saParseValues.at( 1 );
+      sParentGroupName = saParseValues.at( 2 );
+      sGroupSort = saParseValues.at( 3 );
+      if ( saParseValues.count() == 5 )
+      {
+        sTableName = saParseValues.at( 4 );
+      }
+      bRc = true;
+    }
   }
   return bRc;
 }
@@ -2265,21 +2719,37 @@ bool QgsSpatialiteDbInfo::parseSpatialiteTableTypes( QString sSpatialiteTableTyp
 // - [5]  License
 // - [6]  Srid
 //-----------------------------------------------------------------
-bool QgsSpatialiteDbInfo::parseLayerCoverage( QString sLayerInfo, QString &sLayerType,  QString &sLayerName, QString &sTitle, QString &sAbstract, QString &sCopyright, QString &sLicense, int &iSrid )
+bool QgsSpatialiteDbInfo::parseLayerCoverage( QString &sCoverageInfo, QString &sLayerType, QString &sLayerName, QString &sTitle, QString &sAbstract, QString &sCopyright, QString &sLicense, int &iSrid )
 {
   bool bRc = false;
-  QStringList sa_list_info = sLayerInfo.split( QgsSpatialiteDbInfo::ParseSeparatorCoverage );
-  if ( sa_list_info.count() == 7 )
+  if ( sCoverageInfo.isEmpty() )
   {
-    // For Layers  this will be the Layer-Type
-    sLayerType = sa_list_info.at( 0 );
-    sLayerName = sa_list_info.at( 1 );
-    sTitle = sa_list_info.at( 2 );
-    sAbstract = sa_list_info.at( 3 );
-    sCopyright = sa_list_info.at( 4 );
-    sLicense = sa_list_info.at( 5 );
-    iSrid = sa_list_info.at( 6 ).toInt();
+    // Use the Euro-Character to parse, hoping it will not be used in the Title/Abstract Text
+    sCoverageInfo = QString( "%2%1%3%1%4%1%5%1%6%1%7%1%8" ).arg( QgsSpatialiteDbInfo::ParseSeparatorCoverage ).arg( sLayerType ).arg( sLayerName ).arg( sTitle ).arg( sAbstract ).arg( sCopyright ).arg( sLicense ).arg( iSrid );
     bRc = true;
+  }
+  else
+  {
+    sLayerType = QString();
+    sLayerName = QString();
+    sTitle = QString();
+    sAbstract = QString();
+    sCopyright = QString();
+    sLicense = QString();
+    iSrid = -1;
+    QStringList saCoverageInfo = sCoverageInfo.split( QgsSpatialiteDbInfo::ParseSeparatorCoverage );
+    if ( saCoverageInfo.count() == 7 )
+    {
+      // For Layers  this will be the Layer-Type
+      sLayerType = saCoverageInfo.at( 0 );
+      sLayerName = saCoverageInfo.at( 1 );
+      sTitle = saCoverageInfo.at( 2 );
+      sAbstract = saCoverageInfo.at( 3 );
+      sCopyright = saCoverageInfo.at( 4 );
+      sLicense = saCoverageInfo.at( 5 );
+      iSrid = saCoverageInfo.at( 6 ).toInt();
+      bRc = true;
+    }
   }
   return bRc;
 }
@@ -2302,9 +2772,9 @@ bool QgsSpatialiteDbInfo::prepareDataSourceUris()
   QString sLayerName;
   QString sLayerInfo;
   QString sGeometryType;
+  int iSrid = -1;
+  QString sProviderKey;
   QString sLayerType;
-  int iSrid;
-  QString sProvider;
   int iSpatialIndex = GAIA_VECTOR_UNKNOWN;
   int iIsHidden = 0;
   QString sTitle;
@@ -2313,55 +2783,59 @@ bool QgsSpatialiteDbInfo::prepareDataSourceUris()
   QString sLicense;
   for ( QMap<QString, QString>::iterator itLayers = mVectorLayers.begin(); itLayers != mVectorLayers.end(); ++itLayers )
   {
-    if ( parseLayerInfo( itLayers.value(), sGeometryType, iSrid, sProvider, sLayerType, iSpatialIndex, iIsHidden ) )
+    if ( QgsSpatialiteDbInfo::parseLayerInfo( itLayers.value(), sGeometryType, iSrid, sProviderKey, sLayerType, iSpatialIndex, iIsHidden ) )
     {
       createDbLayerInfoUri( sLayerInfo, sDataSourceUri, itLayers.key(), QgsSpatialiteDbInfo::SpatialTable, sGeometryType, iSrid, iSpatialIndex, iIsHidden );
       mDbLayersDataSourceUris.insert( itLayers.key(), sDataSourceUri );
-      mDbLayersDataSourceInfo.insert( itLayers.key(), itLayers.value() );
+      // mDbDataSourcesLayerInfo.insert( itLayers.key(), itLayers.value() );
+      mDbDataSourcesLayerInfo.insert( itLayers.key(), sLayerInfo );
     }
   }
   for ( QMap<QString, QString>::iterator itLayers = mRasterCoveragesLayers.begin(); itLayers != mRasterCoveragesLayers.end(); ++itLayers )
   {
-    if ( parseLayerCoverage( itLayers.value(), sLayerType, sLayerName, sTitle, sAbstract, sCopyright, sLicense, iSrid ) )
+    if ( QgsSpatialiteDbInfo::parseLayerCoverage( itLayers.value(), sLayerType, sLayerName, sTitle, sAbstract, sCopyright, sLicense, iSrid ) )
     {
       iSpatialIndex = GAIA_VECTOR_UNKNOWN;
       iIsHidden = 0;
       createDbLayerInfoUri( sLayerInfo, sDataSourceUri, itLayers.key(), QgsSpatialiteDbInfo::RasterLite2Raster, sLayerType, iSrid, iSpatialIndex, iIsHidden );
       mDbLayersDataSourceUris.insert( itLayers.key(), sDataSourceUri );
-      mDbLayersDataSourceInfo.insert( itLayers.key(), sLayerInfo );
+      mDbDataSourcesLayerInfo.insert( itLayers.key(), sLayerInfo );
     }
   }
   for ( QMap<QString, QString>::iterator itLayers = mTopologyExportLayers.begin(); itLayers != mTopologyExportLayers.end(); ++itLayers )
   {
-    if ( parseLayerInfo( itLayers.value(), sGeometryType, iSrid, sProvider, sLayerType, iSpatialIndex, iIsHidden ) )
+    if ( QgsSpatialiteDbInfo::parseLayerInfo( itLayers.value(), sGeometryType, iSrid, sProviderKey, sLayerType, iSpatialIndex, iIsHidden ) )
     {
       createDbLayerInfoUri( sLayerInfo, sDataSourceUri, itLayers.key(), QgsSpatialiteDbInfo::TopologyExport, sGeometryType, iSrid, iSpatialIndex, iIsHidden );
       mDbLayersDataSourceUris.insert( itLayers.key(), sDataSourceUri );
-      mDbLayersDataSourceInfo.insert( itLayers.key(), itLayers.value() );
+      // mDbDataSourcesLayerInfo.insert( itLayers.key(), itLayers.value() );
+      mDbDataSourcesLayerInfo.insert( itLayers.key(), sLayerInfo );
     }
   }
   for ( QMap<QString, QString>::iterator itLayers = mRasterLite1Layers.begin(); itLayers != mRasterLite1Layers.end(); ++itLayers )
   {
-    if ( parseLayerInfo( itLayers.value(), sGeometryType, iSrid, sProvider, sLayerType, iSpatialIndex, iIsHidden ) )
+    if ( QgsSpatialiteDbInfo::parseLayerInfo( itLayers.value(), sGeometryType, iSrid, sProviderKey, sLayerType, iSpatialIndex, iIsHidden ) )
     {
       createDbLayerInfoUri( sLayerInfo, sDataSourceUri, itLayers.key(), QgsSpatialiteDbInfo::RasterLite1, sGeometryType, iSrid, iSpatialIndex, iIsHidden );
       mDbLayersDataSourceUris.insert( itLayers.key(), sDataSourceUri );
-      mDbLayersDataSourceInfo.insert( itLayers.key(), itLayers.value() );
+      // mDbDataSourcesLayerInfo.insert( itLayers.key(), itLayers.value() );
+      mDbDataSourcesLayerInfo.insert( itLayers.key(), sLayerInfo );
     }
   }
   for ( QMap<QString, QString>::iterator itLayers = mFdoOgrLayers.begin(); itLayers != mFdoOgrLayers.end(); ++itLayers )
   {
-    if ( parseLayerInfo( itLayers.value(), sGeometryType, iSrid, sProvider, sLayerType, iSpatialIndex, iIsHidden ) )
+    if ( QgsSpatialiteDbInfo::parseLayerInfo( itLayers.value(), sGeometryType, iSrid, sProviderKey, sLayerType, iSpatialIndex, iIsHidden ) )
     {
       createDbLayerInfoUri( sLayerInfo, sDataSourceUri, itLayers.key(), QgsSpatialiteDbInfo::GdalFdoOgr, sGeometryType, iSrid, iSpatialIndex, iIsHidden );
       mDbLayersDataSourceUris.insert( itLayers.key(), sDataSourceUri );
-      mDbLayersDataSourceInfo.insert( itLayers.key(), itLayers.value() );
+      // mDbDataSourcesLayerInfo.insert( itLayers.key(), itLayers.value() );
+      mDbDataSourcesLayerInfo.insert( itLayers.key(), sLayerInfo );
     }
   }
   for ( QMap<QString, QString>::iterator itLayers = mGeoPackageLayers.begin(); itLayers != mGeoPackageLayers.end(); ++itLayers )
   {
     QgsSpatialiteDbInfo::SpatialiteLayerType layerType = QgsSpatialiteDbInfo::GeoPackageVector;
-    if ( parseLayerInfo( itLayers.value(), sGeometryType, iSrid, sProvider, sLayerType, iSpatialIndex, iIsHidden ) )
+    if ( QgsSpatialiteDbInfo::parseLayerInfo( itLayers.value(), sGeometryType, iSrid, sProviderKey, sLayerType, iSpatialIndex, iIsHidden ) )
     {
       if ( sGeometryType == "GeoPackageRaster" )
       {
@@ -2369,16 +2843,18 @@ bool QgsSpatialiteDbInfo::prepareDataSourceUris()
       }
       createDbLayerInfoUri( sLayerInfo, sDataSourceUri, itLayers.key(), layerType, sGeometryType, iSrid, iSpatialIndex, iIsHidden );
       mDbLayersDataSourceUris.insert( itLayers.key(), sDataSourceUri );
-      mDbLayersDataSourceInfo.insert( itLayers.key(), itLayers.value() );
+      // mDbDataSourcesLayerInfo.insert( itLayers.key(), itLayers.value() );
+      mDbDataSourcesLayerInfo.insert( itLayers.key(), sLayerInfo );
     }
   }
   for ( QMap<QString, QString>::iterator itLayers = mMBTilesLayers.begin(); itLayers != mMBTilesLayers.end(); ++itLayers )
   {
-    if ( parseLayerInfo( itLayers.value(), sGeometryType, iSrid, sProvider, sLayerType, iSpatialIndex, iIsHidden ) )
+    if ( QgsSpatialiteDbInfo::parseLayerInfo( itLayers.value(), sGeometryType, iSrid, sProviderKey, sLayerType, iSpatialIndex, iIsHidden ) )
     {
       createDbLayerInfoUri( sLayerInfo, sDataSourceUri, itLayers.key(), QgsSpatialiteDbInfo::MBTilesTable, sGeometryType, iSrid, iSpatialIndex, iIsHidden );
       mDbLayersDataSourceUris.insert( itLayers.key(), sDataSourceUri );
-      mDbLayersDataSourceInfo.insert( itLayers.key(), itLayers.value() );
+      // mDbDataSourcesLayerInfo.insert( itLayers.key(), itLayers.value() );
+      mDbDataSourcesLayerInfo.insert( itLayers.key(), sLayerInfo );
     }
   }
   if ( mDbLayersDataSourceUris.count() > 0 )
@@ -2453,13 +2929,13 @@ QMap<QString, QString> QgsSpatialiteDbInfo::getDbLayersType( SpatialiteLayerType
         QString sGeometryType;
         QString sLayerType;
         int iSrid;
-        QString sProvider;
+        QString sProviderKey;
         int iSpatialIndex = GAIA_VECTOR_UNKNOWN;
         int iIsHidden = 0;
         QString sLayerTypeSearch = QgsSpatialiteDbInfo::SpatialiteLayerTypeName( typeLayer );
         for ( QMap<QString, QString>::iterator itLayers = mGeoPackageLayers.begin(); itLayers != mGeoPackageLayers.end(); ++itLayers )
         {
-          if ( parseLayerInfo( itLayers.value(), sGeometryType, iSrid, sProvider, sLayerType, iSpatialIndex, iIsHidden ) )
+          if ( QgsSpatialiteDbInfo::parseLayerInfo( itLayers.value(), sGeometryType, iSrid, sProviderKey, sLayerType, iSpatialIndex, iIsHidden ) )
           {
             if ( sLayerTypeSearch == sLayerType )
             {
@@ -2579,7 +3055,7 @@ QMap<QString, QString> QgsSpatialiteDbInfo::getDbLayersType( SpatialiteLayerType
   return mapLayers;
 };
 //-----------------------------------------------------------------
-// QgsSpatialiteDbInfo::getQgsSpatialiteDbLayer [public]
+// QgsSpatialiteDbInfo::getSpatialiteDbLayer [public]
 // - this can be called from outside
 // - but can also be called from GetDbLayersInfo
 // -> which can cause a Loop
@@ -2588,7 +3064,7 @@ QMap<QString, QString> QgsSpatialiteDbInfo::getDbLayersType( SpatialiteLayerType
 // - if GetDbLayersInfo returns false: the Layer contains errors and cannot be created
 // -> bail out avoiding a possible Loop, returning nullptr
 //-----------------------------------------------------------------
-QgsSpatialiteDbLayer *QgsSpatialiteDbInfo::getQgsSpatialiteDbLayer( QString sLayerName, bool loadLayer )
+QgsSpatialiteDbLayer *QgsSpatialiteDbInfo::getSpatialiteDbLayer( QString sLayerName, bool loadLayer )
 {
   bool bFoundLayerName = false;
   //---------------------------------------------------------------
@@ -2609,7 +3085,11 @@ QgsSpatialiteDbLayer *QgsSpatialiteDbInfo::getQgsSpatialiteDbLayer( QString sLay
           sLayerName = anUri.table();
           if ( !anUri.geometryColumn().toLower().isEmpty() )
           {
-            sLayerName = QString( "%1(%2)" ).arg( sLayerName ).arg( anUri.geometryColumn().toLower() );
+            QString sTableName = sLayerName;
+            QString sGeometryName = anUri.geometryColumn().toLower();
+            sLayerName = QString();
+            // This will fill sLayerName as 'table_name' or 'table_name(geometry_name)' [sLayerName must be empty]
+            QgsSpatialiteDbInfo::parseLayerName( sLayerName, sTableName, sGeometryName );
           }
         }
       }
@@ -2630,7 +3110,7 @@ QgsSpatialiteDbLayer *QgsSpatialiteDbInfo::getQgsSpatialiteDbLayer( QString sLay
       if ( GetDbLayersInfo( sLayerName, bFoundLayerName ) )
       {
         // Retrieve the Layer, which should now exist
-        dbLayer = getQgsSpatialiteDbLayer( sLayerName, false );
+        dbLayer = getSpatialiteDbLayer( sLayerName, false );
         if ( dbLayer )
         {
           return dbLayer;
@@ -2672,7 +3152,7 @@ QgsSpatialiteDbLayer *QgsSpatialiteDbInfo::getQgsSpatialiteDbLayer( QString sLay
   {
     if ( GetDbLayersInfo( sLayerName, bFoundLayerName ) )
     {
-      dbLayer = getQgsSpatialiteDbLayer( sLayerName, loadLayer );
+      dbLayer = getSpatialiteDbLayer( sLayerName, loadLayer );
       if ( dbLayer )
       {
         return dbLayer;
@@ -2736,7 +3216,7 @@ int QgsSpatialiteDbInfo::addDbMapLayers( QStringList saSelectedLayers, QStringLi
   bool bLoadLayer = true;
   QString sGeometryType;
   int iSrid;
-  QString sProvider;
+  QString sProviderKey;
   QString sLayerType;
   int i_count_added = 0;
   int iSpatialIndex = GAIA_VECTOR_UNKNOWN;
@@ -2756,11 +3236,12 @@ int QgsSpatialiteDbInfo::addDbMapLayers( QStringList saSelectedLayers, QStringLi
         sLayerName = sa_list.at( 0 );
       }
     }
-    QgsSpatialiteDbLayer *dbLayer = getQgsSpatialiteDbLayer( sLayerName, bLoadLayer );
+    QgsSpatialiteDbLayer *dbLayer = getSpatialiteDbLayer( sLayerName, bLoadLayer );
     if ( dbLayer )
     {
       // LayerInfo formatted as 'geometry_type:srid:provider:layertype'
-      if ( ( dbLayer->isLayerValid() ) && ( parseLayerInfo( dbLayer->getLayerInfo(), sGeometryType, iSrid, sProvider, sLayerType, iSpatialIndex, iIsHidden ) ) )
+      QString sLayerInfo = dbLayer->getLayerInfo();
+      if ( ( dbLayer->isLayerValid() ) && ( QgsSpatialiteDbInfo::parseLayerInfo( sLayerInfo, sGeometryType, iSrid, sProviderKey, sLayerType, iSpatialIndex, iIsHidden ) ) )
       {
         // LayerName formatted as 'table_name(geometry_name)' or 'table_name' or 'table_name'
         if ( i < saSelectedLayersSql.count() )
@@ -2778,7 +3259,7 @@ int QgsSpatialiteDbInfo::addDbMapLayers( QStringList saSelectedLayers, QStringLi
         QString errorMessage;
         int iStyleId = -1;
         QString sLayerDataSourceUri = dbLayer->getLayerDataSourceUri();
-        if ( ( sProvider == mSpatialiteProviderKey ) || ( sProvider == mRasterLite2ProviderKey ) )
+        if ( ( sProviderKey == mSpatialiteProviderKey ) || ( sProviderKey == mRasterLite2ProviderKey ) )
         {
           // Check for Styles
           if ( ( !sLayerNameStyle.isEmpty() ) && ( sLayerNameStyle.toLower() != QStringLiteral( "nostyle" ) ) )
@@ -2788,11 +3269,11 @@ int QgsSpatialiteDbInfo::addDbMapLayers( QStringList saSelectedLayers, QStringLi
             QString sStyleTitle;
             QString sStyleAbstract;
             QString sTestStylesForQGis;
-            if ( sProvider == mSpatialiteProviderKey )
+            if ( sProviderKey == mSpatialiteProviderKey )
             {
               mapStyles = getDbVectorStylesInfo();
             }
-            if ( sProvider == mRasterLite2ProviderKey )
+            if ( sProviderKey == mRasterLite2ProviderKey )
             {
               mapStyles = getDbRasterStylesInfo();
             }
@@ -2823,7 +3304,7 @@ int QgsSpatialiteDbInfo::addDbMapLayers( QStringList saSelectedLayers, QStringLi
             namedLayerElement = dbLayer->getLayerStyleNamedLayerElement( iStyleId, errorMessage );
           }
         }
-        if ( sProvider == mSpatialiteProviderKey )
+        if ( sProviderKey == mSpatialiteProviderKey )
         {
           if ( !sLayerNameSql.isEmpty() )
           {
@@ -2857,7 +3338,7 @@ int QgsSpatialiteDbInfo::addDbMapLayers( QStringList saSelectedLayers, QStringLi
             }
           }
         }
-        else if ( sProvider == mOgrProviderKey )
+        else if ( sProviderKey == mOgrProviderKey )
         {
           if ( !sLayerNameSql.isEmpty() )
           {
@@ -2865,7 +3346,7 @@ int QgsSpatialiteDbInfo::addDbMapLayers( QStringList saSelectedLayers, QStringLi
           }
           vectorLayer = new QgsVectorLayer( sLayerDataSourceUri, sLayerName, mOgrProviderKey );
         }
-        else  if ( sProvider == mGdalProviderKey )
+        else  if ( sProviderKey == mGdalProviderKey )
         {
           bool bCheckDriver = true;
           if ( ( sLayerDataSourceUri.startsWith( "RASTERLITE:" ) ) && ( !hasDbGdalRasterLite1Driver() ) )
@@ -2875,21 +3356,21 @@ int QgsSpatialiteDbInfo::addDbMapLayers( QStringList saSelectedLayers, QStringLi
           }
           if ( bCheckDriver )
           {
-            rasterLayer = new QgsRasterLayer( sLayerDataSourceUri, sLayerName, sProvider );
+            rasterLayer = new QgsRasterLayer( sLayerDataSourceUri, sLayerName, sProviderKey );
           }
         }
-        else  if ( sProvider == mRasterLite2ProviderKey )
+        else  if ( sProviderKey == mRasterLite2ProviderKey )
         {
           if ( dbHasRasterlite2() )
           {
-            sProvider = mRasterLite2ProviderKey;
+            sProviderKey = mRasterLite2ProviderKey;
           }
           else
           {
-            sProvider = mGdalProviderKey;
+            sProviderKey = mGdalProviderKey;
           }
           // Note: at present (2017-07-31) QGdalProvider cannot display RasterLite2-Rasters created with the development version
-          rasterLayer = new QgsRasterLayer( sLayerDataSourceUri, sLayerName, sProvider );
+          rasterLayer = new QgsRasterLayer( sLayerDataSourceUri, sLayerName, sProviderKey );
           if ( dbHasRasterlite2() )
           {
             // Apply Style, if exists
@@ -3040,9 +3521,9 @@ int QgsSpatialiteDbInfo::addDbMapLayers( QStringList saSelectedLayers, QStringLi
   return i_count_added;
 }
 //-----------------------------------------------------------------
-// QgsSpatialiteDbInfo::getQgsSpatialiteDbLayer
+// QgsSpatialiteDbInfo::getSpatialiteDbLayer
 //-----------------------------------------------------------------
-QgsSpatialiteDbLayer *QgsSpatialiteDbInfo::getQgsSpatialiteDbLayer( int layerId )
+QgsSpatialiteDbLayer *QgsSpatialiteDbInfo::getSpatialiteDbLayer( int layerId )
 {
   QgsSpatialiteDbLayer *dbLayer = nullptr;
   //---------------------------------------------------------------
@@ -4094,7 +4575,6 @@ bool QgsSpatialiteDbInfo::readVectorRasterCoverages()
             QString sCopyright = QString::fromUtf8( ( const char * ) sqlite3_column_text( stmt, 3 ) );
             QString sLicense = QString::fromUtf8( ( const char * ) sqlite3_column_text( stmt, 4 ) );
             int iSrid = sqlite3_column_int( stmt, 5 );
-            QString sLayerName;
             QString sTableName;
             QString sGeometryName;
             // SpatialTable: view_name/view_geometry are Null
@@ -4111,12 +4591,15 @@ bool QgsSpatialiteDbInfo::readVectorRasterCoverages()
               sTableName = QString::fromUtf8( ( const char * ) sqlite3_column_text( stmt, 8 ) );
               sGeometryName = QString::fromUtf8( ( const char * ) sqlite3_column_text( stmt, 9 ) );
             }
-            sLayerName = QString( "%1(%2)" ).arg( sTableName ).arg( sGeometryName );
+            QString sLayerName = QString();
+            // This will fill sLayerName as 'table_name' or 'table_name(geometry_name)' [sLayerName must be empty]
+            QgsSpatialiteDbInfo::parseLayerName( sLayerName, sTableName, sGeometryName );
             if ( !sLayerName.isEmpty() )
             {
-              // Use the Euro-Character to parse, hoping it will not be used in the Title/Abstract Text
-              QString sValue = QString( "%2%1%3%1%4%1%5%1%6%1%7%1%8" ).arg( QgsSpatialiteDbInfo::ParseSeparatorCoverage ).arg( sLayerType ).arg( sCoverageName ).arg( sTitle ).arg( sAbstract ).arg( sCopyright ).arg( sLicense ).arg( iSrid );
-              mVectorCoveragesLayers.insert( sLayerName, sValue );
+              QString sCoverageInfo = QString();
+              // This will create the formated list [first parm is empty]
+              QgsSpatialiteDbInfo::parseLayerCoverage( sCoverageInfo, sLayerType, sCoverageName, sTitle, sAbstract, sCopyright, sLicense, iSrid );
+              mVectorCoveragesLayers.insert( sLayerName, sCoverageInfo );
               vectorCoveragesLayerName.insert( sCoverageName, sLayerName );
             }
           }
@@ -4164,8 +4647,6 @@ bool QgsSpatialiteDbInfo::readVectorRasterCoverages()
       // QgsDebugMsgLevel( QString( "-I-> QgsSpatialiteDbInfo::readVectorRasterCoverages[raster] rc[%1] sql[%2]" ).arg( i_rc ).arg( sql ), 4 );
       if ( i_rc == SQLITE_OK )
       {
-        QString sDataSourceUri;
-        QString sLayerInfo;
         QString sLayerType = QgsSpatialiteDbInfo::SpatialiteLayerTypeName( QgsSpatialiteDbInfo::RasterLite2Raster );
         while ( sqlite3_step( stmt ) == SQLITE_ROW )
         {
@@ -4178,9 +4659,10 @@ bool QgsSpatialiteDbInfo::readVectorRasterCoverages()
             QString sCopyright = QString::fromUtf8( ( const char * ) sqlite3_column_text( stmt, 3 ) );
             QString sLicense = QString::fromUtf8( ( const char * ) sqlite3_column_text( stmt, 4 ) );
             int iSrid = sqlite3_column_int( stmt, 5 );
-            // Use the Euro-Character to parse, hoping it will not be used in the Title/Abstract Text
-            QString sValue = QString( "%2%1%3%1%4%1%5%1%6%1%7%1%8" ).arg( QgsSpatialiteDbInfo::ParseSeparatorCoverage ).arg( sLayerType ).arg( sLayerName ).arg( sTitle ).arg( sAbstract ).arg( sCopyright ).arg( sLicense ).arg( iSrid );
-            mRasterCoveragesLayers.insert( sLayerName, sValue );
+            QString sCoverageInfo = QString();
+            // This will create the formated list [first parm is empty]
+            QgsSpatialiteDbInfo::parseLayerCoverage( sCoverageInfo, sLayerType, sLayerName, sTitle, sAbstract, sCopyright, sLicense, iSrid );
+            mRasterCoveragesLayers.insert( sLayerName, sCoverageInfo );
             //--------------------------------
             QMap<QString, QString> layerTypes;
             // Note: Key must be unique
@@ -4332,9 +4814,10 @@ int QgsSpatialiteDbInfo::readVectorRasterStyles( bool bTestStylesForQGis )
                 sStyleTitle = QString::fromUtf8( ( const char * ) sqlite3_column_text( stmt, 3 ) );
                 sStyleAbstract = QString::fromUtf8( ( const char * ) sqlite3_column_text( stmt, 4 ) );
               }
-              // Use the Euro-Character to parse between, hoping it will not be used in the Title/Abstract Text
-              sStyleXml = QString( "%2%1%3%1%4%1%5" ).arg( QgsSpatialiteDbInfo::ParseSeparatorCoverage ).arg( sStyleName ).arg( sStyleTitle ).arg( sStyleAbstract ).arg( sTestStylesForQGis );
-              mVectorStyleInfo.insert( iStyleId, sStyleXml );
+              QString sStyleInfo = QString();
+              // This will fill sStyleInfo with the formated list [sStyleInfo must be empty]
+              parseStyleInfo( sStyleInfo, sStyleName, sStyleTitle, sStyleAbstract, sTestStylesForQGis );
+              mVectorStyleInfo.insert( iStyleId, sStyleInfo );
             }
           }
           sqlite3_finalize( stmt );
@@ -4391,9 +4874,10 @@ int QgsSpatialiteDbInfo::readVectorRasterStyles( bool bTestStylesForQGis )
                 sStyleTitle = QString::fromUtf8( ( const char * ) sqlite3_column_text( stmt, 3 ) );
                 sStyleAbstract = QString::fromUtf8( ( const char * ) sqlite3_column_text( stmt, 4 ) );
               }
-              // Use the Euro-Character to parse, hoping it will not be used in the Title/Abstract Text
-              sStyleXml = QString( "%2%1%3%1%4%1%5" ).arg( QgsSpatialiteDbInfo::ParseSeparatorCoverage ).arg( sStyleName ).arg( sStyleTitle ).arg( sStyleAbstract ).arg( sTestStylesForQGis );
-              mRasterStyleInfo.insert( iStyleId, sStyleXml );
+              QString sStyleInfo = QString();
+              // This will fill sStyleInfo with the formated list [sStyleInfo must be empty]
+              parseStyleInfo( sStyleInfo, sStyleName, sStyleTitle, sStyleAbstract, sTestStylesForQGis );
+              mRasterStyleInfo.insert( iStyleId, sStyleInfo );
               mHasRasterStylesView++;
             }
           }
@@ -4557,7 +5041,10 @@ bool QgsSpatialiteDbInfo::readTopologyLayers()
               if ( sqlite3_column_type( stmt, 0 ) != SQLITE_NULL )
               {
                 QString sTopoLayerName = QString::fromUtf8( ( const char * ) sqlite3_column_text( stmt, 0 ) );
-                QString sLayerName = QString( "%1(%2)" ).arg( sTopologyName ).arg( sTopoLayerName );
+                QString sLayerName = QString();
+                sLayerInfo = QString();
+                // This will fill sLayerName as 'table_name' or 'table_name(geometry_name)' [sLayerName must be empty]
+                QgsSpatialiteDbInfo::parseLayerName( sLayerName, sTopologyName, sTopoLayerName );
                 // TODO: retrieve the geometry-type from the SpatialTable
                 QString sGeometryType;
                 createDbLayerInfoUri( sLayerInfo, sDataSourceUri, sLayerName, QgsSpatialiteDbInfo::TopologyExport, sGeometryType, iSrid, iSpatialIndex, iIsHidden );
@@ -5368,10 +5855,10 @@ bool QgsSpatialiteDbInfo::readGeoPackageLayers()
           QString sLayerType = QString::fromUtf8( ( const char * ) sqlite3_column_text( stmt, 1 ) );
           int iSrid = sqlite3_column_int( stmt, 2 ) ;
           SpatialiteLayerType type_GeoPackage = GeoPackageVector;
-          QString sProvider = "ogr";
+          QString sProviderKey = "ogr";
           if ( sLayerType == "tiles" )
           {
-            sProvider = "gdal";
+            sProviderKey = "gdal";
             type_GeoPackage = GeoPackageRaster;
             sLayerType = QgsSpatialiteDbInfo::SpatialiteLayerTypeName( type_GeoPackage );
             createDbLayerInfoUri( sLayerInfo, sDataSourceUri, sLayerName, type_GeoPackage, sLayerType, iSrid, iSpatialIndex, iIsHidden );
@@ -5409,6 +5896,8 @@ bool QgsSpatialiteDbInfo::readGeoPackageLayers()
                   if ( !sGeometryColumn.isEmpty() )
                   {
                     sLayerName = QString( "%1(%2)" ).arg( sTableName ).arg( sGeometryColumn );
+                    // This will fill sLayerName as 'table_name' or 'table_name(geometry_name)' [sLayerName must be empty]
+                    QgsSpatialiteDbInfo::parseLayerName( sLayerName, sTableName, sGeometryColumn );
                   }
                   sGeometryType = QgsWkbTypes::displayString( QgsSpatialiteDbLayer::GetGeometryTypeLegacy( sGeometryType, sGeometryDimension ) );
                   createDbLayerInfoUri( sLayerInfo, sDataSourceUri, sLayerName, type_GeoPackage, sGeometryType, iSrid, iSpatialIndex, iIsHidden );
@@ -5482,7 +5971,9 @@ bool QgsSpatialiteDbInfo::readFdoOgrLayers()
           iAddGroupSeperatorCount = 2; // Allow support for MapGroupNames
           QString sTableName = QString::fromUtf8( ( const char * ) sqlite3_column_text( stmt, 0 ) );
           QString sGeometryName = QString::fromUtf8( ( const char * ) sqlite3_column_text( stmt, 1 ) );
-          QString sLayerName = QString( "%1(%2)" ).arg( sTableName ).arg( sGeometryName );
+          QString sLayerName = QString();
+          // This will fill sLayerName as 'table_name' or 'table_name(geometry_name)' [sLayerName must be empty]
+          QgsSpatialiteDbInfo::parseLayerName( sLayerName, sTableName, sGeometryName );
           int iSrid = sqlite3_column_int( stmt, 2 );
           QString sGeometryType = QgsWkbTypes::displayString( QgsSpatialiteDbLayer::GetGeometryType( sqlite3_column_int( stmt, 3 ), sqlite3_column_int( stmt, 4 ) ) );
           createDbLayerInfoUri( sLayerInfo, sDataSourceUri, sLayerName, layerType, sGeometryType, iSrid, iSpatialIndex, iIsHidden );
@@ -5711,249 +6202,173 @@ QMap<int, QString>  QgsSpatialiteDbInfo::readSpatialRefSysAux( QList< int > list
 //-----------------------------------------------------------------
 // sProjectionParameters: added Projection Parameters from sSrsWkt, if found
 //-----------------------------------------------------------------
-bool QgsSpatialiteDbInfo::parseSridInfo( QString sSpatialRefSysAux, int &iSrid, QString &sAuthName, QString &sRefSysName, QString &sProjText, QString &sSrsWkt,
+bool QgsSpatialiteDbInfo::parseSridInfo( QString &sSpatialRefSysAux, int &iSrid, QString &sAuthName, QString &sRefSysName, QString &sProjText, QString &sSrsWkt,
     int &iIsGeographic, int &iHasFlippedAxes, QString &sSpheroid, QString &sPrimeMeridian, QString &sDatum, QString &sProjection, QString &sMapUnit,
     QString &sAxis1Name, QString &sAxis1Orientation, QString &sAxis2Name, QString &sAxis2Orientation, QString &sProjectionParameters )
 {
   bool bRc = false;
-  iSrid = -1;
-  sAuthName = QString();
-  sRefSysName = QString();
-  sProjText = QString();
-  sSrsWkt = QString();
-  iIsGeographic = -1;
-  iHasFlippedAxes = -1;
-  sSpheroid = QString();
-  sPrimeMeridian = QString();
-  sDatum = QString();
-  sProjection = QString();
-  sMapUnit = QString();
-  sAxis1Name = QString();
-  sAxis1Orientation = QString();
-  sAxis2Name = QString();
-  sAxis2Orientation = QString();
-  sProjectionParameters = QString();
-  QStringList saParseValues = sSpatialRefSysAux.split( QgsSpatialiteDbInfo::ParseSeparatorCoverage );
-  if ( saParseValues.count() >= 5 )
+  if ( sSpatialRefSysAux.isEmpty() )
   {
-    // SpatialRefSysAux[4326€EPSG€WGS 84€+proj=longlat +datum=WGS84 +no_defs€GEOGCS["WGS 84",DATUM["WGS_1984",SPHEROID["WGS 84",6378137,298.257223563,AUTHORITY["EPSG","7030"]],AUTHORITY["EPSG","6326"]],PRIMEM["Greenwich",0,AUTHORITY["EPSG","8901"]],UNIT["degree",0.0174532925199433,AUTHORITY["EPSG","9122"]],AXIS["Latitude",NORTH],AXIS["Longitude",EAST],AUTHORITY["EPSG","4326"]]
-    iSrid = saParseValues.at( 0 ).toInt();
-    sAuthName = saParseValues.at( 1 );
-    sRefSysName = saParseValues.at( 2 );
-    sProjText = saParseValues.at( 3 );
-    sSrsWkt = saParseValues.at( 4 );
-    if ( saParseValues.count() >= 16 )
+    // These are created in properly formatted Sql-Queries
+    sSpatialRefSysAux = QString( "%2%1%3%1%4%1%5%1%6%1%7%1%8%1%9%1%10%1%11%1%12%1%13%1%14%1%15%1%16%1%17%1%18" ).arg( QgsSpatialiteDbInfo::ParseSeparatorCoverage ).arg( iSrid ).arg( sAuthName ).arg( sRefSysName ).arg( sProjText ).arg( sSrsWkt ).arg( iIsGeographic ).arg( iHasFlippedAxes ).arg( sSpheroid ).arg( sPrimeMeridian ).arg( sDatum ).arg( sProjection ).arg( sMapUnit ).arg( sAxis1Name ).arg( sAxis1Orientation ).arg( sAxis2Name ).arg( sAxis2Orientation ).arg( sProjectionParameters );
+  }
+  else
+  {
+    iSrid = -1;
+    sAuthName = QString();
+    sRefSysName = QString();
+    sProjText = QString();
+    sSrsWkt = QString();
+    iIsGeographic = -1;
+    iHasFlippedAxes = -1;
+    sSpheroid = QString();
+    sPrimeMeridian = QString();
+    sDatum = QString();
+    sProjection = QString();
+    sMapUnit = QString();
+    sAxis1Name = QString();
+    sAxis1Orientation = QString();
+    sAxis2Name = QString();
+    sAxis2Orientation = QString();
+    sProjectionParameters = QString();
+    QStringList saParseValues = sSpatialRefSysAux.split( QgsSpatialiteDbInfo::ParseSeparatorCoverage );
+    if ( saParseValues.count() >= 5 )
     {
-      // €1€1€WGS 84€Greenwich€WGS_1984€none€degree€Latitude€North€Longitude€East]
-      iIsGeographic = saParseValues.at( 5 ).toInt();
-      iHasFlippedAxes = saParseValues.at( 6 ).toInt();
-      sSpheroid = saParseValues.at( 7 );
-      sPrimeMeridian = saParseValues.at( 8 );
-      sDatum = saParseValues.at( 9 );
-      sProjection = saParseValues.at( 10 );
-      sMapUnit = saParseValues.at( 11 );
-      sAxis1Name = saParseValues.at( 12 );
-      sAxis1Orientation = saParseValues.at( 13 );
-      sAxis2Name = saParseValues.at( 14 );
-      sAxis2Orientation = saParseValues.at( 15 );
-    }
-    //-----------------------------------------------------------------
-    QString sSearch;
-    if ( !sSrsWkt.isEmpty() )
-    {
-      // Note: this will on run on all Databases
-      // Extract the Projection-Parameters from SrsWkt and set to sProjectionParameters
-      // Format: 'parm=value;parm=value' using QgsSpatialiteDbInfo::ParseSeparatorGeneral
-      QString sParseSrsWkt = sSrsWkt;
-      sSearch = QStringLiteral( "PROJECTION[" );
-      int iPosition = sParseSrsWkt.indexOf( sSearch );
-      sParseSrsWkt.remove( 0, iPosition );
-      sSearch = QStringLiteral( "PARAMETER[" );
-      iPosition = sParseSrsWkt.indexOf( sSearch );
-      sParseSrsWkt.remove( 0, iPosition );
-      sSearch = QStringLiteral( "]]" );
-      iPosition = sParseSrsWkt.indexOf( sSearch );
-      sParseSrsWkt.chop( ( sParseSrsWkt.count() - iPosition ) );
-      QStringList sa_parms = sParseSrsWkt.split( "," );
-      if ( sa_parms.count() > 1 )
+      // SpatialRefSysAux[4326€EPSG€WGS 84€+proj=longlat +datum=WGS84 +no_defs€GEOGCS["WGS 84",DATUM["WGS_1984",SPHEROID["WGS 84",6378137,298.257223563,AUTHORITY["EPSG","7030"]],AUTHORITY["EPSG","6326"]],PRIMEM["Greenwich",0,AUTHORITY["EPSG","8901"]],UNIT["degree",0.0174532925199433,AUTHORITY["EPSG","9122"]],AXIS["Latitude",NORTH],AXIS["Longitude",EAST],AUTHORITY["EPSG","4326"]]
+      iSrid = saParseValues.at( 0 ).toInt();
+      sAuthName = saParseValues.at( 1 );
+      sRefSysName = saParseValues.at( 2 );
+      sProjText = saParseValues.at( 3 );
+      sSrsWkt = saParseValues.at( 4 );
+      if ( saParseValues.count() >= 16 )
       {
-        QStringList saProjectionParameters;
-        for ( int j = 0; j < sa_parms.count(); j++ )
+        // €1€1€WGS 84€Greenwich€WGS_1984€none€degree€Latitude€North€Longitude€East]
+        iIsGeographic = saParseValues.at( 5 ).toInt();
+        iHasFlippedAxes = saParseValues.at( 6 ).toInt();
+        sSpheroid = saParseValues.at( 7 );
+        sPrimeMeridian = saParseValues.at( 8 );
+        sDatum = saParseValues.at( 9 );
+        sProjection = saParseValues.at( 10 );
+        sMapUnit = saParseValues.at( 11 );
+        sAxis1Name = saParseValues.at( 12 );
+        sAxis1Orientation = saParseValues.at( 13 );
+        sAxis2Name = saParseValues.at( 14 );
+        sAxis2Orientation = saParseValues.at( 15 );
+      }
+      //-----------------------------------------------------------------
+      QString sSearch;
+      if ( !sSrsWkt.isEmpty() )
+      {
+        // Note: this will on run on all Databases
+        // Extract the Projection-Parameters from SrsWkt and set to sProjectionParameters
+        // Format: 'parm=value;parm=value' using QgsSpatialiteDbInfo::ParseSeparatorGeneral
+        QString sParseSrsWkt = sSrsWkt;
+        sSearch = QStringLiteral( "PROJECTION[" );
+        int iPosition = sParseSrsWkt.indexOf( sSearch );
+        sParseSrsWkt.remove( 0, iPosition );
+        sSearch = QStringLiteral( "PARAMETER[" );
+        iPosition = sParseSrsWkt.indexOf( sSearch );
+        sParseSrsWkt.remove( 0, iPosition );
+        sSearch = QStringLiteral( "]]" );
+        iPosition = sParseSrsWkt.indexOf( sSearch );
+        sParseSrsWkt.chop( ( sParseSrsWkt.count() - iPosition ) );
+        QStringList sa_parms = sParseSrsWkt.split( "," );
+        if ( sa_parms.count() > 1 )
         {
-          QString sPart = sa_parms.at( j );
-          QString sNext;
-          if ( ( j + 1 ) < sa_parms.count() )
+          QStringList saProjectionParameters;
+          for ( int j = 0; j < sa_parms.count(); j++ )
           {
-            sNext = sa_parms.at( j + 1 );
-          }
-          if ( sPart.startsWith( QStringLiteral( "PARAMETER[" ) ) )
-          {
-            sPart.replace( QStringLiteral( "PARAMETER[" ), "" );
-            sPart.replace( '"', "" );
-            sNext.replace( ']', "" );
-            saProjectionParameters.append( QString( "%1=%2" ).arg( sPart ).arg( sNext ) );
-          }
-        }
-        if ( saProjectionParameters.count() > 0 )
-        {
-          for ( int iParameter = 0; iParameter < saProjectionParameters.count(); iParameter++ )
-          {
-            QString sParameter = saProjectionParameters.at( iParameter );
-            if ( sProjectionParameters.isEmpty() )
+            QString sPart = sa_parms.at( j );
+            QString sNext;
+            if ( ( j + 1 ) < sa_parms.count() )
             {
-              sProjectionParameters = sParameter;
+              sNext = sa_parms.at( j + 1 );
             }
-            else
+            if ( sPart.startsWith( QStringLiteral( "PARAMETER[" ) ) )
             {
-              sProjectionParameters += QString( "%1%2" ).arg( QgsSpatialiteDbInfo::ParseSeparatorGeneral ).arg( sParameter );
+              sPart.replace( QStringLiteral( "PARAMETER[" ), "" );
+              sPart.replace( '"', "" );
+              sNext.replace( ']', "" );
+              saProjectionParameters.append( QString( "%1=%2" ).arg( sPart ).arg( sNext ) );
+            }
+          }
+          if ( saProjectionParameters.count() > 0 )
+          {
+            for ( int iParameter = 0; iParameter < saProjectionParameters.count(); iParameter++ )
+            {
+              QString sParameter = saProjectionParameters.at( iParameter );
+              if ( sProjectionParameters.isEmpty() )
+              {
+                sProjectionParameters = sParameter;
+              }
+              else
+              {
+                sProjectionParameters += QString( "%1%2" ).arg( QgsSpatialiteDbInfo::ParseSeparatorGeneral ).arg( sParameter );
+              }
             }
           }
         }
       }
-    }
-    if ( ( sMapUnit.isEmpty() ) && ( sPrimeMeridian.isEmpty() ) && ( !sSrsWkt.isEmpty() ) )
-    {
-      // Note: this will on run on Spatialite Databases < 5.0 and GeoPackages
-      QStringList saAxisParameters;
-      QString sStoreProjectionParameters;
-      // Note: sRefSysName is alwways set and can be ignored
-      QString sParseSrsWkt = sSrsWkt;
-      QStringList sa_values;
-      // SELECT srid,ref_sys_name,srtext FROM spatial_ref_sys
-      // Entries: spatial_ref_sys : 4924 - 2 undefined: 4924
-      if ( sParseSrsWkt.startsWith( QStringLiteral( "GEOGCS[" ) ) )
+      if ( ( sMapUnit.isEmpty() ) && ( sPrimeMeridian.isEmpty() ) && ( !sSrsWkt.isEmpty() ) )
       {
-        // SELECT srid,ref_sys_name,srtext FROM spatial_ref_sys WHERE (srtext LIKE 'GEOGCS[%')
-        // Entries: spatial_ref_sys : 475
-        // gdalsrsinfo  -o wkt epsg:4326
-        sParseSrsWkt = sParseSrsWkt.remove( QStringLiteral( "GEOGCS[" ) );
-        sParseSrsWkt.chop( 0 );
-      }
-      else if ( sParseSrsWkt.startsWith( QStringLiteral( "PROJCS[" ) ) )
-      {
-        // SELECT srid,ref_sys_name,srtext FROM spatial_ref_sys WHERE (srtext LIKE 'PROJCS[%')
-        // Entries: spatial_ref_sys : 4293
-        // gdalsrsinfo  -o wkt epsg:3068
-        sParseSrsWkt = sParseSrsWkt.remove( QStringLiteral( "PROJCS[" ) );
-        sParseSrsWkt.chop( 0 );
+        // Note: this will on run on Spatialite Databases < 5.0 and GeoPackages
+        QStringList saAxisParameters;
+        QString sStoreProjectionParameters;
+        // Note: sRefSysName is alwways set and can be ignored
+        QString sParseSrsWkt = sSrsWkt;
+        QStringList sa_values;
+        // SELECT srid,ref_sys_name,srtext FROM spatial_ref_sys
+        // Entries: spatial_ref_sys : 4924 - 2 undefined: 4924
+        if ( sParseSrsWkt.startsWith( QStringLiteral( "GEOGCS[" ) ) )
+        {
+          // SELECT srid,ref_sys_name,srtext FROM spatial_ref_sys WHERE (srtext LIKE 'GEOGCS[%')
+          // Entries: spatial_ref_sys : 475
+          // gdalsrsinfo  -o wkt epsg:4326
+          sParseSrsWkt = sParseSrsWkt.remove( QStringLiteral( "GEOGCS[" ) );
+          sParseSrsWkt.chop( 0 );
+        }
+        else if ( sParseSrsWkt.startsWith( QStringLiteral( "PROJCS[" ) ) )
+        {
+          // SELECT srid,ref_sys_name,srtext FROM spatial_ref_sys WHERE (srtext LIKE 'PROJCS[%')
+          // Entries: spatial_ref_sys : 4293
+          // gdalsrsinfo  -o wkt epsg:3068
+          sParseSrsWkt = sParseSrsWkt.remove( QStringLiteral( "PROJCS[" ) );
+          sParseSrsWkt.chop( 0 );
+          sa_values = sParseSrsWkt.split( "," );
+          if ( sa_values.count() > 1 )
+          {
+            sParseSrsWkt.remove( 0, sa_values.at( 0 ).count() + 1 );
+          }
+          sParseSrsWkt = sParseSrsWkt.remove( QStringLiteral( "GEOGCS[" ) );
+          sParseSrsWkt.chop( 0 );
+        }
+        else
+        {
+          // SELECT srid,ref_sys_name,srtext FROM spatial_ref_sys WHERE ((srtext NOT LIKE 'GEOGCS[%') AND (srtext NOT LIKE 'PROJCS[%') AND  (srtext <> 'Undefined'))
+          // Entries: spatial_ref_sys : 150
+          // SELECT srid,ref_sys_name,srtext FROM spatial_ref_sys WHERE (srtext LIKE 'COMPD_CS[%')
+          // Entries: spatial_ref_sys : 150
+          // TODO: add test case for: 5556,5500
+          sSearch = QStringLiteral( "GEOGCS[" );
+          if ( sParseSrsWkt.contains( QStringLiteral( "PROJCS[" ) ) )
+          {
+            sSearch = QStringLiteral( "PROJCS[" );
+          }
+          int iPosition = sParseSrsWkt.indexOf( sSearch ) - 1;
+          sParseSrsWkt.remove( 0, iPosition );
+        }
         sa_values = sParseSrsWkt.split( "," );
         if ( sa_values.count() > 1 )
         {
+          if ( sSpheroid.isEmpty() )
+          {
+            sSpheroid = sa_values.at( 0 );
+            sSpheroid.replace( '"', "" );
+          }
           sParseSrsWkt.remove( 0, sa_values.at( 0 ).count() + 1 );
         }
-        sParseSrsWkt = sParseSrsWkt.remove( QStringLiteral( "GEOGCS[" ) );
-        sParseSrsWkt.chop( 0 );
-      }
-      else
-      {
-        // SELECT srid,ref_sys_name,srtext FROM spatial_ref_sys WHERE ((srtext NOT LIKE 'GEOGCS[%') AND (srtext NOT LIKE 'PROJCS[%') AND  (srtext <> 'Undefined'))
-        // Entries: spatial_ref_sys : 150
-        // SELECT srid,ref_sys_name,srtext FROM spatial_ref_sys WHERE (srtext LIKE 'COMPD_CS[%')
-        // Entries: spatial_ref_sys : 150
-        // TODO: add test case for: 5556,5500
-        sSearch = QStringLiteral( "GEOGCS[" );
-        if ( sParseSrsWkt.contains( QStringLiteral( "PROJCS[" ) ) )
-        {
-          sSearch = QStringLiteral( "PROJCS[" );
-        }
-        int iPosition = sParseSrsWkt.indexOf( sSearch ) - 1;
-        sParseSrsWkt.remove( 0, iPosition );
-      }
-      sa_values = sParseSrsWkt.split( "," );
-      if ( sa_values.count() > 1 )
-      {
-        if ( sSpheroid.isEmpty() )
-        {
-          sSpheroid = sa_values.at( 0 );
-          sSpheroid.replace( '"', "" );
-        }
-        sParseSrsWkt.remove( 0, sa_values.at( 0 ).count() + 1 );
-      }
-      sParseSrsWkt.replace( "]],", "]]" );
-      sa_values = sParseSrsWkt.split( QStringLiteral( "]]" ) );
-      if ( sa_values.count() > 0 )
-      {
-        for ( int j = 0; j < sa_values.count(); j++ )
-        {
-          QString sPart = sa_values.at( j );
-          QString sNext;
-          if ( ( j + 1 ) < sa_values.count() )
-          {
-            sNext = sa_values.at( j + 1 );
-          }
-          if ( sPart.startsWith( QStringLiteral( "DATUM[" ) ) )
-          {
-            // DATUM["European_Terrestrial_Reference_System_1989",SPHEROID["GRS 1980",6378137,298.257222101,AUTHORITY["EPSG","7019"
-            // DATUM["WGS_1984",SPHEROID["WGS 84",6378137,298.257223563,AUTHORITY["EPSG","7030"
-            sPart.replace( QStringLiteral( "DATUM[\"" ), "" );
-            QStringList sa_parts = sPart.split( QStringLiteral( "\"," ) );
-            if ( sa_parts.count() > 0 )
-            {
-              if ( sDatum.isEmpty() )
-              {
-                sDatum = sa_parts.at( 0 );
-                sDatum.replace( '"', "" );
-              }
-            }
-          }
-          else if ( sPart.startsWith( QStringLiteral( "PRIMEM[" ) ) )
-          {
-            // PRIMEM["Greenwich",0,AUTHORITY["EPSG","8901"
-            sPart.replace( QStringLiteral( "PRIMEM[\"" ), "" );
-            QStringList sa_parts = sPart.split( QStringLiteral( "\"," ) );
-            if ( sa_parts.count() > 0 )
-            {
-              if ( sPrimeMeridian.isEmpty() )
-              {
-                sPrimeMeridian = sa_parts.at( 0 );
-                sPrimeMeridian.replace( '"', "" );
-              }
-            }
-          }
-          else if ( sPart.startsWith( QStringLiteral( "UNIT[" ) ) )
-          {
-            // UNIT["degree",0.0174532925199433,AUTHORITY["EPSG","9122"
-            sPart.replace( QStringLiteral( "UNIT[\"" ), "" );
-            QStringList sa_parts = sPart.split( QStringLiteral( "\"," ) );
-            if ( sa_parts.count() > 0 )
-            {
-              if ( sMapUnit.isEmpty() )
-              {
-                sMapUnit = sa_parts.at( 0 );
-                sMapUnit.replace( '"', "" );
-                //Note: if later (forn non WSG84 projections) a 'PROJECTION[' turns up
-                // - this will be overwritten with the used 'UNIT[' value
-              }
-            }
-          }
-          else if ( sPart.startsWith( QStringLiteral( "AXIS[" ) ) )
-          {
-            // AXIS["Latitude",NORTH],AXIS["Longitude",EAST],AUTHORITY["EPSG","4258"
-            // AXIS["Y",NORTH],AXIS["X",EAST],AUTHORITY["EPSG","3035"
-            saAxisParameters.append( sPart );
-          }
-          else if ( sPart.startsWith( QStringLiteral( "PROJECTION[" ) ) )
-          {
-            // PROJECTION["Lambert_Azimuthal_Equal_Area"],
-            // Invalidate a possible Lat/long Map-Unit that may have been set
-            sMapUnit = QString();
-            sStoreProjectionParameters = sPart; // Save to parse later
-            sPart.replace( QStringLiteral( "PROJECTION[\"" ), "" );
-            QStringList sa_parts = sPart.split( QStringLiteral( "\"," ) );
-            if ( sa_parts.count() > 0 )
-            {
-              sa_parts = sa_parts.at( 0 ).split( QStringLiteral( "\"]" ) );
-              if ( ( sa_parts.count() > 0 ) && ( sProjection.isEmpty() ) )
-              {
-                sProjection = sa_parts.at( 0 );
-              }
-            }
-          }
-        }
-      }
-      if ( !sStoreProjectionParameters.isEmpty() )
-      {
-        sa_values = sStoreProjectionParameters.split( QStringLiteral( "," ) );
+        sParseSrsWkt.replace( "]],", "]]" );
+        sa_values = sParseSrsWkt.split( QStringLiteral( "]]" ) );
         if ( sa_values.count() > 0 )
         {
           for ( int j = 0; j < sa_values.count(); j++ )
@@ -5964,18 +6379,38 @@ bool QgsSpatialiteDbInfo::parseSridInfo( QString sSpatialRefSysAux, int &iSrid, 
             {
               sNext = sa_values.at( j + 1 );
             }
-            // PARAMETER["latitude_of_center",52],PARAMETER["longitude_of_center",10],
-            // PARAMETER["false_easting",4321000],
-            // PARAMETER["false_northing",3210000],
-            // UNIT["metre",1,AUTHORITY["EPSG","9001"
-            // AXIS["Y",NORTH],AXIS["X",EAST],AUTHORITY["EPSG","3035"
-            if ( sPart.startsWith( QStringLiteral( "PROJECTION[" ) ) )
+            if ( sPart.startsWith( QStringLiteral( "DATUM[" ) ) )
             {
-              // Note: We have PROJECTION[' allready
+              // DATUM["European_Terrestrial_Reference_System_1989",SPHEROID["GRS 1980",6378137,298.257222101,AUTHORITY["EPSG","7019"
+              // DATUM["WGS_1984",SPHEROID["WGS 84",6378137,298.257223563,AUTHORITY["EPSG","7030"
+              sPart.replace( QStringLiteral( "DATUM[\"" ), "" );
+              QStringList sa_parts = sPart.split( QStringLiteral( "\"," ) );
+              if ( sa_parts.count() > 0 )
+              {
+                if ( sDatum.isEmpty() )
+                {
+                  sDatum = sa_parts.at( 0 );
+                  sDatum.replace( '"', "" );
+                }
+              }
+            }
+            else if ( sPart.startsWith( QStringLiteral( "PRIMEM[" ) ) )
+            {
+              // PRIMEM["Greenwich",0,AUTHORITY["EPSG","8901"
+              sPart.replace( QStringLiteral( "PRIMEM[\"" ), "" );
+              QStringList sa_parts = sPart.split( QStringLiteral( "\"," ) );
+              if ( sa_parts.count() > 0 )
+              {
+                if ( sPrimeMeridian.isEmpty() )
+                {
+                  sPrimeMeridian = sa_parts.at( 0 );
+                  sPrimeMeridian.replace( '"', "" );
+                }
+              }
             }
             else if ( sPart.startsWith( QStringLiteral( "UNIT[" ) ) )
             {
-              // UNIT["metre",1,AUTHORITY["EPSG","9001"
+              // UNIT["degree",0.0174532925199433,AUTHORITY["EPSG","9122"
               sPart.replace( QStringLiteral( "UNIT[\"" ), "" );
               QStringList sa_parts = sPart.split( QStringLiteral( "\"," ) );
               if ( sa_parts.count() > 0 )
@@ -5984,127 +6419,232 @@ bool QgsSpatialiteDbInfo::parseSridInfo( QString sSpatialRefSysAux, int &iSrid, 
                 {
                   sMapUnit = sa_parts.at( 0 );
                   sMapUnit.replace( '"', "" );
+                  //Note: if later (forn non WSG84 projections) a 'PROJECTION[' turns up
+                  // - this will be overwritten with the used 'UNIT[' value
                 }
               }
             }
             else if ( sPart.startsWith( QStringLiteral( "AXIS[" ) ) )
             {
-              // Note: We have AXIS[' allready
+              // AXIS["Latitude",NORTH],AXIS["Longitude",EAST],AUTHORITY["EPSG","4258"
+              // AXIS["Y",NORTH],AXIS["X",EAST],AUTHORITY["EPSG","3035"
+              saAxisParameters.append( sPart );
             }
-            else if ( sPart.startsWith( QStringLiteral( "PARAMETER[" ) ) )
+            else if ( sPart.startsWith( QStringLiteral( "PROJECTION[" ) ) )
             {
-              // Note: We have PARAMETER[' allready
-            }
-          }
-        }
-      }
-      if ( saAxisParameters.count() > 0 )
-      {
-        int iAxisCount = 0;
-        // Use only the last entry
-        QString sAxisParameters = saAxisParameters.at( saAxisParameters.count() - 1 );
-        // AXIS["Y",NORTH],AXIS["X",EAST],AUTHORITY["EPSG","3035"
-        QStringList saParms = saAxisParameters.at( saAxisParameters.count() - 1 ).split( QStringLiteral( "],AUTHORITY[" ) );
-        if ( saParms.count() > 0 )
-        {
-          saParms = saParms.at( 0 ).split( QStringLiteral( "]," ) );
-          // AxisParameter[AXIS["Y",NORTH]
-          // AxisParameter[AXIS["X",EAST]
-        }
-        for ( int iAxis = 0; iAxis < saParms.count(); iAxis++ )
-        {
-          if ( saParms.at( iAxis ).startsWith( QStringLiteral( "AXIS[" ) ) )
-          {
-            QString sAxisParameter = saParms.at( iAxis );
-            sAxisParameter.replace( QStringLiteral( "AXIS[\"" ), "" );
-            QStringList sa_parts = sAxisParameter.split( QStringLiteral( "\"," ) );
-            if ( sa_parts.count() > 1 )
-            {
-              QString sAxisName = QString();
-              QString sAxisOrientation = QString();
-              if ( sa_parts.at( 1 ).toUpper().endsWith( QStringLiteral( "EAST" ) ) )
+              // PROJECTION["Lambert_Azimuthal_Equal_Area"],
+              // Invalidate a possible Lat/long Map-Unit that may have been set
+              sMapUnit = QString();
+              sStoreProjectionParameters = sPart; // Save to parse later
+              sPart.replace( QStringLiteral( "PROJECTION[\"" ), "" );
+              QStringList sa_parts = sPart.split( QStringLiteral( "\"," ) );
+              if ( sa_parts.count() > 0 )
               {
-                sAxisName = sa_parts.at( 0 );
-                sAxisName.replace( '"', "" );
-                sAxisOrientation = QStringLiteral( "East" );
-              }
-              else if ( sa_parts.at( 1 ).toUpper().endsWith( QStringLiteral( "WEST" ) ) )
-              {
-                sAxisName = sa_parts.at( 0 );
-                sAxisName.replace( '"', "" );
-                sAxisOrientation = QStringLiteral( "West" );
-              }
-              else if ( sa_parts.at( 1 ).toUpper().endsWith( QStringLiteral( "NORTH" ) ) )
-              {
-                sAxisName = sa_parts.at( 0 );
-                sAxisName.replace( '"', "" );
-                sAxisOrientation = QStringLiteral( "North" );
-              }
-              else if ( sa_parts.at( 1 ).toUpper().endsWith( QStringLiteral( "SOUTH" ) ) )
-              {
-                sAxisName = sa_parts.at( 0 );
-                sAxisName.replace( '"', "" );
-                sAxisOrientation = QStringLiteral( "South" );
-              }
-              if ( !sAxisName.isEmpty() )
-              {
-                iAxisCount++;
-                switch ( iAxisCount )
+                sa_parts = sa_parts.at( 0 ).split( QStringLiteral( "\"]" ) );
+                if ( ( sa_parts.count() > 0 ) && ( sProjection.isEmpty() ) )
                 {
-                  case 1:
-                    sAxis1Name = sAxisName;
-                    sAxis1Orientation = sAxisOrientation;
-                    break;
-                  case 2:
-                    sAxis2Name = sAxisName;
-                    sAxis2Orientation = sAxisOrientation;
-                    break;
-                  // < 0: unknown [no axis] : > 2 should never happen
-                  default:
-                    break;
+                  sProjection = sa_parts.at( 0 );
                 }
               }
             }
           }
         }
-      }
-      else
-      {
-        if ( ( sAxis1Name.isEmpty() ) && ( sAxis2Name.isEmpty() ) )
+        if ( !sStoreProjectionParameters.isEmpty() )
         {
-          // Note: PROJECTION[' does not contain a  'AXIS['  'Unknown'
-          sAxis1Name = QStringLiteral( "unknown" );
-          sAxis2Name = sAxis1Name;
-          sAxis1Orientation = sAxis1Name;
-          sAxis2Orientation = sAxis1Name;
-        }
-      }
-      if ( !sMapUnit.isEmpty() )
-      {
-        iIsGeographic = 0;
-        if ( ( sMapUnit.toLower().startsWith( QStringLiteral( "degree" ) ) ) || ( sMapUnit.toLower().startsWith( QStringLiteral( "grad" ) ) ) )
-        {
-          iIsGeographic = 1;
-          if ( sAxis1Name == QStringLiteral( "unknown" ) )
+          sa_values = sStoreProjectionParameters.split( QStringLiteral( "," ) );
+          if ( sa_values.count() > 0 )
           {
-            sAxis1Name = QStringLiteral( "Latitude" );
-            sAxis2Name = QStringLiteral( "Longitude" );
-            sAxis1Orientation = QStringLiteral( "North" );
-            sAxis2Orientation  = QStringLiteral( "East" );
+            for ( int j = 0; j < sa_values.count(); j++ )
+            {
+              QString sPart = sa_values.at( j );
+              QString sNext;
+              if ( ( j + 1 ) < sa_values.count() )
+              {
+                sNext = sa_values.at( j + 1 );
+              }
+              // PARAMETER["latitude_of_center",52],PARAMETER["longitude_of_center",10],
+              // PARAMETER["false_easting",4321000],
+              // PARAMETER["false_northing",3210000],
+              // UNIT["metre",1,AUTHORITY["EPSG","9001"
+              // AXIS["Y",NORTH],AXIS["X",EAST],AUTHORITY["EPSG","3035"
+              if ( sPart.startsWith( QStringLiteral( "PROJECTION[" ) ) )
+              {
+                // Note: We have PROJECTION[' allready
+              }
+              else if ( sPart.startsWith( QStringLiteral( "UNIT[" ) ) )
+              {
+                // UNIT["metre",1,AUTHORITY["EPSG","9001"
+                sPart.replace( QStringLiteral( "UNIT[\"" ), "" );
+                QStringList sa_parts = sPart.split( QStringLiteral( "\"," ) );
+                if ( sa_parts.count() > 0 )
+                {
+                  if ( sMapUnit.isEmpty() )
+                  {
+                    sMapUnit = sa_parts.at( 0 );
+                    sMapUnit.replace( '"', "" );
+                  }
+                }
+              }
+              else if ( sPart.startsWith( QStringLiteral( "AXIS[" ) ) )
+              {
+                // Note: We have AXIS[' allready
+              }
+              else if ( sPart.startsWith( QStringLiteral( "PARAMETER[" ) ) )
+              {
+                // Note: We have PARAMETER[' allready
+              }
+            }
           }
         }
+        if ( saAxisParameters.count() > 0 )
+        {
+          int iAxisCount = 0;
+          // Use only the last entry
+          QString sAxisParameters = saAxisParameters.at( saAxisParameters.count() - 1 );
+          // AXIS["Y",NORTH],AXIS["X",EAST],AUTHORITY["EPSG","3035"
+          QStringList saParms = saAxisParameters.at( saAxisParameters.count() - 1 ).split( QStringLiteral( "],AUTHORITY[" ) );
+          if ( saParms.count() > 0 )
+          {
+            saParms = saParms.at( 0 ).split( QStringLiteral( "]," ) );
+            // AxisParameter[AXIS["Y",NORTH]
+            // AxisParameter[AXIS["X",EAST]
+          }
+          for ( int iAxis = 0; iAxis < saParms.count(); iAxis++ )
+          {
+            if ( saParms.at( iAxis ).startsWith( QStringLiteral( "AXIS[" ) ) )
+            {
+              QString sAxisParameter = saParms.at( iAxis );
+              sAxisParameter.replace( QStringLiteral( "AXIS[\"" ), "" );
+              QStringList sa_parts = sAxisParameter.split( QStringLiteral( "\"," ) );
+              if ( sa_parts.count() > 1 )
+              {
+                QString sAxisName = QString();
+                QString sAxisOrientation = QString();
+                if ( sa_parts.at( 1 ).toUpper().endsWith( QStringLiteral( "EAST" ) ) )
+                {
+                  sAxisName = sa_parts.at( 0 );
+                  sAxisName.replace( '"', "" );
+                  sAxisOrientation = QStringLiteral( "East" );
+                }
+                else if ( sa_parts.at( 1 ).toUpper().endsWith( QStringLiteral( "WEST" ) ) )
+                {
+                  sAxisName = sa_parts.at( 0 );
+                  sAxisName.replace( '"', "" );
+                  sAxisOrientation = QStringLiteral( "West" );
+                }
+                else if ( sa_parts.at( 1 ).toUpper().endsWith( QStringLiteral( "NORTH" ) ) )
+                {
+                  sAxisName = sa_parts.at( 0 );
+                  sAxisName.replace( '"', "" );
+                  sAxisOrientation = QStringLiteral( "North" );
+                }
+                else if ( sa_parts.at( 1 ).toUpper().endsWith( QStringLiteral( "SOUTH" ) ) )
+                {
+                  sAxisName = sa_parts.at( 0 );
+                  sAxisName.replace( '"', "" );
+                  sAxisOrientation = QStringLiteral( "South" );
+                }
+                if ( !sAxisName.isEmpty() )
+                {
+                  iAxisCount++;
+                  switch ( iAxisCount )
+                  {
+                    case 1:
+                      sAxis1Name = sAxisName;
+                      sAxis1Orientation = sAxisOrientation;
+                      break;
+                    case 2:
+                      sAxis2Name = sAxisName;
+                      sAxis2Orientation = sAxisOrientation;
+                      break;
+                    // < 0: unknown [no axis] : > 2 should never happen
+                    default:
+                      break;
+                  }
+                }
+              }
+            }
+          }
+        }
+        else
+        {
+          if ( ( sAxis1Name.isEmpty() ) && ( sAxis2Name.isEmpty() ) )
+          {
+            // Note: PROJECTION[' does not contain a  'AXIS['  'Unknown'
+            sAxis1Name = QStringLiteral( "unknown" );
+            sAxis2Name = sAxis1Name;
+            sAxis1Orientation = sAxis1Name;
+            sAxis2Orientation = sAxis1Name;
+          }
+        }
+        if ( !sMapUnit.isEmpty() )
+        {
+          iIsGeographic = 0;
+          if ( ( sMapUnit.toLower().startsWith( QStringLiteral( "degree" ) ) ) || ( sMapUnit.toLower().startsWith( QStringLiteral( "grad" ) ) ) )
+          {
+            iIsGeographic = 1;
+            if ( sAxis1Name == QStringLiteral( "unknown" ) )
+            {
+              sAxis1Name = QStringLiteral( "Latitude" );
+              sAxis2Name = QStringLiteral( "Longitude" );
+              sAxis1Orientation = QStringLiteral( "North" );
+              sAxis2Orientation  = QStringLiteral( "East" );
+            }
+          }
+        }
+        if ( ( sAxis1Orientation == QStringLiteral( "North" ) ) && ( sAxis2Orientation == QStringLiteral( "East" ) ) )
+        {
+          iHasFlippedAxes = 1;
+        }
+        else
+        {
+          iHasFlippedAxes = 0;
+        }
       }
-      if ( ( sAxis1Orientation == QStringLiteral( "North" ) ) && ( sAxis2Orientation == QStringLiteral( "East" ) ) )
+      //-----------------------------------------------------------------
+      bRc = true;
+    }
+  }
+  return bRc;
+}
+//-----------------------------------------------------------------
+// QgsSpatialiteDbInfo::parseLayerName
+// This function should always be used
+// -> to format/parse the Layer-Name in unified way
+//-----------------------------------------------------------------
+bool QgsSpatialiteDbInfo::parseLayerName( QString &sLayerName, QString &sTableName, QString &sGeometryColumn )
+{
+  bool bRc = false;
+  if ( sLayerName.isEmpty() )
+  {
+    sLayerName = sTableName;
+    if ( !sGeometryColumn.isEmpty() )
+    {
+      sLayerName = QString( "%1(%2)" ).arg( sTableName ).arg( sGeometryColumn );
+    }
+    if ( !sLayerName.isEmpty() )
+    {
+      bRc = true;
+    }
+  }
+  else
+  {
+    sTableName = sLayerName;
+    sGeometryColumn = QString();
+    if ( ( sTableName.contains( QStringLiteral( "(" ) ) ) && ( sTableName.endsWith( QStringLiteral( ")" ) ) ) )
+    {
+      QStringList sa_layername = sTableName.split( QStringLiteral( "(" ) );
+      if ( sa_layername.count() == 2 )
       {
-        iHasFlippedAxes = 1;
-      }
-      else
-      {
-        iHasFlippedAxes = 0;
+        // Extract TableName/GeometryColumn from sent 'table_name' or 'table_name(field_name)' from LayerName
+        sGeometryColumn = sa_layername[1].replace( QStringLiteral( ")" ), QStringLiteral( "" ) );
+        sTableName = sa_layername.at( 0 );
       }
     }
-    //-----------------------------------------------------------------
-    bRc = true;
+    if ( !sTableName.isEmpty() )
+    {
+      bRc = true;
+    }
   }
   return bRc;
 }
@@ -6118,22 +6658,31 @@ bool QgsSpatialiteDbInfo::parseSridInfo( QString sSpatialRefSysAux, int &iSrid, 
 // - [2] StyleAbstract
 // - [3] TestStylesForQGis
 //-----------------------------------------------------------------
-bool QgsSpatialiteDbInfo::parseStyleInfo( QString sStyleInfo, QString &sStyleName, QString &sStyleTitle, QString &sStyleAbstract, QString &sTestStylesForQGis )
+bool QgsSpatialiteDbInfo::parseStyleInfo( QString &sStyleInfo, QString &sStyleName, QString &sStyleTitle, QString &sStyleAbstract, QString &sTestStylesForQGis )
 {
   bool bRc = false;
-  sStyleName = QString();
-  sStyleTitle = QString();
-  sStyleAbstract = QString();
-  sTestStylesForQGis = QString();
-  QStringList saParseValues =  sStyleInfo.split( QgsSpatialiteDbInfo::ParseSeparatorCoverage );
-  if ( saParseValues.count() == 4 )
+  if ( sStyleInfo.isEmpty() )
   {
-    sStyleName = saParseValues.at( 0 );
-    sStyleTitle = saParseValues.at( 1 );
-    sStyleAbstract = saParseValues.at( 2 );
-    // Result, as Text, if the Style had been checked and is valid
-    sTestStylesForQGis = saParseValues.at( 3 ).toInt();
+    // Use the Euro-Character to parse between, hoping it will not be used in the Title/Abstract Text
+    sStyleInfo = QString( "%2%1%3%1%4%1%5" ).arg( QgsSpatialiteDbInfo::ParseSeparatorCoverage ).arg( sStyleName ).arg( sStyleTitle ).arg( sStyleAbstract ).arg( sTestStylesForQGis );
     bRc = true;
+  }
+  else
+  {
+    sStyleName = QString();
+    sStyleTitle = QString();
+    sStyleAbstract = QString();
+    sTestStylesForQGis = QString();
+    QStringList saParseValues =  sStyleInfo.split( QgsSpatialiteDbInfo::ParseSeparatorCoverage );
+    if ( saParseValues.count() == 4 )
+    {
+      sStyleName = saParseValues.at( 0 );
+      sStyleTitle = saParseValues.at( 1 );
+      sStyleAbstract = saParseValues.at( 2 );
+      // Result, as Text, if the Style had been checked and is valid
+      sTestStylesForQGis = saParseValues.at( 3 ).toInt();
+      bRc = true;
+    }
   }
   return bRc;
 }
@@ -6297,7 +6846,11 @@ bool QgsSpatialiteDbInfo::GetDbLayersInfo( QString sLayerName, bool &bFoundLayer
         sLayerName = anUri.table();
         if ( !anUri.geometryColumn().toLower().isEmpty() )
         {
-          sLayerName = QString( "%1(%2)" ).arg( sLayerName ).arg( anUri.geometryColumn().toLower() );
+          sLayerName = QString();
+          QString sTableName = anUri.table();
+          QString sGeometryName = anUri.geometryColumn().toLower();
+          // This will fill sLayerName as 'table_name' or 'table_name(geometry_name)' [sLayerName must be empty]
+          QgsSpatialiteDbInfo::parseLayerName( sLayerName, sTableName, sGeometryName );
         }
       }
     }
@@ -6440,6 +6993,7 @@ bool QgsSpatialiteDbInfo::GetDbLayersInfo( QString sLayerName, bool &bFoundLayer
 }
 //-----------------------------------------------------------------
 // QgsSpatialiteDbInfo::GetVectorLayersInfo
+// - called from GetDbLayersInfo, after prepare() has run
 //-----------------------------------------------------------------
 // All Layers will be loaded if sLayerName is empty
 // - otherwise load only a specific Layer
@@ -6481,128 +7035,143 @@ bool QgsSpatialiteDbInfo::GetVectorLayersInfo( const QString sLayerName )
         if ( mVectorLayers.contains( sSearchLayer ) )
         {
           // Add only if it does not already exist [using true here, would cause loop]
-          if ( !getQgsSpatialiteDbLayer( sSearchLayer, false ) )
+          if ( !getSpatialiteDbLayer( sSearchLayer, false ) )
           {
             QString sTableName  = sSearchLayer;
             QString sGeometryColumn = QString::null;
             QString sLayerType = QString::null;
             int iLayerSrid = -1;
             QString sGeometryType = QString::null; // For Layers that contain no Geometries, this will be the Layer-Type
-            QString sProvider = QString::null;
+            QString sProviderKey = QString::null;
             // SpatialIndex, AuthInfos->IsHidden
             int iSpatialIndex = GAIA_VECTOR_UNKNOWN;
             int iIsHidden = 0;
-            bool bIsHidden = false; // TODO
-            QString sLayerValue = QString::null;
             //----------------------------------------------------------
             // Extract TableName/GeometryColumn from sent 'table_name' or 'table_name(field_name)' from LayerName
             QgsSpatialiteDbInfo::parseLayerName( sSearchLayer, sTableName, sGeometryColumn );
             //----------------------------------------------------------
-            sLayerValue = mVectorLayers.value( sSearchLayer );
-            if ( parseLayerInfo( sLayerValue, sGeometryType, iLayerSrid, sProvider, sLayerType, iSpatialIndex, iIsHidden ) )
+            // All Layers should have this Information
+            QString sLayerInfo = getDbLayerInfo( sSearchLayer );
+            // Only Spatialite-Layers that are registered in the Vector/Raster Coverages will have this information
+            QString sCoverageInfo = mVectorCoveragesLayers.value( sSearchLayer );
+            QgsDebugMsgLevel( QStringLiteral( "QgsSpatialiteDbInfo::GetVectorLayersInfo: LayerInfo LayerName[%1] mDbDataSourcesLayerInfo.count[%2] LayerInfo[%3] CoverageInfo[%4]" ).arg( sSearchLayer ).arg( mDbDataSourcesLayerInfo.count() ).arg( sLayerInfo ).arg( sCoverageInfo ), 7 );
+            // SELECT 0, AsBinary("eur_polygon") FROM "middle_earth_farthings" WHERE ROWID IN (SELECT pkid FROM "idx_middle_earth_farthings_eur_polygon" WHERE xmin <= 6631827.08004370797425508 AND xmax >= 2286542.62452997732907534 AND ymin <= 1560881.27033135574311018 AND ymax >= -860357.12295760842971504)
+            // PRAGMA table_info(idx_middle_earth_farthings_eur_polygon)
+            // qgsspatialitefeatureiterator.cpp: 396 [SpatialView recieved index-name of View and not the underlining SpatialTable]
+            if ( QgsSpatialiteDbInfo::parseLayerInfo( sLayerInfo, sGeometryType, iLayerSrid, sProviderKey, sLayerType, iSpatialIndex, iIsHidden ) )
             {
               QgsSpatialiteDbLayer *dbLayer = new QgsSpatialiteDbLayer( this );
               if ( dbLayer )
               {
                 dbLayer->mLayerId = mLayersCount++;
-                bIsHidden = ( bool )iIsHidden;
-                dbLayer->setLayerType( QgsSpatialiteDbInfo::SpatialiteLayerTypeFromName( sLayerType ) );
-                dbLayer->mIsLayerValid = true;
-                dbLayer->mTableName = sTableName;
-                dbLayer->mLayerName = dbLayer->mTableName;
-                dbLayer->mGeometryColumn = sGeometryColumn;
-                dbLayer->setGeometryType( QgsWkbTypes::parseType( sGeometryType ) );
-                if ( dbLayer->mGeometryType == QgsWkbTypes::Unknown )
+                if ( dbLayer->setLayerInfo( sSearchLayer, sLayerInfo, sCoverageInfo ) )
                 {
-                  dbLayer->setLayerInvalid( dbLayer->mLayerName, QString( "GetVectorLayersInfo [%1] Capabilities: Invalid GeometryrType[%2]." ).arg( sSearchLayer ).arg( dbLayer->getGeometryTypeString() ) );
-                }
-                if ( !dbLayer->mGeometryColumn.isEmpty() )
-                {
-                  dbLayer->mLayerName = QString( "%1(%2)" ).arg( dbLayer->mTableName ).arg( dbLayer->mGeometryColumn );
-                }
-                dbLayer->setSrid( iLayerSrid );
-                if ( dbLayer->mTableName.isEmpty() )
-                {
-                  dbLayer->setLayerInvalid( dbLayer->mLayerName, QString( "[%1] Invalid Table-Name[%2]: no result" ).arg( sSearchLayer ).arg( dbLayer->mTableName ) );
-                }
-                if ( dbLayer->mGeometryColumn.isEmpty() )
-                {
-                  dbLayer->setLayerInvalid( dbLayer->mLayerName, QString( "[%1] Invalid GeometryColumn-Name[%2]: no result" ).arg( sSearchLayer ).arg( dbLayer->mGeometryColumn ) );
-                }
-                if ( ( dbLayer->mTableName.isEmpty() ) || ( dbLayer->mGeometryColumn.isEmpty() ) || ( dbLayer->mSrid < -1 ) )
-                {
-                  dbLayer->setLayerInvalid( dbLayer->mLayerName, QString( "[%1] Invalid Srid[%2]: no result" ).arg( sSearchLayer ).arg( dbLayer->mSrid ) );
-                }
-                dbLayer->setSpatialIndexType( iSpatialIndex );
-                if ( dbLayer->mSpatialIndexType == QgsSpatialiteDbInfo::SpatialIndexNone )
-                {
-                  dbLayer->setLayerInvalid( dbLayer->mLayerName, QString( "GetVectorLayersInfo [%1] Invalid SpatialiIndex[%2]." ).arg( sSearchLayer ).arg( dbLayer->getSpatialIndexString() ) );
-                }
-                dbLayer->mLayerIsHidden = bIsHidden;
-                if ( dbLayer->mLayerIsHidden )
-                {
-                  dbLayer->setLayerInvalid( dbLayer->mLayerName, QString( "GetVectorLayersInfo [%1] LayerIsHidden" ).arg( sSearchLayer ) );
-                }
-                if ( dbLayer->isLayerValid() )
-                {
-                  // Will read and set LayerExtent and NumberFeatures
-                  dbLayer->getLayerExtent( true );
-                  if ( dbLayer->mLayerType == QgsSpatialiteDbInfo::SpatialTable )
+                  // Layer isValid
+                  switch ( dbLayer->getLayerType() )
                   {
-                    dbLayer->mLayerReadOnly = 0; // default is 1
+                    case QgsSpatialiteDbInfo::SpatialTable:
+                      if ( dbLayer->mSpatialIndexType == QgsSpatialiteDbInfo::SpatialIndexRTree )
+                      {
+                        // Replace type
+                        QString sIndexName = QString( "idx_%1_%2" ).arg( dbLayer->mTableName ).arg( dbLayer->mGeometryColumn );
+                        mNonSpatialTables[ sIndexName ] = QgsSpatialiteDbInfo::getSpatialiteTypesFilter( QStringLiteral( "SpatialIndex-Table" ) ) ;
+                        mNonSpatialTables[ QString( "%1_node" ).arg( sIndexName ) ]  = QgsSpatialiteDbInfo::getSpatialiteTypesFilter( QStringLiteral( "SpatialIndex-Node" ) ) ;
+                        mNonSpatialTables[ QString( "%1_parent" ).arg( sIndexName ) ]  = QgsSpatialiteDbInfo::getSpatialiteTypesFilter( QStringLiteral( "SpatialIndex-Parent" ) ) ;
+                        mNonSpatialTables[ QString( "%1_rowid" ).arg( sIndexName ) ]  = QgsSpatialiteDbInfo::getSpatialiteTypesFilter( QStringLiteral( "SpatialIndex-Rowid" ) ) ;
+                      }
+                      break;
+                    case QgsSpatialiteDbInfo::SpatialView:
+                      break;
+                    case QgsSpatialiteDbInfo::VirtualShape:
+                      break;
+                    default:
+                      break;
                   }
+                  //-----------------------------------------
+                  if ( dbLayer->getLayerName() == sLayerName )
+                  {
+                    // We have found what we are looking for, prevent RL1/2 and Topology search
+                    bFoundLayerName = true;
+                  }
+                  // Remove valid Layer Table-names
+                  mNonSpatialTables.remove( dbLayer->getTableName() );
+                  mDbLayers.insert( dbLayer->getLayerName(), dbLayer );
+                  if ( sLayerName.isEmpty() )
+                  {
+                    mHasVectorLayers++;
+                  }
+                }
+#if 0
+                else
+                {
+                  // Temp: during development of setLayerNameInfo
                   dbLayer->mLayerIsHidden = bIsHidden;
-                  if ( dbLayer->mLayerType == QgsSpatialiteDbInfo::SpatialView )
+                  dbLayer->mIsLayerValid = true;
+                  dbLayer->mTableName = sTableName;
+                  dbLayer->mLayerName = dbLayer->mTableName;
+                  dbLayer->mGeometryColumn = sGeometryColumn;
+                  dbLayer->setLayerType( QgsSpatialiteDbInfo::SpatialiteLayerTypeFromName( sLayerType ) );
+                  dbLayer->setGeometryType( QgsWkbTypes::parseType( sGeometryType ) );
+                  if ( dbLayer->mGeometryType == QgsWkbTypes::Unknown )
                   {
-                    dbLayer->GetViewTriggers();
+                    dbLayer->setLayerInvalid( dbLayer->mLayerName, QString( "GetVectorLayersInfo [%1] Capabilities: Invalid GeometryrType[%2]." ).arg( sSearchLayer ).arg( dbLayer->getGeometryTypeString() ) );
+                  }
+                  if ( !dbLayer->mGeometryColumn.isEmpty() )
+                  {
+                    dbLayer->mLayerName = QString();
+                    // This will fill dbLayer->mLayerName as 'table_name' or 'table_name(geometry_name)' [dbLayer->mLayerName must be empty]
+                    QgsSpatialiteDbInfo::parseLayerName( dbLayer->mLayerName, dbLayer->mTableName, dbLayer->mGeometryColumn );
+                  }
+                  dbLayer->setSrid( iLayerSrid );
+                  if ( dbLayer->mTableName.isEmpty() )
+                  {
+                    dbLayer->setLayerInvalid( dbLayer->mLayerName, QString( "[%1] Invalid Table-Name[%2]: no result" ).arg( sSearchLayer ).arg( dbLayer->mTableName ) );
+                  }
+                  if ( dbLayer->mGeometryColumn.isEmpty() )
+                  {
+                    dbLayer->setLayerInvalid( dbLayer->mLayerName, QString( "[%1] Invalid GeometryColumn-Name[%2]: no result" ).arg( sSearchLayer ).arg( dbLayer->mGeometryColumn ) );
+                  }
+                  if ( ( dbLayer->mTableName.isEmpty() ) || ( dbLayer->mGeometryColumn.isEmpty() ) || ( dbLayer->mSrid < -1 ) )
+                  {
+                    dbLayer->setLayerInvalid( dbLayer->mLayerName, QString( "[%1] Invalid Srid[%2]: no result" ).arg( sSearchLayer ).arg( dbLayer->mSrid ) );
+                  }
+                  dbLayer->setSpatialIndexType( iSpatialIndex );
+                  if ( dbLayer->mSpatialIndexType == QgsSpatialiteDbInfo::SpatialIndexNone )
+                  {
+                    dbLayer->setLayerInvalid( dbLayer->mLayerName, QString( "GetVectorLayersInfo [%1] Invalid SpatialiIndex[%2]." ).arg( sSearchLayer ).arg( dbLayer->getSpatialIndexString() ) );
+                  }
+                  if ( dbLayer->mLayerIsHidden )
+                  {
+                    dbLayer->setLayerInvalid( dbLayer->mLayerName, QString( "GetVectorLayersInfo [%1] LayerIsHidden" ).arg( sSearchLayer ) );
+                  }
+                  if ( dbLayer->isLayerValid() )
+                  {
+                    // Will read and set LayerExtent and NumberFeatures
+                    dbLayer->getLayerExtent( true );
+                    if ( dbLayer->mLayerType == QgsSpatialiteDbInfo::SpatialTable )
+                    {
+                      dbLayer->mLayerReadOnly = 0; // default is 1
+                    }
+                    dbLayer->mLayerIsHidden = bIsHidden;
+                    if ( dbLayer->mLayerType == QgsSpatialiteDbInfo::SpatialView )
+                    {
+                      dbLayer->GetViewTriggers();
+                    }
+                  }
+                  //-----------------------------------------
+                  //---retrieving Table settings ----------
+                  //---retrieving common settings --------
+                  //---retrieving View settings -----------
+                  //---setting EnabledCapabilities---------
+                  //-----------------------------------------
+                  if ( dbLayer->isLayerValid() )
+                  {
+                    if ( dbLayer->GetLayerSettings() )
+                    {
+                    }
                   }
                 }
-                //-----------------------------------------
-                //---retrieving Table settings ----------
-                //---retrieving common settings --------
-                //---retrieving View settings -----------
-                //---setting EnabledCapabilities---------
-                //-----------------------------------------
-                if ( dbLayer->isLayerValid() )
-                {
-                  if ( dbLayer->GetLayerSettings() )
-                  {
-                    //-----------------------------------------
-                    // Layer isValid
-                    switch ( dbLayer->mLayerType )
-                    {
-                      case QgsSpatialiteDbInfo::SpatialTable:
-                        if ( dbLayer->mSpatialIndexType == QgsSpatialiteDbInfo::SpatialIndexRTree )
-                        {
-                          // Replace type
-                          QString sIndexName = QString( "idx_%1_%2" ).arg( dbLayer->mTableName ).arg( dbLayer->mGeometryColumn );
-                          mNonSpatialTables[ sIndexName ] = QgsSpatialiteDbInfo::getSpatialiteTypesFilter( QStringLiteral( "SpatialIndex-Table" ) ) ;
-                          mNonSpatialTables[ QString( "%1_node" ).arg( sIndexName ) ]  = QgsSpatialiteDbInfo::getSpatialiteTypesFilter( QStringLiteral( "SpatialIndex-Node" ) ) ;
-                          mNonSpatialTables[ QString( "%1_parent" ).arg( sIndexName ) ]  = QgsSpatialiteDbInfo::getSpatialiteTypesFilter( QStringLiteral( "SpatialIndex-Parent" ) ) ;
-                          mNonSpatialTables[ QString( "%1_rowid" ).arg( sIndexName ) ]  = QgsSpatialiteDbInfo::getSpatialiteTypesFilter( QStringLiteral( "SpatialIndex-Rowid" ) ) ;
-                        }
-                        break;
-                      case QgsSpatialiteDbInfo::SpatialView:
-                        break;
-                      case QgsSpatialiteDbInfo::VirtualShape:
-                        break;
-                      default:
-                        break;
-                    }
-                    if ( dbLayer->mLayerName == sLayerName )
-                    {
-                      // We have found what we are looking for, prevent RL1/2 and Topology search
-                      bFoundLayerName = true;
-                    }
-                    // Remove valid Layer Table-names
-                    mNonSpatialTables.remove( dbLayer->mTableName );
-                    mDbLayers.insert( dbLayer->mLayerName, dbLayer );
-                    if ( sLayerName.isEmpty() )
-                    {
-                      mHasVectorLayers++;
-                    }
-                  }
-                }
+#endif
                 if ( !dbLayer->isLayerValid() )
                 {
                   mDbErrors.insert( dbLayer->mLayerName, QString( "-W-> QgsSpatialiteDbInfo::GetVectorLayersInfo Errors[%1] LayerType[%2] Layername[%3]" ).arg( ( dbLayer->getLayerErrors().count() + 1 ) ).arg( dbLayer->mLayerTypeString ).arg( dbLayer->mLayerName ) );
@@ -6660,12 +7229,13 @@ bool QgsSpatialiteDbInfo::GetVectorLayersInfo( const QString sLayerName )
 }
 //-----------------------------------------------------------------
 // QgsSpatialiteDbInfo::GetRasterLite2RasterLayersInfo
+// - called from GetDbLayersInfo, after prepare() has run
 //-----------------------------------------------------------------
 // All Layers will be loaded if sLayerName is empty
 // - otherwise load only a specific Layer
 // -> will load Spatialite, with RasterLite2, connection , if not done allready
 //-----------------------------------------------------------------
-bool QgsSpatialiteDbInfo::GetRasterLite2RasterLayersInfo( const QString sLayerName )
+bool QgsSpatialiteDbInfo::GetRasterLite2RasterLayersInfo( QString sLayerName )
 {
   bool bRc = false;
   if ( isDbValid() )
@@ -6740,123 +7310,133 @@ bool QgsSpatialiteDbInfo::GetRasterLite2RasterLayersInfo( const QString sLayerNa
             bFoundLayerName = true;
           }
           // Add only if it does not already exist [using true here, would cause loop]
-          if ( !getQgsSpatialiteDbLayer( sTableName, false ) )
+          if ( !getSpatialiteDbLayer( sTableName, false ) )
           {
             QRect layerBandsTileSize;
             QString sLayerSampleType;
             QString sLayerPixelType;
             QString sLayerCompressionType;
+#if 0
+            // TODO: remove extent and resolution, done in Layer
+            QgsRectangle layerExtent;
+            QgsPointXY layerResolution;
+            int iSrid = -1;
+            if ( ( sqlite3_column_type( stmt, 5 ) != SQLITE_NULL ) &&
+                 ( sqlite3_column_type( stmt, 6 ) != SQLITE_NULL ) &&
+                 ( sqlite3_column_type( stmt, 7 ) != SQLITE_NULL ) &&
+                 ( sqlite3_column_type( stmt, 8 ) != SQLITE_NULL ) &&
+                 ( sqlite3_column_type( stmt, 9 ) != SQLITE_NULL ) &&
+                 ( sqlite3_column_type( stmt, 10 ) != SQLITE_NULL ) &&
+                 ( sqlite3_column_type( stmt, 11 ) != SQLITE_NULL ) )
+            {
+              iSrid = sqlite3_column_int( stmt, 5 );
+              layerExtent = QgsRectangle( sqlite3_column_double( stmt, 6 ), sqlite3_column_double( stmt, 7 ), sqlite3_column_double( stmt, 8 ), sqlite3_column_double( stmt, 9 ) );
+              layerResolution QgsPointXY( sqlite3_column_double( stmt, 10 ), sqlite3_column_double( stmt, 11 ) );
+            }
+#endif
+            if ( ( sqlite3_column_type( stmt, 12 ) != SQLITE_NULL ) &&
+                 ( sqlite3_column_type( stmt, 13 ) != SQLITE_NULL ) &&
+                 ( sqlite3_column_type( stmt, 14 ) != SQLITE_NULL ) )
+            {
+              // num_bands, not_used, tile_width, tile_height
+              layerBandsTileSize = QRect( sqlite3_column_int( stmt, 12 ), 0, sqlite3_column_int( stmt, 13 ), sqlite3_column_int( stmt, 14 ) );
+            }
+            if ( ( sqlite3_column_type( stmt, 15 ) != SQLITE_NULL ) &&
+                 ( sqlite3_column_type( stmt, 16 ) != SQLITE_NULL ) &&
+                 ( sqlite3_column_type( stmt, 17 ) != SQLITE_NULL ) )
+            {
+              // sample_type, pixel_type, compression
+              sLayerSampleType = QString::fromUtf8( ( const char * ) sqlite3_column_text( stmt, 15 ) );
+              sLayerPixelType = QString::fromUtf8( ( const char * ) sqlite3_column_text( stmt, 16 ) );
+              sLayerCompressionType = QString::fromUtf8( ( const char * ) sqlite3_column_text( stmt, 17 ) );
+            }
+            // All Layers should have this Information
+            QString sLayerInfo = getDbLayerInfo( sTableName );
+            // Only Spatialite-Layers that are registered in the Vector/Raster Coverages will have this information
+            QString sCoverageInfo = mRasterCoveragesLayers.value( sTableName );
             QgsSpatialiteDbLayer *dbLayer = new QgsSpatialiteDbLayer( this );
             if ( dbLayer )
             {
               dbLayer->mLayerId = mLayersCount++;
-              dbLayer->setLayerType( QgsSpatialiteDbInfo::RasterLite2Raster );
-              dbLayer->mTableName = sTableName;
-              dbLayer->mLayerName = dbLayer->mTableName;
-              if ( sqlite3_column_type( stmt, 1 ) != SQLITE_NULL )
+              dbLayer->setLayerRasterTypesInfo( layerBandsTileSize, sLayerSampleType, sLayerPixelType, sLayerCompressionType );
+              if ( dbLayer->setLayerInfo( sTableName, sLayerInfo, sCoverageInfo ) )
               {
-                sFields = QString::fromUtf8( ( const char * ) sqlite3_column_text( stmt, 1 ) );
-                if ( sFields.startsWith( "***" ) )
+                //--------------------------------
+                QMap<QString, QString> layerTypes;
+                // Note: Key must be unique
+                layerTypes.insert( QString( "%1_sections(%2)" ).arg( dbLayer->mTableName ).arg( "geometry" ), QgsSpatialiteDbInfo::getSpatialiteTypesFilter( QStringLiteral( "RasterLite2-Sections" ) ) );
+                layerTypes.insert( QString( "%1_levels" ).arg( dbLayer->mTableName ), QgsSpatialiteDbInfo::getSpatialiteTypesFilter( QStringLiteral( "RasterLite2-Levels" ) ) );
+                layerTypes.insert( QString( "%1_tiles(%2)" ).arg( dbLayer->mTableName ).arg( "geometry" ), QgsSpatialiteDbInfo::getSpatialiteTypesFilter( QStringLiteral( "RasterLite2-Tiles" ) ) );
+                layerTypes.insert( QString( "%1_tiles_data" ).arg( dbLayer->mTableName ), QgsSpatialiteDbInfo::getSpatialiteTypesFilter( QStringLiteral( "RasterLite2-TilesData" ) ) );
+                //--------------------------------
+                QMap<QString, QString> mapLayers = mNonSpatialTables;
+                for ( QMap<QString, QString>::iterator itLayers = mapLayers.begin(); itLayers != mapLayers.end(); ++itLayers )
                 {
-                  sFields = "";
-                }
-                dbLayer->mTitle = sFields;
-                if ( sqlite3_column_type( stmt, 2 ) != SQLITE_NULL )
-                {
-                  sFields = QString::fromUtf8( ( const char * ) sqlite3_column_text( stmt, 2 ) );
-                  if ( sFields.startsWith( "***" ) )
+                  // raster_coverages entries are always lower-case
+                  QString sKey = itLayers.key();
+                  if ( sKey.toLower().startsWith( dbLayer->mTableName ) )
                   {
-                    sFields = "";
-                  }
-                  dbLayer->mAbstract = sFields;
-                  if ( sqlite3_column_type( stmt, 3 ) != SQLITE_NULL )
-                  {
-                    sFields = QString::fromUtf8( ( const char * ) sqlite3_column_text( stmt, 3 ) );
-                    if ( sFields.startsWith( "***" ) )
-                    {
-                      sFields = "";
-                    }
-                    dbLayer->mCopyright = sFields;
-                    if ( sqlite3_column_type( stmt, 4 ) != SQLITE_NULL )
-                    {
-                      dbLayer->mLicense = QString::fromUtf8( ( const char * ) sqlite3_column_text( stmt, 4 ) );
-                    }
-                    if ( ( sqlite3_column_type( stmt, 5 ) != SQLITE_NULL ) &&
-                         ( sqlite3_column_type( stmt, 6 ) != SQLITE_NULL ) &&
-                         ( sqlite3_column_type( stmt, 7 ) != SQLITE_NULL ) &&
-                         ( sqlite3_column_type( stmt, 8 ) != SQLITE_NULL ) &&
-                         ( sqlite3_column_type( stmt, 9 ) != SQLITE_NULL ) &&
-                         ( sqlite3_column_type( stmt, 10 ) != SQLITE_NULL ) &&
-                         ( sqlite3_column_type( stmt, 11 ) != SQLITE_NULL ) )
-                    {
-                      // If valid srid, mIsDbValid will be set to true [srid must be set before LayerExtent]
-                      dbLayer->setSrid( sqlite3_column_int( stmt, 5 ) );
-                      QgsRectangle layerExtent( sqlite3_column_double( stmt, 6 ), sqlite3_column_double( stmt, 7 ), sqlite3_column_double( stmt, 8 ), sqlite3_column_double( stmt, 9 ) );
-                      QgsPointXY layerResolution( sqlite3_column_double( stmt, 10 ), sqlite3_column_double( stmt, 11 ) );
-                      dbLayer->setLayerExtent( layerExtent, layerResolution );
-                    }
-                    if ( ( sqlite3_column_type( stmt, 12 ) != SQLITE_NULL ) &&
-                         ( sqlite3_column_type( stmt, 13 ) != SQLITE_NULL ) &&
-                         ( sqlite3_column_type( stmt, 14 ) != SQLITE_NULL ) )
-                    {
-                      // num_bands, not_used, tile_width, tile_height
-                      layerBandsTileSize = QRect( sqlite3_column_int( stmt, 12 ), 0, sqlite3_column_int( stmt, 13 ), sqlite3_column_int( stmt, 14 ) );
-                    }
-                    if ( ( sqlite3_column_type( stmt, 15 ) != SQLITE_NULL ) &&
-                         ( sqlite3_column_type( stmt, 16 ) != SQLITE_NULL ) &&
-                         ( sqlite3_column_type( stmt, 17 ) != SQLITE_NULL ) )
-                    {
-                      // sample_type, pixel_type, compression
-                      sLayerSampleType = QString::fromUtf8( ( const char * ) sqlite3_column_text( stmt, 15 ) );
-                      sLayerPixelType = QString::fromUtf8( ( const char * ) sqlite3_column_text( stmt, 16 ) );
-                      sLayerCompressionType = QString::fromUtf8( ( const char * ) sqlite3_column_text( stmt, 17 ) );
-                    }
-                    dbLayer->setLayerRasterTypesInfo( layerBandsTileSize, sLayerSampleType, sLayerPixelType, sLayerCompressionType );
+                    // remove entry with possible upper-case letters that start with the lower-case dbLayer->mTableName
+                    // layerTypes.insert( itLayers.key(), QStringLiteral( "" ) ); // No entry is desired
                   }
                 }
-              }
-            }
-            if ( dbLayer->isLayerValid() )
-            {
-              //--------------------------------
-              QMap<QString, QString> layerTypes;
-              // Note: Key must be unique
-              layerTypes.insert( QString( "%1_sections(%2)" ).arg( dbLayer->mTableName ).arg( "geometry" ), QgsSpatialiteDbInfo::getSpatialiteTypesFilter( QStringLiteral( "RasterLite2-Sections" ) ) );
-              layerTypes.insert( QString( "%1_levels" ).arg( dbLayer->mTableName ), QgsSpatialiteDbInfo::getSpatialiteTypesFilter( QStringLiteral( "RasterLite2-Levels" ) ) );
-              layerTypes.insert( QString( "%1_tiles(%2)" ).arg( dbLayer->mTableName ).arg( "geometry" ), QgsSpatialiteDbInfo::getSpatialiteTypesFilter( QStringLiteral( "RasterLite2-Tiles" ) ) );
-              layerTypes.insert( QString( "%1_tiles_data" ).arg( dbLayer->mTableName ), QgsSpatialiteDbInfo::getSpatialiteTypesFilter( QStringLiteral( "RasterLite2-TilesData" ) ) );
-              //--------------------------------
-              QMap<QString, QString> mapLayers = mNonSpatialTables;
-              for ( QMap<QString, QString>::iterator itLayers = mapLayers.begin(); itLayers != mapLayers.end(); ++itLayers )
-              {
-                // raster_coverages entries are always lower-case
-                QString sKey = itLayers.key();
-                if ( sKey.toLower().startsWith( dbLayer->mTableName ) )
-                {
-                  // remove entry with possible upper-case letters that start with the lower-case dbLayer->mTableName
-                  // layerTypes.insert( itLayers.key(), QStringLiteral( "" ) ); // No entry is desired
-                }
-              }
-              // Remove (and delete) the RasterLite2 Admin tables, which should not be shown [returns amount deleted (not needed)]
-              i_rc = removeAdminTables( layerTypes );
-              //--------------------------------
-              // Resolve unset settings [may become invalid in QgsSpatialiteDbLayer::getCapabilities]
-              if ( dbLayer->prepare() )
-              {
-                if ( dbLayer->mLayerName == sLayerName )
+                // Remove (and delete) the RasterLite2 Admin tables, which should not be shown [returns amount deleted (not needed)]
+                i_rc = removeAdminTables( layerTypes );
+                //--------------------------------
+                if ( dbLayer->getLayerName() == sLayerName )
                 {
                   // We have found what we are looking for, prevent RL1 and Topology search
                   bFoundLayerName = true;
                 }
                 // i_removed_count should be 14, otherwise something is wrong
-                mDbLayers.insert( dbLayer->mLayerName, dbLayer );
+                mDbLayers.insert( dbLayer->getLayerName(), dbLayer );
                 if ( sLayerName.isEmpty() )
                 {
                   mHasRasterCoveragesTables++;
                 }
               }
+#if 0
+              else
+              {
+                // Temp: during development of setLayerNameInfo
+                dbLayer->mTableName = sTableName;
+                dbLayer->mLayerName = dbLayer->mTableName;
+                dbLayer->setLayerType( QgsSpatialiteDbInfo::RasterLite2Raster );
+                if ( sqlite3_column_type( stmt, 1 ) != SQLITE_NULL )
+                {
+                  sFields = QString::fromUtf8( ( const char * ) sqlite3_column_text( stmt, 1 ) );
+                  if ( sFields.startsWith( "***" ) )
+                  {
+                    sFields = "";
+                  }
+                  dbLayer->mTitle = sFields;
+                  if ( sqlite3_column_type( stmt, 2 ) != SQLITE_NULL )
+                  {
+                    sFields = QString::fromUtf8( ( const char * ) sqlite3_column_text( stmt, 2 ) );
+                    if ( sFields.startsWith( "***" ) )
+                    {
+                      sFields = "";
+                    }
+                    dbLayer->mAbstract = sFields;
+                    if ( sqlite3_column_type( stmt, 3 ) != SQLITE_NULL )
+                    {
+                      sFields = QString::fromUtf8( ( const char * ) sqlite3_column_text( stmt, 3 ) );
+                      if ( sFields.startsWith( "***" ) )
+                      {
+                        sFields = "";
+                      }
+                      dbLayer->mCopyright = sFields;
+                      if ( sqlite3_column_type( stmt, 4 ) != SQLITE_NULL )
+                      {
+                        dbLayer->mLicense = QString::fromUtf8( ( const char * ) sqlite3_column_text( stmt, 4 ) );
+                      }
+                    }
+                  }
+                }
+              }
+#endif
             }
-            else
+            if ( !dbLayer->isLayerValid() )
             {
               delete dbLayer;
             }
@@ -7001,6 +7581,7 @@ int QgsSpatialiteDbInfo::removeGeoTable( QString sTableName )
 }
 //-----------------------------------------------------------------
 // QgsSpatialiteDbInfo::GetTopologyLayersInfo
+// - called from GetDbLayersInfo, after prepare() has run
 //-----------------------------------------------------------------
 // All Layers will be loaded if sLayerName is empty
 // - otherwise load only a specific Layer
@@ -7060,24 +7641,96 @@ bool QgsSpatialiteDbInfo::GetTopologyLayersInfo( QString sLayerName )
             bFoundLayerName = true;
           }
           // Add only if it does not already exist [using true here, would cause loop]
-          if ( !getQgsSpatialiteDbLayer( sTableName, false ) )
+          if ( !getSpatialiteDbLayer( sTableName, false ) )
           {
+            // All Layers should have this Information
+            QString sLayerInfo = getDbLayerInfo( sTableName );
+            // Only Spatialite-Layers that are registered in the Vector/Raster Coverages will have this information
+            QString sCoverageInfo = mVectorCoveragesLayers.value( sTableName );
             QgsSpatialiteDbLayer *dbLayer = new QgsSpatialiteDbLayer( this );
             if ( dbLayer )
             {
               dbLayer->mLayerId = mLayersCount++;
-              dbLayer->setLayerType( QgsSpatialiteDbInfo::SpatialiteTopology );
-              dbLayer->mTableName = sTableName;
-              dbLayer->mLayerName = dbLayer->mTableName;
-              if ( sqlite3_column_type( stmt, 1 ) != SQLITE_NULL )
+              if ( dbLayer->setLayerInfo( sTableName, sLayerInfo, sCoverageInfo ) )
               {
-                // If valid srid, mIsLayerValid will be set to true
-                dbLayer->setSrid( sqlite3_column_int( stmt, 1 ) );
+                // Note: Key must be unique
+                QMap<QString, QString> layerTypes;
+                // TODO: valid without layers? could be - ?? just not yet created??
+                sFields = QString( "topolayer_id,topolayer_name" );
+                // "topology_ortsteil_segments_topolayers
+                sql = QStringLiteral( "SELECT %1 FROM %2 ORDER BY topolayer_name" ).arg( sFields ).arg( QString( "%1_topolayers" ).arg( dbLayer->mTableName ) );
+                i_rc = sqlite3_prepare_v2( dbSqliteHandle(), sql.toUtf8().constData(), -1, &stmtSubquery, nullptr );
+                if ( i_rc == SQLITE_OK )
+                {
+                  while ( sqlite3_step( stmtSubquery ) == SQLITE_ROW )
+                  {
+                    int i_topolayer_id = 0;
+                    QString s_topolayer_tablename = "";
+                    QString s_topolayer_layername = "";
+                    if ( ( sqlite3_column_type( stmtSubquery, 0 ) != SQLITE_NULL ) &&
+                         ( sqlite3_column_type( stmtSubquery, 1 ) != SQLITE_NULL ) )
+                    {
+                      // The unique id inside the Topology
+                      i_topolayer_id = sqlite3_column_int( stmtSubquery, 0 );
+                      // The exported SpatialTable [Topology-Features (Metadata) and Geometry]
+                      s_topolayer_tablename = QString::fromUtf8( ( const char * ) sqlite3_column_text( stmtSubquery, 1 ) );
+                      // The export-table geometry is always called 'geometry'
+                      s_topolayer_layername = QString( "%1(geometry)" ).arg( s_topolayer_tablename );
+                      // The Topology-Features (Metadata) - topology_admin_segments_topofeatures_1
+                      QString featureName = QString( "%1_topofeatures_%2" ).arg( dbLayer->mTableName ).arg( i_topolayer_id );
+                      layerTypes.insert( featureName, QStringLiteral( "Topology-ExportData" ) );
+                      dbLayer->mAttributeFields.append( QgsField( s_topolayer_tablename, QVariant::UserType, featureName, i_topolayer_id, dbLayer->mLayerId, dbLayer->mTableName ) );
+                      // Move the Export-Table (which a  normal SpatialTable), to the Topology Layer
+                      // Why has this not been found??: it is not contained in vector_layers or geometry_columns
+                      QgsSpatialiteDbLayer *moveLayer = static_cast<QgsSpatialiteDbLayer *>( mDbLayers.take( s_topolayer_layername ) );
+                      if ( moveLayer )
+                      {
+                        moveLayer->mLayerId = i_topolayer_id;
+                        moveLayer->setLayerType( QgsSpatialiteDbInfo::TopologyExport );
+                        dbLayer->mTopologyExportLayers.insert( moveLayer->mLayerName, moveLayer );
+                        dbLayer->mTopologyExportLayersDataSourceUris.insert( moveLayer->mLayerName, moveLayer->getLayerDataSourceUri() );
+                        dbLayer->mNumberFeatures++;
+                        layerTypes.insert( moveLayer->mLayerName, QStringLiteral( "" ) );
+                      }
+                    }
+                  }
+                  sqlite3_finalize( stmtSubquery );
+                }
+                layerTypes.insert( QString( "%1_edge(%2)" ).arg( dbLayer->mTableName ).arg( "geom" ), QgsSpatialiteDbInfo::getSpatialiteTypesFilter( QStringLiteral( "Topology-Edge" ) ) );
+                layerTypes.insert( QString( "%1_face(%2)" ).arg( dbLayer->mTableName ).arg( "mbr" ), QgsSpatialiteDbInfo::getSpatialiteTypesFilter( QStringLiteral( "Topology-Face" ) ) );
+                layerTypes.insert( QString( "%1_node(%2)" ).arg( dbLayer->mTableName ).arg( "geom" ), QgsSpatialiteDbInfo::getSpatialiteTypesFilter( QStringLiteral( "Topology-Nodes" ) ) );
+                layerTypes.insert( QString( "%1_seeds(%2)" ).arg( dbLayer->mTableName ).arg( "geom" ), QgsSpatialiteDbInfo::getSpatialiteTypesFilter( QStringLiteral( "Topology-Seeds" ) ) );
+                layerTypes.insert( QString( "%1_edge_seeds(%2)" ).arg( dbLayer->mTableName ).arg( "geom" ), QgsSpatialiteDbInfo::getSpatialiteTypesFilter( QStringLiteral( "Topology-View-Edge_Seeds" ) ) );
+                layerTypes.insert( QString( "%1_edge_seeds(%2)" ).arg( dbLayer->mTableName ).arg( "geom" ), QgsSpatialiteDbInfo::getSpatialiteTypesFilter( QStringLiteral( "Topology-View-Edge_Seeds" ) ) );
+                layerTypes.insert( QString( "%1_face_seeds(%2)" ).arg( dbLayer->mTableName ).arg( "geom" ), QgsSpatialiteDbInfo::getSpatialiteTypesFilter( QStringLiteral( "Topology-View-Face_Seeds" ) ) );
+                layerTypes.insert( QString( "%1_face_geoms(%2)" ).arg( dbLayer->mTableName ).arg( "geom" ), QgsSpatialiteDbInfo::getSpatialiteTypesFilter( QStringLiteral( "Topology-View-Face_Geoms" ) ) );
+                layerTypes.insert( QString( "%1_topolayers" ).arg( dbLayer->mTableName ), QgsSpatialiteDbInfo::getSpatialiteTypesFilter( QStringLiteral( "Topology-Layers" ) ) );
+                layerTypes.insert( QString( "%1_topofeatures" ).arg( dbLayer->mTableName ), QgsSpatialiteDbInfo::getSpatialiteTypesFilter( QStringLiteral( "Topology-Features" ) ) );
+                // Remove (and delete) the Topology Admin tables, which should not be shown  [returns amount deleted (not needed)]
+                i_rc = removeAdminTables( layerTypes );
+                //---------------
+                if ( dbLayer->getLayerName() == sLayerName )
+                {
+                  // We have found what we are looking for, prevent RL1/2 and Topology search
+                  bFoundLayerName = true;
+                }
+                mDbLayers.insert( dbLayer->mLayerName, dbLayer );
+                if ( sLayerName.isEmpty() )
+                {
+                  mHasTopologyExportTables++;
+                }
               }
-              // Note: Key must be unique
-              QMap<QString, QString> layerTypes;
-              if ( dbLayer->isLayerValid() )
+              else
               {
+                // Temp: during development of setLayerNameInfo
+                dbLayer->mTableName = sTableName;
+                dbLayer->mLayerName = dbLayer->mTableName;
+                dbLayer->setLayerType( QgsSpatialiteDbInfo::SpatialiteTopology );
+                if ( sqlite3_column_type( stmt, 1 ) != SQLITE_NULL )
+                {
+                  // If valid srid, mIsLayerValid will be set to true
+                  dbLayer->setSrid( sqlite3_column_int( stmt, 1 ) );
+                }
 #if 0
                 sFields = QString( "extent_minx,extent_miny,extent_maxx,extent_maxy" );
                 sql = QStringLiteral( "SELECT %1 FROM %2" ).arg( sFields ).arg( QString( "%1_face_geoms" ).arg( dbLayer->mTableName ) );
@@ -7099,83 +7752,8 @@ bool QgsSpatialiteDbInfo::GetTopologyLayersInfo( QString sLayerName )
                   sqlite3_finalize( stmtSubquery );
                 }
 #endif
-                if ( dbLayer->isLayerValid() )
-                {
-                  // TODO: valid without layers? could be - ?? just not yet created??
-                  sFields = QString( "topolayer_id,topolayer_name" );
-                  // "topology_ortsteil_segments_topolayers
-                  sql = QStringLiteral( "SELECT %1 FROM %2 ORDER BY topolayer_name" ).arg( sFields ).arg( QString( "%1_topolayers" ).arg( dbLayer->mTableName ) );
-                  i_rc = sqlite3_prepare_v2( dbSqliteHandle(), sql.toUtf8().constData(), -1, &stmtSubquery, nullptr );
-                  if ( i_rc == SQLITE_OK )
-                  {
-                    while ( sqlite3_step( stmtSubquery ) == SQLITE_ROW )
-                    {
-                      int i_topolayer_id = 0;
-                      QString s_topolayer_tablename = "";
-                      QString s_topolayer_layername = "";
-                      if ( ( sqlite3_column_type( stmtSubquery, 0 ) != SQLITE_NULL ) &&
-                           ( sqlite3_column_type( stmtSubquery, 1 ) != SQLITE_NULL ) )
-                      {
-                        // The unique id inside the Topology
-                        i_topolayer_id = sqlite3_column_int( stmtSubquery, 0 );
-                        // The exported SpatialTable [Topology-Features (Metadata) and Geometry]
-                        s_topolayer_tablename = QString::fromUtf8( ( const char * ) sqlite3_column_text( stmtSubquery, 1 ) );
-                        // The export-table geometry is always called 'geometry'
-                        s_topolayer_layername = QString( "%1(geometry)" ).arg( s_topolayer_tablename );
-                        // The Topology-Features (Metadata) - topology_admin_segments_topofeatures_1
-                        QString featureName = QString( "%1_topofeatures_%2" ).arg( dbLayer->mTableName ).arg( i_topolayer_id );
-                        layerTypes.insert( featureName, QStringLiteral( "Topology-ExportData" ) );
-                        dbLayer->mAttributeFields.append( QgsField( s_topolayer_tablename, QVariant::UserType, featureName, i_topolayer_id, dbLayer->mLayerId, dbLayer->mTableName ) );
-                        // Move the Export-Table (which a  normal SpatialTable), to the Topology Layer
-                        // Why has this not been found??: it is not contained in vector_layers or geometry_columns
-                        QgsSpatialiteDbLayer *moveLayer = static_cast<QgsSpatialiteDbLayer *>( mDbLayers.take( s_topolayer_layername ) );
-                        if ( moveLayer )
-                        {
-                          moveLayer->mLayerId = i_topolayer_id;
-                          moveLayer->setLayerType( QgsSpatialiteDbInfo::TopologyExport );
-                          dbLayer->mTopologyExportLayers.insert( moveLayer->mLayerName, moveLayer );
-                          dbLayer->mTopologyExportLayersDataSourceUris.insert( moveLayer->mLayerName, moveLayer->getLayerDataSourceUri() );
-                          dbLayer->mNumberFeatures++;
-                          layerTypes.insert( moveLayer->mLayerName, QStringLiteral( "" ) );
-                        }
-                      }
-                    }
-                    sqlite3_finalize( stmtSubquery );
-                  }
-                }
               }
-              if ( dbLayer->isLayerValid() )
-              {
-                layerTypes.insert( QString( "%1_edge(%2)" ).arg( dbLayer->mTableName ).arg( "geom" ), QgsSpatialiteDbInfo::getSpatialiteTypesFilter( QStringLiteral( "Topology-Edge" ) ) );
-                layerTypes.insert( QString( "%1_face(%2)" ).arg( dbLayer->mTableName ).arg( "mbr" ), QgsSpatialiteDbInfo::getSpatialiteTypesFilter( QStringLiteral( "Topology-Face" ) ) );
-                layerTypes.insert( QString( "%1_node(%2)" ).arg( dbLayer->mTableName ).arg( "geom" ), QgsSpatialiteDbInfo::getSpatialiteTypesFilter( QStringLiteral( "Topology-Nodes" ) ) );
-                layerTypes.insert( QString( "%1_seeds(%2)" ).arg( dbLayer->mTableName ).arg( "geom" ), QgsSpatialiteDbInfo::getSpatialiteTypesFilter( QStringLiteral( "Topology-Seeds" ) ) );
-                layerTypes.insert( QString( "%1_edge_seeds(%2)" ).arg( dbLayer->mTableName ).arg( "geom" ), QgsSpatialiteDbInfo::getSpatialiteTypesFilter( QStringLiteral( "Topology-View-Edge_Seeds" ) ) );
-                layerTypes.insert( QString( "%1_edge_seeds(%2)" ).arg( dbLayer->mTableName ).arg( "geom" ), QgsSpatialiteDbInfo::getSpatialiteTypesFilter( QStringLiteral( "Topology-View-Edge_Seeds" ) ) );
-                layerTypes.insert( QString( "%1_face_seeds(%2)" ).arg( dbLayer->mTableName ).arg( "geom" ), QgsSpatialiteDbInfo::getSpatialiteTypesFilter( QStringLiteral( "Topology-View-Face_Seeds" ) ) );
-                layerTypes.insert( QString( "%1_face_geoms(%2)" ).arg( dbLayer->mTableName ).arg( "geom" ), QgsSpatialiteDbInfo::getSpatialiteTypesFilter( QStringLiteral( "Topology-View-Face_Geoms" ) ) );
-                layerTypes.insert( QString( "%1_topolayers" ).arg( dbLayer->mTableName ), QgsSpatialiteDbInfo::getSpatialiteTypesFilter( QStringLiteral( "Topology-Layers" ) ) );
-                layerTypes.insert( QString( "%1_topofeatures" ).arg( dbLayer->mTableName ), QgsSpatialiteDbInfo::getSpatialiteTypesFilter( QStringLiteral( "Topology-Features" ) ) );
-                // Remove (and delete) the Topology Admin tables, which should not be shown  [returns amount deleted (not needed)]
-                i_rc = removeAdminTables( layerTypes );
-                //---------------
-                // Resolve unset settings [may become invalid in QgsSpatialiteDbLayer::getCapabilities]
-                if ( dbLayer->prepare() )
-                {
-                  if ( dbLayer->mLayerName == sLayerName )
-                  {
-                    // We have found what we are looking for, prevent RL1/2 and Topology search
-                    bFoundLayerName = true;
-                  }
-
-                  mDbLayers.insert( dbLayer->mLayerName, dbLayer );
-                  if ( sLayerName.isEmpty() )
-                  {
-                    mHasTopologyExportTables++;
-                  }
-                }
-              }
-              else
+              if ( !dbLayer->isLayerValid() )
               {
                 delete dbLayer;
               }
@@ -7269,15 +7847,27 @@ bool QgsSpatialiteDbInfo::GetRasterLite1LayersInfo( QString sLayerName )
             bFoundLayerName = true;
           }
           // Add only if it does not already exist [using true here, would cause loop]
-          if ( !getQgsSpatialiteDbLayer( sTableName, false ) )
+          if ( !getSpatialiteDbLayer( sTableName, false ) )
           {
+            // All Layers should have this Information
+            QString sLayerInfo = getDbLayerInfo( sTableName );
+            // Only Spatialite-Layers that are registered in the Vector/Raster Coverages will have this information
+            QString sCoverageInfo = QString();
             QgsSpatialiteDbLayer *dbLayer = new QgsSpatialiteDbLayer( this );
             if ( dbLayer )
             {
               dbLayer->mLayerId = mLayersCount++;
+              if ( dbLayer->setLayerInfo( sTableName, sLayerInfo, sCoverageInfo ) )
+              {
+              }
+              else
+              {
+                // Temp: during development of setLayerNameInfo
+                dbLayer->mTableName = sTableName;
+                dbLayer->mLayerName = dbLayer->mTableName;
+              }
               dbLayer->setLayerType( QgsSpatialiteDbInfo::RasterLite1 );
-              dbLayer->mTableName = sTableName;
-              dbLayer->mLayerName = dbLayer->mTableName;
+
               dbLayer->mCoordDimensions = GAIA_XY;
               QgsRectangle layerExtent;
               if ( sqlite3_column_type( stmt, 1 ) != SQLITE_NULL )
@@ -7463,7 +8053,6 @@ bool QgsSpatialiteDbInfo::GetMBTilesLayersInfo( QString sLayerName )
   if ( isDbValid() )
   {
     sqlite3_stmt *stmt = nullptr;
-    sqlite3_stmt *stmtSubquery = nullptr;
     // sqlite3_stmt *stmtSubquery = nullptr;
     bool bFoundLayerName = false;
     int i_rc = 0;
@@ -7506,10 +8095,53 @@ bool QgsSpatialiteDbInfo::GetMBTilesLayersInfo( QString sLayerName )
       QString sFormat;
       int iMinZoom = 0;
       int iMaxZoom = 0;
+      QString sLayerType = QString();
+      QString sTitle = QString();
+      QString sAbstract = QString();
+      QString sCopyright = QString();
+      QString sLicense = QString();
+      SpatialiteLayerType type_MBTiles = MBTilesTable;
       while ( sqlite3_step( stmt ) == SQLITE_ROW )
       {
         if ( sqlite3_column_type( stmt, 0 ) != SQLITE_NULL )
         {
+          sTitle = QString::fromUtf8( ( const char * ) sqlite3_column_text( stmt, 0 ) );
+          if ( sqlite3_column_type( stmt, 1 ) != SQLITE_NULL )
+          {
+            sAbstract = QString::fromUtf8( ( const char * ) sqlite3_column_text( stmt, 1 ) );
+          }
+          if ( ( sqlite3_column_type( stmt, 2 ) != SQLITE_NULL ) &&
+               ( sqlite3_column_type( stmt, 3 ) != SQLITE_NULL ) &&
+               ( sqlite3_column_type( stmt, 4 ) != SQLITE_NULL ) )
+          {
+            sFormat = QString::fromUtf8( ( const char * ) sqlite3_column_text( stmt, 2 ) );
+            iMinZoom = sqlite3_column_int( stmt, 3 );
+            iMaxZoom =  sqlite3_column_int( stmt, 4 );
+          }
+          if ( sAbstract.isEmpty() )
+          {
+            sAbstract = QString( "format=%1 ; minzoom=%2 ; maxzoom=%3" ).arg( sFormat ).arg( iMinZoom ).arg( iMaxZoom );
+          }
+          if ( sqlite3_column_type( stmt, 5 ) != SQLITE_NULL )
+          {
+            // 'copyright' may not exist as name in metadata [will be empy if it does not exist]
+            sCopyright = QString::fromUtf8( ( const char * ) sqlite3_column_text( stmt, 5 ) );
+          }
+          if ( sqlite3_column_type( stmt, 6 ) != SQLITE_NULL )
+          {
+            // 'license' may not exist as name in metadata [will be empty if it does not exist]
+            sLicense = QString::fromUtf8( ( const char * ) sqlite3_column_text( stmt, 6 ) );
+          }
+          if ( ( sqlite3_column_type( stmt, 7 ) != SQLITE_NULL ) &&
+               ( sqlite3_column_type( stmt, 8 ) != SQLITE_NULL ) )
+          {
+            if ( sqlite3_column_int( stmt, 8 ) > 2 )
+            {
+              type_MBTiles = MBTilesView;
+            }
+
+          }
+          sLayerType = QgsSpatialiteDbInfo::SpatialiteLayerTypeName( type_MBTiles );
           // Use file-name (excluding the path) as LayerName
           // - metadata name/value may not be unique across different mbtiles-files [should be used only as title]
           QString sTableName = getFileName();
@@ -7519,109 +8151,39 @@ bool QgsSpatialiteDbInfo::GetMBTilesLayersInfo( QString sLayerName )
             bFoundLayerName = true;
           }
           // Add only if it does not already exist [using true here, would cause loop]
-          if ( !getQgsSpatialiteDbLayer( sTableName, false ) )
+          if ( !getSpatialiteDbLayer( sTableName, false ) )
           {
+            // All Layers should have this Information
+            QString sLayerInfo = getDbLayerInfo( sTableName );
+            // Only Spatialite-Layers that are registered in the Vector/Raster Coverages will have this information
+            QString sCoverageInfo = QString();
+            int iSrid = 4326;
+            // This will create the formated list [first parm is empty]
+            QgsSpatialiteDbInfo::parseLayerCoverage( sCoverageInfo, sLayerType, sTableName, sTitle, sAbstract, sCopyright, sLicense, iSrid );
             QgsSpatialiteDbLayer *dbLayer = new QgsSpatialiteDbLayer( this );
             if ( dbLayer )
             {
               dbLayer->mLayerId = mLayersCount++;
-              dbLayer->mTableName = sTableName;
-              dbLayer->mLayerName = dbLayer->mTableName;
-              dbLayer->mTitle = QString::fromUtf8( ( const char * ) sqlite3_column_text( stmt, 0 ) );
-              if ( sqlite3_column_type( stmt, 1 ) != SQLITE_NULL )
+              if ( dbLayer->setLayerInfo( sTableName, sLayerInfo, sCoverageInfo ) )
               {
-                dbLayer->mAbstract = QString::fromUtf8( ( const char * ) sqlite3_column_text( stmt, 1 ) );
-              }
-              if ( ( sqlite3_column_type( stmt, 2 ) != SQLITE_NULL ) &&
-                   ( sqlite3_column_type( stmt, 3 ) != SQLITE_NULL ) &&
-                   ( sqlite3_column_type( stmt, 4 ) != SQLITE_NULL ) )
-              {
-                sFormat = QString::fromUtf8( ( const char * ) sqlite3_column_text( stmt, 2 ) );
-                iMinZoom = sqlite3_column_int( stmt, 3 );
-                iMaxZoom =  sqlite3_column_int( stmt, 4 );
-              }
-              if ( dbLayer->mAbstract.isEmpty() )
-              {
-                dbLayer->mAbstract = QString( "format=%1 ; minzoom=%2 ; maxzoom=%3" ).arg( sFormat ).arg( iMinZoom ).arg( iMaxZoom );
-              }
-              if ( sqlite3_column_type( stmt, 5 ) != SQLITE_NULL )
-              {
-                // 'copyright' may not exist as name in metadata [will be empy if it does not exist]
-                dbLayer->mCopyright = QString::fromUtf8( ( const char * ) sqlite3_column_text( stmt, 5 ) );
-              }
-              if ( sqlite3_column_type( stmt, 6 ) != SQLITE_NULL )
-              {
-                // 'license' may not exist as name in metadata [will be empty if it does not exist]
-                dbLayer->mLicense = QString::fromUtf8( ( const char * ) sqlite3_column_text( stmt, 6 ) );
-              }
-              if ( ( sqlite3_column_type( stmt, 7 ) != SQLITE_NULL ) &&
-                   ( sqlite3_column_type( stmt, 8 ) != SQLITE_NULL ) )
-              {
-                SpatialiteLayerType type_MBTiles = MBTilesTable;
-                if ( sqlite3_column_int( stmt, 8 ) > 2 )
+                if ( dbLayer->getLayerName() == sLayerName )
                 {
-                  type_MBTiles = MBTilesView;
+                  // We have found what we are looking for, prevent RL1/2 and Topology search
+                  bFoundLayerName = true;
                 }
-                dbLayer->setLayerType( type_MBTiles );
-                // If valid srid, mIsDbValid will be set to true [srid must be set before LayerExtent]
-                dbLayer->setSrid( 4326 );
-                // Bounds: 11.249999999999993,43.06888777416961,14.062499999999986,44.08758502824516
-                QStringList saBounds = QString::fromUtf8( ( const char * ) sqlite3_column_text( stmt, 7 ) ).split( "," );
-                if ( saBounds.count() == 4 )
+                mDbLayers.insert( dbLayer->getLayerName(), dbLayer );
+                if ( sLayerName.isEmpty() )
                 {
-                  QString sLayerSampleType = QStringLiteral( "UINT8" );
-                  QString sLayerPixelType = QStringLiteral( "RGB" );
-                  QString sLayerCompressionType = QStringLiteral( "PNG" );
-                  if ( sFormat.toUpper() == QStringLiteral( "JPG" ) )
-                  {
-                    sLayerCompressionType = QStringLiteral( "JPEG" );
-                  }
-                  // num_bands, not_used, tile_width, tile_height
-                  QRect layerBandsTileSize = QRect( 3, 0, 256, 256 );
-                  dbLayer->setLayerRasterTypesInfo( layerBandsTileSize, sLayerSampleType, sLayerPixelType, sLayerCompressionType );
-                  QgsRectangle layerExtent( saBounds.at( 0 ).toDouble(), saBounds.at( 1 ).toDouble(), saBounds.at( 2 ).toDouble(), saBounds.at( 3 ).toDouble() );
-                  QgsPointXY layerResolution( 0, 0 );
-                  QgsPointXY imageExtent( 0, 0 );
-                  if ( ( iMaxZoom > 0 ) && ( iMinZoom < iMaxZoom ) )
-                  {
-                    sql = QStringLiteral( "SELECT ((Max(tile_column)-Min(tile_column))*256) AS width_x, ((Max(tile_row)-Min(tile_row))*256) AS height_y FROM 'tiles' WHERE zoom_level=%1" ).arg( iMaxZoom );
-                    i_rc = sqlite3_prepare_v2( dbSqliteHandle(), sql.toUtf8().constData(), -1, &stmtSubquery, nullptr );
-                    if ( i_rc == SQLITE_OK )
-                    {
-                      while ( sqlite3_step( stmtSubquery ) == SQLITE_ROW )
-                      {
-                        if ( ( sqlite3_column_type( stmtSubquery, 0 ) != SQLITE_NULL ) &&
-                             ( sqlite3_column_type( stmtSubquery, 1 ) != SQLITE_NULL ) )
-                        {
-                          iMinZoom = sqlite3_column_int( stmtSubquery, 0 );
-                          iMaxZoom =  sqlite3_column_int( stmtSubquery, 1 );
-                          imageExtent.set( ( double ) iMinZoom, ( double ) iMaxZoom );
-                        }
-                      }
-                      sqlite3_finalize( stmtSubquery );
-                    }
-                  }
-                  dbLayer->setLayerExtent( layerExtent, layerResolution, imageExtent );
-                }
-              }
-              if ( dbLayer->isLayerValid() )
-              {
-                // Resolve unset settings [may become invalid in QgsSpatialiteDbLayer::getCapabilities]
-                if ( dbLayer->prepare() )
-                {
-                  if ( dbLayer->mLayerName == sLayerName )
-                  {
-                    // We have found what we are looking for, prevent RL1/2 and Topology search
-                    bFoundLayerName = true;
-                  }
-                  mDbLayers.insert( dbLayer->mLayerName, dbLayer );
-                  if ( sLayerName.isEmpty() )
-                  {
-                    mHasMBTilesTables++;
-                  }
+                  mHasMBTilesTables++;
                 }
               }
               else
+              {
+                // Temp: during development of setLayerNameInfo
+                dbLayer->mTableName = sTableName;
+                dbLayer->mLayerName = dbLayer->mTableName;
+              }
+              if ( !dbLayer->isLayerValid() )
               {
                 delete dbLayer;
               }
@@ -7665,7 +8227,6 @@ bool QgsSpatialiteDbInfo::GetGeoPackageLayersInfo( QString sLayerName )
   if ( isDbValid() )
   {
     sqlite3_stmt *stmt = nullptr;
-    sqlite3_stmt *stmtSubquery = nullptr;
     bool bFoundLayerName = false;
     int i_rc = 0;
     QString sTableName  = QString::null;
@@ -7713,9 +8274,15 @@ bool QgsSpatialiteDbInfo::GetGeoPackageLayersInfo( QString sLayerName )
               mHasGeoPackageRasters++;
             }
           }
+          else
+          {
+            mHasGeoPackageVectors++;
+          }
+          sLayerType = QgsSpatialiteDbInfo::SpatialiteLayerTypeName( type_GeoPackage );
           QString sTitle = QString::fromUtf8( ( const char * ) sqlite3_column_text( stmt, 2 ) );
           QString sAbstract = QString::fromUtf8( ( const char * ) sqlite3_column_text( stmt, 3 ) );
           int iSrid = sqlite3_column_int( stmt, 4 );
+#if 0
           QgsRectangle layerExtent( 0.0, 0.0, 0.0, 0.0 );
           if ( ( sqlite3_column_type( stmt, 5 ) != SQLITE_NULL ) &&
                ( sqlite3_column_type( stmt, 6 ) != SQLITE_NULL ) &&
@@ -7735,6 +8302,7 @@ bool QgsSpatialiteDbInfo::GetGeoPackageLayersInfo( QString sLayerName )
           QgsPointXY layerResolution( 0, 0 );
           QgsPointXY imageExtent( 0, 0 );
           QgsWkbTypes::Type geometryType = QgsWkbTypes::Unknown;
+
           if ( type_GeoPackage == GeoPackageVector )
           {
             sFields = QString( "column_name, geometry_type_name,z,m" );
@@ -7763,7 +8331,9 @@ bool QgsSpatialiteDbInfo::GetGeoPackageLayersInfo( QString sLayerName )
                   }
                   if ( !sGeometryColumn.isEmpty() )
                   {
-                    sLayer_Name = QString( "%1(%2)" ).arg( sTable_Name ).arg( sGeometryColumn );
+                    sLayer_Name = QString();
+                    // This will fill sLayer_Name as 'table_name' or 'table_name(geometry_name)' [sLayer_Name must be empty]
+                    QgsSpatialiteDbInfo::parseLayerName( sLayer_Name, sTable_Name, sGeometryColumn );
                   }
                   geometryType = QgsSpatialiteDbLayer::GetGeometryTypeLegacy( sGeometryType, sGeometryDimension );
                   if ( sLayerName.isEmpty() )
@@ -7775,6 +8345,8 @@ bool QgsSpatialiteDbInfo::GetGeoPackageLayersInfo( QString sLayerName )
               sqlite3_finalize( stmtSubquery );
             }
           }
+#endif
+#if 0
           if ( type_GeoPackage == GeoPackageRaster )
           {
             sFields = QString( "tile_width,tile_height,pixel_x_size,pixel_y_size" );
@@ -7805,25 +8377,50 @@ bool QgsSpatialiteDbInfo::GetGeoPackageLayersInfo( QString sLayerName )
               sqlite3_finalize( stmtSubquery );
             }
           }
+#endif
           // Add only if it does not already exist [using true here, would cause loop]
-          if ( !getQgsSpatialiteDbLayer( sLayer_Name, false ) )
+          if ( !getSpatialiteDbLayer( sLayer_Name, false ) )
           {
             QgsSpatialiteDbLayer *dbLayer = new QgsSpatialiteDbLayer( this );
             if ( dbLayer )
             {
+              // All Layers should have this Information
+              QString sLayerInfo = getDbLayerInfo( sLayer_Name );
+              // Only Spatialite-Layers that are registered in the Vector/Raster Coverages will have this information
+              QString sCoverageInfo = QString();
+              QString sCopyright = QString();
+              QString sLicense = QString();
+              // This will create the formated list [first parm is empty]
+              QgsSpatialiteDbInfo::parseLayerCoverage( sCoverageInfo, sLayerType, sTableName, sTitle, sAbstract, sCopyright, sLicense, iSrid );
               dbLayer->mLayerId = mLayersCount++;
-              dbLayer->mTableName = sTable_Name;
-              dbLayer->mLayerName = sLayer_Name;
-              dbLayer->mTitle = sTitle;
-              dbLayer->mAbstract = sAbstract;
-              dbLayer->setLayerType( type_GeoPackage );
-              // If valid srid, mIsDbValid will be set to true [srid must be set before LayerExtent]
-              dbLayer->setSrid( iSrid );
-              dbLayer->setLayerExtent( layerExtent, layerResolution, imageExtent );
-              dbLayer->mGeometryColumn = sGeometryColumn;
-              dbLayer->setGeometryType( geometryType );
-              if ( dbLayer->isLayerValid() )
+              if ( dbLayer->setLayerInfo( sLayer_Name, sLayerInfo, sCoverageInfo ) )
               {
+                if ( dbLayer->getLayerName() == sLayerName )
+                {
+                  // We have found what we are looking for, prevent RL1/2 and Topology search
+                  bFoundLayerName = true;
+                }
+                mDbLayers.insert( dbLayer->mLayerName, dbLayer );
+                if ( sLayerName.isEmpty() )
+                {
+                  mHasGeoPackageTables++;
+                }
+              }
+#if 0
+              else
+              {
+                // Temp: during development of setLayerNameInfo
+                dbLayer->mTableName = sTable_Name;
+                dbLayer->mLayerName = sLayer_Name;
+                dbLayer->mTitle = sTitle;
+                dbLayer->mAbstract = sAbstract;
+                dbLayer->setLayerType( type_GeoPackage );
+                // If valid srid, mIsDbValid will be set to true [srid must be set before LayerExtent]
+                dbLayer->setSrid( iSrid );
+                dbLayer->mGeometryColumn = sGeometryColumn;
+                dbLayer->setGeometryType( geometryType );
+
+                dbLayer->setLayerExtent( layerExtent, layerResolution, imageExtent );
                 // Read AttributeFields to display in QgsSpatialiteDbInfoItem::addColumnItems
                 if ( ( dbLayer->getLayerType() == GeoPackageVector ) && ( dbLayer->GetLayerSettings() ) )
                 {
@@ -7836,22 +8433,9 @@ bool QgsSpatialiteDbInfo::GetGeoPackageLayersInfo( QString sLayerName )
                   QString sLayerCompressionType = QStringLiteral( "PNG" );
                   dbLayer->setLayerRasterTypesInfo( layerBandsTileSize, sLayerSampleType, sLayerPixelType, sLayerCompressionType );
                 }
-                // Resolve unset settings [may become invalid in QgsSpatialiteDbLayer::getCapabilities]
-                if ( dbLayer->prepare() )
-                {
-                  if ( dbLayer->mLayerName == sLayerName )
-                  {
-                    // We have found what we are looking for, prevent RL1/2 and Topology search
-                    bFoundLayerName = true;
-                  }
-                  mDbLayers.insert( dbLayer->mLayerName, dbLayer );
-                  if ( sLayerName.isEmpty() )
-                  {
-                    mHasGeoPackageTables++;
-                  }
-                }
               }
-              else
+#endif
+              if ( !dbLayer->isLayerValid() )
               {
                 delete dbLayer;
               }
@@ -7904,7 +8488,6 @@ bool QgsSpatialiteDbInfo::GetFdoOgrLayersInfo( QString sLayerName )
   {
     int i_check_count_fdoogr = mHasFdoOgrTables;
     sqlite3_stmt *stmt = nullptr;
-    sqlite3_stmt *stmtSubquery = nullptr;
     bool bFoundLayerName = false;
     int i_rc = 0;
     QString sTableName  = QString::null;
@@ -7940,40 +8523,46 @@ bool QgsSpatialiteDbInfo::GetFdoOgrLayersInfo( QString sLayerName )
           QString sTable_Name = QString::fromUtf8( ( const char * ) sqlite3_column_text( stmt, 0 ) );
           QString sLayer_Name = sTable_Name;
           QString sGeometry_Column = QString::fromUtf8( ( const char * ) sqlite3_column_text( stmt, 1 ) );
-          QgsWkbTypes::Type geometryType = QgsSpatialiteDbLayer::GetGeometryType( sqlite3_column_int( stmt, 2 ), sqlite3_column_int( stmt, 3 ) );
-          int iSrid = sqlite3_column_int( stmt, 4 );
+          // QgsWkbTypes::Type geometryType = QgsSpatialiteDbLayer::GetGeometryType( sqlite3_column_int( stmt, 2 ), sqlite3_column_int( stmt, 3 ) );
+          // int iSrid = sqlite3_column_int( stmt, 4 );
           if ( !sGeometry_Column.isEmpty() )
           {
-            sLayer_Name = QString( "%1(%2)" ).arg( sTable_Name ).arg( sGeometry_Column );
+            sLayer_Name = QString();
+            // This will fill sLayer_Name as 'table_name' or 'table_name(geometry_name)' [sLayer_Name must be empty]
+            QgsSpatialiteDbInfo::parseLayerName( sLayer_Name, sTable_Name, sGeometry_Column );
           }
           QString sGeometryFormat = QString::fromUtf8( ( const char * ) sqlite3_column_text( stmt, 5 ) );
           if ( sGeometryFormat == QStringLiteral( "WKB" ) )
           {
-            QgsRectangle layerExtent;
-            // SELECT ST_MinX(ST_Collect(ST_GeomFromWKB(GEOMETRY,3035))) AS min_x, ST_MinY(ST_Collect(ST_GeomFromWKB(GEOMETRY,3035)))  AS min_y,ST_MaxX(ST_Collect(ST_GeomFromWKB(GEOMETRY,3035))) AS max_x, ST_MaxY(ST_Collect(ST_GeomFromWKB(GEOMETRY,3035))) AS max_y FROM middle_earth_linestrings;
-            sFields = QString( "ST_MinX(ST_Collect(ST_GeomFromWKB(%1,%2))), ST_MinY(ST_Collect(ST_GeomFromWKB(%1,%2))),ST_MaxX(ST_Collect(ST_GeomFromWKB(%1,%2))), ST_MaxY(ST_Collect(ST_GeomFromWKB(%1,%2)))" ).arg( sGeometry_Column ).arg( iSrid );
-            sql = QStringLiteral( "SELECT %1 FROM '%2'" ).arg( sFields ).arg( sTable_Name );
-            i_rc = sqlite3_prepare_v2( dbSqliteHandle(), sql.toUtf8().constData(), -1, &stmtSubquery, nullptr );
-            if ( i_rc == SQLITE_OK )
+            // Only 'WKB' is supported, when used in getLayerExtent 'WKB' is assumed
+            // Add only if it does not already exist [using true here, would cause loop]
+            if ( !getSpatialiteDbLayer( sLayer_Name, false ) )
             {
-              while ( sqlite3_step( stmtSubquery ) == SQLITE_ROW )
+              QgsSpatialiteDbLayer *dbLayer = new QgsSpatialiteDbLayer( this );
+              if ( dbLayer )
               {
-                if ( ( sqlite3_column_type( stmtSubquery, 0 ) != SQLITE_NULL ) &&
-                     ( sqlite3_column_type( stmtSubquery, 1 ) != SQLITE_NULL ) &&
-                     ( sqlite3_column_type( stmtSubquery, 2 ) != SQLITE_NULL ) &&
-                     ( sqlite3_column_type( stmtSubquery, 3 ) != SQLITE_NULL ) )
+                // All Layers should have this Information
+                QString sLayerInfo = getDbLayerInfo( sTableName );
+                // Only Spatialite-Layers that are registered in the Vector/Raster Coverages will have this information
+                QString sCoverageInfo = QString();
+                dbLayer->mLayerId = mLayersCount++;
+                if ( dbLayer->setLayerInfo( sTableName, sLayerInfo, sCoverageInfo ) )
                 {
-                  layerExtent = QgsRectangle( sqlite3_column_double( stmtSubquery, 0 ), sqlite3_column_double( stmtSubquery, 1 ), sqlite3_column_double( stmtSubquery, 2 ), sqlite3_column_double( stmtSubquery, 3 ) );
+                  if ( dbLayer->getLayerName() == sLayerName )
+                  {
+                    // We have found what we are looking for, prevent RL1/2 and Topology search
+                    bFoundLayerName = true;
+                  }
+                  mDbLayers.insert( dbLayer->mLayerName, dbLayer );
+                  if ( sLayerName.isEmpty() )
+                  {
+                    mHasFdoOgrTables++;
+                  }
                 }
-              }
-              sqlite3_finalize( stmtSubquery );
-              // Add only if it does not already exist [using true here, would cause loop]
-              if ( !getQgsSpatialiteDbLayer( sLayer_Name, false ) )
-              {
-                QgsSpatialiteDbLayer *dbLayer = new QgsSpatialiteDbLayer( this );
-                if ( dbLayer )
+#if 0
+                else
                 {
-                  dbLayer->mLayerId = mLayersCount++;
+                  // Temp: during development of setLayerNameInfo
                   dbLayer->mTableName = sTable_Name;
                   dbLayer->mLayerName = sLayer_Name;
                   dbLayer->setLayerType( GdalFdoOgr );
@@ -7991,22 +8580,14 @@ bool QgsSpatialiteDbInfo::GetFdoOgrLayersInfo( QString sLayerName )
                     // Resolve unset settings [may become invalid in QgsSpatialiteDbLayer::getCapabilities]
                     if ( dbLayer->prepare() )
                     {
-                      if ( dbLayer->mLayerName == sLayerName )
-                      {
-                        // We have found what we are looking for, prevent RL1/2 and Topology search
-                        bFoundLayerName = true;
-                      }
-                      mDbLayers.insert( dbLayer->mLayerName, dbLayer );
-                      if ( sLayerName.isEmpty() )
-                      {
-                        mHasFdoOgrTables++;
-                      }
+
                     }
                   }
-                  else
-                  {
-                    delete dbLayer;
-                  }
+                }
+#endif
+                if ( !dbLayer->isLayerValid() )
+                {
+                  delete dbLayer;
                 }
               }
             }
@@ -8193,7 +8774,10 @@ bool QgsSpatialiteDbInfo::readNonSpatialTables()
           }
           else
           {
-            mDbWarnings.insert( QStringLiteral( "QgsSpatialiteDbInfo::readNonSpatialTables" ), QStringLiteral( "Warnings[%1] Name[%2] Type[%3] masterType[%4]" ).arg( getDbWarnings().count() + 1 ).arg( sName ).arg( sType ).arg( masterType ) );
+            if ( sName != QStringLiteral( "SpatialIndex" ) )
+            {
+              mDbWarnings.insert( QStringLiteral( "QgsSpatialiteDbInfo::readNonSpatialTables" ), QStringLiteral( "Warnings[%1] Name[%2] Type[%3] masterType[%4]" ).arg( getDbWarnings().count() + 1 ).arg( sName ).arg( sType ).arg( masterType ) );
+            }
           }
         }
       }
@@ -8355,7 +8939,7 @@ QDomElement QgsSpatialiteDbInfo::getDbStyleNamedLayerElement( QgsSpatialiteDbInf
 //-----------------------------------------------------------------
 // QgsSpatialiteDbInfo::testNamedLayerElement
 //-----------------------------------------------------------------
-int QgsSpatialiteDbInfo::testNamedLayerElement( QDomElement namedLayerElement,  QString &errorMessage )
+int QgsSpatialiteDbInfo::testNamedLayerElement( QDomElement namedLayerElement, QString &errorMessage )
 {
   int i_rc = 0;
   QString rendererType = QStringLiteral( "singleSymbol" );
@@ -8396,9 +8980,9 @@ int QgsSpatialiteDbInfo::testNamedLayerElement( QDomElement namedLayerElement,  
                   sNodeName = ruleChildElement.tagName();
                 }
                 // rule has filter or min/max scale denominator, use the RuleRenderer
-                if ( sNodeName == QLatin1String( "Filter" ) ||
-                     sNodeName == QLatin1String( "MinScaleDenominator" ) ||
-                     sNodeName == QLatin1String( "MaxScaleDenominator" ) )
+                if ( sNodeName == QStringLiteral( "Filter" ) ||
+                     sNodeName == QStringLiteral( "MinScaleDenominator" ) ||
+                     sNodeName == QStringLiteral( "MaxScaleDenominator" ) )
                 {
                   QgsDebugMsgLevel( QString( "Filter or Min/MaxScaleDenominator element found NodeName[%1]: need a RuleRenderer" ).arg( sNodeName ), 3 );
                   rendererType = QStringLiteral( "RuleRenderer" );
@@ -8432,7 +9016,7 @@ int QgsSpatialiteDbInfo::testNamedLayerElement( QDomElement namedLayerElement,  
                       // Note: an external source may not be using the 'se:' prefix, thus localName() will be empty.
                       sNodeName = ruleChildElement.tagName();
                     }
-                    if ( sNodeName.endsWith( QLatin1String( "Symbolizer" ) ) )
+                    if ( sNodeName.endsWith( QStringLiteral( "Symbolizer" ) ) )
                     {
                       // create symbol layers for this symbolizer
                       // QgsSymbolLayerUtils::createSymbolLayerListFromSld( childElem, geomType, layers );
@@ -8447,7 +9031,7 @@ int QgsSpatialiteDbInfo::testNamedLayerElement( QDomElement namedLayerElement,  
                         // Note: not sure why this is so, otherwise when only one exist it fails.
                         symbolizerName = sNodeName;
                       }
-                      if ( symbolizerName == QLatin1String( "PointSymbolizer" ) )
+                      if ( symbolizerName == QStringLiteral( "PointSymbolizer" ) )
                       {
                         // first check for Graphic element, nothing will be rendered if not found
                         QDomElement graphicElement = ruleChildElement.firstChildElement( QStringLiteral( "Graphic" ) );
@@ -8462,7 +9046,7 @@ int QgsSpatialiteDbInfo::testNamedLayerElement( QDomElement namedLayerElement,  
                           saLayers.append( symbolizerName );
                         }
                       }
-                      else if ( symbolizerName == QLatin1String( "LineSymbolizer" ) )
+                      else if ( symbolizerName == QStringLiteral( "LineSymbolizer" ) )
                       {
                         // first check for Graphic element, nothing will be rendered if not found
                         QDomElement strokeElement = ruleChildElement.firstChildElement( QStringLiteral( "Stroke" ) );
@@ -8477,7 +9061,7 @@ int QgsSpatialiteDbInfo::testNamedLayerElement( QDomElement namedLayerElement,  
                           errorMessage = QStringLiteral( "-I-> symbolizerName[%1.%2] all Elements in 'Symbolizer-Layers' were found.  ; rc=%3" ).arg( rendererType ).arg( symbolizerName ).arg( i_rc );
                         }
                       }
-                      else if ( symbolizerName == QLatin1String( "PolygonSymbolizer" ) )
+                      else if ( symbolizerName == QStringLiteral( "PolygonSymbolizer" ) )
                       {
                         // get Fill and Stroke elements, nothing will be rendered if both are missing
                         QDomElement fillElement = ruleChildElement.firstChildElement( QStringLiteral( "Fill" ) );
@@ -8556,12 +9140,12 @@ int QgsSpatialiteDbInfo::testNamedLayerElement( QDomElement namedLayerElement,  
                   }
                   while ( !ruleGrandChildElement.isNull() )
                   {
-                    if ( ( sNodeName == QLatin1String( "Filter" ) ) ||
-                         ( sNodeName == QLatin1String( "MinScaleDenominator" ) ) ||
-                         ( sNodeName == QLatin1String( "MaxScaleDenominator" ) ) ||
-                         ( sNodeName == QLatin1String( "Symbolizer" ) ) )
+                    if ( ( sNodeName == QStringLiteral( "Filter" ) ) ||
+                         ( sNodeName == QStringLiteral( "MinScaleDenominator" ) ) ||
+                         ( sNodeName == QStringLiteral( "MaxScaleDenominator" ) ) ||
+                         ( sNodeName == QStringLiteral( "Symbolizer" ) ) )
                     {
-                      if ( sNodeName.endsWith( QLatin1String( "Symbolizer" ) ) )
+                      if ( sNodeName.endsWith( QStringLiteral( "Symbolizer" ) ) )
                       {
                         // create symbol layers for this symbolizer
                         // QgsSymbolLayerUtils::createSymbolLayerListFromSld( childElem, geomType, layers );
@@ -8571,7 +9155,7 @@ int QgsSpatialiteDbInfo::testNamedLayerElement( QDomElement namedLayerElement,  
                           // Note: an external source may not be using the 'se:' prefix, thus localName() will be empty.
                           symbolizerName = ruleGrandChildElement.nextSiblingElement().tagName();
                         }
-                        if ( symbolizerName == QLatin1String( "PointSymbolizer" ) )
+                        if ( symbolizerName == QStringLiteral( "PointSymbolizer" ) )
                         {
                           // first check for Graphic element, nothing will be rendered if not found
                           QDomElement graphicElement = ruleGrandChildElement.firstChildElement( QStringLiteral( "Graphic" ) );
@@ -8586,7 +9170,7 @@ int QgsSpatialiteDbInfo::testNamedLayerElement( QDomElement namedLayerElement,  
                             errorMessage = QStringLiteral( "-I-> symbolizerName[%1.%2] all Elements in 'Symbolizer-Layers' were found.  ; rc=%3" ).arg( rendererType ).arg( symbolizerName ).arg( i_rc );
                           }
                         }
-                        else if ( symbolizerName == QLatin1String( "LineSymbolizer" ) )
+                        else if ( symbolizerName == QStringLiteral( "LineSymbolizer" ) )
                         {
                           // first check for Graphic element, nothing will be rendered if not found
                           QDomElement strokeElement = ruleGrandChildElement.firstChildElement( QStringLiteral( "Stroke" ) );
@@ -8601,7 +9185,7 @@ int QgsSpatialiteDbInfo::testNamedLayerElement( QDomElement namedLayerElement,  
                             errorMessage = QStringLiteral( "-I-> symbolizerName[%1.%2] all Elements in 'Symbolizer-Layers' were found.  ; rc=%3" ).arg( rendererType ).arg( symbolizerName ).arg( i_rc );
                           }
                         }
-                        else if ( symbolizerName == QLatin1String( "PolygonSymbolizer" ) )
+                        else if ( symbolizerName == QStringLiteral( "PolygonSymbolizer" ) )
                         {
                           // get Fill and Stroke elements, nothing will be rendered if both are missing
                           QDomElement fillElement = ruleGrandChildElement.firstChildElement( QStringLiteral( "Fill" ) );
@@ -8741,7 +9325,8 @@ QgsSpatialiteDbLayer::QgsSpatialiteDbLayer( QgsSpatialiteDbInfo *dbConnectionInf
   , mTriggerUpdate( false )
   , mTriggerDelete( false )
   , mLayerId( -1 )
-  , mEnabledCapabilities( QgsVectorDataProvider::NoCapabilities )
+  , mEnabledVectorCapabilities( QgsVectorDataProvider::NoCapabilities )
+  , mEnabledRasterCapabilities( QgsRasterDataProvider::NoCapabilities )
   , mQuery( QString::null )
   , mPrimaryKey( QString::null )
   , mPrimaryKeyCId( -1 )
@@ -8775,6 +9360,308 @@ QgsSpatialiteDbLayer::~QgsSpatialiteDbLayer()
   mSpatialiteDbInfo = nullptr; // do not delete
 };
 //-----------------------------------------------------------------
+// QgsSpatialiteDbLayer::setLayerType
+// Init (or re-Init) of Layer:
+// - Layer has been created with QgsSpatialiteDbInfo
+// - mLayerId has been set
+//-----------------------------------------------------------------
+bool QgsSpatialiteDbLayer::setLayerInfo( QString sLayerName, QString sLayerInfo, QString sCoverageInfo )
+{
+  if ( isLayerValid() )
+  {
+    // re-Init of Layer: clear
+    mIsLayerValid = false;
+  }
+  if ( getSpatialiteDbInfo() )
+  {
+    if ( !sLayerName.isEmpty() )
+    {
+      if ( QgsSpatialiteDbInfo::parseLayerName( sLayerName, mTableName, mGeometryColumn ) )
+      {
+        mLayerName = sLayerName;
+        QString sLayerType;
+        int iLayerSrid = -1;
+        QString sGeometryType = QString(); // For Layers that contain no Geometries, this will be the Layer-Type
+        QString sProviderKey = QString();
+        // SpatialIndex, AuthInfos->IsHidden
+        int iSpatialIndex = GAIA_VECTOR_UNKNOWN;
+        int iIsHidden = 0;
+        QString sTitle;
+        QString sAbstract;
+        QString sCopyright;
+        QString sLicense;
+        QgsDebugMsgLevel( QStringLiteral( "QgsSpatialiteDbLayer::setLayerInfo LayerName[%1] LayerInfo[%2] CoverageInfo[%3]" ).arg( getLayerName() ).arg( sLayerInfo ).arg( sCoverageInfo ), 7 );
+        if ( !sLayerInfo.isEmpty() )
+        {
+          // All Layers should have this Information [Point;3035;spatialite;SpatialView;1;0]
+          if ( QgsSpatialiteDbInfo::parseLayerInfo( sLayerInfo, sGeometryType, iLayerSrid, sProviderKey, sLayerType, iSpatialIndex, iIsHidden ) )
+          {
+            mLayerIsHidden = ( bool )iIsHidden;
+            setLayerType( QgsSpatialiteDbInfo::SpatialiteLayerTypeFromName( sLayerType ) );
+            // It is now know what type of Layer we are
+            if ( isLayerVectorType() )
+            {
+              setGeometryType( QgsWkbTypes::parseType( sGeometryType ) );
+              setSpatialIndexType( iSpatialIndex );
+            }
+            if ( isLayerRasterType() )
+            {
+            }
+          }
+        }
+        if ( !sCoverageInfo.isEmpty() )
+        {
+          // Only Spatialite-Layers that are registered in the Vector/Raster Coverages will have this information
+          if ( QgsSpatialiteDbInfo::parseLayerCoverage( sCoverageInfo, sLayerType, sLayerName, sTitle, sAbstract, sCopyright, sLicense, iLayerSrid ) )
+          {
+            if ( getLayerType() == QgsSpatialiteDbInfo::SpatialiteUnknown )
+            {
+              setLayerType( QgsSpatialiteDbInfo::SpatialiteLayerTypeFromName( sLayerType ) );
+              // It is now know what type of Layer we are
+            }
+            mTitle = sTitle;
+            mAbstract = sAbstract;
+            mCopyright = sCopyright;
+            mLicense = sLicense;
+            if ( isLayerMbTiles() )
+            {
+              // num_bands, not_used, tile_width, tile_height
+              QRect layerBandsTileSize = QRect( 3, 0, 256, 256 );
+              QString sLayerSampleType = QStringLiteral( "UINT8" );
+              QString sLayerPixelType = QStringLiteral( "RGB" );
+              QString sLayerCompressionType = QStringLiteral( "PNG" );
+              QString sFormat; // TODO
+              if ( sFormat.toUpper() == QStringLiteral( "JPG" ) )
+              {
+                sLayerCompressionType = QStringLiteral( "JPEG" );
+              }
+              setLayerRasterTypesInfo( layerBandsTileSize, sLayerSampleType, sLayerPixelType, sLayerCompressionType );
+            }
+          }
+        }
+        if ( iLayerSrid >= -1 )
+        {
+          // This will set the Layer to valid, if correct
+          setSrid( iLayerSrid );
+        }
+        // Validity checks - common -
+        if ( getTableName().isEmpty() )
+        {
+          setLayerInvalid( getLayerName(), QString( "[%1] Invalid Table-Name[%2]: no result" ).arg( getLayerName() ).arg( getTableName() ) );
+        }
+        if ( getSrid() < -1 )
+        {
+          setLayerInvalid( getLayerName(), QString( "[%1] Invalid Srid[%2]: no result" ).arg( getLayerName() ).arg( getSrid() ) );
+        }
+        if ( isLayerHidden() )
+        {
+          setLayerInvalid( getLayerName(), QString( "[%1] LayerIsHidden" ).arg( getLayerName() ) );
+        }
+        if ( isLayerVectorType() )
+        {
+          // Validity checks - vector -
+          if ( getGeometryType() == QgsWkbTypes::Unknown )
+          {
+            setLayerInvalid( getLayerName(), QString( "[%1] Capabilities: Invalid GeometryrType[%2]." ).arg( getLayerName() ).arg( getGeometryTypeString() ) );
+          }
+          if ( getGeometryColumn().isEmpty() )
+          {
+            setLayerInvalid( getLayerName(), QString( "[%1] Invalid GeometryColumn-Name[%2]: no result" ).arg( getLayerName() ).arg( getGeometryColumn() ) );
+          }
+          if ( getLayerType() == QgsSpatialiteDbInfo::SpatialiteUnknown )
+          {
+            setLayerInvalid( getLayerName(), QString( "[%1] Invalid LayerType[%2]: no result" ).arg( getLayerName() ).arg( getLayerTypeString() ) );
+          }
+        }
+        if ( isLayerRasterType() )
+        {
+          // Validity checks - raster -
+        }
+        if ( isLayerValid() )
+        {
+          // Will read and set LayerExtent and NumberFeatures
+          // srid must be set before LayerExtent
+          getLayerExtent( true );
+          if ( isLayerVectorType() )
+          {
+            if ( isLayerSpatialView() )
+            {
+              GetViewTriggers();
+            }
+            //-----------------------------------------
+            //---retrieving Table settings ----------
+            //---retrieving common settings --------
+            //---retrieving View settings -----------
+            //---setting EnabledCapabilities---------
+            //-----------------------------------------
+            if ( isLayerValid() )
+            {
+              if ( GetLayerSettings() )
+              {
+                // prepare() has been called and Layer is Valid
+              }
+            }
+          }
+          if ( isLayerRasterType() )
+          {
+            // Resolve unset settings [may become invalid in QgsSpatialiteDbLayer::getCapabilities]
+            prepare(); // When returns true: Layer is Valid
+          }
+        }
+      }
+    }
+    QgsDebugMsgLevel( QStringLiteral( "--I> QgsSpatialiteDbLayer::setLayerInfo isLayerValid[%1] LayerType[%2]" ).arg( isLayerValid() ).arg( getLayerTypeString() ), 7 );
+  }
+  return isLayerValid();
+}
+//-----------------------------------------------------------------
+// QgsSpatialiteDbLayer::setLayerType
+//-----------------------------------------------------------------
+void QgsSpatialiteDbLayer::setLayerType( QgsSpatialiteDbInfo::SpatialiteLayerType layerType )
+{
+  mLayerType = layerType;
+  mIsSpatialite = false;
+  mIsSpatialTable = false;
+  mIsSpatialView = false;
+  mIsVirtualShape = false;
+  mIsRasterLite2 = false;
+  mIsRasterLite1 = false;
+  mIsMbTiles = false;
+  mIsGeoPackage = false;
+  mIsRasterType = false;
+  mIsVectorType = false;
+  mLayerTypeString = QgsSpatialiteDbInfo::SpatialiteLayerTypeName( mLayerType );
+  switch ( mLayerType )
+  {
+    case QgsSpatialiteDbInfo::SpatialTable:
+    case QgsSpatialiteDbInfo::SpatialView:
+    case QgsSpatialiteDbInfo::VirtualShape:
+    case QgsSpatialiteDbInfo::RasterLite2Raster:
+    case QgsSpatialiteDbInfo::TopologyExport:
+      mIsSpatialite = true;
+      if ( mLayerType == QgsSpatialiteDbInfo::RasterLite2Raster )
+      {
+        mIsRasterLite2 = true;
+        mIsRasterType = true;
+      }
+      if ( mLayerType == QgsSpatialiteDbInfo::SpatialTable )
+      {
+        mIsVectorType = true;
+        mIsSpatialTable = true;
+        mLayerReadOnly = 0; // default is 1
+      }
+      if ( mLayerType == QgsSpatialiteDbInfo::TopologyExport )
+      {
+        mIsVectorType = true;
+        mIsSpatialTable = true;
+      }
+      if ( mLayerType == QgsSpatialiteDbInfo::VirtualShape )
+      {
+        mIsVectorType = true;
+        mIsVirtualShape = true;
+      }
+      break;
+    case QgsSpatialiteDbInfo::AllSpatialLayers:
+    case QgsSpatialiteDbInfo::GdalFdoOgr:
+    case QgsSpatialiteDbInfo::GeoPackageVector:
+    case QgsSpatialiteDbInfo::RasterLite1:
+    case QgsSpatialiteDbInfo::GeoPackageRaster:
+    case QgsSpatialiteDbInfo::MBTilesTable:
+    case QgsSpatialiteDbInfo::MBTilesView:
+    case QgsSpatialiteDbInfo::SpatialiteTopology:
+    case QgsSpatialiteDbInfo::StyleVector:
+    case QgsSpatialiteDbInfo::StyleRaster:
+    case QgsSpatialiteDbInfo::NonSpatialTables:
+    case QgsSpatialiteDbInfo::AllLayers:
+    default:
+      if ( mLayerType == QgsSpatialiteDbInfo::RasterLite1 )
+      {
+        mIsRasterLite1 = true;
+        mIsRasterType = true;
+      }
+      if ( mLayerType == QgsSpatialiteDbInfo::GdalFdoOgr )
+      {
+        mIsSpatialTable = true;
+        mIsVectorType = true;
+        mIsFdoOgr = true;
+      }
+      if ( mLayerType == QgsSpatialiteDbInfo::GeoPackageVector )
+      {
+        mIsSpatialTable = true;
+        mIsGeoPackage = true;
+        mIsVectorType = true;
+      }
+      if ( mLayerType == QgsSpatialiteDbInfo::GeoPackageRaster )
+      {
+        mIsGeoPackage = true;
+        mIsRasterType = true;
+      }
+      if ( ( mLayerType == QgsSpatialiteDbInfo::MBTilesTable ) || ( mLayerType == QgsSpatialiteDbInfo::MBTilesTable ) )
+      {
+        mIsMbTiles = true;
+        mIsRasterType = true;
+      }
+      mIsSpatialite = false;
+      break;
+  }
+}
+//-----------------------------------------------------------------
+// QgsSpatialiteDbLayer::setGeometryType
+//-----------------------------------------------------------------
+void QgsSpatialiteDbLayer::setGeometryType( int iGeomType )
+{
+  mGeometryType = ( QgsWkbTypes::Type )iGeomType;
+  mGeometryTypeString = QgsWkbTypes::displayString( mGeometryType );
+  if ( mGeometryTypeString.endsWith( QStringLiteral( "ZM" ) ) )
+  {
+    mCoordDimensions = GAIA_XY_Z_M;
+  }
+  else if ( mGeometryTypeString.endsWith( QStringLiteral( "M" ) ) )
+  {
+    mCoordDimensions = GAIA_XY_M;
+  }
+  else if ( mGeometryTypeString.endsWith( QStringLiteral( "Z" ) ) )
+  {
+    mCoordDimensions = GAIA_XY_Z_M;
+  }
+}
+//-----------------------------------------------------------------
+// QgsSpatialiteDbLayer::setSrid
+//-----------------------------------------------------------------
+bool QgsSpatialiteDbLayer::setSrid( int iSrid )
+{
+  bool bRc = false;
+  int i_rc = 0;
+  if ( !getSpatialiteDbInfo()->isDbSpatialite() )
+  {
+    mSrid = iSrid;
+    bRc = true;
+    mIsLayerValid = bRc;
+    return bRc;
+  }
+  sqlite3_stmt *stmt = nullptr;
+  QString sql;
+  sql = QStringLiteral( "SELECT auth_name||':'||auth_srid,proj4text FROM spatial_ref_sys WHERE srid=%1" ).arg( iSrid );
+  i_rc = sqlite3_prepare_v2( dbSqliteHandle(), sql.toUtf8().constData(), -1, &stmt, nullptr );
+  if ( i_rc == SQLITE_OK )
+  {
+    while ( sqlite3_step( stmt ) == SQLITE_ROW )
+    {
+      if ( ( sqlite3_column_type( stmt, 0 ) != SQLITE_NULL ) &&
+           ( sqlite3_column_type( stmt, 1 ) != SQLITE_NULL ) )
+      {
+        mAuthId = QString::fromUtf8( ( const char * ) sqlite3_column_text( stmt, 0 ) );
+        mProj4text = QString::fromUtf8( ( const char * ) sqlite3_column_text( stmt, 1 ) );
+        mSrid = iSrid;
+        bRc = true;
+      }
+    }
+    sqlite3_finalize( stmt );
+  }
+  mIsLayerValid = bRc;
+  return isLayerValid();
+}
+//-----------------------------------------------------------------
 // QgsSpatialiteDbLayer::layerHasRasterlite2
 //-----------------------------------------------------------------
 bool QgsSpatialiteDbLayer::layerHasRasterlite2()
@@ -8796,6 +9683,9 @@ bool QgsSpatialiteDbLayer::layerHasRasterlite2()
   }
   return bRc;
 }
+//-----------------------------------------------------------------
+// QgsSpatialiteDbInfo::UpdateLayerStatistics
+//-----------------------------------------------------------------
 bool QgsSpatialiteDbInfo::UpdateLayerStatistics( QStringList saLayers )
 {
   bool bRc = false;
@@ -8878,6 +9768,41 @@ bool QgsSpatialiteDbLayer::UpdateLayerStatistics()
     return getSpatialiteDbInfo()->UpdateLayerStatistics( ( QStringList() << mLayerName ) );
   }
   return false;
+}
+//-----------------------------------------------------------------
+// QgsSpatialiteDbInfo::checkLayerViewTableNameColumn
+//-----------------------------------------------------------------
+// Check if the given Column of a registered SpatialTable is being used in a SpatialView
+// - the Column used in a SpatialView may be different than the in the original Table ('AS something_else')
+// returns amount of SpatialViews where found that uses the same Column-Name as the registered SpatialTable
+//-----------------------------------------------------------------
+int QgsSpatialiteDbInfo::checkLayerViewTableNameColumn( QString sSpatialTableName, QString sTableColumnName )
+{
+  int iCountHits = 0;
+  if ( ( isDbValid() ) && ( isDbSpatialite() ) )
+  {
+    if ( ( !sSpatialTableName.isEmpty() ) && ( !sSpatialTableName.isEmpty() ) )
+    {
+      // Retrieve the list of SpatialViews of this Database
+      QStringList saSpatialViews = QStringList( getDbLayersType( QgsSpatialiteDbInfo::SpatialView ).keys() );
+      bool bLoadLayer = true;
+      for ( int i = 0; i < saSpatialViews.count(); i++ )
+      {
+        QgsSpatialiteDbLayer *dbLayer = getSpatialiteDbLayer( saSpatialViews.at( i ), bLoadLayer );
+        if ( ( dbLayer ) && ( dbLayer->isLayerValid() ) )
+        {
+          // Check if the underlining SpatialTable is the same as the given SpatialTable
+          // When yes, check if the given TableColumn-Name is in the list the shared Column-Names
+          if ( ( dbLayer->getViewTableName() == sSpatialTableName ) && ( dbLayer->getLayerViewTableNameColumns().contains( sTableColumnName ) ) )
+          {
+            // We have found what we are looking for, add to amount to return
+            iCountHits++;
+          }
+        }
+      }
+    }
+  }
+  return iCountHits;
 }
 //-----------------------------------------------------------------
 // QgsSpatialiteDbLayer::setLayerExtent
@@ -9070,9 +9995,20 @@ bool QgsSpatialiteDbLayer::prepare()
     }
   }
   //---------------------------------------------------------------
-  if ( mEnabledCapabilities == QgsVectorDataProvider::NoCapabilities )
+  if ( isLayerVectorType() )
   {
-    getCapabilities();
+    if ( mEnabledVectorCapabilities == QgsVectorDataProvider::NoCapabilities )
+    {
+      getVectorCapabilities();
+    }
+  }
+  //---------------------------------------------------------------
+  if ( isLayerRasterType() )
+  {
+    if ( mEnabledRasterCapabilities == QgsRasterDataProvider::NoCapabilities )
+    {
+      getRasterCapabilities();
+    }
   }
   //---------------------------------------------------------------
   // QgsLayerMetadata for Layer
@@ -9160,75 +10096,8 @@ void QgsSpatialiteDbLayer::setSpatialIndexType( int iSpatialIndexType )
   mSpatialIndexType = ( QgsSpatialiteDbInfo::SpatialIndexType )iSpatialIndexType;
   mSpatialIndexTypeString = QgsSpatialiteDbInfo::SpatialIndexTypeName( mSpatialIndexType );
 }
-//-----------------------------------------------------------------
-// QgsSpatialiteDbLayer::setLayerType
-//-----------------------------------------------------------------
-void QgsSpatialiteDbLayer::setLayerType( QgsSpatialiteDbInfo::SpatialiteLayerType layerType )
-{
-  mLayerType = layerType;
-  mLayerTypeString = QgsSpatialiteDbInfo::SpatialiteLayerTypeName( mLayerType );
-  switch ( mLayerType )
-  {
-    case QgsSpatialiteDbInfo::SpatialTable:
-    case QgsSpatialiteDbInfo::SpatialView:
-    case QgsSpatialiteDbInfo::VirtualShape:
-    case QgsSpatialiteDbInfo::RasterLite2Raster:
-    case QgsSpatialiteDbInfo::TopologyExport:
-      mIsSpatialite = true;
-      if ( mLayerType == QgsSpatialiteDbInfo::RasterLite2Raster )
-      {
-        mIsRasterLite2 = true;
-      }
-      break;
-    case QgsSpatialiteDbInfo::AllSpatialLayers:
-    case QgsSpatialiteDbInfo::GdalFdoOgr:
-    case QgsSpatialiteDbInfo::GeoPackageVector:
-    case QgsSpatialiteDbInfo::RasterLite1:
-    case QgsSpatialiteDbInfo::GeoPackageRaster:
-    case QgsSpatialiteDbInfo::MBTilesTable:
-    case QgsSpatialiteDbInfo::MBTilesView:
-    case QgsSpatialiteDbInfo::SpatialiteTopology:
-    case QgsSpatialiteDbInfo::StyleVector:
-    case QgsSpatialiteDbInfo::StyleRaster:
-    case QgsSpatialiteDbInfo::NonSpatialTables:
-    case QgsSpatialiteDbInfo::AllLayers:
-    default:
-      if ( mLayerType == QgsSpatialiteDbInfo::RasterLite1 )
-      {
-        mIsRasterLite1 = true;
-      }
-      if ( ( mLayerType == QgsSpatialiteDbInfo::GeoPackageVector ) || ( mLayerType == QgsSpatialiteDbInfo::GeoPackageRaster ) )
-      {
-        mIsGeoPackage = true;
-      }
-      if ( ( mLayerType == QgsSpatialiteDbInfo::MBTilesTable ) || ( mLayerType == QgsSpatialiteDbInfo::MBTilesTable ) )
-      {
-        mIsMbTiles = true;
-      }
-      mIsSpatialite = false;
-      break;
-  }
-}
-//-----------------------------------------------------------------
-// QgsSpatialiteDbLayer::setGeometryType
-//-----------------------------------------------------------------
-void QgsSpatialiteDbLayer::setGeometryType( int iGeomType )
-{
-  mGeometryType = ( QgsWkbTypes::Type )iGeomType;
-  mGeometryTypeString = QgsWkbTypes::displayString( mGeometryType );
-  if ( mGeometryTypeString.endsWith( QLatin1String( "ZM" ) ) )
-  {
-    mCoordDimensions = GAIA_XY_Z_M;
-  }
-  else if ( mGeometryTypeString.endsWith( QLatin1String( "M" ) ) )
-  {
-    mCoordDimensions = GAIA_XY_M;
-  }
-  else if ( mGeometryTypeString.endsWith( QLatin1String( "Z" ) ) )
-  {
-    mCoordDimensions = GAIA_XY_Z_M;
-  }
-}
+
+
 //-----------------------------------------------------------------
 // QgsSpatialiteDbLayer::getLayerStyleXml
 //-----------------------------------------------------------------
@@ -9305,7 +10174,7 @@ bool QgsSpatialiteDbLayer::checkLayerStyles()
     QString sql;
     QString sLayerType = getLayerTypeString();
     QString sStyleType;
-    QString sCoverageData;
+    QString sCoverageInfo;
     mLayerStyleInfo.clear();
     switch ( mLayerType )
     {
@@ -9317,11 +10186,11 @@ bool QgsSpatialiteDbLayer::checkLayerStyles()
         mStyleType = QgsSpatialiteDbInfo::StyleVector;
         if ( getSpatialiteDbInfo()->dbVectorCoveragesLayersCount() > 0 )
         {
-          sCoverageData = getSpatialiteDbInfo()->getDbVectorCoveragesLayers().value( mLayerName );
+          sCoverageInfo = getSpatialiteDbInfo()->getDbVectorCoveragesLayers().value( mLayerName );
           sLayerType = QgsSpatialiteDbInfo::SpatialiteLayerTypeName( QgsSpatialiteDbInfo::RasterLite2Vector );
           QString sCheckLayerType;
           // Use the Euro-Character to parse, hoping it will not be used in the Title/Abstract Text
-          if ( getSpatialiteDbInfo()->parseLayerCoverage( sCoverageData, sCheckLayerType, mCoverageName, mTitle, mAbstract, mCopyright, mLicense, mSrid ) )
+          if ( getSpatialiteDbInfo()->QgsSpatialiteDbInfo::parseLayerCoverage( sCoverageInfo, sCheckLayerType, mCoverageName, mTitle, mAbstract, mCopyright, mLicense, mSrid ) )
           {
             if ( sCheckLayerType == sLayerType )
             {
@@ -9351,10 +10220,10 @@ bool QgsSpatialiteDbLayer::checkLayerStyles()
         // Here the coverage name is the same as our LayerName [Title,Abstract and Copyright have been retrieved elsewhere]
         if ( getSpatialiteDbInfo()->dbRasterStylesViewCount() > 0 )
         {
-          QString sCoverageData = getSpatialiteDbInfo()->getDbRasterCoveragesLayers().value( mLayerName );
+          QString sCoverageInfo = getSpatialiteDbInfo()->getDbRasterCoveragesLayers().value( mLayerName );
           // Use the Euro-Character to parse, hoping it will not be used in the Title/Abstract Text
           QString sCheckLayerType;
-          if ( getSpatialiteDbInfo()->parseLayerCoverage( sCoverageData, sCheckLayerType, mCoverageName, mTitle, mAbstract, mCopyright, mLicense, mSrid ) )
+          if ( getSpatialiteDbInfo()->QgsSpatialiteDbInfo::parseLayerCoverage( sCoverageInfo, sCheckLayerType, mCoverageName, mTitle, mAbstract, mCopyright, mLicense, mSrid ) )
           {
             if ( sCheckLayerType == sLayerType )
             {
@@ -9425,7 +10294,6 @@ int QgsSpatialiteDbLayer::setLayerStyleSelected( int iStyleId )
         {
           mLayerStyleIdSelected = iStyleId ;
           QgsDebugMsgLevel( QString( "-I-> QgsSpatialiteDbLayer::setLayerStyleSelected: mLayerStyleIdSelected[%1] " ).arg( mLayerStyleIdSelected ), 4 );
-          // sStyleXml = QString( "%2%1%3%1%4%1%5" ).arg( QgsSpatialiteDbInfo::ParseSeparatorCoverage ).arg( sStyleName ).arg( sStyleTitle ).arg( sStyleAbstract ).arg( sTestStylesForQGis );
           mLayerStyleSelectedName = sa_style_info.at( 0 );
           mLayerStyleSelectedTitle = sa_style_info.at( 1 );
           mLayerStyleSelectedAbstract = sa_style_info.at( 2 );
@@ -9441,67 +10309,67 @@ int QgsSpatialiteDbLayer::setLayerStyleSelected( int iStyleId )
   return mLayerStyleIdSelected;
 }
 //-----------------------------------------------------------------
-// QgsSpatialiteDbLayer::getCapabilities
+// QgsSpatialiteDbLayer::getVectorCapabilities
 //-----------------------------------------------------------------
-QgsVectorDataProvider::Capabilities QgsSpatialiteDbLayer::getCapabilities( bool bUpdate )
+QgsVectorDataProvider::Capabilities QgsSpatialiteDbLayer::getVectorCapabilities( bool bUpdate )
 {
-  mEnabledCapabilitiesString = QString( "%1(NoCapabilities)" ).arg( getLayerTypeString() );
+  mEnabledVectorCapabilitiesString = QString( "%1(NoCapabilities)" ).arg( getLayerTypeString() );
   //---------------------------------------------------------------
-  if ( ( mEnabledCapabilities == QgsVectorDataProvider::NoCapabilities ) || ( bUpdate ) )
+  if ( ( mEnabledVectorCapabilities == QgsVectorDataProvider::NoCapabilities ) || ( bUpdate ) )
   {
     if ( bUpdate )
     {
       GetLayerSettings();
     }
-    mEnabledCapabilities = mPrimaryKey.isEmpty() ? QgsVectorDataProvider::Capabilities() : ( QgsVectorDataProvider::SelectAtId );
+    mEnabledVectorCapabilities = mPrimaryKey.isEmpty() ? QgsVectorDataProvider::Capabilities() : ( QgsVectorDataProvider::SelectAtId  | QgsVectorDataProvider::ReadLayerMetadata );
     switch ( mLayerType )
     {
       case QgsSpatialiteDbInfo::GeoPackageVector:
       case QgsSpatialiteDbInfo::GdalFdoOgr:
       case QgsSpatialiteDbInfo::TopologyExport:
       case QgsSpatialiteDbInfo::SpatialTable:
-        mEnabledCapabilities |= QgsVectorDataProvider::DeleteFeatures | QgsVectorDataProvider::FastTruncate;
+        mEnabledVectorCapabilities |= QgsVectorDataProvider::DeleteFeatures | QgsVectorDataProvider::FastTruncate;
         if ( !mGeometryColumn.isEmpty() )
-          mEnabledCapabilities |= QgsVectorDataProvider::ChangeGeometries;
-        mEnabledCapabilities |= QgsVectorDataProvider::ChangeAttributeValues;
-        mEnabledCapabilities |= QgsVectorDataProvider::AddFeatures;
-        mEnabledCapabilities |= QgsVectorDataProvider::AddAttributes;
-        mEnabledCapabilities |= QgsVectorDataProvider::CreateAttributeIndex;
-        mEnabledCapabilitiesString = QString( "%1(Add, Insert, Delete)" ).arg( getLayerTypeString() );
+          mEnabledVectorCapabilities |= QgsVectorDataProvider::ChangeGeometries;
+        mEnabledVectorCapabilities |= QgsVectorDataProvider::ChangeAttributeValues;
+        mEnabledVectorCapabilities |= QgsVectorDataProvider::AddFeatures;
+        mEnabledVectorCapabilities |= QgsVectorDataProvider::AddAttributes;
+        mEnabledVectorCapabilities |= QgsVectorDataProvider::CreateAttributeIndex;
+        mEnabledVectorCapabilitiesString = QString( "%1(Add, Insert, Delete)" ).arg( getLayerTypeString() );
         break;
       case QgsSpatialiteDbInfo::SpatialView:
-        mEnabledCapabilitiesString = QString( "SpatialView(ReadOnly)" );
+        mEnabledVectorCapabilitiesString = QString( "SpatialView(ReadOnly)" );
         if ( !mLayerReadOnly )
         {
           QString sComma = QString();
           if ( ( mTriggerDelete ) || ( mTriggerUpdate ) || ( mTriggerInsert ) )
           {
             // "SpatialView(Add, Insert, Delete | ReadOnly)"
-            mEnabledCapabilitiesString = QString( "SpatialView(" );
+            mEnabledVectorCapabilitiesString = QString( "SpatialView(" );
           }
           if ( mTriggerInsert )
           {
-            mEnabledCapabilities |= QgsVectorDataProvider::AddFeatures;
-            mEnabledCapabilities |= QgsVectorDataProvider::AddAttributes;
-            mEnabledCapabilities |= QgsVectorDataProvider::CreateAttributeIndex;
-            mEnabledCapabilitiesString += QString( "Add" );
+            mEnabledVectorCapabilities |= QgsVectorDataProvider::AddFeatures;
+            mEnabledVectorCapabilities |= QgsVectorDataProvider::AddAttributes;
+            mEnabledVectorCapabilities |= QgsVectorDataProvider::CreateAttributeIndex;
+            mEnabledVectorCapabilitiesString += QString( "Add" );
             sComma = QString( ", " );
           }
           if ( mTriggerUpdate )
           {
-            mEnabledCapabilities |= QgsVectorDataProvider::ChangeGeometries;
-            mEnabledCapabilities |= QgsVectorDataProvider::ChangeAttributeValues;
-            mEnabledCapabilitiesString += QString( "%1Insert" ).arg( sComma );
+            mEnabledVectorCapabilities |= QgsVectorDataProvider::ChangeGeometries;
+            mEnabledVectorCapabilities |= QgsVectorDataProvider::ChangeAttributeValues;
+            mEnabledVectorCapabilitiesString += QString( "%1Insert" ).arg( sComma );
             sComma = QString( ", " );
           }
           if ( mTriggerDelete )
           {
-            mEnabledCapabilities |= QgsVectorDataProvider::DeleteFeatures | QgsVectorDataProvider::FastTruncate;
-            mEnabledCapabilitiesString += QString( "%1Delete" ).arg( sComma );
+            mEnabledVectorCapabilities |= QgsVectorDataProvider::DeleteFeatures | QgsVectorDataProvider::FastTruncate;
+            mEnabledVectorCapabilitiesString += QString( "%1Delete" ).arg( sComma );
           }
           if ( ( mTriggerDelete ) || ( mTriggerUpdate ) || ( mTriggerInsert ) )
           {
-            mEnabledCapabilitiesString += QString( ")" );
+            mEnabledVectorCapabilitiesString += QString( ")" );
           }
         }
         break;
@@ -9514,7 +10382,7 @@ QgsVectorDataProvider::Capabilities QgsSpatialiteDbLayer::getCapabilities( bool 
       case QgsSpatialiteDbInfo::StyleVector:
       case QgsSpatialiteDbInfo::StyleRaster:
       case QgsSpatialiteDbInfo::NonSpatialTables:
-        mEnabledCapabilities = QgsVectorDataProvider::NoCapabilities;
+        mEnabledVectorCapabilities = QgsVectorDataProvider::NoCapabilities;
         break;
       default:
         setLayerInvalid( mLayerName, QString( "[%1] Capabilities: Unexpected Layer-Type[%2]." ).arg( mLayerName ).arg( getLayerTypeString() ) );
@@ -9522,43 +10390,71 @@ QgsVectorDataProvider::Capabilities QgsSpatialiteDbLayer::getCapabilities( bool 
     }
   }
   //---------------------------------------------------------------
-  return mEnabledCapabilities;
-};
+  return mEnabledVectorCapabilities;
+}
 //-----------------------------------------------------------------
-// QgsSpatialiteDbLayer::setSrid
+// QgsSpatialiteDbLayer::getCapabilitiesString()
 //-----------------------------------------------------------------
-bool QgsSpatialiteDbLayer::setSrid( int iSrid )
+QString QgsSpatialiteDbLayer::getCapabilitiesString() const
 {
-  bool bRc = false;
-  int i_rc = 0;
-  if ( !getSpatialiteDbInfo()->isDbSpatialite() )
+  if ( isLayerVectorType() )
   {
-    mSrid = iSrid;
-    bRc = true;
-    mIsLayerValid = bRc;
-    return bRc;
+    return getRasterCapabilitiesString();
   }
-  sqlite3_stmt *stmt = nullptr;
-  QString sql;
-  sql = QStringLiteral( "SELECT auth_name||':'||auth_srid,proj4text FROM spatial_ref_sys WHERE srid=%1" ).arg( iSrid );
-  i_rc = sqlite3_prepare_v2( dbSqliteHandle(), sql.toUtf8().constData(), -1, &stmt, nullptr );
-  if ( i_rc == SQLITE_OK )
+  if ( isLayerVectorType() )
   {
-    while ( sqlite3_step( stmt ) == SQLITE_ROW )
+    return getRasterCapabilitiesString();
+  }
+  return QString();
+}
+//-----------------------------------------------------------------
+// QgsSpatialiteDbLayer::getRasterCapabilities
+//-----------------------------------------------------------------
+int QgsSpatialiteDbLayer::getRasterCapabilities( bool bUpdate )
+{
+  mEnabledRasterCapabilitiesString = QString( "%1(NoCapabilities)" ).arg( getLayerTypeString() );
+  //---------------------------------------------------------------
+  if ( ( mEnabledRasterCapabilities == QgsRasterDataProvider::NoCapabilities ) || ( bUpdate ) )
+  {
+    if ( bUpdate )
     {
-      if ( ( sqlite3_column_type( stmt, 0 ) != SQLITE_NULL ) &&
-           ( sqlite3_column_type( stmt, 1 ) != SQLITE_NULL ) )
-      {
-        mAuthId = QString::fromUtf8( ( const char * ) sqlite3_column_text( stmt, 0 ) );
-        mProj4text = QString::fromUtf8( ( const char * ) sqlite3_column_text( stmt, 1 ) );
-        mSrid = iSrid;
-        bRc = true;
-      }
+      GetLayerSettings();
     }
-    sqlite3_finalize( stmt );
+    mEnabledRasterCapabilities = QgsRasterDataProvider::Size | QgsRasterDataProvider::ReadLayerMetadata;
+    mEnabledRasterCapabilitiesString = QString( "%1(Size)" ).arg( getLayerTypeString() );
+    // QgsRasterDataProvider::Identify: ??
+    // QgsRasterDataProvider::IdentifyText: ??
+    // QgsRasterDataProvider::IdentifyHtml : ??
+    // QgsRasterDataProvider::Feature : ??
+    // QgsRasterDataProvider::IdentifyValue: ??
+    // QgsRasterDataProvider::BuildPyramids : no
+    // QgsRasterDataProvider::Create : no
+    // QgsRasterDataProvider::Remove: no
+    switch ( mLayerType )
+    {
+      case QgsSpatialiteDbInfo::GeoPackageRaster:
+      case QgsSpatialiteDbInfo::RasterLite1:
+      case QgsSpatialiteDbInfo::RasterLite2Raster:
+      case QgsSpatialiteDbInfo::MBTilesTable:
+      case QgsSpatialiteDbInfo::MBTilesView:
+        break;
+      case QgsSpatialiteDbInfo::GeoPackageVector:
+      case QgsSpatialiteDbInfo::GdalFdoOgr:
+      case QgsSpatialiteDbInfo::TopologyExport:
+      case QgsSpatialiteDbInfo::SpatialTable:
+      case QgsSpatialiteDbInfo::SpatialiteTopology:
+      case QgsSpatialiteDbInfo::StyleVector:
+      case QgsSpatialiteDbInfo::StyleRaster:
+      case QgsSpatialiteDbInfo::NonSpatialTables:
+        mEnabledRasterCapabilities = QgsRasterDataProvider::NoCapabilities;
+        break;
+      default:
+        setLayerInvalid( mLayerName, QString( "[%1] Capabilities: Unexpected Layer-Type[%2]." ).arg( mLayerName ).arg( getLayerTypeString() ) );
+        break;
+    }
   }
-  mIsLayerValid = bRc;
-  return isLayerValid();
+  //---------------------------------------------------------------
+  return mEnabledRasterCapabilities;
 }
 //-----------------------------------------------------------------
 // QgsSpatialiteDbLayer::getLayerExtent
@@ -9603,19 +10499,121 @@ QgsRectangle QgsSpatialiteDbLayer::getLayerExtent( bool bUpdateExtent, bool bUpd
         parmGeometryColumn = "";
         sFields = QString( "extent_minx,extent_miny,extent_maxx,extent_maxy, horz_resolution, vert_resolution" );
         break;
+      case QgsSpatialiteDbInfo::SpatialiteTopology:
+        sourceTable = QString( "%1_face_geoms" ).arg( getTableName() );
+        parmTable = "";
+        parmField = "";
+        parmGeometryColumn = "";
+        sFields = QString( "extent_minx,extent_miny,extent_maxx,extent_maxy" );
+        break;
+      case QgsSpatialiteDbInfo::RasterLite1:
+        sFields = QString( "extent_min_x, extent_min_y, extent_max_x, extent_max_y, row_count" );
+        sFields = QStringLiteral( "SELECT %1 FROM layer_statistics WHERE (((raster_layer=1) AND (table_name = '%2')) OR ((raster_layer=0) AND (table_name = '%2_metadata')))" ).arg( sFields ).arg( getTableName() );
+        sourceTable = "";
+        parmTable = "";
+        parmField = "";
+        parmGeometryColumn = "";
+        break;
+      case QgsSpatialiteDbInfo::MBTilesTable:
+      case QgsSpatialiteDbInfo::MBTilesView:
+        sourceTable = QString( "SELECT value FROM metadata WHERE (name='bounds')" );
+        sFields = QString( "WITH RECURSIVE split(content, last, rest) AS (" );
+        sFields += QString( " VALUES('', '', (%1))" ).arg( sourceTable );
+        sFields += QString( " UNION ALL SELECT" );
+        sFields += QString( " CASE WHEN last = ',' THEN substr(rest, 1, 1)  ELSE content || substr(rest, 1, 1) END," );
+        sFields += QString( " substr(rest, 1, 1)," );
+        sFields += QString( " substr(rest, 2)" );
+        sFields += QString( " FROM split WHERE rest <> '' )" );
+        sFields += QString( " SELECT REPLACE(content, ',','') AS 'bounds'" );
+        sFields += QString( " FROM split WHERE  last = ',' OR rest ='';" );
+        // SELECT ((Max(tile_column)-Min(tile_column))*256) AS width_x, ((Max(tile_row)-Min(tile_row))*256) AS height_y FROM 'tiles' WHERE zoom_level=(SELECT value FROM metadata WHERE (name = 'maxzoom'))
+        sourceTable = QString( "SELECT value FROM metadata WHERE (name = 'maxzoom')" );
+        parmTable = QString( "SELECT ((Max(tile_column)-Min(tile_column))*256) AS width_x," );
+        parmTable += QString( " ((Max(tile_row)-Min(tile_row))*256) AS height_y" );
+        parmTable += QString( "FROM 'tiles' WHERE zoom_level=(%1)" ).arg( sourceTable );
+        parmField = "";
+        parmGeometryColumn = "";
+        bUpdateExtent = false;
+        bUpdateStatistics = false;
+        break;
+      case QgsSpatialiteDbInfo::GeoPackageVector:
+        // SELECT table_name, data_type, identifier, description, min_x,min_y, max_x, max_y, srs_id FROM gpkg_contents
+        sFields = QStringLiteral( "SELECT min_x,min_y, max_x, max_y FROM gpkg_contents WHERE (table_name='%1')" ).arg( getTableName() );
+        parmTable = QString();
+        bUpdateExtent = false;
+        bUpdateStatistics = false;
+        break;
+      case QgsSpatialiteDbInfo::GeoPackageRaster:
+        sourceTable = QStringLiteral( "SELECT max(zoom_level) FROM gpkg_tile_matrix  WHERE (table_name='%1')" ).arg( getTableName() );
+        sFields = QString( "tile_width,tile_height,pixel_x_size,pixel_y_size" );
+        // SELECT tile_width,tile_height,pixel_x_size,pixel_y_size FROM gpkg_tile_matrix  WHERE ( (table_name='middle_earth_1418sr') AND (zoom_level = (SELECT max(zoom_level) FROM gpkg_tile_matrix  WHERE (table_name='middle_earth_1418sr'))))
+        parmTable = QStringLiteral( "SELECT %1 FROM gpkg_tile_matrix WHERE ((table_name='%2') AND (zoom_level = (%3)))" ).arg( sFields ).arg( getTableName() ).arg( sourceTable );
+        sFields = QStringLiteral( "SELECT min_x,min_y, max_x, max_y FROM gpkg_contents WHERE (table_name='%1')" ).arg( getTableName() );
+        bUpdateExtent = false;
+        bUpdateStatistics = false;
+        break;
+      case QgsSpatialiteDbInfo::GdalFdoOgr:
+        // When called from GetFdoOgrLayersInfoOnly geometry_format='WKB' is fulfilled
+        sFields = QString( "ST_MinX(ST_Collect(ST_GeomFromWKB(%1,%2))), ST_MinY(ST_Collect(ST_GeomFromWKB(%1,%2))),ST_MaxX(ST_Collect(ST_GeomFromWKB(%1,%2))), ST_MaxY(ST_Collect(ST_GeomFromWKB(%1,%2)))" ).arg( getGeometryColumn() ).arg( getSrid() );
+        sFields = QStringLiteral( "SELECT %1 FROM '%2'" ).arg( sFields ).arg( getTableName() );
+        bUpdateExtent = false;
+        bUpdateStatistics = false;
+        break;
       default:
         bUpdateExtent = false;
         bUpdateStatistics = false;
         break;
     }
-    if ( bUpdateStatistics )
+    if ( isLayerRasterLite1() )
     {
-      sql = QStringLiteral( "SELECT InvalidateLayerStatistics('%1','%2'),UpdateLayerStatistics('%1','%2')" ).arg( mTableName ).arg( mGeometryColumn );
-      ( void )sqlite3_exec( dbSqliteHandle(), sql.toUtf8().constData(), nullptr, 0, nullptr );
+      QgsRectangle layerExtent;
+      sql = sFields;
+      if ( i_rc == SQLITE_OK )
+      {
+        while ( sqlite3_step( stmt ) == SQLITE_ROW )
+        {
+          if ( ( sqlite3_column_type( stmt, 0 ) != SQLITE_NULL ) &&
+               ( sqlite3_column_type( stmt, 1 ) != SQLITE_NULL ) &&
+               ( sqlite3_column_type( stmt, 2 ) != SQLITE_NULL ) &&
+               ( sqlite3_column_type( stmt, 3 ) != SQLITE_NULL ) )
+          {
+            layerExtent = QgsRectangle( sqlite3_column_double( stmt, 0 ), sqlite3_column_double( stmt, 1 ), sqlite3_column_double( stmt, 2 ), sqlite3_column_double( stmt, 3 ) );
+          }
+          if ( ( sqlite3_column_type( stmt, 4 ) != SQLITE_NULL ) )
+          {
+            mNumberFeatures = sqlite3_column_int64( stmt, 4 );
+          }
+        }
+        sqlite3_finalize( stmt );
+        setLayerExtent( layerExtent );
+      }
     }
-    if ( bUpdateExtent )
+    if ( isLayerFdoOgr() )
     {
-      sql = QStringLiteral( "SELECT %1 FROM %2 WHERE (%3 = '%4')%5" ).arg( sFields ).arg( sourceTable ).arg( parmTable ).arg( mTableName ).arg( parmGeometryColumn );
+      QgsRectangle layerExtent;
+      sql = sFields;
+      if ( i_rc == SQLITE_OK )
+      {
+        while ( sqlite3_step( stmt ) == SQLITE_ROW )
+        {
+          if ( ( sqlite3_column_type( stmt, 0 ) != SQLITE_NULL ) &&
+               ( sqlite3_column_type( stmt, 1 ) != SQLITE_NULL ) &&
+               ( sqlite3_column_type( stmt, 2 ) != SQLITE_NULL ) &&
+               ( sqlite3_column_type( stmt, 3 ) != SQLITE_NULL ) )
+          {
+            layerExtent = QgsRectangle( sqlite3_column_double( stmt, 0 ), sqlite3_column_double( stmt, 1 ), sqlite3_column_double( stmt, 2 ), sqlite3_column_double( stmt, 3 ) );
+          }
+        }
+        sqlite3_finalize( stmt );
+        setLayerExtent( layerExtent );
+      }
+    }
+    if ( isLayerGeoPackage() )
+    {
+      QgsRectangle layerExtent;
+      QgsPointXY layerResolution( 0, 0 );
+      QgsPointXY imageExtent( 0, 0 );
+      sql = sFields;
       i_rc = sqlite3_prepare_v2( dbSqliteHandle(), sql.toUtf8().constData(), -1, &stmt, nullptr );
       if ( i_rc == SQLITE_OK )
       {
@@ -9624,19 +10622,141 @@ QgsRectangle QgsSpatialiteDbLayer::getLayerExtent( bool bUpdateExtent, bool bUpd
           if ( ( sqlite3_column_type( stmt, 0 ) != SQLITE_NULL ) &&
                ( sqlite3_column_type( stmt, 1 ) != SQLITE_NULL ) &&
                ( sqlite3_column_type( stmt, 2 ) != SQLITE_NULL ) &&
-               ( sqlite3_column_type( stmt, 3 ) != SQLITE_NULL ) &&
-               ( sqlite3_column_type( stmt, 4 ) != SQLITE_NULL ) &&
-               ( sqlite3_column_type( stmt, 5 ) != SQLITE_NULL ) )
+               ( sqlite3_column_type( stmt, 3 ) != SQLITE_NULL ) )
           {
-            QgsRectangle layerExtent( sqlite3_column_double( stmt, 0 ), sqlite3_column_double( stmt, 1 ), sqlite3_column_double( stmt, 2 ), sqlite3_column_double( stmt, 3 ) );
-            QgsPointXY layerResolution( sqlite3_column_double( stmt, 4 ), sqlite3_column_double( stmt, 5 ) );
-            setLayerExtent( layerExtent, layerResolution );
-          }
-          if ( sqlite3_column_type( stmt, 6 ) != SQLITE_NULL )
-          {
-            mNumberFeatures = sqlite3_column_int64( stmt, 6 );
+            layerExtent = QgsRectangle( sqlite3_column_double( stmt, 0 ), sqlite3_column_double( stmt, 1 ), sqlite3_column_double( stmt, 2 ), sqlite3_column_double( stmt, 3 ) );
           }
         }
+        sqlite3_finalize( stmt );
+        if ( !parmTable.isEmpty() )
+        {
+          sql = parmTable;
+          i_rc = sqlite3_prepare_v2( dbSqliteHandle(), sql.toUtf8().constData(), -1, &stmt, nullptr );
+          if ( i_rc == SQLITE_OK )
+          {
+            while ( sqlite3_step( stmt ) == SQLITE_ROW )
+            {
+              if ( ( sqlite3_column_type( stmt, 0 ) != SQLITE_NULL ) &&
+                   ( sqlite3_column_type( stmt, 1 ) != SQLITE_NULL ) &&
+                   ( sqlite3_column_type( stmt, 2 ) != SQLITE_NULL ) &&
+                   ( sqlite3_column_type( stmt, 3 ) != SQLITE_NULL ) )
+              {
+                int iTileWidth = sqlite3_column_int( stmt, 0 );
+                int iTileHeight = sqlite3_column_int( stmt, 1 );
+                double dLayerResolutionX = sqlite3_column_int( stmt, 2 );
+                double dLayerResolutionY = sqlite3_column_int( stmt, 3 );
+                // num_bands, not_used, tile_width, tile_height
+                QRect layerBandsTileSize = QRect( 3, 0, iTileWidth, iTileHeight );
+                layerResolution = QgsPointXY( dLayerResolutionX, dLayerResolutionY );
+                imageExtent.setX( ( int )( layerExtent.width() / dLayerResolutionX ) ) ;
+                imageExtent.setY( ( int )( layerExtent.height() / dLayerResolutionY ) ) ;
+                // gdalinfo middle_earth.3035.gpkg  -oo TABLE=middle_earth_1418sr
+                QString sLayerSampleType = QStringLiteral( "UINT8" );
+                QString sLayerPixelType = QStringLiteral( "RGB" );
+                QString sLayerCompressionType = QStringLiteral( "PNG" );
+                setLayerRasterTypesInfo( layerBandsTileSize, sLayerSampleType, sLayerPixelType, sLayerCompressionType );
+              }
+            }
+            sqlite3_finalize( stmt );
+            setLayerExtent( layerExtent, layerResolution, imageExtent );
+          }
+        }
+      }
+    }
+    if ( isLayerMbTiles() )
+    {
+      if ( ( mLayerResolution.x() == 0.0 ) && ( mLayerResolution.y() == 0.0 ) && ( mLayerImageExtent.x() == 0.0 ) && ( mLayerImageExtent.y() == 0.0 ) )
+      {
+        // Do this only once
+        QgsRectangle layerExtent;
+        sql = sFields;
+        i_rc = sqlite3_prepare_v2( dbSqliteHandle(), sql.toUtf8().constData(), -1, &stmt, nullptr );
+        if ( i_rc == SQLITE_OK )
+        {
+          int iCount = 0;
+          while ( sqlite3_step( stmt ) == SQLITE_ROW )
+          {
+            if ( sqlite3_column_type( stmt, 0 ) != SQLITE_NULL )
+            {
+              double dValue = sqlite3_column_double( stmt, 0 );
+              switch ( iCount )
+              {
+                case 0:
+                  layerExtent.setXMinimum( dValue );
+                  break;
+                case 1:
+                  layerExtent.setYMinimum( dValue );
+                  break;
+                case 2:
+                  layerExtent.setXMaximum( dValue );
+                  break;
+                case 3:
+                  layerExtent.setYMaximum( dValue );
+                  break;
+                default:
+                  break;
+              }
+              iCount++;
+            }
+          }
+          sqlite3_finalize( stmt );
+          sql = sFields;
+          i_rc = sqlite3_prepare_v2( dbSqliteHandle(), sql.toUtf8().constData(), -1, &stmt, nullptr );
+          if ( i_rc == SQLITE_OK )
+          {
+            while ( sqlite3_step( stmt ) == SQLITE_ROW )
+            {
+              if ( ( sqlite3_column_type( stmt, 0 ) != SQLITE_NULL ) &&
+                   ( sqlite3_column_type( stmt, 1 ) != SQLITE_NULL ) )
+              {
+                QgsPointXY layerResolution( sqlite3_column_double( stmt, 0 ), sqlite3_column_double( stmt, 1 ) );
+                setLayerExtent( layerExtent, layerResolution );
+              }
+            }
+            sqlite3_finalize( stmt );
+          }
+        }
+      }
+    }
+    if ( bUpdateStatistics )
+    {
+      sql = QStringLiteral( "SELECT InvalidateLayerStatistics('%1','%2'),UpdateLayerStatistics('%1','%2')" ).arg( mTableName ).arg( mGeometryColumn );
+      ( void )sqlite3_exec( dbSqliteHandle(), sql.toUtf8().constData(), nullptr, 0, nullptr );
+    }
+    if ( bUpdateExtent )
+    {
+      if ( parmTable.isEmpty() )
+      {
+        sql = QStringLiteral( "SELECT %1 FROM %2" ).arg( sFields ).arg( sourceTable );
+      }
+      else
+      {
+        sql = QStringLiteral( "SELECT %1 FROM %2 WHERE (%3 = '%4')%5" ).arg( sFields ).arg( sourceTable ).arg( parmTable ).arg( mTableName ).arg( parmGeometryColumn );
+      }
+      i_rc = sqlite3_prepare_v2( dbSqliteHandle(), sql.toUtf8().constData(), -1, &stmt, nullptr );
+      if ( i_rc == SQLITE_OK )
+      {
+        while ( sqlite3_step( stmt ) == SQLITE_ROW )
+        {
+          if ( ( sqlite3_column_type( stmt, 0 ) != SQLITE_NULL ) &&
+               ( sqlite3_column_type( stmt, 1 ) != SQLITE_NULL ) &&
+               ( sqlite3_column_type( stmt, 2 ) != SQLITE_NULL ) &&
+               ( sqlite3_column_type( stmt, 3 ) != SQLITE_NULL ) )
+          {
+            QgsRectangle layerExtent( sqlite3_column_double( stmt, 0 ), sqlite3_column_double( stmt, 1 ), sqlite3_column_double( stmt, 2 ), sqlite3_column_double( stmt, 3 ) );
+            if ( ( sqlite3_column_type( stmt, 4 ) != SQLITE_NULL ) &&
+                 ( sqlite3_column_type( stmt, 5 ) != SQLITE_NULL ) )
+            {
+              QgsPointXY layerResolution( sqlite3_column_double( stmt, 4 ), sqlite3_column_double( stmt, 5 ) );
+              setLayerExtent( layerExtent, layerResolution );
+            }
+            if ( sqlite3_column_type( stmt, 6 ) != SQLITE_NULL )
+            {
+              mNumberFeatures = sqlite3_column_int64( stmt, 6 );
+            }
+          }
+        }
+        sqlite3_finalize( stmt );
       }
     }
   }
@@ -9668,27 +10788,119 @@ int QgsSpatialiteDbLayer::setSpatialiteAttributeFields()
   mAttributeFields.clear();
   mPrimaryKeyAttrs.clear();
   mDefaultValues.clear();
+  mLayerViewTableNameColumns.clear();
+  // Contains the list of the Table ForeignKeys
+  mForeignKeyList.clear();
+  mPrimaryKeyList.clear();
+  mTableInfoList.clear();
+  mForeignKeyColumnDefList.clear();
+  mTableColumnDefList.clear();
+  // Contains the list of the Views registered Tables ForeignKeys
+  QStringList saForeignKeyList;
   sqlite3_stmt *stmt = nullptr;
   // The Column-Number of the primary key of the Table and View may be different
   int pk_cid_table = -1;
   int pk_cid_view = -1;
+  // Store Column-Name and cid to retriev when filling SpatialView with underlining TABLE-Values
+  QMap<QString, int> nameCid;
+  QString sql;
+  int i_rc = 0;
+  QgsDebugMsgLevel( QStringLiteral( "QgsSpatialiteDbLayer::setSpatialiteAttributeFields: LayerName[%1] LayerType[%2]" ).arg( getLayerName() ).arg( getLayerTypeString() ), 7 );
+  if ( isLayerSpatialTable() )
+  {
+    // Certain tasks only need to be done for TABLEs
+    //-----------------------------------------------------------------
+    // First fill the list of Foreign-Keys, then read the table_info
+    //-----------------------------------------------------------------
+    QString sTableNameFrom = mTableName;
+    QString sql = QStringLiteral( "PRAGMA foreign_key_list('%1')" ).arg( sTableNameFrom );
+    // PRAGMA foreign_key_list(vector_coverages)
+    // PRAGMA foreign_key_list(gpkg_contents)
+    i_rc = sqlite3_prepare_v2( dbSqliteHandle(), sql.toUtf8().constData(), -1, &stmt, nullptr );
+    if ( i_rc == SQLITE_OK )
+    {
+      int iTableToId = 0;    // 0
+      int iTableToSeq = 0;    // 1
+      QString sTableNameTo; // 2
+      QString sColummNameFrom;  // 3
+      QString sColummNameTo;  // 4
+      QString sOnUpdateAction;  // 5
+      QString sOnDeleteAction;  // 6
+      QString sMatchType;  // 7
+      while ( sqlite3_step( stmt ) == SQLITE_ROW )
+      {
+        if ( ( sqlite3_column_type( stmt, 0 ) != SQLITE_NULL ) &&
+             ( sqlite3_column_type( stmt, 1 ) != SQLITE_NULL ) &&
+             ( sqlite3_column_type( stmt, 2 ) != SQLITE_NULL ) &&
+             ( sqlite3_column_type( stmt, 3 ) != SQLITE_NULL ) &&
+             ( sqlite3_column_type( stmt, 4 ) != SQLITE_NULL ) &&
+             ( sqlite3_column_type( stmt, 5 ) != SQLITE_NULL ) &&
+             ( sqlite3_column_type( stmt, 6 ) != SQLITE_NULL ) &&
+             ( sqlite3_column_type( stmt, 7 ) != SQLITE_NULL ) )
+        {
+          // 0  0 gpkg_spatial_ref_sys  srs_id  srs_id  NO ACTION NO ACTION NONE
+          // 0  0 data_licenses license id  NO ACTION NO ACTION NONE
+          iTableToId = sqlite3_column_int( stmt, 0 );
+          iTableToSeq = sqlite3_column_int( stmt, 1 );
+          sTableNameTo = QString::fromUtf8( ( const char * ) sqlite3_column_text( stmt, 2 ) );
+          sColummNameFrom = QString::fromUtf8( ( const char * ) sqlite3_column_text( stmt, 3 ) );
+          sColummNameTo = QString::fromUtf8( ( const char * ) sqlite3_column_text( stmt, 4 ) );
+          sOnUpdateAction = QString::fromUtf8( ( const char * ) sqlite3_column_text( stmt, 5 ) );
+          sOnDeleteAction = QString::fromUtf8( ( const char * ) sqlite3_column_text( stmt, 6 ) );
+          sMatchType = QString::fromUtf8( ( const char * ) sqlite3_column_text( stmt, 7 ) );
+          // This will create the formated list [first parm is empty]
+          QString sValue = QgsSpatialiteDbInfo::parseForeignKeyList( QString(), sTableNameFrom, sColummNameFrom, sTableNameTo, sColummNameTo, iTableToId, iTableToSeq, sOnUpdateAction, sOnDeleteAction, sMatchType );
+          mForeignKeyList.insert( sColummNameFrom, sValue );
+          // This will build Foreign-Key definition from the created formated list [first parm is the the formated list]
+          sValue = QgsSpatialiteDbInfo::parseForeignKeyList( sValue, sTableNameFrom, sColummNameFrom, sTableNameTo, sColummNameTo, iTableToId, iTableToSeq, sOnUpdateAction, sOnDeleteAction, sMatchType );
+          mForeignKeyColumnDefList.insert( sColummNameFrom, sValue );
+        }
+      }
+      sqlite3_finalize( stmt );
+    }
+    // Missing entries in 'vector_layers_field_infos' TABLE.
+    // Cause could be: when properly registered TABLE or VIEW is empty
+    // dbLayer->setLayerInvalid( mLayerName, QString( "GetDbLayersInfo [%1] Missing entries in 'vector_layers_field_infos'. TABLE may be empty." ).arg( sSearchLayer ) );
+    sql = QStringLiteral( "PRAGMA table_info('%1')" ).arg( mTableName );
+    // PRAGMA table_info('pg_grenzkommando_1985')
+    // PRAGMA table_info('street_segments_3000')
+    // PRAGMA table_info('middle_earth_polygons')
+    i_rc = sqlite3_prepare_v2( dbSqliteHandle(), sql.toUtf8().constData(), -1, &stmt, nullptr );
+    if ( i_rc == SQLITE_OK )
+    {
+      while ( sqlite3_step( stmt ) == SQLITE_ROW )
+      {
+        if ( ( sqlite3_column_type( stmt, 5 ) != SQLITE_NULL ) &&
+             ( sqlite3_column_type( stmt, 5 ) > 0 ) &&
+             ( sqlite3_column_type( stmt, 1 ) != SQLITE_NULL ) )
+        {
+          // We need to know how many PK's exist for the TABLE
+          // The index of the column in the primary key for columns that are part of the primary key
+          mPrimaryKeyList.insert( QString::fromUtf8( ( const char * ) sqlite3_column_text( stmt, 1 ) ), sqlite3_column_int( stmt, 5 ) );
+        }
+      }
+      sqlite3_finalize( stmt );
+    }
+  }
   // Missing entries in 'vector_layers_field_infos' TABLE.
   // Cause could be: when properly registered TABLE or VIEW is empty
   // dbLayer->setLayerInvalid( mLayerName, QString( "GetDbLayersInfo [%1] Missing entries in 'vector_layers_field_infos'. TABLE may be empty." ).arg( sSearchLayer ) );
-  QString sql = QStringLiteral( "PRAGMA table_info('%1')" ).arg( mTableName );
+  sql = QStringLiteral( "PRAGMA table_info('%1')" ).arg( mTableName );
   // PRAGMA table_info('pg_grenzkommando_1985')
   // PRAGMA table_info('street_segments_3000')
   // PRAGMA table_info('middle_earth_polygons')
-  int i_rc = sqlite3_prepare_v2( dbSqliteHandle(), sql.toUtf8().constData(), -1, &stmt, nullptr );
+  i_rc = sqlite3_prepare_v2( dbSqliteHandle(), sql.toUtf8().constData(), -1, &stmt, nullptr );
   if ( i_rc == SQLITE_OK )
   {
     int cid = 0;    // 0
     QString sName; // 1
     QString sType;  // 2
-    // bool notNull;      // 3
+    bool bNotNull;      // 3
     QString sDefaultValue;  // 4
-    // int isPK;  // 5
+    int iPrimaryKey;  // 5
     bool bPrimaryKey = false;
+    int iForeignKey;
+    bool bForeignKey = false;
     while ( sqlite3_step( stmt ) == SQLITE_ROW )
     {
       if ( ( sqlite3_column_type( stmt, 0 ) != SQLITE_NULL ) &&
@@ -9699,9 +10911,19 @@ int QgsSpatialiteDbLayer::setSpatialiteAttributeFields()
       {
         cid = sqlite3_column_int( stmt, 0 );
         sName = QString::fromUtf8( ( const char * ) sqlite3_column_text( stmt, 1 ) );
+        nameCid.insert( sName, cid );
         sType = QString::fromUtf8( ( const char * ) sqlite3_column_text( stmt, 2 ) );
         sDefaultValue = QString();
+        iPrimaryKey = mPrimaryKeyList.count();
         bPrimaryKey = false;
+        bForeignKey = false;
+        bNotNull = false;
+        iForeignKey = 0;
+        if ( mForeignKeyList.contains( sName ) )
+        {
+          bForeignKey = true;
+          iForeignKey = mForeignKeyList.count();
+        }
         if ( sqlite3_column_type( stmt, 4 ) != SQLITE_NULL )
         {
           // Not an error if NULL (which it often is)
@@ -9710,7 +10932,7 @@ int QgsSpatialiteDbLayer::setSpatialiteAttributeFields()
         if ( sName.toLower() != mGeometryColumn.toLower() )
         {
           // Note: the activ Geometry-Column is NOT added to the AttributeFields!
-          if ( mLayerType == QgsSpatialiteDbInfo::SpatialView )
+          if ( isLayerSpatialView() )
           {
             // for QgsSpatialiteDbInfo::SpatialView, mPrimaryKey was retrieved from 'views_geometry_columns'
             if ( mPrimaryKey == sName )
@@ -9719,15 +10941,16 @@ int QgsSpatialiteDbLayer::setSpatialiteAttributeFields()
               bPrimaryKey = true;
               // Error if primary Key was not found
               pk_cid_view = cid;
+              iPrimaryKey = 1; // ... there can only be one
+              mPrimaryKeyList.insert( sName, iPrimaryKey );
             }
           }
-          if ( sqlite3_column_int( stmt, 5 ) == 1 )
+          if ( iPrimaryKey > 0 )
           {
-            if ( ( mLayerType == QgsSpatialiteDbInfo::SpatialTable ) ||
-                 ( mLayerType == QgsSpatialiteDbInfo::GeoPackageVector ) ||
-                 ( mLayerType == QgsSpatialiteDbInfo::GdalFdoOgr ) )
+            if ( isLayerSpatialTable() )
             {
-              // Only if unique pk [SpatialView will almost never have this set here as 1]
+              // Certain tasks only need to be done for TABLEs
+              // Only if unique pk [SpatialView will never have this set here as 1]
               if ( mPrimaryKey.isEmpty() )
               {
                 mPrimaryKey = sName;
@@ -9744,23 +10967,45 @@ int QgsSpatialiteDbLayer::setSpatialiteAttributeFields()
           }
           QVariant defaultVariant; // Will be set during GetSpatialiteQgsField.
           // When bPrimaryKey=true, comment='PRIMARY KEY' ; When sDefaultValue is not empty: DEFAULT=value
-          QgsField column_field = QgsSpatialiteDbLayer::GetSpatialiteQgsField( sName, sType, sDefaultValue, defaultVariant, bPrimaryKey );
+          QgsField columnField = QgsSpatialiteDbLayer::GetSpatialiteQgsField( sName, sType, sDefaultValue, defaultVariant, bPrimaryKey, bForeignKey );
           if ( sqlite3_column_int( stmt, 3 ) == 1 )
           {
             // column 4[3] tells us if the field is nullable. Should use that info...
-            QgsFieldConstraints constraints = column_field.constraints();
+            QgsFieldConstraints constraints = columnField.constraints();
             constraints.setConstraint( QgsFieldConstraints::ConstraintNotNull, QgsFieldConstraints::ConstraintOriginProvider );
-            column_field.setConstraints( constraints );
+            columnField.setConstraints( constraints );
+            bNotNull = true;
           }
           // As done in QgsPostgresProvider::loadFields
           mDefaultValues.insert( mAttributeFields.count(), defaultVariant );
-          mAttributeFields.append( column_field );
+          mAttributeFields.append( columnField );
+          sName = columnField.name();
+          sType = columnField.typeName();
+          // This will create the formated list [first parm is empty]
+          QString sTableInfo = QgsSpatialiteDbInfo::parseTableInfo( QString(), sName, sType, bNotNull, sDefaultValue, iPrimaryKey, iForeignKey );
+          mTableInfoList.insert( cid, sTableInfo );
+          // When iPrimaryKey > 0 and < 2, will the Primary -Key be added to the column definition
+          // This will build Column definition from the created formated list [first parm is the the formated list]
+          mTableColumnDefList.insert( cid, QgsSpatialiteDbInfo::parseTableInfo( sTableInfo, sName, sType, bNotNull, sDefaultValue, iPrimaryKey, iForeignKey ) );
+        }
+        else
+        {
+          QVariant defaultVariant; // Will be set during GetSpatialiteQgsField.
+          QgsField columnField = QgsSpatialiteDbLayer::GetSpatialiteQgsField( sName, sType, sDefaultValue, defaultVariant, bPrimaryKey, bForeignKey );
+          sName = columnField.name();
+          sType = columnField.typeName();
+          // This will create the formated list [first parm is empty]
+          QString sTableInfo = QgsSpatialiteDbInfo::parseTableInfo( QString(), sName, sType, bNotNull, sDefaultValue, iPrimaryKey, iForeignKey );
+          mTableInfoList.insert( cid, sTableInfo );
+          // When iPrimaryKey > 0 and < 2, will the Primary -Key be added to the column definition
+          // This will build Column definition from the created formated list [first parm is the the formated list]
+          mTableColumnDefList.insert( cid, QgsSpatialiteDbInfo::parseTableInfo( sTableInfo, sName, sType, bNotNull, sDefaultValue, iPrimaryKey, iForeignKey ) );
         }
       }
     }
     sqlite3_finalize( stmt );
   }
-  if ( mLayerType == QgsSpatialiteDbInfo::SpatialView )
+  if ( isLayerSpatialView() )
   {
     if ( pk_cid_view < 0 )
     {
@@ -9771,10 +11016,9 @@ int QgsSpatialiteDbLayer::setSpatialiteAttributeFields()
     }
     mPrimaryKeyCId = pk_cid_view;
   }
-  if ( ( mLayerType == QgsSpatialiteDbInfo::SpatialTable ) ||
-       ( mLayerType == QgsSpatialiteDbInfo::GeoPackageVector ) ||
-       ( mLayerType == QgsSpatialiteDbInfo::GdalFdoOgr ) )
+  if ( isLayerSpatialTable() )
   {
+    // Certain tasks only need to be done for TABLEs
     mPrimaryKeyCId = pk_cid_table;
     sql = QStringLiteral( "SELECT " );
     sql += QStringLiteral( "(SELECT sql FROM sqlite_master WHERE type='table' AND name='%1'))," ).arg( mTableName );
@@ -9801,14 +11045,14 @@ int QgsSpatialiteDbLayer::setSpatialiteAttributeFields()
               int fieldIndex = mAttributeFields.lookupField( fieldName );
               if ( fieldIndex >= 0 )
               {
-                QgsField column_field = mAttributeFields.at( fieldIndex );
-                QgsFieldConstraints constraints = column_field.constraints();
+                QgsField columnField = mAttributeFields.at( fieldIndex );
+                QgsFieldConstraints constraints = columnField.constraints();
                 if ( definition.contains( "unique", Qt::CaseInsensitive ) || definition.contains( "primary key", Qt::CaseInsensitive ) )
                   constraints.setConstraint( QgsFieldConstraints::ConstraintUnique, QgsFieldConstraints::ConstraintOriginProvider );
                 if ( definition.contains( "not null", Qt::CaseInsensitive ) || definition.contains( "primary key", Qt::CaseInsensitive ) )
                   constraints.setConstraint( QgsFieldConstraints::ConstraintNotNull, QgsFieldConstraints::ConstraintOriginProvider );
-                column_field.setConstraints( constraints );
-                mAttributeFields[fieldIndex] = column_field;
+                columnField.setConstraints( constraints );
+                mAttributeFields[fieldIndex] = columnField;
               }
             }
           }
@@ -9823,8 +11067,28 @@ int QgsSpatialiteDbLayer::setSpatialiteAttributeFields()
       sqlite3_finalize( stmt );
     }
   }
-  if ( ( mLayerType == QgsSpatialiteDbInfo::SpatialView ) && ( !mViewTableName.isEmpty() ) )
+  if ( ( isLayerSpatialView() ) && ( !mViewTableName.isEmpty() ) )
   {
+    //-----------------------------------------------------------------
+    // Not really needed, but as information possibly usefull
+    //-----------------------------------------------------------------
+    sql = QStringLiteral( "PRAGMA foreign_key_list('%1')" ).arg( mViewTableName );
+    // PRAGMA foreign_key_list(vector_coverages)
+    i_rc = sqlite3_prepare_v2( dbSqliteHandle(), sql.toUtf8().constData(), -1, &stmt, nullptr );
+    if ( i_rc == SQLITE_OK )
+    {
+      QString sFrom;  // 3
+      while ( sqlite3_step( stmt ) == SQLITE_ROW )
+      {
+        if ( sqlite3_column_type( stmt, 3 ) != SQLITE_NULL )
+        {
+          // - key[license] ; Key only
+          sFrom = QString::fromUtf8( ( const char * ) sqlite3_column_text( stmt, 3 ) );
+          saForeignKeyList.append( sFrom );
+        }
+      }
+      sqlite3_finalize( stmt );
+    }
     //-----------------------------------------------------------------
     // PRAGMA table_info('segments_ortsteile_1938') ; PRAGMA table_info('berlin_admin_segments') ;
     // Notes: PRAGMA table_info will rarely contain useful information for notnull or default-values for Views
@@ -9838,7 +11102,12 @@ int QgsSpatialiteDbLayer::setSpatialiteAttributeFields()
     if ( i_rc == SQLITE_OK )
     {
       int fieldIndex;
+      int cid;
       bool bPrimaryKey = false;
+      bool bForeignKey = false;
+      int iForeignKey = 0;
+      int iPrimaryKey = 0;
+      bool bNotNull = false;
       while ( sqlite3_step( stmt ) == SQLITE_ROW )
       {
         if ( ( sqlite3_column_type( stmt, 1 ) != SQLITE_NULL ) &&
@@ -9848,15 +11117,30 @@ int QgsSpatialiteDbLayer::setSpatialiteAttributeFields()
           QString sName = QString::fromUtf8( ( const char * ) sqlite3_column_text( stmt, 1 ) );
           fieldIndex = mAttributeFields.indexFromName( sName );
           bPrimaryKey = false;
+          bForeignKey = false;
+          iPrimaryKey = 0;
+          iForeignKey = 0;
+          bNotNull = false;
+          cid = -1;
           if ( fieldIndex < 0 )
           {
             // Active mGeometryColumn [or unknown field] should be ignored
             continue;
           }
+          // Retrieve the SpatialView-cid, which is/can different that the SpatialTable-cid
+          cid = nameCid.value( sName );
+          // The SpatialView and the underlining TABLE share a common Column-Name
+          mLayerViewTableNameColumns.append( sName );
           QString sType = QString::fromUtf8( ( const char * ) sqlite3_column_text( stmt, 2 ) );
           if ( sName == mPrimaryKey )
           {
             bPrimaryKey = true;
+            iPrimaryKey = mPrimaryKeyList.count();;
+          }
+          if ( saForeignKeyList.contains( sName ) )
+          {
+            bForeignKey = true;
+            iForeignKey = mForeignKeyList.count();
           }
           QString sDefaultValue;  // 4
           if ( sqlite3_column_type( stmt, 4 ) != SQLITE_NULL )
@@ -9865,31 +11149,44 @@ int QgsSpatialiteDbLayer::setSpatialiteAttributeFields()
           }
           QVariant defaultVariant; // Will be set during GetSpatialiteQgsField.
           // When bPrimaryKey=true, comment='PRIMARY KEY' ; When sDefaultValue is not empty: DEFAULT=value
-          QgsField column_field = QgsSpatialiteDbLayer::GetSpatialiteQgsField( sName, sType, sDefaultValue, defaultVariant, bPrimaryKey );
+          QgsField columnField = QgsSpatialiteDbLayer::GetSpatialiteQgsField( sName, sType, sDefaultValue, defaultVariant, bPrimaryKey, bForeignKey );
           // Replace the (possibly) changed defaut-value
           mDefaultValues.insert( fieldIndex, defaultVariant );
           if ( sqlite3_column_int( stmt, 3 ) == 1 )
           {
             // column 4[3] tells us if the field is nullable. Should use that info...
-            QgsFieldConstraints constraints = column_field.constraints();
+            QgsFieldConstraints constraints = columnField.constraints();
             constraints.setConstraint( QgsFieldConstraints::ConstraintNotNull, QgsFieldConstraints::ConstraintOriginProvider );
-            column_field.setConstraints( constraints );
+            columnField.setConstraints( constraints );
             // mAttributeFields.at( fieldIndex ).setConstraints( constraints );
+          }
+          if ( cid >= 0 )
+          {
+            QString sName = columnField.name();
+            QString sType = columnField.typeName();
+            iPrimaryKey = ( int )bPrimaryKey;
+            iForeignKey = ( int )bForeignKey;
+            // This will create the formated list [first parm is empty]
+            QString sTableInfo = QgsSpatialiteDbInfo::parseTableInfo( QString(), sName, sType, bNotNull, sDefaultValue, iPrimaryKey, iForeignKey );
+            mTableInfoList[cid] = sTableInfo;
+            // When iPrimaryKey > 0 and < 2, will the Primary -Key be added to the column definition
+            // This will build Column definition from the created formated list [first parm is the the formated list]
+            mTableColumnDefList[cid] = QgsSpatialiteDbInfo::parseTableInfo( sTableInfo, sName, sType, bNotNull, sDefaultValue, iPrimaryKey, iForeignKey );
           }
           //-------------------------------------------------------------
           // Set the types and the comment based on the TABLE value
           // mAttributeFields.at( fieldIndex ) : seem to be read only
           //-------------------------------------------------------------
           /*
-          mAttributeFields.at( fieldIndex ).setType( column_field.type() );
-          mAttributeFields.at( fieldIndex ).setTypeName( column_field.typeName() );
-          if ( column_field.typeName() == "TEXT" )
+          mAttributeFields.at( fieldIndex ).setType( columnField.type() );
+          mAttributeFields.at( fieldIndex ).setTypeName( columnField.typeName() );
+          if ( columnField.typeName() == "TEXT" )
           {
-            mAttributeFields.at( fieldIndex ).setSubType( column_field.subType() );
+            mAttributeFields.at( fieldIndex ).setSubType( columnField.subType() );
           }
-          mAttributeFields.at( fieldIndex ).setComment( QString( column_field.comment() ) );
+          mAttributeFields.at( fieldIndex ).setComment( QString( columnField.comment() ) );
           */
-          mAttributeFields[fieldIndex] = column_field;
+          mAttributeFields[fieldIndex] = columnField;
         }
       }
       sqlite3_finalize( stmt );
@@ -10167,24 +11464,51 @@ int QgsSpatialiteDbLayer::setSpatialiteAttributeFields()
         for ( QMap<QString, QString>::iterator itFields = view_defaults.begin(); itFields != view_defaults.end(); ++itFields )
         {
           int fieldIndex = mAttributeFields.lookupField( itFields.key() );
+          int iPrimaryKey = 0;
           bool bPrimaryKey = false;
+          bool bForeignKey = false;
+          int iForeignKey = 0;
+          bool bNotNull = false;
+          int cid = -1;
           if ( fieldIndex >= 0 )
           {
+            // Retrieve the SpatialView-cid, so that we can replace the result correctly
+            cid = nameCid.value( itFields.key() );
             if ( itFields.key() == mPrimaryKey )
             {
               bPrimaryKey = true;
+              iPrimaryKey = mPrimaryKeyList.count();
+            }
+            if ( saForeignKeyList.contains( itFields.key() ) )
+            {
+              bForeignKey = true;
+              iForeignKey = mForeignKeyList.count();
             }
             QVariant defaultVariant; // Will be set during GetSpatialiteQgsField.
             // When bPrimaryKey=true, comment='PRIMARY KEY' ; When sDefaultValue is not empty: DEFAULT=value
-            QgsField column_field = QgsSpatialiteDbLayer::GetSpatialiteQgsField( itFields.key(), mAttributeFields.at( fieldIndex ).typeName(), itFields.value(), defaultVariant, bPrimaryKey );
+            QgsField columnField = QgsSpatialiteDbLayer::GetSpatialiteQgsField( itFields.key(), mAttributeFields.at( fieldIndex ).typeName(), itFields.value(), defaultVariant, bPrimaryKey, bForeignKey );
             // Replace the (possibly) changed defaut-value
             mDefaultValues.insert( fieldIndex, defaultVariant );
             // mAttributeFields.at( fieldIndex ) : seem to be read only
-            // mAttributeFields.at( fieldIndex ).setComment( QString( column_field.comment() ) );
-            mAttributeFields[fieldIndex] = column_field;
+            // mAttributeFields.at( fieldIndex ).setComment( QString( columnField.comment() ) );
+            mAttributeFields[fieldIndex] = columnField;
+            if ( cid >= 0 )
+            {
+              QString sName = columnField.name();
+              QString sType = columnField.typeName();
+              QString sDefaultValue = itFields.value();
+              iPrimaryKey = ( int )bPrimaryKey;
+              iForeignKey = ( int )bForeignKey;
+              // This will create the formated list [first parm is empty]
+              QString sTableInfo = QgsSpatialiteDbInfo::parseTableInfo( QString(), sName, sType, bNotNull, sDefaultValue, iPrimaryKey, iForeignKey );
+              mTableInfoList[cid] = sTableInfo;
+              // When iPrimaryKey > 0 and < 2, will the Primary -Key be added to the column definition
+              // This will build Column definition from the created formated list [first parm is the the formated list]
+              mTableColumnDefList[cid] = QgsSpatialiteDbInfo::parseTableInfo( sTableInfo, sName, sType, bNotNull, sDefaultValue, iPrimaryKey, iForeignKey );
+            }
             if ( mLayerReadOnly )
             {
-              QgsDebugMsgLevel( QString( "QgsSpatialiteDbLayer::setSpatialiteAttributeFields ReadOnly SpatialView LayerName[%1] Column[%2] DefaultValue[%3]" ).arg( getLayerName() ).arg( itFields.key() ).arg( column_field.comment() ), 7 );
+              QgsDebugMsgLevel( QString( "QgsSpatialiteDbLayer::setSpatialiteAttributeFields ReadOnly SpatialView LayerName[%1] Column[%2] DefaultValue[%3]" ).arg( getLayerName() ).arg( itFields.key() ).arg( columnField.comment() ), 7 );
             }
           }
         }
@@ -10245,7 +11569,9 @@ bool QgsSpatialiteDbLayer::GetLayerSettings()
         mLayerViewTableName = mViewTableName;
         if ( !mViewTableGeometryColumn.isEmpty() )
         {
-          mLayerViewTableName = QString( "%1(%2)" ).arg( mLayerViewTableName ).arg( mViewTableGeometryColumn );
+          mLayerViewTableName = QString();
+          // This will fill mLayerViewTableName as 'table_name' or 'table_name(geometry_name)' [mLayerViewTableName must be empty]
+          QgsSpatialiteDbInfo::parseLayerName( mLayerViewTableName, mViewTableName, mViewTableGeometryColumn );
         }
       }
     }
@@ -10262,8 +11588,7 @@ bool QgsSpatialiteDbLayer::GetLayerSettings()
     //-----------------------------------------
     //---setting EnabledCapabilities---------
     //-----------------------------------------
-    prepare();
-    bRc = isLayerValid();
+    bRc = prepare(); // When returns true: Layer is Valid
   }
   else
   {
@@ -10331,27 +11656,27 @@ bool QgsSpatialiteDbLayer::GetViewTriggers()
 //-----------------------------------------------------------------
 // QgsSpatialiteDbLayer::GetSpatialiteQgsField [static]
 //-----------------------------------------------------------------
-QgsField QgsSpatialiteDbLayer::GetSpatialiteQgsField( const QString sName, QString sType, QString sDefaultValue, QVariant &defaultVariant, bool bPrimaryKey )
+QgsField QgsSpatialiteDbLayer::GetSpatialiteQgsField( const QString sName, QString sType, QString sDefaultValue, QVariant &defaultVariant, bool bPrimaryKey, bool bForeignKey )
 {
-  QgsField column_field;
+  QgsField columnField;
   sType = sType.toUpper();
-  column_field.setName( sName );
+  columnField.setName( sName );
   QgsWkbTypes::Type geometryType = QgsSpatialiteDbLayer::GetGeometryTypeLegacy( sType );
   if ( geometryType != QgsWkbTypes::Unknown )
   {
     defaultVariant = sDefaultValue.toUtf8().constData();
-    column_field.setType( QVariant::ByteArray );
-    column_field.setTypeName( sType );
+    columnField.setType( QVariant::ByteArray );
+    columnField.setTypeName( sType );
     if ( sDefaultValue.startsWith( "FILTER='" ) )
     {
       // Filter from a ReadOnly-SpatialView
-      column_field.setComment( sDefaultValue );
+      columnField.setComment( sDefaultValue );
     }
     else
     {
-      column_field.setComment( QString( "NULL" ) );
+      columnField.setComment( QString( "NULL" ) );
     }
-    return column_field;
+    return columnField;
   }
   else
   {
@@ -10362,8 +11687,11 @@ QgsField QgsSpatialiteDbLayer::GetSpatialiteQgsField( const QString sName, QStri
       sDefaultValue = QString(); // No default valiue
     }
     QVariant::Type fieldType = QVariant::String; // default: SQLITE_TEXT
-    if ( sType == "INTEGER" )
+    if ( ( sType == "INTEGER" ) || ( sType == "BOOLEAN" ) || ( sType.endsWith( "INT" ) ) || ( sType.startsWith( "INT" ) ) )
     {
+      // INT, INTEGER, INT2, INT8
+      // TINYINT, SMALLINT, MEDIUMINT, BIGINT, UNSIGNED BIG INT
+      // BOOLEAN
       fieldType = QVariant::LongLong;
       type = "INTEGER";
       QString defaultString = sDefaultValue;
@@ -10384,6 +11712,10 @@ QgsField QgsSpatialiteDbLayer::GetSpatialiteQgsField( const QString sName, QStri
         {
           comment_text = QString( "PRIMARY KEY %1" ).arg( comment_text );
         }
+        if ( bForeignKey )
+        {
+          comment_text = QString( "FOREIGN KEY %1" ).arg( comment_text );
+        }
       }
       else
       {
@@ -10391,10 +11723,17 @@ QgsField QgsSpatialiteDbLayer::GetSpatialiteQgsField( const QString sName, QStri
         {
           comment_text = QString( "PRIMARY KEY" );
         }
+        if ( bForeignKey )
+        {
+          comment_text = QString( "FOREIGN KEY %1" );
+        }
       }
     }
-    else if ( sType == "DOUBLE" )
+    else if ( ( sType == "DOUBLE" ) || ( sType.startsWith( "DOUBLE" ) )  || ( sType.startsWith( "DECIMAL(" ) ) ||
+              ( sType == "NUMERIC" ) || ( sType == "REAL" ) || ( sType == "FLOAT" ) )
     {
+      // REAL, DOUBLE, DOUBLE PRECISION, FLOAT
+      // NUMERIC, DECIMAL(10,5)
       fieldType = QVariant::Double;
       type = "DOUBLE";
       QString defaultString = sDefaultValue;
@@ -10410,6 +11749,37 @@ QgsField QgsSpatialiteDbLayer::GetSpatialiteQgsField( const QString sName, QStri
         else
         {
           comment_text = QString( "DEFAULT=%1" ).arg( defaultString );
+        }
+      }
+      if ( sDefaultValue.count() > 0 )
+      {
+        if ( sDefaultValue.startsWith( "FILTER='" ) )
+        {
+          // Filter from a ReadOnly-SpatialView
+          comment_text = sDefaultValue;
+        }
+        else
+        {
+          comment_text = QString( "DEFAULT=%1" ).arg( defaultString );
+        }
+        if ( bPrimaryKey )
+        {
+          comment_text = QString( "PRIMARY KEY %1" ).arg( comment_text );
+        }
+        if ( bForeignKey )
+        {
+          comment_text = QString( "FOREIGN KEY %1" ).arg( comment_text );
+        }
+      }
+      else
+      {
+        if ( bPrimaryKey )
+        {
+          comment_text = QString( "PRIMARY KEY" );
+        }
+        if ( bForeignKey )
+        {
+          comment_text = QString( "FOREIGN KEY %1" );
         }
       }
     }
@@ -10435,9 +11805,32 @@ QgsField QgsSpatialiteDbLayer::GetSpatialiteQgsField( const QString sName, QStri
           comment_text = QString( "DEFAULT='%1'" ).arg( date_DefaultValue );
         }
       }
+      if ( comment_text.count() > 0 )
+      {
+        if ( bPrimaryKey )
+        {
+          comment_text = QString( "PRIMARY KEY %1" ).arg( comment_text );
+        }
+        if ( bForeignKey )
+        {
+          comment_text = QString( "FOREIGN KEY %1" ).arg( comment_text );
+        }
+      }
+      else
+      {
+        if ( bPrimaryKey )
+        {
+          comment_text = QString( "PRIMARY KEY" );
+        }
+        if ( bForeignKey )
+        {
+          comment_text = QString( "FOREIGN KEY %1" );
+        }
+      }
     }
     else if ( sType == "DATETIME" )
     {
+      // DATE, DATETIME
       fieldType = QVariant::DateTime;
       type = "DATETIME";
       QString date_DefaultValue = sDefaultValue;
@@ -10454,6 +11847,28 @@ QgsField QgsSpatialiteDbLayer::GetSpatialiteQgsField( const QString sName, QStri
         else
         {
           comment_text = QString( "DEFAULT='%1'" ).arg( date_DefaultValue );
+        }
+      }
+      if ( comment_text.count() > 0 )
+      {
+        if ( bPrimaryKey )
+        {
+          comment_text = QString( "PRIMARY KEY %1" ).arg( comment_text );
+        }
+        if ( bForeignKey )
+        {
+          comment_text = QString( "FOREIGN KEY %1" ).arg( comment_text );
+        }
+      }
+      else
+      {
+        if ( bPrimaryKey )
+        {
+          comment_text = QString( "PRIMARY KEY" );
+        }
+        if ( bForeignKey )
+        {
+          comment_text = QString( "FOREIGN KEY %1" );
         }
       }
     }
@@ -10475,6 +11890,28 @@ QgsField QgsSpatialiteDbLayer::GetSpatialiteQgsField( const QString sName, QStri
         else
         {
           comment_text = QString( "DEFAULT='%1'" ).arg( date_DefaultValue );
+        }
+      }
+      if ( sDefaultValue.count() > 0 )
+      {
+        if ( bPrimaryKey )
+        {
+          comment_text = QString( "PRIMARY KEY %1" ).arg( comment_text );
+        }
+        if ( bForeignKey )
+        {
+          comment_text = QString( "FOREIGN KEY %1" ).arg( comment_text );
+        }
+      }
+      else
+      {
+        if ( bPrimaryKey )
+        {
+          comment_text = QString( "PRIMARY KEY" );
+        }
+        if ( bForeignKey )
+        {
+          comment_text = QString( "FOREIGN KEY %1" );
         }
       }
     }
@@ -10507,19 +11944,41 @@ QgsField QgsSpatialiteDbLayer::GetSpatialiteQgsField( const QString sName, QStri
         }
       }
       defaultVariant = defaultString;
+      if ( comment_text.count() > 0 )
+      {
+        if ( bPrimaryKey )
+        {
+          comment_text = QString( "PRIMARY KEY %1" ).arg( comment_text );
+        }
+        if ( bForeignKey )
+        {
+          comment_text = QString( "FOREIGN KEY %1" ).arg( comment_text );
+        }
+      }
+      else
+      {
+        if ( bPrimaryKey )
+        {
+          comment_text = QString( "PRIMARY KEY" );
+        }
+        if ( bForeignKey )
+        {
+          comment_text = QString( "FOREIGN KEY %1" );
+        }
+      }
       // if the type seems unknown, fix it with what we actually have
       QgsSpatialiteDbInfo::TypeSubType typeSubType = QgsSpatialiteDbInfo::GetVariantType( sType );
-      column_field.setType( typeSubType.first );
-      column_field.setSubType( typeSubType.second );
+      columnField.setType( typeSubType.first );
+      columnField.setSubType( typeSubType.second );
     }
     if ( type != "TEXT" )
     {
-      column_field.setType( fieldType );
+      columnField.setType( fieldType );
     }
-    column_field.setTypeName( type );
-    column_field.setComment( QString( comment_text ) );
-    // column_field.convertCompatible( defaultVariant );
-    return column_field;
+    columnField.setTypeName( type );
+    columnField.setComment( QString( comment_text ) );
+    // columnField.convertCompatible( defaultVariant );
+    return columnField;
   }
 }
 //-----------------------------------------------------------------
@@ -10790,21 +12249,21 @@ void QgsSpatialiteDbLayer::setLayerBandsInfo( QStringList layerBandsInfo, QMap<i
   mLayerBandsInfo = layerBandsInfo;
   mLayerBandsHistograms = layerBandsHistograms;
   mDefaultImageBackground = QString( "#ffffff" );
-  QStringList sa_list_info = mLayerBandsInfo.at( 0 ).split( QgsSpatialiteDbInfo::ParseSeparatorGeneral );
+  QStringList saListInfo = mLayerBandsInfo.at( 0 ).split( QgsSpatialiteDbInfo::ParseSeparatorGeneral );
   if ( mLayerBandsInfo.count() > 0 )
   {
     int i_NoDataPixelValue = 255;
     for ( int i = 0; i < mLayerBandsInfo.count(); i++ )
     {
-      QStringList sa_list_info = mLayerBandsInfo.at( i ).split( QgsSpatialiteDbInfo::ParseSeparatorGeneral );
-      if ( sa_list_info.count() == 8 )
+      QStringList saListInfo = mLayerBandsInfo.at( i ).split( QgsSpatialiteDbInfo::ParseSeparatorGeneral );
+      if ( saListInfo.count() == 8 )
       {
         if ( i == 0 )
         {
           mDefaultImageBackground = QString( "#" );
-          int i_PixelNodata = sa_list_info.at( 7 ).toInt();
-          mLayerBandsNodata.insert( i, sa_list_info.at( 0 ).toInt() );
-          int i_PixelValid = sa_list_info.at( 6 ).toInt();
+          int i_PixelNodata = saListInfo.at( 7 ).toInt();
+          mLayerBandsNodata.insert( i, saListInfo.at( 0 ).toInt() );
+          int i_PixelValid = saListInfo.at( 6 ).toInt();
           int i_PixelImage = i_PixelNodata + i_PixelValid;
           // Calculation based on extent and resolution may differ
           int i_PixelDiff = i_PixelDiff - ( getLayerImageWidth() * getLayerImageHeight() );
@@ -10813,7 +12272,7 @@ void QgsSpatialiteDbLayer::setLayerBandsInfo( QStringList layerBandsInfo, QMap<i
         if ( i < 3 )
         {
           // max is '#rrggbb'
-          i_NoDataPixelValue = sa_list_info.at( 0 ).toInt();
+          i_NoDataPixelValue = saListInfo.at( 0 ).toInt();
           // Hex(0) must be shown as '00'
           mDefaultImageBackground += QString( "%1" ).arg( i_NoDataPixelValue, 2, 16, QLatin1Char( '0' ) );
         }
@@ -10865,38 +12324,37 @@ bool QgsSpatialiteDbLayer::setLayerRasterTypesInfo( QRect layerBandsTileSize, QS
   {
     mLayerPixelType = 22; // RL2_PIXEL_DATAGRID [0x16 = 22 dec]
   }
-
-  if ( ( mLayerSampleType.endsWith( QLatin1String( "-BIT" ) ) ) || ( mLayerSampleType.endsWith( QLatin1String( "INT8" ) ) ) )
+  if ( ( mLayerSampleType.endsWith( QStringLiteral( "-BIT" ) ) ) || ( mLayerSampleType.endsWith( QStringLiteral( "INT8" ) ) ) )
   {
     mLayerRasterDataType = Qgis::Byte;
     mLayerRasterDataTypeString = QStringLiteral( "Byte - Eight bit unsigned integer" );
   }
-  else if ( mLayerSampleType == QLatin1String( "UINT16" ) )
+  else if ( mLayerSampleType == QStringLiteral( "UINT16" ) )
   {
     mLayerRasterDataType = Qgis::UInt16;
     mLayerRasterDataTypeString = QStringLiteral( "UInt16 - Sixteen bit unsigned integer" );
   }
-  else if ( mLayerSampleType == QLatin1String( "UINT32" ) )
+  else if ( mLayerSampleType == QStringLiteral( "UINT32" ) )
   {
     mLayerRasterDataType = Qgis::UInt32;
     mLayerRasterDataTypeString = QStringLiteral( "UInt32 - Thirty two bit unsigned integer" );
   }
-  else if ( mLayerSampleType == QLatin1String( "INT16" ) )
+  else if ( mLayerSampleType == QStringLiteral( "INT16" ) )
   {
     mLayerRasterDataType = Qgis::Int16;
     mLayerRasterDataTypeString = QStringLiteral( "Int16 - Sixteen bit signed integer" );
   }
-  else if ( mLayerSampleType == QLatin1String( "INT32" ) )
+  else if ( mLayerSampleType == QStringLiteral( "INT32" ) )
   {
     mLayerRasterDataType = Qgis::Int32;
     mLayerRasterDataTypeString = QStringLiteral( "Int32 - Thirty two bit signed integer" );
   }
-  else if ( mLayerSampleType == QLatin1String( "FLOAT" ) )
+  else if ( mLayerSampleType == QStringLiteral( "FLOAT" ) )
   {
     mLayerRasterDataType = Qgis::Float32;
     mLayerRasterDataTypeString = QStringLiteral( "Float32 - Thirty two bit floating point" );
   }
-  else if ( mLayerSampleType == QLatin1String( "DOUBLE" ) )
+  else if ( mLayerSampleType == QStringLiteral( "DOUBLE" ) )
   {
     mLayerRasterDataType = Qgis::Float32;
     mLayerRasterDataTypeString = QStringLiteral( "Float64 - Sixty four bit floating point" );
@@ -11366,7 +12824,7 @@ bool QgsSpatialiteDbLayer::addLayerAttributes( const QList<QgsField> &attributes
   }
   getNumberFeatures( true );
   // reload columns
-  getCapabilities( true );
+  getVectorCapabilities( true );
   return true;
 }
 //-----------------------------------------------------------------
@@ -11472,6 +12930,336 @@ QgsField QgsSpatialiteDbLayer::getAttributeField( int index ) const
     throw QgsSpatiaLiteUtils::SLFieldNotFound();
   }
   return getAttributeFields().at( index );
+}
+//-----------------------------------------------------------------
+// QgsSpatialiteDbLayer::buildSqlCreate
+// - part of 'Alter Table Interface'
+//-----------------------------------------------------------------
+// iCommandType:  [simple] < 100 ; >=100  [rebuild]
+// -     0:  reserved for buildSqlCreate
+// -     1 :  Rename table
+// -     2 :  Add column to table
+// - 100  : Modify column in table
+// -> change/rename Column-Name, Data-Type, Default-Value in column
+// - 109  : Drop column in table
+//-----------------------------------------------------------------
+QStringList QgsSpatialiteDbLayer::buildSqlCreate( int iCommandType, bool bAlterTable, QMap<int, QString> alterTableInfoList, QMap<QString, int> alterTablePrimaryKeyList, QMultiMap<QString, QString> alterTableForeignKeyList )
+{
+  QStringList saSqlCommands;
+  switch ( iCommandType )
+  {
+    case 0:
+    case 1:
+    case 2:
+    case 100:
+    case 109:
+      break;
+    default:
+      return saSqlCommands;
+      break;
+  }
+  switch ( getLayerType() )
+  {
+    case QgsSpatialiteDbInfo::SpatialTable:
+    case QgsSpatialiteDbInfo::GdalFdoOgr:
+    case QgsSpatialiteDbInfo::GeoPackageVector:
+      break;
+    default:
+      // return saSqlCommands;
+      break;
+  }
+  if ( isLayerValid() )
+  {
+    // Origial settings of TABLE
+    QMap<int, QString> tableInfoList = getTableInfoList();
+    QMap<QString, int> primaryKeyList = getPrimaryKeyList();
+    QMultiMap<QString, QString> tableForeignKeyList = getForeignKeyList();
+    if ( alterTableInfoList.count() > 0 )
+    {
+      // Adapt original settings of TABLE with values found in alterTableInfoList
+    }
+    if ( alterTablePrimaryKeyList.count() > 0 )
+    {
+      // Adapt original settings of TABLE with values found in alterTableInfoList
+    }
+    if ( alterTableForeignKeyList.count() > 0 )
+    {
+      // Adapt original settings of TABLE with values found in alterTableInfoList
+    }
+    QString sTableName = getTableName();
+    QString sSqlCreate = QString();
+    QString sSqlInsert = QString();
+    if ( bAlterTable )
+    {
+      sTableName = QString( "%1_altered" ).arg( getTableName() );
+    }
+    sSqlCreate = QString( "CREATE TABLE \"%1\"\n{" ).arg( sTableName );
+    QString sColumnName;
+    QString sColumnType;
+    QString sColumnDefaultValue;
+    QString sColumnDef;
+    bool bNotNull;
+    int iPrimaryKey;
+    int iForeignKey;
+    QString sComma = QString();
+    for ( QMap<int, QString>::iterator itColumns = tableInfoList.begin(); itColumns != tableInfoList.end(); ++itColumns )
+    {
+      // int iColumnCid = itColumns.key();
+      // Returns the corresponding Column definition  as used a CREATE TABLE statement
+      // - the DefaultValue as returned by 'PRAGMA table_info', formated as needed
+      // If the Column is a Primary-Key and when there is only 1, it will added to the column definition
+      sColumnDef = QgsSpatialiteDbInfo::parseTableInfo( itColumns.value(), sColumnName, sColumnType, bNotNull, sColumnDefaultValue, iPrimaryKey, iForeignKey );
+      sSqlCreate = QString( "%1%2\n %3" ).arg( sSqlCreate ).arg( sComma ).arg( sColumnDef );
+      sComma = QString( "," );
+    }
+    if ( primaryKeyList.count() > 1 )
+    {
+      // More than 1 Primary Key, add entries [when only 1, will have been added to the column definition]
+      QString sPrimaryKey = QString( "CONSTRAINT pk_%1 (" ).arg( getTableName() );
+      sComma = QString();
+      for ( QMap<QString, int>::iterator itColumns = primaryKeyList.begin(); itColumns != primaryKeyList.end(); ++itColumns )
+      {
+        sPrimaryKey = QString( "%1%2\n %3" ).arg( sPrimaryKey ).arg( sComma ).arg( itColumns.key() );
+        sComma = QString( "," );
+      }
+      sSqlCreate = QString( "%1%2\n %3" ).arg( sSqlCreate ).arg( sComma ).arg( sPrimaryKey );
+    }
+    if ( tableForeignKeyList.count() > 0 )
+    {
+      int iTableToId = 0;    // 0
+      int iTableToSeq = 0;    // 1
+      QString sTableNameTo; // 2
+      QString sColummNameFrom;  // 3
+      QString sColummNameTo;  // 4
+      QString sOnUpdateAction;  // 5
+      QString sOnDeleteAction;  // 6
+      QString sMatchType;  // 7
+      QString sTableNameFrom;
+      QString sColummDef;
+      for ( QMultiMap<QString, QString>::iterator itColumns = tableForeignKeyList.begin(); itColumns != tableForeignKeyList.end(); ++itColumns )
+      {
+        sColummDef = QgsSpatialiteDbInfo::parseForeignKeyList( itColumns.value(), sTableNameFrom, sColummNameFrom, sTableNameTo, sColummNameTo, iTableToId, iTableToSeq, sOnUpdateAction, sOnDeleteAction, sMatchType );
+        sSqlCreate = QString( "%1%2\n %3" ).arg( sSqlCreate ).arg( sComma ).arg( sColummDef );
+      }
+    }
+    sSqlCreate = QString( "%1\n);" ).arg( sSqlCreate );
+    if ( !sSqlCreate.isEmpty() )
+    {
+      saSqlCommands.append( sSqlCreate );
+    }
+    if ( !sSqlInsert.isEmpty() )
+    {
+      saSqlCommands.append( sSqlInsert );
+    }
+  }
+  return saSqlCommands;
+}
+//-----------------------------------------------------------------
+// QgsSpatialiteDbInfo::alterTableInterface
+// - part of 'Alter Table Interface'
+//-----------------------------------------------------------------
+// https://www.techonthenet.com/sqlite/tables/alter_table.php
+//-----------------------------------------------------------------
+// iCommandType:  [simple] < 100 ; >=100  [rebuild]
+// -     0:  reserved for buildSqlCreate
+// -     1 :  Rename table
+// -     2 :  Add column to table
+// - 100  : Modify column in table
+// -> change/rename Column-Name, Data-Type, Default-Value in column
+// - 109  : Drop column in table
+//-----------------------------------------------------------------
+int QgsSpatialiteDbInfo::alterTableInterface( int iCommandType, QgsSpatialiteDbLayer *dbLayer, QMap<int, QString> alterTableInfoList, QMap<QString, int> alterTablePrimaryKeyList, QMultiMap<QString, QString> alterTableForeignKeyList )
+{
+  int iRc = -1; // Invalid parameters
+  bool bAlterTable = false;
+  Q_UNUSED( alterTableInfoList );
+  switch ( iCommandType )
+  {
+    case 0:
+    case 1:
+    case 2:
+    case 100:
+    case 109:
+    default:
+      return iRc;
+      break;
+  }
+  if ( !dbLayer )
+  {
+    return iRc;
+  }
+  switch ( dbLayer->getLayerType() )
+  {
+    case QgsSpatialiteDbInfo::SpatialTable:
+    case QgsSpatialiteDbInfo::GdalFdoOgr:
+    case QgsSpatialiteDbInfo::GeoPackageVector:
+      break;
+    default:
+      return iRc;
+      break;
+  }
+  if ( dbLayer->isLayerValid() )
+  {
+    switch ( dbLayer->getLayerType() )
+    {
+      case QgsSpatialiteDbInfo::SpatialTable:
+      case QgsSpatialiteDbInfo::GdalFdoOgr:
+      case QgsSpatialiteDbInfo::GeoPackageVector:
+        break;
+      default:
+        return iRc;
+        break;
+    }
+    QStringList saSqlCommands;
+    switch ( iCommandType )
+    {
+      case 0:
+        break;
+      case 1:
+        break;
+      case 109:
+      case 100:
+      {
+        bAlterTable = true;
+        QStringList saSqlCreate = dbLayer->buildSqlCreate( iCommandType, bAlterTable, alterTableInfoList, alterTablePrimaryKeyList, alterTableForeignKeyList );
+        if ( saSqlCreate.count() > 0 )
+        {
+        }
+      }
+      break;
+      default:
+        break;
+    }
+  }
+  return iRc;
+}
+//-----------------------------------------------------------------
+// QgsSpatialiteDbInfo::executeAlterSchema [private]
+// - part of 'Alter Table Interface'
+//-----------------------------------------------------------------
+// 1) schema_version will be retrieved and stored
+// 2) foreign_keys = 0 [turned OFF]
+// 3) writable_schema = 1 [turned ON]
+// 4) BEGIN Transaction
+//     5a-z) execute sqlCommands [noting return code for each command]
+//     -> 'VACUUM' will be noted, but skiped
+//     -> on Error: break loop  [i.e. GOTO ROLLBACK, do not collect €200]
+// 6a) on Error: ROLLBACK
+// 6b) on OK:
+//     6b-1) stored schema_version will be added to and set
+//     6b-2) if 'VACUUM' was noted, will run
+//     6b-3) COMMIT
+// 7) writable_schema = 0 [turned OFF]
+// 8) foreign_keys = 1 [turned ON]
+//-----------------------------------------------------------------
+int QgsSpatialiteDbInfo::executeAlterSchema( int iCommandType, QStringList saSqlCommands )
+{
+  int iRc = -1; // Invalid parameters
+  switch ( iCommandType )
+  {
+    case 0:
+      break;
+    default:
+      return iRc;
+      break;
+  }
+  if ( saSqlCommands.count() == 0 )
+  {
+    return iRc;
+  }
+  if ( isDbValid() )
+  {
+    // Making Other Kinds Of Table Schema Changes [https://www.sqlite.org/lang_altertable.html]
+    // The procedure above is completely general and will work even if the schema change causes the information stored in the table to change.
+    // So the full procedure above is appropriate for dropping a column, changing the order of columns, adding or removing a UNIQUE constraint or PRIMARY KEY,
+    // adding CHECK or FOREIGN KEY or NOT NULL constraints, or changing the datatype for a column, for example.
+    // However, a simpler and faster procedure can optionally be used for some changes that do no affect the on-disk content in any way.
+    // The following simpler procedure is appropriate for removing CHECK or FOREIGN KEY or NOT NULL constraints,
+    // renaming columns, or adding or removing or changing default values on a column.
+    int i_schema_version = 0;
+    sqlite3_stmt *stmt = nullptr;
+    char *errMsg = nullptr;
+    // Run PRAGMA schema_version to determine the current schema version number. This number will be needed for step 6 below
+    QString sSqlCommand = QStringLiteral( "PRAGMA schema_version" );
+    int i_rc = sqlite3_prepare_v2( dbSqliteHandle(), sSqlCommand.toUtf8().constData(), -1, &stmt, nullptr );
+    if ( i_rc == SQLITE_OK )
+    {
+      while ( sqlite3_step( stmt ) == SQLITE_ROW )
+      {
+        if ( sqlite3_column_type( stmt, 0 ) != SQLITE_NULL )
+        {
+          i_schema_version = sqlite3_column_int( stmt, 0 );
+        }
+      }
+      sqlite3_finalize( stmt );
+      bool bVacuum = false;
+      if ( i_schema_version > 0 )
+      {
+        //-----------------------------------------------------------------
+        // De-activating Foreign Key constraints [needed for proper internal spatialite support for admin tables (CASCADE)]
+        // Always set to ON in QgsSqliteHandle::sqlite3_open
+        // -> what ever may happen, this MUST be turned back on before returning
+        //-----------------------------------------------------------------
+        ( void ) sqlite3_exec( dbSqliteHandle(), "PRAGMA foreign_keys = 0", nullptr, 0, nullptr );
+        // Activate schema editing using PRAGMA writable_schema=ON.
+        ( void ) sqlite3_exec( dbSqliteHandle(), "PRAGMA writable_schema = 1", nullptr, 0, nullptr );
+        //-----------------------------------------------------------------
+        if ( sqlite3_exec( dbSqliteHandle(), "BEGIN", nullptr, nullptr, &errMsg ) == SQLITE_OK )
+        {
+          int iSqlReturnCode = SQLITE_OK;
+          for ( int i_list = 0; i_list < saSqlCommands.size(); i_list++ )
+          {
+            sSqlCommand = saSqlCommands.at( i_list );
+            if ( ( sSqlCommand.toUpper().contains( QStringLiteral( "BEGIN" ) ) ) || ( sSqlCommand.toUpper().contains( QStringLiteral( "COMMIT" ) ) ) )
+            {
+              sSqlCommand = QString();
+            }
+            if ( sSqlCommand.toUpper().contains( QStringLiteral( "VACUUM" ) ) )
+            {
+              // For the purposes of this pragma ['schema_version'], the VACUUM command is considered a schema change
+              // -> call VACUUM before COMMIT, after resetting 'schema_version'
+              bVacuum = true;
+              sSqlCommand = QString();
+            }
+            if ( !sSqlCommand.isEmpty() )
+            {
+              iSqlReturnCode = sqlite3_exec( dbSqliteHandle(), sSqlCommand.toUtf8().constData(), nullptr, nullptr, &errMsg );
+              if ( iSqlReturnCode != SQLITE_OK )
+              {
+                sqlite3_free( errMsg );
+                break; // Error, rollback
+              }
+            }
+          }
+          if ( iSqlReturnCode != SQLITE_OK )
+          {
+            ( void ) sqlite3_exec( dbSqliteHandle(), "ROLLBACK", nullptr, 0, nullptr );
+            iRc = 0;
+          }
+          else
+          {
+            i_schema_version++;
+            sSqlCommand = QStringLiteral( "PRAGMA schema_version=%1" ).arg( i_schema_version );
+            ( void ) sqlite3_exec( dbSqliteHandle(), sSqlCommand.toUtf8().constData(), nullptr, nullptr, &errMsg );
+            if ( bVacuum )
+            {
+              ( void ) sqlite3_exec( dbSqliteHandle(), "VACUUM", nullptr, 0, nullptr );
+            }
+            ( void ) sqlite3_exec( dbSqliteHandle(), "COMMIT", nullptr, 0, nullptr );
+            iRc = 1;
+          }
+        }
+        // Disable schema editing using PRAGMA writable_schema=OFF.
+        ( void ) sqlite3_exec( dbSqliteHandle(), "PRAGMA writable_schema = 0", nullptr, 0, nullptr );
+        //-----------------------------------------------------------------
+        // Activating Foreign Key constraints [needed for proper internal spatialite support for admin tables (CASCADE)]
+        //-----------------------------------------------------------------
+        ( void ) sqlite3_exec( dbSqliteHandle(), "PRAGMA foreign_keys = 1", nullptr, 0, nullptr );
+        //-----------------------------------------------------------------
+      }
+    }
+  }
+  return iRc;
 }
 //-----------------------------------------------------------------
 // QgsSpatialiteDbLayer::createLayerAttributeIndex

@@ -72,11 +72,6 @@ QGISEXTERN QString description()
 // Class factory to return a pointer to a newly created
 // RasterLite2 object
 //-----------------------------------------------------------------
-
-/**
- * Class factory to return a pointer to a newly created
- * RasterLite2Provider object
- */
 QGISEXTERN QgsRasterLite2Provider *classFactory( const QString *uri )
 {
   return new QgsRasterLite2Provider( *uri );
@@ -90,13 +85,13 @@ QgsRasterLite2Provider::QgsRasterLite2Provider( const QString &uri )
   , mUriTableName( QString::null )
   , mUriSqlitePath( QString::null )
   , mMetadata( QString() )
-  , mDefaultImageBackground( QStringLiteral( "#ffffff" ) )
+  , mDefaultImageBackground( QString( "#ffffff" ) )
   , mImageBandsViewExtent( QgsRectangle() )
 {
   if ( dataSourceUri().startsWith( QStringLiteral( "RASTERLITE2:" ) ) )
   {
     QStringList sa_list_info = dataSourceUri().split( QgsSpatialiteDbInfo::ParseSeparatorUris );
-    if ( sa_list_info.count() == 3 )
+    if ( sa_list_info.size() == 3 )
     {
       // Note: the gdal notation will be retained, so that only one connection string exists. QgsDataSourceUri will fail.
       if ( sa_list_info.at( 0 ) == QStringLiteral( "RASTERLITE2" ) )
@@ -129,8 +124,8 @@ QgsRasterLite2Provider::QgsRasterLite2Provider( const QString &uri )
 //-----------------------------------------------------------------
 QgsRasterLite2Provider::~QgsRasterLite2Provider()
 {
-  // QgsDebugMsgLevel( QStringLiteral( "-I-> QgsRasterLite2Provider:~QgsRasterLite2Provider Bands[%1]" ).arg( mImageBands.count() ), 5 );
-  if ( mImageBands.count() > 0 )
+  QgsDebugMsgLevel( QString( "--I--> QgsRasterLite2Provider:~QgsRasterLite2Provider Bands[%1]" ).arg( mImageBands.size() ), 5 );
+  if ( mImageBands.size() > 0 )
   {
     qDeleteAll( mImageBands.begin(), mImageBands.end() );
     mImageBands.clear();
@@ -176,11 +171,16 @@ void QgsRasterLite2Provider::invalidateConnections( const QString &connection )
 }
 //-----------------------------------------------------------------
 // QgsRasterLite2Provider::capabilities
-// Size | ReadLayerMetadata
 //-----------------------------------------------------------------
 int QgsRasterLite2Provider::capabilities() const
 {
-  return getDbLayer()->getRasterCapabilities();
+  int capability = QgsRasterDataProvider::Identify
+                   | QgsRasterDataProvider::IdentifyValue
+                   | QgsRasterDataProvider::Size
+                   | QgsRasterDataProvider::BuildPyramids
+                   | QgsRasterDataProvider::Create
+                   | QgsRasterDataProvider::Remove;
+  return capability;
 }
 //-----------------------------------------------------------------
 // QgsRasterLite2Provider::setSqliteHandle
@@ -213,11 +213,11 @@ bool QgsRasterLite2Provider::setSqliteHandle( QgsSqliteHandle *qSqliteHandle )
           //  ---> that the layer is not a RasterLite1-Layer
           // -- ---------------------------------- --
           bool bLoadLayer = true;
-          bRc = setDbLayer( getSpatialiteDbInfo()->getSpatialiteDbLayer( mUriTableName, bLoadLayer ) );
+          bRc = setDbLayer( getSpatialiteDbInfo()->getQgsSpatialiteDbLayer( mUriTableName, bLoadLayer ) );
         }
         else
         {
-          QgsDebugMsgLevel( QStringLiteral( "QgsRasterLite2Provider failed: Spatialite and/or RasterLite2-Drivers are not active Spatialite[%1] RasterLite2[%2] LayerName[%3]" ).arg( isDbSpatialiteActive() ).arg( isDbRasterLite2Active() ).arg( mUriTableName ), 7 );
+          QgsDebugMsgLevel( QString( "QgsRasterLite2Provider failed: Spatialite and/or RasterLite2-Drivers are not active Spatialite[%1] RasterLite2[%2] LayerName[%3]" ).arg( isDbSpatialiteActive() ).arg( isDbRasterLite2Active() ).arg( mUriTableName ), 7 );
         }
       }
       else
@@ -226,23 +226,23 @@ bool QgsRasterLite2Provider::setSqliteHandle( QgsSqliteHandle *qSqliteHandle )
         {
           if ( !isDbRasterLite2() )
           {
-            QgsDebugMsgLevel( QStringLiteral( "QgsRasterLite2Provider failed: Database not supported by QgsRasterLite2Provider LayerName[%1]" ).arg( mUriTableName ), 7 );
+            QgsDebugMsgLevel( QString( "QgsRasterLite2Provider failed: Database not supported by QgsRasterLite2Provider LayerName[%1]" ).arg( mUriTableName ), 7 );
           }
         }
         else
         {
-          QgsDebugMsgLevel( QStringLiteral( "QgsRasterLite2Provider failed: Database is invalid LayerName[%1]" ).arg( mUriTableName ), 7 );
+          QgsDebugMsgLevel( QString( "QgsRasterLite2Provider failed: Database is invalid LayerName[%1]" ).arg( mUriTableName ), 7 );
         }
       }
     }
     else
     {
-      QgsDebugMsgLevel( QStringLiteral( "QgsRasterLite2Provider failed QgsSpatialiteDbInfo invalid LayerName[%1] " ).arg( mUriTableName ), 7 );
+      QgsDebugMsgLevel( QString( "QgsRasterLite2Provider failed QgsSpatialiteDbInfo invalid LayerName[%1] " ).arg( mUriTableName ), 7 );
     }
   }
   else
   {
-    QgsDebugMsgLevel( QStringLiteral( "QgsRasterLite2Provider failed invalid QgsSqliteHandle[%1] " ).arg( mUriSqlitePath ), 7 );
+    QgsDebugMsgLevel( QString( "QgsRasterLite2Provider failed invalid QgsSqliteHandle[%1] " ).arg( mUriSqlitePath ), 7 );
   }
   return bRc;
 }
@@ -277,10 +277,9 @@ bool QgsRasterLite2Provider::setDbLayer( QgsSpatialiteDbLayer *dbLayer )
       setLayerBandsInfo( mDbLayer->getLayerGetBandStatistics(), mDbLayer->getLayerBandsHistograms() );
       mDefaultRasterStyle = mDbLayer->getLayerStyleSelected();
       mDefaultImageBackground = mDbLayer->getLayerDefaultImageBackground();
-      // setLayerMetadata( getDbLayer()->getLayerMetadata() );
       QgsSettings *userSettings = new QgsSettings();
       // Set the default Image-Backround to the color used for the canvas background
-      mDefaultImageBackground = QStringLiteral( "#%1%2%3" )
+      mDefaultImageBackground = QString( "#%1%2%3" )
                                 .arg( QString::number( userSettings->value( QStringLiteral( "/qgis/default_canvas_color_red" ), 255 ).toInt(), 16 ) )
                                 .arg( QString::number( userSettings->value( QStringLiteral( "/qgis/default_canvas_color_green" ), 255 ).toInt(), 16 ) )
                                 .arg( QString::number( userSettings->value( QStringLiteral( "/qgis/default_canvas_color_blue" ), 255 ).toInt(), 16 ) );
@@ -289,14 +288,14 @@ bool QgsRasterLite2Provider::setDbLayer( QgsSpatialiteDbLayer *dbLayer )
     }
     else
     {
-      QgsDebugMsgLevel( QStringLiteral( "QgsRasterLite2Provider failed while loading Layer : Spatialite and/or RasterLite2-Drivers are not active Spatialite[%1] RasterLite2[%2] LayerName[%3]" ).arg( isDbSpatialiteActive() ).arg( isDbRasterLite2Active() ).arg( getLayerName() ), 7 );
+      QgsDebugMsgLevel( QString( "QgsRasterLite2Provider failed while loading Layer : Spatialite and/or RasterLite2-Drivers are not active Spatialite[%1] RasterLite2[%2] LayerName[%3]" ).arg( isDbSpatialiteActive() ).arg( isDbRasterLite2Active() ).arg( getLayerName() ), 7 );
     }
   }
   else
   {
     if ( dbLayer )
     {
-      QgsDebugMsgLevel( QStringLiteral( " QgsRasterLite2Provider setting Layer failed: isLayerValid[%1] isDbRasterLite2[%2] LayerName[%3]" ).arg( dbLayer->isLayerValid() ).arg( dbLayer->isLayerRasterLite2() ).arg( mUriTableName ), 7 );
+      QgsDebugMsgLevel( QString( " QgsRasterLite2Provider setting Layer failed: isLayerValid[%1] isDbRasterLite2[%2] LayerName[%3]" ).arg( dbLayer->isLayerValid() ).arg( dbLayer->isLayerRasterLite2() ).arg( mUriTableName ), 7 );
     }
   }
   return bRc;
@@ -308,10 +307,10 @@ void QgsRasterLite2Provider::setLayerBandsInfo( QStringList layerBandsInfo, QMap
 {
   mLayerBandsInfo = layerBandsInfo;
   mLayerBandsHistograms = layerBandsHistograms;
-  for ( int i = 0; i < mLayerBandsInfo.count(); i++ )
+  for ( int i = 0; i < mLayerBandsInfo.size(); i++ )
   {
     QStringList sa_list_info = mLayerBandsInfo.at( i ).split( QgsSpatialiteDbInfo::ParseSeparatorGeneral );
-    if ( sa_list_info.count() == 8 )
+    if ( sa_list_info.size() == 8 )
     {
       mLayerBandsNodata.insert( i, sa_list_info.at( 0 ).toDouble() );
       mSrcNoDataValue.append( sa_list_info.at( 0 ).toDouble() );
@@ -341,113 +340,58 @@ int QgsRasterLite2Provider::createLayerMetadata( int i_debug )
     {
       return i_status;
     }
+    QString sMetadata = "";
+    QString sMetadataBands = "";
     //-----------------------------------------------------------
-    QString htmlTrTdStart = QStringLiteral( "<tr><td class=\"highlight\">" );
-    QString htmlTrTdEnd = QStringLiteral( "</td></tr>\n" );
-    QString htmlTdEndTdStart = QStringLiteral( "</td><td>" );
-    //-----------------------------------------------------------
-    QString sMetadataBuild = QString();
-    QString sMetadata = QString();
-    QString sMetadataBands = QString();
-    QString sHtmlMetadata = QString();
-    QString sHtmlMetadataBands = QString();
-    // TODO: add header information
-    // GDAL Driver description
-    //  myMetadata += QStringLiteral( "<tr><td class=\"highlight\">" ) + tr( "GDAL Driver Description" ) + QStringLiteral( "</td><td>" ) + QString( GDALGetDescription( GDALGetDatasetDriver( mGdalDataset ) ) ) + QStringLiteral( "</td></tr>\n" );
-    // GDAL Driver Metadata
-    // myMetadata += QStringLiteral( "<tr><td class=\"highlight\">" ) + tr( "GDAL Driver Metadata" ) + QStringLiteral( "</td><td>" ) + QString( GDALGetMetadataItem( GDALGetDatasetDriver( mGdalDataset ), GDAL_DMD_LONGNAME, nullptr ) ) + QStringLiteral( "</td></tr>\n" );
-    //-----------------------------------------------------------
-    sMetadataBuild = QStringLiteral( "Layer-Name: %1\n" ).arg( getLayerName() );
-    sMetadataBands += sMetadataBuild;
-    sHtmlMetadataBands += QString( "%1%2%3" ).arg( htmlTrTdStart ).arg( sMetadataBuild.replace( "\n", "" ).replace( ": ", htmlTdEndTdStart ) ).arg( htmlTrTdEnd );
-    sMetadataBuild = QStringLiteral( "Title     : %1\n" ).arg( getTitle() );
-    sMetadataBands += sMetadataBuild;
-    sHtmlMetadataBands += QString( "%1%2%3" ).arg( htmlTrTdStart ).arg( sMetadataBuild.replace( "\n", "" ).replace( ": ", htmlTdEndTdStart ) ).arg( htmlTrTdEnd );
-    sMetadataBuild = QStringLiteral( "Abstract  : %1\n" ).arg( getAbstract() );
-    sMetadataBands += sMetadataBuild;
-    sHtmlMetadataBands += QString( "%1%2%3" ).arg( htmlTrTdStart ).arg( sMetadataBuild.replace( "\n", "" ).replace( ": ", htmlTdEndTdStart ) ).arg( htmlTrTdEnd );
-    sMetadataBuild = QStringLiteral( "Copyright : %1\n" ).arg( getCopyright() );
-    sMetadataBands += sMetadataBuild;
-    sHtmlMetadataBands += QString( "%1%2%3" ).arg( htmlTrTdStart ).arg( sMetadataBuild.replace( "\n", "" ).replace( ": ", htmlTdEndTdStart ) ).arg( htmlTrTdEnd );
-    sMetadataBuild = QStringLiteral( "Srid\t  : %1\n" ).arg( getSridEpsg() );
-    sMetadataBands += sMetadataBuild;
-    sHtmlMetadataBands += QString( "%1%2%3" ).arg( htmlTrTdStart ).arg( sMetadataBuild.replace( "\n", "" ).replace( ": ", htmlTdEndTdStart ) ).arg( htmlTrTdEnd );
-    sMetadataBuild = QStringLiteral( "Extent\t  : %1\n" ).arg( getDbLayer()->getLayerExtentEWKT() );
-    sMetadataBands += sMetadataBuild;
-    sHtmlMetadataBands += QString( "%1%2%3" ).arg( htmlTrTdStart ).arg( sMetadataBuild.replace( "\n", "" ).replace( ": ", htmlTdEndTdStart ) ).arg( htmlTrTdEnd );
-    sMetadataBuild = QStringLiteral( "\tExtent - Width : %1\n" ).arg( QString::number( getDbLayer()->getLayerExtentWidth(), 'f', 7 ) );
-    sMetadataBands += sMetadataBuild;
-    sHtmlMetadataBands += QString( "%1%2%3" ).arg( htmlTrTdStart ).arg( sMetadataBuild.replace( "\n", "" ).replace( ": ", htmlTdEndTdStart ) ).arg( htmlTrTdEnd );
-    sMetadataBuild = QStringLiteral( "\tExtent - Height: %1\n" ).arg( QString::number( getDbLayer()->getLayerExtentHeight(), 'f', 7 ) );
-    sMetadataBands += sMetadataBuild;
-    sHtmlMetadataBands += QString( "%1%2%3" ).arg( htmlTrTdStart ).arg( sMetadataBuild.replace( "\n", "" ).replace( ": ", htmlTdEndTdStart ) ).arg( htmlTrTdEnd );
-    sMetadataBuild = QStringLiteral( "Image-Size: %1x%2\n" ).arg( getDbLayer()->getLayerImageWidth() ).arg( getDbLayer()->getLayerImageHeight() );
-    sMetadataBands += sMetadataBuild;
-    sHtmlMetadataBands += QString( "%1%2%3" ).arg( htmlTrTdStart ).arg( sMetadataBuild.replace( "\n", "" ).replace( ": ", htmlTdEndTdStart ) ).arg( htmlTrTdEnd );
-    sMetadataBuild = QStringLiteral( "\tPixels - Total  : %1\n" ).arg( getDbLayer()->getLayerCountImagePixels() );
-    sMetadataBands += sMetadataBuild;
-    sHtmlMetadataBands += QString( "%1%2%3" ).arg( htmlTrTdStart ).arg( sMetadataBuild.replace( "\n", "" ).replace( ": ", htmlTdEndTdStart ) ).arg( htmlTrTdEnd );
-    sMetadataBuild = QStringLiteral( "\tPixels - Valid  : %1\n" ).arg( getDbLayer()->getLayerCountImageValidPixels() );
-    sMetadataBands += sMetadataBuild;
-    sHtmlMetadataBands += QString( "%1%2%3" ).arg( htmlTrTdStart ).arg( sMetadataBuild.replace( "\n", "" ).replace( ": ", htmlTdEndTdStart ) ).arg( htmlTrTdEnd );
-    sMetadataBuild = QStringLiteral( "\tPixels - NoData : %1\n" ).arg( getDbLayer()->getLayerCountImageNodataPixels() );
-    sMetadataBuild = QStringLiteral( "Bands\t  : %1\n" ).arg( getDbLayer()->getLayerNumBands() );
-    sMetadataBands += sMetadataBuild;
-    sHtmlMetadataBands += QString( "%1%2%3" ).arg( htmlTrTdStart ).arg( sMetadataBuild.replace( "\n", "" ).replace( ": ", htmlTdEndTdStart ) ).arg( htmlTrTdEnd );
+    sMetadataBands += QString( "Layer-Name: %1\n" ).arg( getLayerName() );
+    sMetadataBands += QString( "Title     : %1\n" ).arg( getTitle() );
+    sMetadataBands += QString( "Abstract  : %1\n" ).arg( getAbstract() );
+    sMetadataBands += QString( "Copyright : %1\n" ).arg( getCopyright() );
+    sMetadataBands += QString( "Srid\t  : %1\n" ).arg( getSridEpsg() );
+    sMetadataBands += QString( "Extent\t  : %1\n" ).arg( getDbLayer()->getLayerExtentEWKT() );
+    sMetadataBands += QString( "\tExtent - Width : %1\n" ).arg( QString::number( getDbLayer()->getLayerExtentWidth(), 'f', 7 ) );
+    sMetadataBands += QString( "\tExtent - Height: %1\n" ).arg( QString::number( getDbLayer()->getLayerExtentHeight(), 'f', 7 ) );
+    sMetadataBands += QString( "Image-Size: %1x%2\n" ).arg( getDbLayer()->getLayerImageWidth() ).arg( getDbLayer()->getLayerImageHeight() );
+    sMetadataBands += QString( "\tPixels - Total  : %1\n" ).arg( getDbLayer()->getLayerCountImagePixels() );
+    sMetadataBands += QString( "\tPixels - Valid  : %1\n" ).arg( getDbLayer()->getLayerCountImageValidPixels() );
+    sMetadataBands += QString( "\tPixels - NoData : %1\n" ).arg( getDbLayer()->getLayerCountImageNodataPixels() );
+    sMetadataBands += QString( "Bands\t  : %1\n" ).arg( getDbLayer()->getLayerNumBands() );
     // 3319x2701 = 8964619-7917158=1047461
     //-----------------------------------------------------------
     for ( int i = 0; i < getDbLayer()->getLayerNumBands(); i++ )
     {
       // [generateBandName is 1 based, thus adding '+1'] RL2_GetPixelValue for nodata
-      QString sBandInfo = QStringLiteral( " %1\t: nodata[%2] " ).arg( generateBandName( i + 1 ) ).arg( ( int )mLayerBandsNodata.value( i ) );
+      QString sBandInfo = QString( " %1\t: nodata[%2] " ).arg( generateBandName( i + 1 ) ).arg( ( int )mLayerBandsNodata.value( i ) );
       // RL2_GetBandStatistics_Min, RL2_GetBandStatistics_Max
-      sBandInfo += QStringLiteral( "Min[%1] Max[%2] " ).arg( ( int )mLayerBandsPixelMin.value( i ) ).arg( ( int )mLayerBandsPixelMax.value( i ) );
+      sBandInfo += QString( "Min[%1] Max[%2] " ).arg( ( int )mLayerBandsPixelMin.value( i ) ).arg( ( int )mLayerBandsPixelMax.value( i ) );
       // RL2_GetRasterStatistics_ValidPixelsCount, range (max-min)
-      sBandInfo += QStringLiteral( "Range[%1] " ).arg( ( int )( mLayerBandsPixelMax.value( i ) - mLayerBandsPixelMin.value( i ) ) );
+      sBandInfo += QString( "Range[%1] " ).arg( ( int )( mLayerBandsPixelMax.value( i ) - mLayerBandsPixelMin.value( i ) ) );
       // RL2_GetBandStatistics_Avg, RL2_GetBandStatistics_StdDev
-      sBandInfo += QStringLiteral( "Average/Mean[%1] StandardDeviation[%2] " ).arg( ( int )mLayerBandsPixelAverage.value( i ) ).arg( ( int )mLayerBandsPixelStandardDeviation.value( i ) );
+      sBandInfo += QString( "Average/Mean[%1] StandardDeviation[%2] " ).arg( ( int )mLayerBandsPixelAverage.value( i ) ).arg( ( int )mLayerBandsPixelStandardDeviation.value( i ) );
       // RL2_GetBandStatistics_Var [estimated Variance value as double]
-      sBandInfo += QStringLiteral( "Variance[%1] " ).arg( ( int )mLayerBandsPixelVariance.value( i ) );
-      sMetadataBuild += QStringLiteral( "\t%1\n" ).arg( sBandInfo );
-      sMetadataBands += sMetadataBuild;
-      sHtmlMetadataBands += QString( "%1%2%3" ).arg( htmlTrTdStart ).arg( sMetadataBuild.replace( "\n", "" ).replace( ": ", htmlTdEndTdStart ) ).arg( htmlTrTdEnd );
+      sBandInfo += QString( "Variance[%1] " ).arg( ( int )mLayerBandsPixelVariance.value( i ) );
+      sMetadataBands += QString( "\t%1\n" ).arg( sBandInfo );
     }
-    sMetadata = QStringLiteral( "%1\n" ).arg( sMetadataBands );
-    sHtmlMetadata = QStringLiteral( "%1\n" ).arg( sHtmlMetadataBands );
-    sMetadataBuild = QStringLiteral( "Data-Type   : %1 [%2]\n" ).arg( getDbLayer()->getLayerRasterSampleType() ).arg( getDbLayer()->getLayerRasterDataTypeString() );
-    sMetadata += sMetadataBuild;
-    sHtmlMetadata += QString( "%1%2%3" ).arg( htmlTrTdStart ).arg( sMetadataBuild.replace( "\n", "" ).replace( ": ", htmlTdEndTdStart ) ).arg( htmlTrTdEnd );
-    sMetadataBuild = QStringLiteral( "Pixel-Type  : %1\n" ).arg( getDbLayer()->getLayerRasterPixelTypeString() );
-    sMetadata += sMetadataBuild;
-    sHtmlMetadata += QString( "%1%2%3" ).arg( htmlTrTdStart ).arg( sMetadataBuild.replace( "\n", "" ).replace( ": ", htmlTdEndTdStart ) ).arg( htmlTrTdEnd );
-    sMetadataBuild = QStringLiteral( "Compression : %1\n" ).arg( getDbLayer()->getLayerRasterCompressionType() );
-    sMetadata += sMetadataBuild;
-    sHtmlMetadata += QString( "%1%2%3" ).arg( htmlTrTdStart ).arg( sMetadataBuild.replace( "\n", "" ).replace( ": ", htmlTdEndTdStart ) ).arg( htmlTrTdEnd );
-    sMetadataBuild = QStringLiteral( "Tile-Size   : %1,%2\n" ).arg( getDbLayer()->getLayerTileWidth() ).arg( getDbLayer()->getLayerTileHeight() );
-    sMetadata += sMetadataBuild;
-    sHtmlMetadata += QString( "%1%2%3" ).arg( htmlTrTdStart ).arg( sMetadataBuild.replace( "\n", "" ).replace( ": ", htmlTdEndTdStart ) ).arg( htmlTrTdEnd );
-    sMetadataBuild = QStringLiteral( "Resolution  : horz=%1 vert=%2\n" ).arg( QString::number( getDbLayer()->getLayerImageResolutionX(), 'f', 7 ) ).arg( QString::number( getDbLayer()->getLayerImageResolutionY(), 'f', 7 ) );
-    sMetadata += sMetadataBuild;
-    sHtmlMetadata += QString( "%1%2%3" ).arg( htmlTrTdStart ).arg( sMetadataBuild.replace( "\n", "" ).replace( ": ", htmlTdEndTdStart ) ).arg( htmlTrTdEnd );
-    sMetadataBuild = QStringLiteral( "User Canvas background    : '%1'\n" ).arg( mDefaultImageBackground );
-    sMetadata += sMetadataBuild;
-    sHtmlMetadata += QString( "%1%2%3" ).arg( htmlTrTdStart ).arg( sMetadataBuild.replace( "\n", "" ).replace( ": ", htmlTdEndTdStart ) ).arg( htmlTrTdEnd );
-    sMetadataBuild = QStringLiteral( "NoData ImageBackground : '%1'\n" ).arg( mDbLayer->getLayerDefaultImageBackground() );
-    sMetadata += sMetadataBuild;
-    sHtmlMetadata += QString( "%1%2%3" ).arg( htmlTrTdStart ).arg( sMetadataBuild.replace( "\n", "" ).replace( ": ", htmlTdEndTdStart ) ).arg( htmlTrTdEnd );
-    sMetadataBuild = QStringLiteral( "DefaultRasterStyle : '%1' of %2 Styles\n" ).arg( mDbLayer->getLayerStyleSelected() ).arg( mDbLayer->getLayerCoverageStylesInfo().count() );
-    sMetadata += sMetadataBuild;
-    sHtmlMetadata += QString( "%1%2%3" ).arg( htmlTrTdStart ).arg( sMetadataBuild.replace( "\n", "" ).replace( ": ", htmlTdEndTdStart ) ).arg( htmlTrTdEnd );
-    //-----------------------------------------------------------
-    sHtmlMetadata.replace( "\t", "" );
-    //-----------------------------------------------------------
+    sMetadata += QString( "%1\n" ).arg( sMetadataBands );
+    sMetadata += QString( "Data-Type   : %1 [%2]\n" ).arg( getDbLayer()->getLayerRasterSampleType() ).arg( getDbLayer()->getLayerRasterDataTypeString() );
+    sMetadata += QString( "Pixel-Type  : %1\n" ).arg( getDbLayer()->getLayerRasterPixelTypeString() );
+    sMetadata += QString( "Compression : %1\n" ).arg( getDbLayer()->getLayerRasterCompressionType() );
+    sMetadata += QString( "Tile-Size   : %1,%2\n" ).arg( getDbLayer()->getLayerTileWidth() ).arg( getDbLayer()->getLayerTileHeight() );
+    sMetadata += QString( "Resolution  : horz=%1 vert=%2\n" ).arg( QString::number( getDbLayer()->getLayerImageResolutionX(), 'f', 7 ) ).arg( QString::number( getDbLayer()->getLayerImageResolutionY(), 'f', 7 ) );
+    sMetadata += QString( "User Canvas background    : '%1'\n" ).arg( mDefaultImageBackground );
+    sMetadata += QString( "NoData ImageBackground : '%1'\n" ).arg( mDbLayer->getLayerDefaultImageBackground() );
+    sMetadata += QString( "DefaultRasterStyle : '%1' of %2 Styles\n" ).arg( mDbLayer->getLayerStyleSelected() ).arg( mDbLayer->getLayerCoverageStylesInfo().count() );
     if ( i_debug > 0 )
     {
       QgsDebugMsgLevel( sMetadata, 5 );
     }
     //-----------------------------------------------------------
     mMetadata = sMetadata;
-    mHtmlMetadata = sHtmlMetadata;
+#if 1
+    // If/When QgsLayerMetadata has been added to QgsDataProvider
+    // - then this should be done here
+    setLayerMetadata( getDbLayer()->getLayerMetadata() );
+#endif
     i_status = 1;
   }
   //-----------------------------------------------------------
@@ -456,9 +400,9 @@ int QgsRasterLite2Provider::createLayerMetadata( int i_debug )
 //-----------------------------------------------------------------
 // QgsRasterLite2Provider::metadata
 //-----------------------------------------------------------------
-QString QgsRasterLite2Provider::htmlMetadata()
+QString QgsRasterLite2Provider::metadata()
 {
-  return mHtmlMetadata;
+  return mMetadata;
 }
 //-----------------------------------------------------------------
 // QgsRasterLite2Provider::subLayerStyles
@@ -466,7 +410,7 @@ QString QgsRasterLite2Provider::htmlMetadata()
 QStringList QgsRasterLite2Provider::subLayerStyles() const
 {
   QStringList styles;
-  for ( int i = 0, n = mSubLayers.count(); i < n; ++i )
+  for ( int i = 0, n = mSubLayers.size(); i < n; ++i )
   {
     styles.append( QString() );
   }
@@ -484,7 +428,7 @@ void QgsRasterLite2Provider::setLayerOrder( const QStringList &layers )
   foreach ( const QString &layer, layers )
   {
     // Search for match
-    for ( int i = 0, n = oldSubLayers.count(); i < n; ++i )
+    for ( int i = 0, n = oldSubLayers.size(); i < n; ++i )
     {
       if ( oldSubLayers[i] == layer )
       {
@@ -505,7 +449,7 @@ void QgsRasterLite2Provider::setLayerOrder( const QStringList &layers )
 //-----------------------------------------------------------------
 void QgsRasterLite2Provider::setSubLayerVisibility( const QString &name, bool vis )
 {
-  for ( int i = 0, n = mSubLayers.count(); i < n; ++i )
+  for ( int i = 0, n = mSubLayers.size(); i < n; ++i )
   {
     if ( mSubLayers[i] == name )
     {
@@ -567,7 +511,7 @@ QgsRasterIdentifyResult QgsRasterLite2Provider::identify( const QgsPointXY &poin
       {
         valueStr += QStringLiteral( "%1 = %2\n" ).arg( attribute, attributesMap[attribute].toString() );
       }
-      entries.insert( entries.count(), valueStr );
+      entries.insert( entries.size(), valueStr );
     }
   }
   else if ( format == QgsRaster::IdentifyFormatFeature )
@@ -596,7 +540,7 @@ QgsRasterIdentifyResult QgsRasterLite2Provider::identify( const QgsPointXY &poin
       params[QStringLiteral( "featureType" )] = attributesMap[resultMap[QStringLiteral( "displayFieldName" )].toString()].toString();
       store.setParams( params );
       store.addFeature( feature );
-      entries.insert( entries.coun t(), qVariantFromValue( QList<QgsFeatureStore>() << store ) );
+      entries.insert( entries.size(), qVariantFromValue( QList<QgsFeatureStore>() << store ) );
     }
   }
 #endif
@@ -617,22 +561,20 @@ void QgsRasterLite2Provider::readBlock( int bandNo, const QgsRectangle &viewExte
     // Otherwise: set to 'default' or to another registered Style, otherwise 'default' will be used
     if ( mImageBandsViewExtent != viewExtent )
     {
-      QgsDebugMsgLevel( QStringLiteral( "QgsRasterLite2Provider::readBlock Retrieving Data band[%1,%2]" ).arg( bandNo ).arg( bandNo_ZeroBased ), 7 );
+      QgsDebugMsgLevel( QString( "QgsRasterLite2Provider::readBlock Retrieving Data band[%1,%2]" ).arg( bandNo ).arg( bandNo_ZeroBased ), 5 );
       mImageBandsViewExtent = viewExtent;
       qDeleteAll( mImageBands.begin(), mImageBands.end() );
       mImageBands.clear();
       mImageBands = getDbLayer()->getMapBandsFromRasterLite2( width, height, viewExtent, mDefaultRasterStyle, mDefaultImageBackground, mError );
-      QgsDebugMsgLevel( QStringLiteral( "-I-->QgsRasterLite2Provider::readBlock Retrieved Data band[%1,%2]" ).arg( bandNo ).arg( bandNo_ZeroBased ).arg( mImageBands.count() ), 7 );
     }
     else
     {
-      QgsDebugMsgLevel( QStringLiteral( "QgsRasterLite2Provider::readBlock Have Data band[%1,%2]" ).arg( bandNo ).arg( bandNo_ZeroBased ), 7 );
+      QgsDebugMsgLevel( QString( "QgsRasterLite2Provider::readBlock Have Data band[%1,%2]" ).arg( bandNo ).arg( bandNo_ZeroBased ), 5 );
     }
     //bandNo=bandNo_ZeroBased;
-    QgsDebugMsgLevel( QStringLiteral( "-I--> QgsRasterLite2Provider::readBlock Have Data band[%1,%2] count[%3]" ).arg( bandNo ).arg( bandNo_ZeroBased ).arg( mImageBands.count() ), 7 );
-    if ( bandNo_ZeroBased < mImageBands.count() )
+    if ( bandNo_ZeroBased <= mImageBands.size() )
     {
-      QgsDebugMsgLevel( QStringLiteral( "QgsRasterLite2Provider::readBlock Setting Data band[%1,%2] size[%3]" ).arg( bandNo ).arg( bandNo_ZeroBased ).arg( mImageBands.at( bandNo_ZeroBased )->size() ), 7 );
+      QgsDebugMsgLevel( QString( "QgsRasterLite2Provider::readBlock Setting Data band[%1,%2] size[%3]" ).arg( bandNo ).arg( bandNo_ZeroBased ).arg( mImageBands.at( bandNo_ZeroBased )->size() ), 5 );
       char *arrayData = mImageBands.at( bandNo_ZeroBased )->data();
       if ( arrayData )
       {
@@ -642,7 +584,7 @@ void QgsRasterLite2Provider::readBlock( int bandNo, const QgsRectangle &viewExte
 #if 0
     if ( !getDbLayer()->getMapImageFromRasterLite2( width, height, viewExtent, mDefaultRasterStyle, mimeType, mDefaultImageBackground, data, mError ) )
     {
-      QgsDebugMsgLevel( QStringLiteral( "Retrieving image from RasterLite2 failed: [%1]" ).arg( mError ), 3 );
+      QgsDebugMsgLevel( QString( "Retrieving image from RasterLite2 failed: [%1]" ).arg( mError ), 3 );
       return;
     }
 #endif
@@ -663,16 +605,16 @@ QString QgsRasterLite2Provider::generateBandName( int bandNumber ) const
       switch ( bandNumber )
       {
         case 1:
-          sLayerPixelType = QStringLiteral( "%2 %1" ).arg( bandNumber ).arg( QStringLiteral( "Red  " ) );
+          sLayerPixelType = QString( "%2 %1" ).arg( bandNumber ).arg( QStringLiteral( "Red  " ) );
           break;
         case 2:
-          sLayerPixelType = QStringLiteral( "%2 %1" ).arg( bandNumber ).arg( QStringLiteral( "Green" ) );
+          sLayerPixelType = QString( "%2 %1" ).arg( bandNumber ).arg( QStringLiteral( "Green" ) );
           break;
         case 3:
-          sLayerPixelType = QStringLiteral( "%2 %1" ).arg( bandNumber ).arg( QStringLiteral( "Blue " ) );
+          sLayerPixelType = QString( "%2 %1" ).arg( bandNumber ).arg( QStringLiteral( "Blue " ) );
           break;
         default:
-          sLayerPixelType = QStringLiteral( "Band %1" ).arg( bandNumber );
+          sLayerPixelType = QString( "Band %1" ).arg( bandNumber );
           break;
       }
     }
@@ -680,11 +622,11 @@ QString QgsRasterLite2Provider::generateBandName( int bandNumber ) const
     {
       if ( sLayerPixelType == QLatin1String( "MULTIBAND" ) )
       {
-        sLayerPixelType = QStringLiteral( "%2-Band %1" ).arg( bandNumber ).arg( sLayerPixelType );
+        sLayerPixelType = QString( "%2-Band %1" ).arg( bandNumber ).arg( sLayerPixelType );
       }
       else
       {
-        sLayerPixelType = QStringLiteral( "%1-Band" ).arg( sLayerPixelType );
+        sLayerPixelType = QString( "%1-Band" ).arg( sLayerPixelType );
       }
     }
   }
@@ -721,17 +663,17 @@ bool  QgsRasterLite2Provider::hasStatistics( int bandNo,
                        | QgsRasterBandStats::Range | QgsRasterBandStats::Mean
                        | QgsRasterBandStats::StdDev;
   rasterBandStats.statsGathered = supportedStats;
-  QgsDebugMsgLevel( QStringLiteral( "************ STATS Band %1**************" ).arg( rasterBandStats.bandNumber ), 3 );
-  QgsDebugMsgLevel( QStringLiteral( "COUNT %1" ).arg( rasterBandStats.elementCount ), 3 );
-  QgsDebugMsgLevel( QStringLiteral( "MIN %1" ).arg( rasterBandStats.minimumValue ), 3 );
-  QgsDebugMsgLevel( QStringLiteral( "MAX %1" ).arg( rasterBandStats.maximumValue ), 3 );
-  QgsDebugMsgLevel( QStringLiteral( "RANGE %1" ).arg( rasterBandStats.range ), 3 );
-  QgsDebugMsgLevel( QStringLiteral( "MEAN %1" ).arg( rasterBandStats.mean ), 3 );
-  QgsDebugMsgLevel( QStringLiteral( "STDDEV %1" ).arg( rasterBandStats.stdDev ), 3 );
+  QgsDebugMsgLevel( QString( "************ STATS Band %1**************" ).arg( rasterBandStats.bandNumber ), 3 );
+  QgsDebugMsgLevel( QString( "COUNT %1" ).arg( rasterBandStats.elementCount ), 3 );
+  QgsDebugMsgLevel( QString( "MIN %1" ).arg( rasterBandStats.minimumValue ), 3 );
+  QgsDebugMsgLevel( QString( "MAX %1" ).arg( rasterBandStats.maximumValue ), 3 );
+  QgsDebugMsgLevel( QString( "RANGE %1" ).arg( rasterBandStats.range ), 3 );
+  QgsDebugMsgLevel( QString( "MEAN %1" ).arg( rasterBandStats.mean ), 3 );
+  QgsDebugMsgLevel( QString( "STDDEV %1" ).arg( rasterBandStats.stdDev ), 3 );
   if ( rasterBandStats.extent != extent() ||
        ( stats & ( ~supportedStats ) ) )
   {
-    QgsDebugMsgLevel( QStringLiteral( "Not supported by RasterLite2." ), 3 );
+    QgsDebugMsgLevel( QString( "Not supported by RasterLite2." ), 3 );
     return false;
   }
   return true;
@@ -748,7 +690,7 @@ QgsRasterBandStats QgsRasterLite2Provider::bandStatistics( int bandNo, int stats
   {
     if ( stats.contains( rasterBandStats ) )
     {
-      QgsDebugMsgLevel( QStringLiteral( "Using cached statistics." ), 3 );
+      QgsDebugMsgLevel( QString( "Using cached statistics." ), 3 );
       return stats;
     }
   }
@@ -769,13 +711,13 @@ QgsRasterBandStats QgsRasterLite2Provider::bandStatistics( int bandNo, int stats
                        | QgsRasterBandStats::Range | QgsRasterBandStats::Mean
                        | QgsRasterBandStats::StdDev;
   rasterBandStats.statsGathered = supportedStats;
-  QgsDebugMsgLevel( QStringLiteral( "************ STATS Band %1 **************" ).arg( rasterBandStats.bandNumber ), 3 );
-  QgsDebugMsgLevel( QStringLiteral( "COUNT %1" ).arg( rasterBandStats.elementCount ), 3 );
-  QgsDebugMsgLevel( QStringLiteral( "MIN %1" ).arg( rasterBandStats.minimumValue ), 3 );
-  QgsDebugMsgLevel( QStringLiteral( "MAX %1" ).arg( rasterBandStats.maximumValue ), 3 );
-  QgsDebugMsgLevel( QStringLiteral( "RANGE %1" ).arg( rasterBandStats.range ), 3 );
-  QgsDebugMsgLevel( QStringLiteral( "MEAN %1" ).arg( rasterBandStats.mean ), 3 );
-  QgsDebugMsgLevel( QStringLiteral( "STDDEV %1" ).arg( rasterBandStats.stdDev ), 3 );
+  QgsDebugMsgLevel( QString( "************ STATS Band %1 **************" ).arg( rasterBandStats.bandNumber ), 3 );
+  QgsDebugMsgLevel( QString( "COUNT %1" ).arg( rasterBandStats.elementCount ), 3 );
+  QgsDebugMsgLevel( QString( "MIN %1" ).arg( rasterBandStats.minimumValue ), 3 );
+  QgsDebugMsgLevel( QString( "MAX %1" ).arg( rasterBandStats.maximumValue ), 3 );
+  QgsDebugMsgLevel( QString( "RANGE %1" ).arg( rasterBandStats.range ), 3 );
+  QgsDebugMsgLevel( QString( "MEAN %1" ).arg( rasterBandStats.mean ), 3 );
+  QgsDebugMsgLevel( QString( "STDDEV %1" ).arg( rasterBandStats.stdDev ), 3 );
 
   mStatistics.append( rasterBandStats );
   return rasterBandStats;
