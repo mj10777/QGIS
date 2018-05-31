@@ -197,9 +197,10 @@ QgsSpatialiteLayerItem::QgsSpatialiteLayerItem( QgsDataItem *parent, QString fil
     QgsSpatialiteDbInfo::parseLayerName( sLayerName, sTableName, sGeometryColumn );
     QString sGeometryType; // For Layers that contain no Geometries, this will be the Layer-Type
     QString sLayerTypeSpatialite;
-    int iSpatialIndex = -1;
+    int iSpatialIndex = ( int )QgsSpatialiteDbInfo::SpatialIndexUnknown;
     int iIsHidden = 0;
-    if ( mSpatialiteDbInfo->parseLayerInfo( mLayerInfo, sGeometryType, mLayerSrid, mProviderKey, sLayerTypeSpatialite, iSpatialIndex, iIsHidden ) )
+    int iGeometryFormat = ( int )QgsSpatialiteDbInfo::GeometryFormatUnknown;
+    if ( mSpatialiteDbInfo->parseLayerInfo( mLayerInfo, sGeometryType, mLayerSrid, mProviderKey, sLayerTypeSpatialite, iSpatialIndex, iIsHidden, iGeometryFormat ) )
     {
       QString sSpatialMetadata = QString( "%1,%2" ).arg( mSpatialiteDbInfo->dbSpatialMetadataString() ).arg( sLayerTypeSpatialite );
       mUri = mSpatialiteDbInfo->getDbLayerUris( name() );

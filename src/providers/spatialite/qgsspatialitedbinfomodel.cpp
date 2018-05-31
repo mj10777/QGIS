@@ -497,11 +497,27 @@ bool QgsSpatialiteDbInfoModel::setHeaderData( int section, Qt::Orientation orien
   return result;
 }
 //-----------------------------------------------------------------
-// QgsSpatialiteDbInfoModel::setLayerOrderData
+// QgsSpatialiteDbInfoModel::clearSelectedDbLayers
+//-----------------------------------------------------------------
+int QgsSpatialiteDbInfoModel::clearSelectedDbLayers()
+{
+  switch ( getModelType() )
+  {
+    case QgsSpatialiteDbInfoModel::ModelTypeLayerOrder:
+      break;
+    default:
+      return 0;
+      break;
+  }
+  bool bRemoveItems = true;
+  return setLayerModelData( bRemoveItems );
+}
+//-----------------------------------------------------------------
+// QgsSpatialiteDbInfoModel::setLayerModelData
 // returns amount of Items affected
 // If nothing has changed (iRc== 0), no need for the View to do anything
 //-----------------------------------------------------------------
-int QgsSpatialiteDbInfoModel::setLayerOrderData( bool bRemoveItems )
+int QgsSpatialiteDbInfoModel::setLayerModelData( bool bRemoveItems )
 {
   int iCountItems = 0;
   if ( ( getModelRootItem() ) && ( getModelType() == ModelTypeMaintenanceColumns ) )
@@ -512,7 +528,7 @@ int QgsSpatialiteDbInfoModel::setLayerOrderData( bool bRemoveItems )
       beginResetModel();
       if ( bRemoveItems )
       {
-        getModelRootItem()->getChildItems().clear();
+        getModelRootItem()->clearChildren();
       }
       else
       {
@@ -526,7 +542,7 @@ int QgsSpatialiteDbInfoModel::setLayerOrderData( bool bRemoveItems )
   if ( ( getModelRootItem() ) && ( getModelType() == ModelTypeLayerOrder ) )
   {
     bool bResetModel = false;
-    if ( getModelRootItem()->getPrepairedChildItems().count() > 0 )
+    if ( ( getModelRootItem()->getPrepairedChildItems().count() > 0 ) || ( bRemoveItems ) )
     {
       bResetModel = true;
     }
@@ -539,7 +555,15 @@ int QgsSpatialiteDbInfoModel::setLayerOrderData( bool bRemoveItems )
     {
       emit layoutAboutToBeChanged();
     }
-    iCountItems = getModelRootItem()->handelSelectedPrepairedChildren( bRemoveItems );
+    if ( bRemoveItems )
+    {
+      iCountItems = getModelRootItem()->childCount();
+      getModelRootItem()->clearChildren();
+    }
+    else
+    {
+      iCountItems = getModelRootItem()->handelSelectedPrepairedChildren( bRemoveItems );
+    }
     if ( bResetModel )
     {
       // We have finished rebuilding, inform the TreeView to repaint everything
@@ -962,34 +986,36 @@ QString QgsSpatialiteDbInfoModel::getDatabaseUri() const
 //-----------------------------------------------------------------
 QString QgsSpatialiteDbInfoModel::getLayerSqlQuery( const QModelIndex &index ) const
 {
-  QgsSpatialiteDbInfoItem *item = getItem( index );
-  if ( ( item ) && ( item->isValid() ) )
+  QgsSpatialiteDbInfoItem *currentItem = getItem( index );
+  if ( ( currentItem ) && ( currentItem->getModelType() == QgsSpatialiteDbInfoModel::ModelTypeConnections ) )
   {
-    return item->getLayerSqlQuery();
+    if ( ( currentItem->isLayerSelectable() ) && ( currentItem->isLayerVectorType() ) )
+    {
+      return currentItem->getLayerSqlQuery();
+    }
   }
   return QString();
 }
 //-----------------------------------------------------------------
 // QgsSpatialiteDbInfoModel::setLayerSqlQuery
+//  ModelTypeConnections
 //-----------------------------------------------------------------
-void QgsSpatialiteDbInfoModel::setLayerSqlQuery( const QModelIndex &index, const QString &sLayerSqlQuery )
+void QgsSpatialiteDbInfoModel::setLayerSqlQuery( QgsSpatialiteDbInfoItem *currentItem, const QString &sLayerSqlQuery )
 {
-  if ( !index.isValid() || !index.parent().isValid() )
+  if ( ( getModelType() == QgsSpatialiteDbInfoModel::ModelTypeConnections ) )
   {
-    return;
-  }
-  //find out table name
-  QModelIndex tableSibling = index.sibling( index.row(), getTableNameIndex() );
-  QModelIndex geomSibling = index.sibling( index.row(), getGeometryNameIndex() );
-
-  if ( !tableSibling.isValid() || !geomSibling.isValid() )
-  {
-    return;
-  }
-  QgsSpatialiteDbInfoItem *item = getItem( index );
-  if ( ( item ) && ( item->isLayerSelectable() ) )
-  {
-    item->setLayerSqlQuery( sLayerSqlQuery );
+    if ( ( currentItem ) && ( currentItem->getModelType() == QgsSpatialiteDbInfoModel::ModelTypeConnections ) )
+    {
+      if ( ( currentItem->isLayerSelectable() ) && ( currentItem->isLayerVectorType() ) )
+      {
+        emit layoutAboutToBeChanged();
+        // Only a (main, not its Children) Layer-Item but also a Vector Layer
+        currentItem->setLayerSqlQuery( sLayerSqlQuery );
+        // We have changed something [Item internaly: such as moveChild, setSeletedStyle]
+        // -  inform the TreeView to repaint everything
+        emit layoutChanged();
+      }
+    }
   }
 }
 //-----------------------------------------------------------------
@@ -1104,7 +1130,7 @@ QgsSpatialiteDbInfoItem::QgsSpatialiteDbInfoItem( QgsSpatialiteDbInfoItem *paren
             break;
           default:
             // This should never happen
-            QgsDebugMsgLevel( QStringLiteral( "-W-> QgsSpatialiteDbInfoItem::SpatialiteDbInfo type not handeled  ItemType[%1] ModelType[%2]" ).arg( getItemTypeString() ).arg( getModelTypeString() ), 7 );
+            QgsDebugMsgLevel( QStringLiteral( "-W-> QgsSpatialiteDbInfoItem::SpatialiteDbInfo type not handeled ItemType[%1] ModelType[%2]" ).arg( getItemTypeName() ).arg( getModelTypeName() ), 7 );
             break;
         }
       }
@@ -1121,7 +1147,7 @@ QgsSpatialiteDbInfoItem::QgsSpatialiteDbInfoItem( QgsSpatialiteDbInfoItem *paren
   if ( !isValid() )
   {
     // This should never happen
-    QgsDebugMsgLevel( QStringLiteral( "-E--> QgsSpatialiteDbInfoItem::SpatialiteDbInfo -not valid- ItemType[%1] ModelType[%2]" ).arg( getItemTypeString() ).arg( getModelTypeString() ), 7 );
+    QgsDebugMsgLevel( QStringLiteral( "-E--> QgsSpatialiteDbInfoItem::SpatialiteDbInfo -not valid- ItemType[%1] ModelType[%2]" ).arg( getItemTypeName() ).arg( getModelTypeName() ), 7 );
   }
 }
 //-----------------------------------------------------------------
@@ -1173,7 +1199,7 @@ QgsSpatialiteDbInfoItem::QgsSpatialiteDbInfoItem( QgsSpatialiteDbInfoItem *paren
             break;
           default:
             // This should never happen
-            QgsDebugMsgLevel( QStringLiteral( "-W-> QgsSpatialiteDbInfoItem::SpatialiteDbLayer type not handeled  ItemType[%1] ModelType[%2]" ).arg( getItemTypeString() ).arg( getModelTypeString() ), 7 );
+            QgsDebugMsgLevel( QStringLiteral( "-W-> QgsSpatialiteDbInfoItem::SpatialiteDbLayer type not handeled  ItemType[%1] ModelType[%2]" ).arg( getItemTypeName() ).arg( getModelTypeName() ), 7 );
             break;
         }
       }
@@ -1191,7 +1217,7 @@ QgsSpatialiteDbInfoItem::QgsSpatialiteDbInfoItem( QgsSpatialiteDbInfoItem *paren
             break;
           default:
             // This should never happen
-            QgsDebugMsgLevel( QStringLiteral( "-W-> QgsSpatialiteDbInfoItem::SpatialiteDbLayer type not handeled  ItemType[%1] ModelType[%2]" ).arg( getItemTypeString() ).arg( getModelTypeString() ), 7 );
+            QgsDebugMsgLevel( QStringLiteral( "-W-> QgsSpatialiteDbInfoItem::SpatialiteDbLayer type not handeled  ItemType[%1] ModelType[%2]" ).arg( getItemTypeName() ).arg( getModelTypeName() ), 7 );
             break;
         }
       }
@@ -1201,7 +1227,7 @@ QgsSpatialiteDbInfoItem::QgsSpatialiteDbInfoItem( QgsSpatialiteDbInfoItem *paren
         switch ( mItemType )
         {
           case ItemTypeLayer:
-            if ( isVector() )
+            if ( isLayerVectorType() )
             {
               // call list columns, when vector
               // This will be retrieved from and added to the calling Parent-Item
@@ -1214,12 +1240,12 @@ QgsSpatialiteDbInfoItem::QgsSpatialiteDbInfoItem( QgsSpatialiteDbInfoItem *paren
                   case QgsSpatialiteDbInfo::VirtualShape:
                   case QgsSpatialiteDbInfo::TopologyExport:
                     dbMetadataGroupItem->setToolTip( getTableNameIndex(), QStringLiteral( " ViewTableName(%1)" ).arg( getDbLayer()->getViewTableName() ) );
-                    dbMetadataGroupItem->setToolTip( getGeometryTypeIndex(), QStringLiteral( "Columns cannot be added or removed from a  %1" ).arg( getLayerTypeString() ) );
+                    dbMetadataGroupItem->setToolTip( getGeometryTypeIndex(), QStringLiteral( "Columns cannot be added or removed from a  %1" ).arg( getLayerTypeName() ) );
                     break;
                   default:
                     break;
                 }
-                dbMetadataGroupItem->setText( getGeometryTypeIndex(), getLayerTypeString() );
+                dbMetadataGroupItem->setText( getGeometryTypeIndex(), getLayerTypeName() );
                 dbMetadataGroupItem->setIcon( getGeometryTypeIndex(), getLayerTypeIcon() );
                 mParentItem->mPrepairedChildItems.append( dbMetadataGroupItem );
                 mIsItemValid = true;
@@ -1228,7 +1254,7 @@ QgsSpatialiteDbInfoItem::QgsSpatialiteDbInfoItem( QgsSpatialiteDbInfoItem *paren
             break;
           default:
             // This should never happen
-            QgsDebugMsgLevel( QStringLiteral( "-W-> QgsSpatialiteDbInfoItem::SpatialiteDbLayer type not handeled  ItemType[%1] ModelType[%2]" ).arg( getItemTypeString() ).arg( getModelTypeString() ), 7 );
+            QgsDebugMsgLevel( QStringLiteral( "-W-> QgsSpatialiteDbInfoItem::SpatialiteDbLayer type not handeled  ItemType[%1] ModelType[%2]" ).arg( getItemTypeName() ).arg( getModelTypeName() ), 7 );
             break;
         }
       }
@@ -1239,7 +1265,7 @@ QgsSpatialiteDbInfoItem::QgsSpatialiteDbInfoItem( QgsSpatialiteDbInfoItem *paren
   if ( !isValid() )
   {
     // This should never happen
-    QgsDebugMsgLevel( QStringLiteral( "-E--> QgsSpatialiteDbInfoItem::SpatialiteDbLayer -not valid- ItemType[%1] ModelType[%2]" ).arg( getItemTypeString() ).arg( getModelTypeString() ), 7 );
+    QgsDebugMsgLevel( QStringLiteral( "-E--> QgsSpatialiteDbInfoItem::SpatialiteDbLayer -not valid- ItemType[%1] ModelType[%2]" ).arg( getItemTypeName() ).arg( getModelTypeName() ), 7 );
   }
 }
 // -- ---------------------------------- --
@@ -1269,7 +1295,7 @@ QgsSpatialiteDbInfoItem::QgsSpatialiteDbInfoItem( QgsSpatialiteDbInfoItem *paren
             break;
           default:
             // This should never happen
-            QgsDebugMsgLevel( QStringLiteral( "-W-> QgsSpatialiteDbInfoItem::ItemType -type not handeled- ItemType[%1] ModelType[%2]" ).arg( getItemTypeString() ).arg( getModelTypeString() ), 7 );
+            QgsDebugMsgLevel( QStringLiteral( "-W-> QgsSpatialiteDbInfoItem::ItemType -type not handeled- ItemType[%1] ModelType[%2]" ).arg( getItemTypeName() ).arg( getModelTypeName() ), 7 );
             break;
         }
       }
@@ -1286,7 +1312,7 @@ QgsSpatialiteDbInfoItem::QgsSpatialiteDbInfoItem( QgsSpatialiteDbInfoItem *paren
   if ( !isValid() )
   {
     // This should never happen
-    QgsDebugMsgLevel( QStringLiteral( "-E-> QgsSpatialiteDbInfoItem::ItemType -not valid- ItemType[%1] ModelType[%2]" ).arg( getItemTypeString() ).arg( getModelTypeString() ), 7 );
+    QgsDebugMsgLevel( QStringLiteral( "-E-> QgsSpatialiteDbInfoItem::ItemType -not valid- ItemType[%1] ModelType[%2]" ).arg( getItemTypeName() ).arg( getModelTypeName() ), 7 );
   }
 }
 // -- ---------------------------------- --
@@ -1345,6 +1371,7 @@ QgsSpatialiteDbInfoItem::QgsSpatialiteDbInfoItem( QgsSpatialiteDbInfoItem *paren
           // Either MBTilesTable or MBTilesView can be used [same result]
           case ItemTypeGroupMBTilesTable:
           case ItemTypeGroupMBTilesView:
+          case ItemTypeGroupMBTilesVector:
             // called from createGroupLayerItem
             if ( buildSpatialSubGroups() > 0 )
             {
@@ -1362,7 +1389,7 @@ QgsSpatialiteDbInfoItem::QgsSpatialiteDbInfoItem( QgsSpatialiteDbInfoItem *paren
             break;
           default:
             // This should never happen
-            QgsDebugMsgLevel( QStringLiteral( "-W-> QgsSpatialiteDbInfoItem::ItemType -type not handeled- ItemType[%1] ModelType[%2]" ).arg( getItemTypeString() ).arg( getModelTypeString() ), 7 );
+            QgsDebugMsgLevel( QStringLiteral( "-W-> QgsSpatialiteDbInfoItem::ItemType -type not handeled- ItemType[%1] ModelType[%2]" ).arg( getItemTypeName() ).arg( getModelTypeName() ), 7 );
             break;
         }
       }
@@ -1379,7 +1406,7 @@ QgsSpatialiteDbInfoItem::QgsSpatialiteDbInfoItem( QgsSpatialiteDbInfoItem *paren
   if ( !isValid() )
   {
     // This should never happen
-    QgsDebugMsgLevel( QStringLiteral( "-E-> QgsSpatialiteDbInfoItem::ItemType -not valid- ItemType[%1] ModelType[%2]" ).arg( getItemTypeString() ).arg( getModelTypeString() ), 7 );
+    QgsDebugMsgLevel( QStringLiteral( "-E-> QgsSpatialiteDbInfoItem::ItemType -not valid- ItemType[%1] ModelType[%2]" ).arg( getItemTypeName() ).arg( getModelTypeName() ), 7 );
   }
 }
 // -- ---------------------------------- --
@@ -1440,6 +1467,7 @@ QgsSpatialiteDbInfoItem::QgsSpatialiteDbInfoItem( QgsSpatialiteDbInfoItem *paren
           // Either MBTilesTable or MBTilesView can be used [same result]
           case ItemTypeGroupMBTilesTable:
           case ItemTypeGroupMBTilesView:
+          case ItemTypeGroupMBTilesVector:
             // called from createGroupLayerItem or buildSpatialSubGroups
             if ( buildSpatialSubGroup( sItemName, saItemInfos ) > 0 )
             {
@@ -1462,7 +1490,7 @@ QgsSpatialiteDbInfoItem::QgsSpatialiteDbInfoItem( QgsSpatialiteDbInfoItem *paren
             break;
           default:
             // This should never happen
-            QgsDebugMsgLevel( QStringLiteral( "-W-> QgsSpatialiteDbInfoItem::ItemType,ItemName,ItemInfos -type not handeled- ItemType[%1] ModelType[%2]" ).arg( getItemTypeString() ).arg( getModelTypeString() ), 7 );
+            QgsDebugMsgLevel( QStringLiteral( "-W-> QgsSpatialiteDbInfoItem::ItemType,ItemName,ItemInfos -type not handeled- ItemType[%1] ItemName[%2] ModelType[%3]" ).arg( getItemTypeName() ).arg( sItemName ).arg( getModelTypeName() ), 7 );
             break;
         }
       }
@@ -1483,7 +1511,7 @@ QgsSpatialiteDbInfoItem::QgsSpatialiteDbInfoItem( QgsSpatialiteDbInfoItem *paren
             break;
           default:
             // This should never happen
-            QgsDebugMsgLevel( QStringLiteral( "-W-> QgsSpatialiteDbInfoItem::ItemType,ItemName,ItemInfos -type not handeled- ItemType[%1] ModelType[%2]" ).arg( getItemTypeString() ).arg( getModelTypeString() ), 7 );
+            QgsDebugMsgLevel( QStringLiteral( "-W-> QgsSpatialiteDbInfoItem::ItemType,ItemName,ItemInfos -type not handeled- ItemType[%1] ItemName[%2] ModelType[%3]" ).arg( getItemTypeName() ).arg( sItemName ).arg( getModelTypeName() ), 7 );
             break;
         }
       }
@@ -1495,7 +1523,7 @@ QgsSpatialiteDbInfoItem::QgsSpatialiteDbInfoItem( QgsSpatialiteDbInfoItem *paren
   if ( !isValid() )
   {
     // This should never happen
-    QgsDebugMsgLevel( QStringLiteral( "-E-> QgsSpatialiteDbInfoItem::ItemType,ItemName,ItemInfos -not valid- ItemType[%1] ItemName[%2] saItemInfos.count[%3] ModelType[%4]" ).arg( getItemTypeString() ).arg( sItemName ).arg( saItemInfos .count() ).arg( getModelTypeString() ), 7 );
+    QgsDebugMsgLevel( QStringLiteral( "-E-> QgsSpatialiteDbInfoItem::ItemType,ItemName,ItemInfos -not valid- ItemType[%1] ItemName[%2] saItemInfos.count[%3] ModelType[%4]" ).arg( getItemTypeName() ).arg( sItemName ).arg( saItemInfos .count() ).arg( getModelTypeName() ), 7 );
   }
 }
 //-----------------------------------------------------------------
@@ -1510,7 +1538,9 @@ bool QgsSpatialiteDbInfoItem::getCopyCellText( int iColumn, int &iCommandRole, Q
   }
   iCommandRole = -1; // 0=copy ; 1=edit ; 2=remove ; 30 column-Remove
   // sMenuText = sToolTip;
-  QgsDebugMsgLevel( QStringLiteral( "-II-> QgsSpatialiteDbInfoItem::getCopyCellText  Model-Type[%1] Item-Type[%2] Column[%3] Layer-Type[%4]" ).arg( getModelTypeString() ).arg( getItemTypeString() ).arg( iColumn ).arg( getLayerTypeString() ), 7 );
+#if 0
+  QgsDebugMsgLevel( QStringLiteral( "-II-> QgsSpatialiteDbInfoItem::getCopyCellText  Model-Type[%1] Item-Type[%2] Column[%3] Layer-Type[%4]" ).arg( getModelTypeName() ).arg( getItemTypeName() ).arg( iColumn ).arg( getLayerTypeName() ), 7 );
+#endif
   switch ( getItemType() )
   {
     case ItemTypeRoot:
@@ -1530,6 +1560,7 @@ bool QgsSpatialiteDbInfoItem::getCopyCellText( int iColumn, int &iCommandRole, Q
     case ItemTypeGroupGeoPackageRaster:
     case ItemTypeGroupMBTilesTable:
     case ItemTypeGroupMBTilesView:
+    case ItemTypeGroupMBTilesVector:
     case ItemTypeGroupMetadata:
     case ItemTypeGroupAllSpatialLayers:
     case ItemTypeGroupNonSpatialTables:
@@ -1543,16 +1574,15 @@ bool QgsSpatialiteDbInfoItem::getCopyCellText( int iColumn, int &iCommandRole, Q
       // Ignore for all Columns, no copy
       return bRc;
     }
+    break;
     case ItemTypeDb:
     case ItemTypeLayer:
     case ItemTypeStylesMetadata:
-    case ItemTypeWarning:
-    case ItemTypeError:
     {
       // Allow for all Columns, copy
       iCommandRole = 0;
       sMenuText = QStringLiteral( "Copy Cell text" );
-      sToolTip = QStringLiteral( "Copy Cell text for ItemType[%1] ModelType[%2]" ).arg( getItemTypeString() ).arg( getModelTypeString() );
+      sToolTip = QStringLiteral( "Copy Cell text for ItemType[%1] ModelType[%2]" ).arg( getItemTypeName() ).arg( getModelTypeName() );
       bRc = true;
       return bRc;
     }
@@ -1562,14 +1592,14 @@ bool QgsSpatialiteDbInfoItem::getCopyCellText( int iColumn, int &iCommandRole, Q
       // allow remove switch to GroupItem
       iCommandRole = 2;
       sMenuText = QStringLiteral( "Remove all Items is this Group" );
-      sToolTip = QStringLiteral( "Remove all Items is this Group ItemType[%1] ModelType[%2]" ).arg( getItemTypeString() ).arg( getModelTypeString() );
+      sToolTip = QStringLiteral( "Remove all Items is this Group ItemType[%1] ModelType[%2]" ).arg( getItemTypeName() ).arg( getModelTypeName() );
       break;
     case ItemTypeLayerOrderVectorLayer:
     case ItemTypeLayerOrderRasterLayer:
       // allow copy and remove switch to LayerItem
       iCommandRole = 20;
       sMenuText = QStringLiteral( "Remove this Item from this Group" );
-      sToolTip = QStringLiteral( "Remove this Item from this Group ItemType[%1] ModelType[%2]" ).arg( getItemTypeString() ).arg( getModelTypeString() );
+      sToolTip = QStringLiteral( "Remove this Item from this Group ItemType[%1] ModelType[%2]" ).arg( getItemTypeName() ).arg( getModelTypeName() );
       break;
     default:
       break;
@@ -1596,7 +1626,7 @@ bool QgsSpatialiteDbInfoItem::getCopyCellText( int iColumn, int &iCommandRole, Q
                 // No SpatialView contains this Column-Name being used by the Views registered Table
                 iCommandRole = 30;
                 sMenuText = QStringLiteral( "Remove this Column from this Table" );
-                sToolTip = QStringLiteral( "Remove this Item from this Table ItemType[%1] ModelType[%2] LayerType[%3]" ).arg( getItemTypeString() ).arg( getModelTypeString() ).arg( getLayerTypeString() );
+                sToolTip = QStringLiteral( "Remove this Item from this Table ItemType[%1] ModelType[%2] LayerType[%3]" ).arg( getItemTypeName() ).arg( getModelTypeName() ).arg( getLayerTypeName() );
                 bRc = true;
                 return bRc;
               }
@@ -1605,7 +1635,7 @@ bool QgsSpatialiteDbInfoItem::getCopyCellText( int iColumn, int &iCommandRole, Q
           // Allow copy of text for any other conditions
           iCommandRole = 0;
           sMenuText = QStringLiteral( "Copy Cell text" );
-          sToolTip = QStringLiteral( "Copy Cell text for ItemType[%1] ModelType[%2]" ).arg( getItemTypeString() ).arg( getModelTypeString() );
+          sToolTip = QStringLiteral( "Copy Cell text for ItemType[%1] ModelType[%2]" ).arg( getItemTypeName() ).arg( getModelTypeName() );
           bRc = true;
           return bRc;
         }
@@ -1627,8 +1657,14 @@ bool QgsSpatialiteDbInfoItem::getCopyCellText( int iColumn, int &iCommandRole, Q
     {
       case ItemTypeLayer:
       case ItemTypeNonSpatialTable:
+      case ItemTypeSpatialRefSysAux:
       {
+        // Allow copy of text for any other conditions
+        iCommandRole = 0;
+        sMenuText = QStringLiteral( "Copy Cell text" );
+        sToolTip = QStringLiteral( "Copy Cell text for ItemType[%1] ModelType[%2]" ).arg( getItemTypeName() ).arg( getModelTypeName() );
         bRc = true;
+        return bRc;
       }
       break;
       default:
@@ -1641,6 +1677,8 @@ bool QgsSpatialiteDbInfoItem::getCopyCellText( int iColumn, int &iCommandRole, Q
       case ItemTypePointMetadata:
       case ItemTypeRectangleMetadata:
       case ItemTypeSpatialRefSysAux:
+      case ItemTypeWarning:
+      case ItemTypeError:
       {
         // Description only, no copy
         bRc = false;
@@ -1660,11 +1698,18 @@ bool QgsSpatialiteDbInfoItem::getCopyCellText( int iColumn, int &iCommandRole, Q
       case ItemTypeMBTilesMetadata:
       case ItemTypePointMetadata:
       case ItemTypeRectangleMetadata:
-      case ItemTypeNonSpatialTable:
       case ItemTypeSpatialRefSysAux:
+      case ItemTypeNonSpatialTable:
+      case ItemTypeWarning:
+      case ItemTypeError:
       {
-        // Extent only, copy and change postion
+        // Extent only, copy and change position
+        // Allow copy of text for any other conditions
+        iCommandRole = 0;
+        sMenuText = QStringLiteral( "Copy Cell text" );
+        sToolTip = QStringLiteral( "Copy Cell text for ItemType[%1] ModelType[%2]" ).arg( getItemTypeName() ).arg( getModelTypeName() );
         bRc = true;
+        return bRc;
       }
       break;
       default:
@@ -1702,6 +1747,22 @@ bool QgsSpatialiteDbInfoItem::getCopyCellText( int iColumn, int &iCommandRole, Q
       default:
         break;
     }
+    switch ( getItemType() )
+    {
+      case ItemTypeWarning:
+      case ItemTypeError:
+      {
+        // Allow copy of text for any other conditions
+        iCommandRole = 0;
+        sMenuText = QStringLiteral( "Copy Cell text" );
+        sToolTip = QStringLiteral( "Copy Cell text for ItemType[%1] ModelType[%2]" ).arg( getItemTypeName() ).arg( getModelTypeName() );
+        bRc = true;
+        return bRc;
+      }
+      break;
+      default:
+        break;
+    }
   }
   else if ( iColumn == getSqlQueryIndex() )
   {
@@ -1716,6 +1777,8 @@ bool QgsSpatialiteDbInfoItem::getCopyCellText( int iColumn, int &iCommandRole, Q
       case ItemTypeColumn:
       case ItemTypeNonSpatialTable:
       case ItemTypeSpatialRefSysAux:
+      case ItemTypeWarning:
+      case ItemTypeError:
       {
         // Empty, no copy
         bRc = false;
@@ -1834,12 +1897,21 @@ int QgsSpatialiteDbInfoItem::addColumnItems()
     int iPrimaryKey;
     int iForeignKey;
     QIcon iconType;
-    int iCommandType = 0;
-    bool bAlterTable = false;
+#if 0
+    int iCommandType = 100;
+    QgsSpatialiteDbInfo::AlterTableType commandType = QgsSpatialiteDbInfo::AlterTableConvertTable;
+    bool bAlterTable = true;
     QMap<int, QString> alterTableInfoList;
     QMap<QString, int> alterTablePrimaryKeyList;
     QMultiMap<QString, QString> alterTableForeignKeyList;
-    // buildSqlCreate( iCommandType, bAlterTable, alterTableInfoList,  alterTablePrimaryKeyList, alterTableForeignKeyList )
+    QgsSpatialiteDbInfo::GeometryFormatType geometryFormatTypeTo = QgsSpatialiteDbInfo::GeometryFormatGpkg; // getDbLayer()->getGeometryFormatType();
+    QStringList saSqlCreate = getDbLayer()->buildSqlCreate( commandType, bAlterTable, alterTableInfoList, alterTablePrimaryKeyList, alterTableForeignKeyList, geometryFormatTypeTo );
+    QgsDebugMsgLevel( QString( "QgsSpatialiteDbInfoItem::addColumnItems LayerName[%1] SqlCreate[%2]" ).arg( getLayerName() ).arg( saSqlCreate.count() ), 7 );
+    for ( int i = 0; i < saSqlCreate.count(); i++ )
+    {
+      QgsDebugMsgLevel( QString( "QgsSpatialiteDbInfoItem::addColumnItems LayerName[%1] SqlCreate[%2]" ).arg( getLayerName() ).arg( saSqlCreate.at( i ) ), 7 );
+    }
+#endif
     QMap<int, QString> tableInfoList = getDbLayer()->getTableInfoList();
     if ( tableInfoList.count() > 0 )
     {
@@ -1849,6 +1921,8 @@ int QgsSpatialiteDbInfoItem::addColumnItems()
       sGeometryColumn += QStringLiteral( " [including active geometry]" );
       setToolTip( getGeometryNameIndex(), sGeometryColumn );
       QString sPrimaryKey = getDbLayer()->getPrimaryKey();
+      QStringList saPrimaryKeys = getDbLayer()->getPrimaryKeyList().uniqueKeys();
+      QStringList saForeignKeys = getDbLayer()->getForeignKeyList().uniqueKeys();
       for ( QMap<int, QString>::iterator itColumns = tableInfoList.begin(); itColumns != tableInfoList.end(); ++itColumns )
       {
         int iColumnCid = itColumns.key();
@@ -1898,7 +1972,7 @@ int QgsSpatialiteDbInfoItem::addColumnItems()
           dbColumnItem->setIcon( getGeometryNameIndex(), iconType );
           dbColumnItem->setBackground( getGeometryNameIndex(), bg_color );
           // Column 2: getGeometryTypeIndex()
-          if ( sColumnName == sPrimaryKey )
+          if ( saPrimaryKeys.contains( sColumnName ) )
           {
             dbColumnItem->setIcon( getGeometryTypeIndex(), QgsSpatialiteDbInfo::QVariantTypeIcon( QVariant::KeySequence ) );
             dbColumnItem->setBackground( getGeometryTypeIndex(), bg_color_Primary_Key );
@@ -1915,7 +1989,7 @@ int QgsSpatialiteDbInfoItem::addColumnItems()
               }
             }
           }
-          else if ( iForeignKey > 0 )
+          else if ( saForeignKeys.contains( sColumnName ) )
           {
             dbColumnItem->setIcon( getGeometryTypeIndex(), QgsSpatialiteDbInfo::QVariantTypeIcon( QVariant::UserType ) );
             dbColumnItem->setBackground( getGeometryTypeIndex(), bg_color_Foreign_Key );
@@ -1977,7 +2051,7 @@ int QgsSpatialiteDbInfoItem::addLayerStylesItems()
     QColor bg_color = QColor( "lightyellow" );
     QColor bg_color_Selected = QColor( "darkcyan" );
     QgsSpatialiteDbInfo::SpatialiteLayerType styleType = QgsSpatialiteDbInfo::Metadata;
-    if ( mIsVectorType )
+    if ( isLayerVectorType() )
     {
       styleType = QgsSpatialiteDbInfo::StyleVector;
     }
@@ -2073,37 +2147,30 @@ int QgsSpatialiteDbInfoItem::addCommonMetadataItems()
     QColor bg_color_extent = QColor( "lightyellow" );
     QColor bg_color_srid_default = QColor( "steelblue" );
     QColor fg_color_srid_default = QColor( "yellow" );
-    bool bMetadataExtended = false;
-    if ( mIsRasterLite2 )
-    {
-      bMetadataExtended = true;
-    }
     QgsLayerMetadata layerMetadata = getDbLayer()->getLayerMetadata();
-    QString sToolTipText = QStringLiteral( "Metaddata [%1]" ).arg( getLayerTypeString() );
+    QString sToolTipText = QStringLiteral( "Metaddata [%1]" ).arg( getLayerTypeName() );
     QList<QPair<QString, QString>> metaData;
     metaData.append( qMakePair( QStringLiteral( "Capabilities" ), getDbLayer()->getCapabilitiesString() ) );
-    if ( mIsVectorType )
-    {
-      metaData.append( qMakePair( QStringLiteral( "Features" ), QString::number( getDbLayer()->getFeaturesCount() ) ) );
-    }
-    if ( ( !mIsMbTiles ) && ( !mIsRasterLite1 ) )
+    if ( ( !getDbLayer()->isLayerFdoOgr() ) && ( !getDbLayer()->isLayerRasterLite1() ) )
     {
       metaData.append( qMakePair( QStringLiteral( "Title" ), getDbLayer()->getTitle() ) );
       metaData.append( qMakePair( QStringLiteral( "Abstract" ), getDbLayer()->getAbstract() ) );
-    }
-    if ( bMetadataExtended )
-    {
       metaData.append( qMakePair( QStringLiteral( "Copyright" ), getDbLayer()->getCopyright() ) );
     }
-    if ( !mIsVectorType )
+    if ( isLayerVectorType() )
+    {
+      metaData.append( qMakePair( QStringLiteral( "Features" ), QString::number( getDbLayer()->getFeaturesCount() ) ) );
+      metaData.append( qMakePair( QStringLiteral( "Spatial-Index-Type" ), getDbLayer()->getSpatialIndexString() ) );
+      metaData.append( qMakePair( QStringLiteral( "Geometry-Format-Type" ), getDbLayer()->getGeometryFormatTypeName() ) );
+    }
+    if ( isLayerRasterType() )
     {
       metaData.append( qMakePair( QStringLiteral( "Resolution - X" ), QString::number( getDbLayer()->getLayerImageResolutionX(), 'f', 7 ) ) );
       metaData.append( qMakePair( QStringLiteral( "Resolution - Y" ), QString::number( getDbLayer()->getLayerImageResolutionY(), 'f', 7 ) ) );
       metaData.append( qMakePair( QStringLiteral( "Image-Size" ), QString( "%1x%2" ).arg( getDbLayer()->getLayerImageWidth() ).arg( getDbLayer()->getLayerImageHeight() ) ) );
       metaData.append( qMakePair( QStringLiteral( "Bands" ), QString::number( getDbLayer()->getLayerNumBands() ) ) );
-      //if ( mIsRasterLite2 )
-      metaData.append( qMakePair( QStringLiteral( "Data Type" ), getDbLayer()->getLayerRasterDataTypeString() ) );
-      metaData.append( qMakePair( QStringLiteral( "Pixel Type" ), getDbLayer()->getLayerRasterPixelTypeString() ) );
+      metaData.append( qMakePair( QStringLiteral( "Data Type" ), getDbLayer()->getLayerRasterDataTypeName() ) );
+      metaData.append( qMakePair( QStringLiteral( "Pixel Type" ), getDbLayer()->getLayerRasterPixelTypeName() ) );
       metaData.append( qMakePair( QStringLiteral( "Compression Type" ), getDbLayer()->getLayerRasterCompressionType() ) );
       metaData.append( qMakePair( QStringLiteral( "Tile Size" ), QString( "%1x%2" ).arg( getDbLayer()->getLayerTileWidth() ).arg( getDbLayer()->getLayerTileHeight() ) ) );
     }
@@ -2253,20 +2320,25 @@ int QgsSpatialiteDbInfoItem::addMbTilesMetadataItems()
   if ( ( getSpatialiteDbInfo() ) && ( getDbLayer() ) )
   {
     QColor bg_color = QColor( "lightyellow" );
-    QColor bg_edit = QColor( "darkseagreen" );
+    QColor bg_edit = QColor( "paleturquoise" );
+    QColor bg_clipped = QColor( "khaki" );
     QMap<QString, QString> metaData = getSpatialiteDbInfo()->getDbMBTileMetaData();
     // Column 1: getGeometryNameIndex()
     QString sGeometryColumn = QStringLiteral( "metadata entries : %1" ).arg( ( metaData.count() ) );
     setText( getGeometryNameIndex(), sGeometryColumn );
     sGeometryColumn += QStringLiteral( " [from the MBTiles specific 'metadata' TABLE]" );
     setToolTip( getGeometryNameIndex(), sGeometryColumn );
+    // Some values are to large to display properly: set max-value to show
+    int iMaxString = 500;
+    int iCountString = 0;
     for ( QMap<QString, QString>::iterator itLayers = metaData.begin(); itLayers != metaData.end(); ++itLayers )
     {
       if ( !itLayers.key().isEmpty() )
       {
         QString sName = itLayers.key();
         QString sValue = itLayers.value();
-        QString sSortTag = QStringLiteral( "AZZC_%1_%2" ).arg( getDbLayer()->getLayerName() ).arg( sName );
+        // addCommonMetadataItems: 'AZZM' ['Z_': should be shown as last entry, after CommonMetadataItems]
+        QString sSortTag = QStringLiteral( "AZZZ_%1_%2" ).arg( getDbLayer()->getLayerName() ).arg( sName );
         QgsSpatialiteDbInfoItem *dbMetadataItem = new QgsSpatialiteDbInfoItem( this, QgsSpatialiteDbInfoItem::ItemTypeMBTilesMetadata );
         if ( dbMetadataItem )
         {
@@ -2275,12 +2347,26 @@ int QgsSpatialiteDbInfoItem::addMbTilesMetadataItems()
           dbMetadataItem->setToolTip( getTableNameIndex(), QStringLiteral( "Entry of MbTiles 'metadata' TABLE" ) );
           dbMetadataItem->setBackground( getTableNameIndex(), bg_color );
           // Column 1: getGeometryNameIndex()
+          if ( sValue.count() > iMaxString )
+          {
+            iCountString  = sValue.count();
+            // Some values are to large to display properly: json: 171889
+            // QT 5.10: sValue = sValue.chopped(iMaxString)
+            sValue.chop( ( sValue.count() - iMaxString ) ) ;
+            QString sInfo = QStringLiteral( "....clipped after %1 characters, of %2 ...." ).arg( iMaxString ).arg( iCountString );
+            dbMetadataItem->setBackground( getGeometryNameIndex(), bg_clipped );
+            // Column 2: getGeometryTypeIndex()
+            dbMetadataItem->setText( getGeometryTypeIndex(), sInfo );
+            dbMetadataItem->setBackground( getGeometryTypeIndex(), bg_color );
+          }
+          else
+          {
+            dbMetadataItem->setBackground( getGeometryNameIndex(), bg_edit );
+          }
           dbMetadataItem->setText( getGeometryNameIndex(), sValue );
           // These can be long string descriptions, add ToolTip
           dbMetadataItem->setToolTip( getGeometryNameIndex(), sValue );
           dbMetadataItem->setEditable( getGeometryNameIndex(), true );
-          dbMetadataItem->setBackground( getGeometryNameIndex(), bg_edit );
-          // Column 2 [not used]: getGeometryTypeIndex()
           // Column 3 [not used]: getSqlQueryIndex()
           // Column 4 [should always be  used]: getColumnSortHidden()
           dbMetadataItem->setText( getColumnSortHidden(), sSortTag );
@@ -2454,6 +2540,7 @@ bool QgsSpatialiteDbInfoItem::onInit()
       case ItemTypeGroupGeoPackageRaster:
       case ItemTypeGroupMBTilesTable:
       case ItemTypeGroupMBTilesView:
+      case ItemTypeGroupMBTilesVector:
       case ItemTypeGroupMetadata:
       case ItemTypeGroupAllSpatialLayers:
       case ItemTypeGroupNonSpatialTables:
@@ -2495,11 +2582,37 @@ bool QgsSpatialiteDbInfoItem::onInit()
       mSpatialiteDbInfo = getDbLayer()->getSpatialiteDbInfo();
     }
     mLayerType =  getDbLayer()->getLayerType();
-    mLayerTypeString = getDbLayer()->getLayerTypeString();
+    mLayerTypeName = getDbLayer()->getLayerTypeName();
     mLayerName = getDbLayer()->getLayerName();
+    mLayerProviderKey = getDbLayer()->getLayerProviderKey();
+    mLayerUris = getDbLayer()->getLayerUris();
+    mIsLayerSpatialite = getDbLayer()->isLayerSpatialite();
+    mIsLayerVectorType = getDbLayer()->isLayerVectorType();
+    mIsLayerRasterType = getDbLayer()->isLayerRasterType();
+    mIsLayerSpatialTable = getDbLayer()->isLayerSpatialTable();
+    mIsLayerSpatialView = getDbLayer()->isLayerSpatialView();
+    mIsLayerVirtualShape = getDbLayer()->isLayerVirtualShape();
+    mIsLayerRasterLite2 = getDbLayer()->isLayerRasterLite2();
+    mIsLayerRasterLite1 = getDbLayer()->isLayerRasterLite1();
+    mIsLayerGeoPackage = getDbLayer()->isLayerGeoPackage();
+    mIsLayerGeoPackageRaster = getDbLayer()->isLayerGeoPackageRaster();
+    mIsLayerGeoPackageVector = getDbLayer()->isLayerGeoPackageVector();
+    mIsLayerFdoOgr = getDbLayer()->isLayerFdoOgr();
+    mIsLayerMbTilesRaster = getDbLayer()->isLayerMbTilesRaster();
+    mIsLayerMbTilesVector = getDbLayer()->isLayerMbTilesVector();
     if ( getSpatialiteDbInfo() )
     {
       mIsDbSelectable = getSpatialiteDbInfo()->isDbValid();
+      mIsDbSpatialite = getSpatialiteDbInfo()->isDbSpatialite();
+      mIsDbRasterLite2 = getSpatialiteDbInfo()->isDbRasterLite2();
+      mIsDbSpatialiteLegacy = getSpatialiteDbInfo()->isDbSpatialiteLegacy();
+      mIsDbSpatialite40 = getSpatialiteDbInfo()->isDbSpatialite40();
+      mIsDbSpatialite50 = getSpatialiteDbInfo()->isDbSpatialite50();
+      mIsDbGdalOgr = getSpatialiteDbInfo()->isDbGdalOgr();
+      mIsDbMbTiles = getSpatialiteDbInfo()->isDbMbTiles();
+      mIsDbGeoPackage = getSpatialiteDbInfo()->isDbGeoPackage();
+      mIsDbSqlite3 = getSpatialiteDbInfo()->isDbSqlite3();
+      mDbReadOnly = getSpatialiteDbInfo()->isDbReadOnly();
     }
     switch ( mItemType )
     {
@@ -2525,58 +2638,34 @@ bool QgsSpatialiteDbInfoItem::onInit()
         mCanColumnAdd = true;
         mCanColumnRemove = true;
         mCanColumnRename = true;
-        if ( mLayerType ==  QgsSpatialiteDbInfo::SpatialView )
-        {
-          mIsSpatialView = true;
-          mCanColumnAdd = false;
-          mCanColumnRemove = false;
-          mCanColumnRename = false;
-        }
-        if ( mLayerType ==  QgsSpatialiteDbInfo::VirtualShape )
+        if ( isLayerSpatialView() )
         {
           mCanColumnAdd = false;
           mCanColumnRemove = false;
           mCanColumnRename = false;
         }
-        if ( mLayerType ==  QgsSpatialiteDbInfo::GeoPackageVector )
+        if ( isLayerVirtualShape() )
         {
-          mIsGeoPackage = true;
+          mCanColumnAdd = false;
+          mCanColumnRemove = false;
+          mCanColumnRename = false;
         }
-        mIsVectorType = true;
+        break;
+        if ( isLayerMbTilesVector() )
+        {
+          mCanColumnAdd = false;
+          mCanColumnRemove = false;
+          mCanColumnRename = false;
+        }
         break;
       case QgsSpatialiteDbInfo::MBTilesTable:
       case QgsSpatialiteDbInfo::MBTilesView:
-        mIsMbTiles = true;
-        mIsRasterType = true;
-        mIsVectorType = false;
         break;
       case QgsSpatialiteDbInfo::RasterLite2Raster:
       case QgsSpatialiteDbInfo::RasterLite1:
       case QgsSpatialiteDbInfo::GeoPackageRaster:
-        mIsVectorType = false;
-        if ( mLayerType ==  QgsSpatialiteDbInfo::RasterLite1 )
-        {
-          mIsRasterLite1 = true;
-          mIsRasterType = true;
-        }
-        if ( mLayerType ==  QgsSpatialiteDbInfo::RasterLite2Raster )
-        {
-          mIsRasterLite2 = true;
-          mIsRasterType = true;
-        }
-        if ( mLayerType ==  QgsSpatialiteDbInfo::GeoPackageRaster )
-        {
-          mIsGeoPackage = true;
-          mIsRasterType = true;
-        }
         break;
       default:
-        mIsVectorType = false;
-        mIsGeoPackage = false;
-        mIsMbTiles = false;
-        mIsRasterLite2 = false;
-        mIsRasterLite2 = false;
-        mIsSpatialView = false;
         break;
     }
   }
@@ -2647,6 +2736,7 @@ bool QgsSpatialiteDbInfoItem::onInit()
       // Either MBTilesTable or MBTilesView can be used [same result]
       case ItemTypeGroupMBTilesTable:
       case ItemTypeGroupMBTilesView:
+      case ItemTypeGroupMBTilesVector:
       // Either StyleVector or StyleRaster can be used [same result]
       case ItemTypeGroupStyleVector:
       case ItemTypeGroupStyleRaster:
@@ -2727,17 +2817,17 @@ bool QgsSpatialiteDbInfoItem::onInit()
   sMessage += QStringLiteral( "TableCounter[%1] " ).arg( getTableCounter() );
   if ( mParentItem )
   {
-    sMessage += QStringLiteral( "ItemType[this=%1,parent=%2] " ).arg( getItemTypeString() ).arg( mParentItem->getItemTypeString() );
-    sMessage += QStringLiteral( "ModelType[this=%1,parent=%2] " ).arg( getModelTypeString() ).arg( mParentItem->getModelTypeString() );
+    sMessage += QStringLiteral( "ItemType[this=%1,parent=%2] " ).arg( getItemTypeName() ).arg( mParentItem->getItemTypeName() );
+    sMessage += QStringLiteral( "ModelType[this=%1,parent=%2] " ).arg( getModelTypeName() ).arg( mParentItem->getModelTypeName() );
     sMessage += QStringLiteral( "Parent-childCount[%1] " ).arg( mParentItem->childCount() );
   }
   else
   {
-    sMessage += QStringLiteral( "ItemType[this=%1] " ).arg( getItemTypeString() );
-    sMessage += QStringLiteral( "ModelType[this=%1] " ).arg( getModelTypeString() );
+    sMessage += QStringLiteral( "ItemType[this=%1] " ).arg( getItemTypeName() );
+    sMessage += QStringLiteral( "ModelType[this=%1] " ).arg( getModelTypeName() );
   }
   sMessage += QStringLiteral( "DbContainterType[%1] " ).arg( dbSpatialMetadataString() );
-  sMessage += QStringLiteral( "LayerType[%1] " ).arg( getLayerTypeString() );
+  sMessage += QStringLiteral( "LayerType[%1] " ).arg( getLayerTypeName() );
   sMessage += QStringLiteral( "LayerName[%1] " ).arg( getLayerName() );
   sMessage += QStringLiteral( "isDbSelectable[%1] " ).arg( isDbSelectable() );
   sMessage += QStringLiteral( "isLayerSelectable[%1] " ).arg( isLayerSelectable() );
@@ -2803,9 +2893,19 @@ bool QgsSpatialiteDbInfoItem::moveChild( int iFrom, int iTo )
   return true;
 }
 //-----------------------------------------------------------------
+// QgsSpatialiteDbInfoItem::clearChildren
+// - returns the childCount before removing
+//-----------------------------------------------------------------
+int QgsSpatialiteDbInfoItem::clearChildren()
+{
+  int iCount = childCount();
+  mChildItems.clear();
+  return iCount;
+}
+//-----------------------------------------------------------------
 // QgsSpatialiteDbInfoItem::removeChild
 // - 0 based index
-// - returns thw following child row number ; -1 = empty ; -2 invalid range
+// - returns the following child row number ; -1 = empty ; -2 invalid range
 //-----------------------------------------------------------------
 int QgsSpatialiteDbInfoItem::removeChild( int iFrom )
 {
@@ -3046,7 +3146,7 @@ int QgsSpatialiteDbInfoItem::addSelectedDbLayers( QStringList &saSelectedLayers,
 // QgsSpatialiteDbInfoItem::insertPrepairedChildren
 // Adding/Removing Childrens to this node/item
 // - The ModelType must be ModelTypeLayerOrder and ItemTypeRoot
-// Note: this will be called from 'setLayerOrderData',
+// Note: this will be called from 'setLayerModelData',
 // - inside beginResetModel/endResetModel statements
 // -> therefore we can add and Remove while the View is not painting
 // for ItemTypeLayer: text() will return a TableName, use getLayerName
@@ -3085,11 +3185,11 @@ int QgsSpatialiteDbInfoItem::handelSelectedPrepairedChildren( bool bRemoveItems 
             {
               // Check the childItem for Vector or Raster
               SpatialiteDbInfoItemType itemType = ItemTypeUnknown;
-              if ( childItem->isVector() )
+              if ( childItem->isLayerVectorType() )
               {
                 itemType = ItemTypeLayerOrderVectorGroup;
               }
-              if ( childItem->isRaster() )
+              if ( childItem->isLayerRasterType() )
               {
                 itemType = ItemTypeLayerOrderRasterGroup;
               }
@@ -3224,7 +3324,7 @@ bool QgsSpatialiteDbInfoItem::setLayerSqlQuery( QString sLayerSqlQuery )
   bool bRc = false;
   if ( ( getModelType() == QgsSpatialiteDbInfoModel::ModelTypeConnections ) )
   {
-    if ( ( isLayerSelectable() ) && ( !getCousinLayerItem()->isLayerSelectable() ) )
+    if ( ( isLayerSelectable() ) && ( isLayerVectorType() ) )
     {
       // This is where the created Layer-Sql is stored
       setText( getSqlQueryIndex(), sLayerSqlQuery );
@@ -3334,7 +3434,7 @@ QIcon QgsSpatialiteDbInfoItem::getLayerTypeIcon() const
 {
   if ( isLayerSelectable() )
   {
-    if ( isVector() )
+    if ( isLayerVectorType() )
     {
       return getDbLayer()->getGeometryTypeIcon();
     }
@@ -3350,7 +3450,6 @@ QIcon QgsSpatialiteDbInfoItem::getLayerTypeIcon() const
 // The creating Connections-Layer must be stored so the latest version
 // version of the (possibly create) Sql-Query can be retrieved.
 // This will be used for the 'addDbMapLayers' logic
-// See
 //-----------------------------------------------------------------
 bool QgsSpatialiteDbInfoItem::setCousinLayerItem( QgsSpatialiteDbInfoItem *cousinLayerItem )
 {
@@ -3423,7 +3522,6 @@ int QgsSpatialiteDbInfoItem::addConnectionLayer( QgsSpatialiteDbInfoItem *childI
     if ( ( childItem->isValid() ) && ( childItem->isLayerSelectable() ) )
     {
       setDbLayer( childItem->getDbLayer() );
-      setCousinLayerItem( childItem );
       SpatialiteDbInfoItemType itemGroupType = ItemTypeUnknown;
       QColor bg_color = QColor( "steelblue" );
       QColor bg_black = QColor( "black" );
@@ -3435,7 +3533,7 @@ int QgsSpatialiteDbInfoItem::addConnectionLayer( QgsSpatialiteDbInfoItem *childI
       QString sToolTipText = QStringLiteral( "Rasters will be loaded first, then the Vectors so that the Vectors will be on top of the Rasters" );
       QString sSortTag = QStringLiteral( "AAAAA" );
       QString sGroupType = QString();
-      if ( childItem->isVector() )
+      if ( childItem->isLayerVectorType() )
       {
         itemGroupType = ItemTypeLayerOrderVectorGroup;
         sGroupType = QStringLiteral( "Vector" );
@@ -3446,7 +3544,7 @@ int QgsSpatialiteDbInfoItem::addConnectionLayer( QgsSpatialiteDbInfoItem *childI
         sToolTipText += QStringLiteral( "LINESTRING's will be on top of the POLYGON's\n" );
         sToolTipText += QStringLiteral( "POLYGON's will be on top of the Rasters" );
       }
-      else if ( childItem->isRaster() )
+      else if ( childItem->isLayerRasterType() )
       {
         itemGroupType = ItemTypeLayerOrderRasterGroup;
         sGroupType = QStringLiteral( "Raster" );
@@ -3513,6 +3611,7 @@ int QgsSpatialiteDbInfoItem::addConnectionLayer( QgsSpatialiteDbInfoItem *childI
           QgsSpatialiteDbInfoItem *layerItem = new QgsSpatialiteDbInfoItem( groupItem, childItem->getDbLayer() );
           if ( ( layerItem ) && ( layerItem->isValid() ) )
           {
+            layerItem->setCousinLayerItem( childItem );
             groupItem->mPrepairedChildItems.append( layerItem );
             groupItem->insertPrepairedChildren();
             // Set (the possibly changed) counter Text and ToolTip
@@ -4037,7 +4136,7 @@ bool QgsSpatialiteDbInfoItem::createErrorWarningsGroups()
   QMap<QString, QString> dbErrors = getSpatialiteDbInfoErrors( false ); // Errors [default]
   if ( dbErrors.count() > 0 )
   {
-    QgsSpatialiteDbInfoItem *dbErrorGroup = new QgsSpatialiteDbInfoItem( this, QgsSpatialiteDbInfoItem::ItemTypeError );
+    QgsSpatialiteDbInfoItem *dbErrorGroup = new QgsSpatialiteDbInfoItem( this, QgsSpatialiteDbInfoItem::ItemTypeGroupError );
     if ( dbErrorGroup )
     {
       if ( dbErrorGroup->isValid() )
@@ -4049,15 +4148,15 @@ bool QgsSpatialiteDbInfoItem::createErrorWarningsGroups()
         dbErrorGroup->setIcon( getTableNameIndex(), QgsSpatialiteDbInfo::SpatialiteLayerTypeIcon( QgsSpatialiteDbInfo::SpatialiteUnknown ) );
         // Column 1: getGeometryNameIndex()
         dbErrorGroup->setText( getGeometryNameIndex(), QStringLiteral( "Count: %1" ).arg( dbErrors.count() ) );
-        // Column 2 [not used]: getGeometryTypeIndex()
-        // Column 3: getSqlQueryIndex()
+        // Column 2: getGeometryTypeIndex()
         sText = QStringLiteral( "Cause [%1]" ).arg( QStringLiteral( "reported during the creation of SpatialiteDbInfo" ) );
-        dbErrorGroup->setText( getSqlQueryIndex(), sText );
+        dbErrorGroup->setText( getGeometryTypeIndex(), sText );
+        // Column 3 [not used]: getSqlQueryIndex()
         // Column 4 [should always be  used]: getColumnSortHidden()
         dbErrorGroup->setText( getColumnSortHidden(), sGroupSort );
         for ( QMap<QString, QString>::iterator itErrors = dbErrors.begin(); itErrors != dbErrors.end(); ++itErrors )
         {
-          QgsSpatialiteDbInfoItem *dbErrorItem = new QgsSpatialiteDbInfoItem( dbErrorGroup, QgsSpatialiteDbInfoItem::ItemTypeGroupError );
+          QgsSpatialiteDbInfoItem *dbErrorItem = new QgsSpatialiteDbInfoItem( dbErrorGroup, QgsSpatialiteDbInfoItem::ItemTypeError );
           if ( dbErrorItem )
           {
             if ( dbErrorItem->isValid() )
@@ -4087,8 +4186,8 @@ bool QgsSpatialiteDbInfoItem::createErrorWarningsGroups()
       }
     }
   }
-  dbErrors = getSpatialiteDbInfoErrors( true ); // Warnings
-  if ( dbErrors.count() > 0 )
+  QMap<QString, QString> dbWarnings = getSpatialiteDbInfoErrors( true ); // Warnings
+  if ( dbWarnings.count() > 0 )
   {
     iCounter = 0;
     QgsSpatialiteDbInfoItem *dbWarningGroup = new QgsSpatialiteDbInfoItem( this, QgsSpatialiteDbInfoItem::ItemTypeGroupWarning );
@@ -4102,13 +4201,14 @@ bool QgsSpatialiteDbInfoItem::createErrorWarningsGroups()
         dbWarningGroup->setText( getTableNameIndex(),  sGroupName );
         dbWarningGroup->setIcon( getTableNameIndex(), QgsSpatialiteDbInfo::SpatialiteLayerTypeIcon( QgsSpatialiteDbInfo::SpatialiteUnknown ) );
         // Column 1: getGeometryNameIndex()
-        dbWarningGroup->setText( getGeometryNameIndex(), QStringLiteral( "Count: %1" ).arg( dbErrors.count() ) );
-        // Column 2 [not used]: getGeometryTypeIndex()
+        dbWarningGroup->setText( getGeometryNameIndex(), QStringLiteral( "Count: %1" ).arg( dbWarnings.count() ) );
+        // Column 2: getGeometryTypeIndex()
         sText = QStringLiteral( "Cause [%1]" ).arg( QStringLiteral( "reported during the creation of SpatialiteDbInfo" ) );
-        dbWarningGroup->setText( getSqlQueryIndex(), sText );
+        dbWarningGroup->setText( getGeometryTypeIndex(), sText );
+        // Column 3 [not used]: getSqlQueryIndex()
         // Column 4 [should always be  used]: getColumnSortHidden()
         dbWarningGroup->setText( getColumnSortHidden(), sGroupSort );
-        for ( QMap<QString, QString>::iterator itWarnings = dbErrors.begin(); itWarnings != dbErrors.end(); ++itWarnings )
+        for ( QMap<QString, QString>::iterator itWarnings = dbWarnings.begin(); itWarnings != dbWarnings.end(); ++itWarnings )
         {
           QgsSpatialiteDbInfoItem *dbWarningItem = new QgsSpatialiteDbInfoItem( dbWarningGroup, QgsSpatialiteDbInfoItem::ItemTypeWarning );
           if ( dbWarningItem )
@@ -4215,6 +4315,10 @@ bool QgsSpatialiteDbInfoItem::createGroupLayerItem( QgsSpatialiteDbInfo::Spatial
       case QgsSpatialiteDbInfo::MBTilesView:
         sGroupName = QStringLiteral( "MbTiles" ); // Instead of 'MBTilesView'
         infoType = QgsSpatialiteDbInfoItem::ItemTypeGroupMBTilesView;
+        break;
+      case QgsSpatialiteDbInfo::MBTilesVector:
+        sGroupName = QStringLiteral( "MbTiles-Vector" );
+        infoType = QgsSpatialiteDbInfoItem::ItemTypeGroupMBTilesVector;
         break;
       case QgsSpatialiteDbInfo::GeoPackageVector:
         infoType = QgsSpatialiteDbInfoItem::ItemTypeGroupGeoPackageVector;
@@ -4383,7 +4487,14 @@ int QgsSpatialiteDbInfoItem::buildDbInfoItem()
         }
         break;
       case QgsSpatialiteDbInfo::SpatialiteMBTiles:
-        sProvider = QStringLiteral( "QgsGdalProvider" );
+        if ( getSpatialiteDbInfo()->isDbMbTilesRaster() )
+        {
+          sProvider = QStringLiteral( "QgsGdalProvider" );
+        }
+        else
+        {
+          sProvider = QStringLiteral( "QgsOgrProvider" );
+        }
         sInfoText = QStringLiteral( "The 'MBTiles' Driver is NOT active and cannot be displayed" );
         if ( getSpatialiteDbInfo()->hasDbGdalMBTilesDriver() )
         {
@@ -4691,12 +4802,13 @@ int QgsSpatialiteDbInfoItem::buildDbLayerItem()
     QString sTableName = getDbLayer()->getTableName();
     QString sGeometryColumn = getDbLayer()->getGeometryColumn();
     QString sSortTag = QStringLiteral( "AZZA_%1" ).arg( getDbLayer()->getLayerName() );
-    QString sGeometryTypeString = getDbLayer()->getGeometryTypeString();
+    QString sGeometryTypeName = getDbLayer()->getGeometryTypeName();
     QString sFeatureCount = QString();
     QString sViewTableName = QString();
     QString sTitle  = getDbLayer()->getTitle();
     QString sAbstract  = getDbLayer()->getAbstract();
-    if ( mIsVectorType )
+    QColor bg_color = QColor( "lightyellow" );
+    if ( isLayerVectorType() )
     {
       // "SpatialView(Add, Insert, Delete | ReadOnly) 123 features"
       sFeatureCount = QStringLiteral( "%1 %2 features" ).arg( getDbLayer()->getCapabilitiesString() ).arg( getDbLayer()->getFeaturesCount() );
@@ -4705,11 +4817,11 @@ int QgsSpatialiteDbInfoItem::buildDbLayerItem()
         sViewTableName = QStringLiteral( " ViewTableName(%1)" ).arg( getDbLayer()->getViewTableName() );
       }
     }
-    if ( !mIsVectorType )
+    if ( !isLayerVectorType() )
     {
-      sGeometryTypeString = sGeometryColumn;
-      sGeometryTypeString = sAbstract;
-      if ( mIsMbTiles )
+      sGeometryTypeName = sGeometryColumn;
+      sGeometryTypeName = sAbstract;
+      if ( isLayerMbTilesRaster() )
       {
         sFeatureCount = QStringLiteral( "Table-based MbTiles" );
         if ( mLayerType == QgsSpatialiteDbInfo::MBTilesView )
@@ -4724,7 +4836,7 @@ int QgsSpatialiteDbInfoItem::buildDbLayerItem()
     // Column 1: getGeometryNameIndex()
     // Note: for Rasters this will be the Title
     setText( getGeometryNameIndex(), sGeometryColumn );
-    if ( mIsVectorType )
+    if ( isLayerVectorType() )
     {
       // Add column information [this does not include the geometry of the Layer]
       setToolTip( getGeometryNameIndex(), sFeatureCount );
@@ -4736,19 +4848,21 @@ int QgsSpatialiteDbInfoItem::buildDbLayerItem()
       // These can be long string descriptions, add ToolTip
       setToolTip( getTableNameIndex(), sTableName );
       setToolTip( getGeometryNameIndex(), sGeometryColumn );
-      setToolTip( getGeometryTypeIndex(), sGeometryTypeString );
-      if ( mIsMbTiles )
+      setToolTip( getGeometryTypeIndex(), sGeometryTypeName );
+      if ( isLayerMbTilesRaster() )
       {
         mParentItem->setText( getGeometryNameIndex(), sFeatureCount );
       }
     }
     // Column 2: getGeometryTypeIndex()
     // Note: for Rasters this will be the Abstract
-    setText( getGeometryTypeIndex(), sGeometryTypeString );
+    setText( getGeometryTypeIndex(), sGeometryTypeName );
     // Column 3: getSqlQueryIndex()
-    if ( mIsVectorType )
+    if ( isLayerVectorType() )
     {
       setToolTip( getSqlQueryIndex(), sAbstract );
+      // A DoubleClick on the getSqlQueryIndex Column will call the SqlQuery dialog [making it clear where to click]
+      setBackground( getSqlQueryIndex(), bg_color );
     }
     // Column 4 [should always be  used]: getColumnSortHidden()
     setText( getColumnSortHidden(), sSortTag );
@@ -4788,9 +4902,9 @@ int QgsSpatialiteDbInfoItem::buildMetadataRootItem()
   {
     QString sGroupName;
     QStringList saParmValues;
-    if ( mIsVectorType )
+    if ( isLayerVectorType() )
     {
-      if ( mIsSpatialView )
+      if ( isLayerSpatialView() )
       {
       }
       else
@@ -4817,11 +4931,55 @@ int QgsSpatialiteDbInfoItem::buildMetadataRootItem()
         }
         saParmValues.clear();
       }
+      if ( isDbMbTiles() )
+      {
+        // MBTiles-Vector can have more than 1 Layer: add inside Group after Layers
+        // - the 'metadata' is valid for all Layers, add only once
+        QgsSpatialiteDbInfoItem *parentItem = nullptr;
+        if ( getSpatialiteDbInfo()->dbMBTilesLayersCount() == 1 )
+        {
+          // - if this is the only layer, place the MbTilesMetadataItems inside that Layer
+          parentItem = parent();
+        }
+        else
+        {
+          // - if this is the last layer, place the MbTilesMetadataItems after that Layer [in the MBTiles-Group-Item]
+          if ( getSpatialiteDbInfo()->getDbMBTilesLayers().lastKey() == getDbLayer()->getLayerName() )
+          {
+            // MBTiles-Group-Item
+            parentItem = getGrandParent();
+            // buildMetadataRootItem checks for a valid Layer, which the GrandParent does not have
+            parentItem->setDbLayer( getDbLayer() );
+          }
+        }
+        if ( parentItem )
+        {
+          sGroupName = QStringLiteral( "MbTiles.Metadata" );
+          saParmValues.append( QStringLiteral( "addMbTilesMetadataItems()" ) );
+          // This will be retrieved from and added to the calling Parent-Item
+          QgsSpatialiteDbInfoItem *dbMetadataGroupItem = new QgsSpatialiteDbInfoItem( parentItem, QgsSpatialiteDbInfoItem::ItemTypeMetadataGroup, sGroupName, saParmValues );
+          if ( ( dbMetadataGroupItem ) && ( dbMetadataGroupItem->isValid() ) )
+          {
+            if ( parentItem == parent() )
+            {
+              // add to MBTiles-Layer-Item
+              mPrepairedChildItems.append( dbMetadataGroupItem );
+            }
+            else
+            {
+              // add to MBTiles-Group-Item
+              parentItem->mPrepairedChildItems.append( dbMetadataGroupItem );
+            }
+          }
+          saParmValues.clear();
+        }
+      }
     }
     else
     {
-      if ( mIsMbTiles )
+      if ( isDbMbTiles() )
       {
+        // MBTiles-Raster can have only 1 Layer: add inside Layer
         sGroupName = QStringLiteral( "MbTiles.Metadata" );
         saParmValues.append( QStringLiteral( "addMbTilesMetadataItems()" ) );
         // This will be retrieved from and added to the calling Parent-Item
@@ -4832,13 +4990,13 @@ int QgsSpatialiteDbInfoItem::buildMetadataRootItem()
         }
         saParmValues.clear();
       }
-      else if ( mIsRasterLite1 )
+      else if ( isLayerRasterLite1() )
       {
       }
-      else if ( mIsRasterLite2 )
+      else if ( isLayerRasterLite2() )
       {
       }
-      else if ( mIsGeoPackage )
+      else if ( isLayerGeoPackage() )
       {
       }
       if ( getDbLayer()->hasLayerStyle() )
@@ -5060,8 +5218,9 @@ int QgsSpatialiteDbInfoItem::buildMetadataGroupItem( QString sGroupName, QString
       setText( getTableNameIndex(), sGroupName );
       setIcon( getTableNameIndex(), QgsSpatialiteDbInfo::SpatialiteLayerTypeIcon( QgsSpatialiteDbInfo::StyleVector ) );
       QString sCommand = saParmValues.at( 0 );
-      if ( mIsVectorType )
+      if ( isLayerVectorType() )
       {
+        // Vector-Specific
         if ( sCommand == QStringLiteral( "addColumnItems()" ) )
         {
           // Column 1[not used]: getGeometryNameIndex()
@@ -5073,16 +5232,7 @@ int QgsSpatialiteDbInfoItem::buildMetadataGroupItem( QString sGroupName, QString
       }
       else
       {
-        if ( mIsMbTiles )
-        {
-          if ( sCommand == QStringLiteral( "addMbTilesMetadataItems()" ) )
-          {
-            if ( addMbTilesMetadataItems() > 0 )
-            {
-              // will now have children tables
-            }
-          }
-        }
+        // Raster-Specific
       }
       if ( sCommand == QStringLiteral( "addLayerStylesItems()" ) )
       {
@@ -5096,6 +5246,17 @@ int QgsSpatialiteDbInfoItem::buildMetadataGroupItem( QString sGroupName, QString
         if ( addCommonMetadataItems() > 0 )
         {
           // will now have children tables
+        }
+      }
+      if ( isDbMbTiles() )
+      {
+        // both Raster and Vector
+        if ( sCommand == QStringLiteral( "addMbTilesMetadataItems()" ) )
+        {
+          if ( addMbTilesMetadataItems() > 0 )
+          {
+            // will now have children tables
+          }
         }
       }
     }
@@ -5642,6 +5803,9 @@ int QgsSpatialiteDbInfoItem::buildSpatialSubGroups()
       case ItemTypeGroupMBTilesView:
         layerType = QgsSpatialiteDbInfo::MBTilesView;
         break;
+      case ItemTypeGroupMBTilesVector:
+        layerType = QgsSpatialiteDbInfo::MBTilesVector;
+        break;
       case ItemTypeGroupStyleVector:
         layerType = QgsSpatialiteDbInfo::StyleVector;
         break;
@@ -5784,10 +5948,12 @@ int QgsSpatialiteDbInfoItem::buildSpatialSubGroup( QString sSubGroupName, QStrin
         break;
       case ItemTypeGroupMBTilesTable:
         layerType = QgsSpatialiteDbInfo::MBTilesTable;
-        QgsDebugMsgLevel( QStringLiteral( "-W--> QgsSpatialiteDbInfoItem::buildSpatialSubGroup: MbTiles -1-, returning  ItemType[%1] ModelType[%2]" ).arg( getItemTypeString() ).arg( getModelTypeString() ), 7 );
         break;
       case ItemTypeGroupMBTilesView:
         layerType = QgsSpatialiteDbInfo::MBTilesView;
+        break;
+      case ItemTypeGroupMBTilesVector:
+        layerType = QgsSpatialiteDbInfo::MBTilesVector;
         break;
       default:
         return childCount();
@@ -6501,6 +6667,8 @@ QString QgsSpatialiteDbInfoItem::SpatialiteDbInfoItemTypeName( QgsSpatialiteDbIn
       return QStringLiteral( "ItemTypeGroupMBTilesTable" );
     case QgsSpatialiteDbInfoItem::ItemTypeGroupMBTilesView:
       return QStringLiteral( "ItemTypeGroupMBTilesView" );
+    case QgsSpatialiteDbInfoItem::ItemTypeGroupMBTilesVector:
+      return QStringLiteral( "ItemTypeGroupMBTilesVector" );
     case QgsSpatialiteDbInfoItem::ItemTypeGroupMetadata:
       return QStringLiteral( "ItemTypeGroupMetadata" );
     case QgsSpatialiteDbInfoItem::ItemTypeGroupAllSpatialLayers:
@@ -6511,6 +6679,10 @@ QString QgsSpatialiteDbInfoItem::SpatialiteDbInfoItemTypeName( QgsSpatialiteDbIn
       return QStringLiteral( "ItemTypeWarning" );
     case QgsSpatialiteDbInfoItem::ItemTypeError:
       return QStringLiteral( "ItemTypeError" );
+    case QgsSpatialiteDbInfoItem::ItemTypeGroupWarning:
+      return QStringLiteral( "ItemTypeGroupWarning" );
+    case QgsSpatialiteDbInfoItem::ItemTypeGroupError:
+      return QStringLiteral( "ItemTypeGroupError" );
     case QgsSpatialiteDbInfoItem::ItemTypeUnknown:
       return QStringLiteral( "ItemTypeUnknown" );
     default:

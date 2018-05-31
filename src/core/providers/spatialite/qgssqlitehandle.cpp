@@ -193,16 +193,19 @@ void QgsSqliteHandle::closeAll()
 // QgsSqliteHandle::loadExtension [static]
 //-----------------------------------------------------------------
 // Since Spatialite 4.2.0
-// - for RasterLite2, Apatialite must be loaded first
+// - for RasterLite2, Spatialite must be loaded first
 // sFileName only needed for debuging for what files this is being called for
 // 'mod_spatialite' calls:
 // -> 'sqlite3_modspatialite_init'   [calls 'init_spatialite_extension', 'spatialite_alloc_connection' and 'spatialite_init_ex']
 // 'mod_rasterlite2' calls:
 // -> 'sqlite3_modrasterlite_init' [calls 'init_rl2_extension' and 'register_rl2_sql_functions']
 //-----------------------------------------------------------------
-bool QgsSqliteHandle::loadExtension( sqlite3 *sqlite_handle,  bool bRasterLite2, QString sFileName )
+// Note: for sqlite3 versions 3.22, 3.23 and 3.23.1:
+// - this will fail due to a faulty change done on the 2017-12-23 ; reported and corrected 2018-05-07 [for planned 3.24]
+// -> http://www.sqlite.org/src/info/b348d1193a7a3ed4
+//-----------------------------------------------------------------
+int QgsSqliteHandle::loadExtension( sqlite3 *sqlite_handle,  bool bRasterLite2, QString sFileName )
 {
-  bool bRc = false;
   char *errMsg = nullptr;
   int i_rc = SQLITE_ERROR;
   QString sExtension = QStringLiteral( "mod_spatialite" );
@@ -210,28 +213,31 @@ bool QgsSqliteHandle::loadExtension( sqlite3 *sqlite_handle,  bool bRasterLite2,
   {
     sExtension = QStringLiteral( "mod_rasterlite2" );
   }
-  else
-  {
-    // avoid 'not authorized' error
-    sqlite3_enable_load_extension( sqlite_handle, 1 ); // always returns SQLITE_OK
-  }
+  // avoid 'not authorized' error
+  sqlite3_enable_load_extension( sqlite_handle, 1 ); // always returns SQLITE_OK
   i_rc = sqlite3_load_extension( sqlite_handle, sExtension.toUtf8().constData(), nullptr, &errMsg );
   if ( i_rc == SQLITE_OK )
   {
     QgsDebugMsgLevel( QString( "Extension ['%1'] has been loaded. Filename[%2]" ).arg( sExtension ).arg( sFileName ), 7 );
-    bRc = true;
   }
   else
   {
-    QgsDebugMsgLevel( QString( "Error loading Extension ['%1'] Filename[%2] rc=[%3,%4] error[%5]" ).arg( sExtension ).arg( sFileName ).arg( i_rc ).arg( QgsSqliteHandle::get_sqlite3_result_code_string( i_rc ) ).arg( errMsg ), 7 );
+    QString sLdLibraryPath;
+    if ( getenv( "LD_LIBRARY_PATH" ) )
+    {
+      // sqlite3.extension_dir
+      sLdLibraryPath = getenv( "LD_LIBRARY_PATH" );
+    }
+    // sqlite3 3.22/23:  rc=[1,Generic error] error[mod_spatialite: cannot open shared object file: No such file or directory]
+    QgsDebugMsgLevel( QString( "Error loading Extension ['%1'] Filename[%2] rc=[%3,%4] error[%5] \tLD_LIBRARY_PATH[%6]" ).arg( sExtension ).arg( sFileName ).arg( i_rc ).arg( QgsSqliteHandle::get_sqlite3_result_code_string( i_rc ) ).arg( errMsg ).arg( sLdLibraryPath ), 7 );
     sqlite3_free( errMsg );
   }
-  return bRc;
+  return i_rc;
 }
 //-----------------------------------------------------------------
 // QgsSqliteHandle::initSpatialite [static]
 //-----------------------------------------------------------------
-bool QgsSqliteHandle::initSpatialite( sqlite3 *sqlite_handle, QString sFileName )
+int QgsSqliteHandle::initSpatialite( sqlite3 *sqlite_handle, QString sFileName )
 {
   return loadExtension( sqlite_handle, false, sFileName ); // spatialite
 }
@@ -240,18 +246,26 @@ bool QgsSqliteHandle::initSpatialite( sqlite3 *sqlite_handle, QString sFileName 
 //-----------------------------------------------------------------
 bool QgsSqliteHandle::loadSpatialite( bool bRasterLite2 )
 {
+  int i_rc = SQLITE_ERROR;
+  QString sFunctionName = QStringLiteral( "QgsSqliteHandle::loadSpatialite" );
   if ( mSqliteHandle )
   {
     if ( bRasterLite2 )
     {
-      return initRasterlite2();
+      initRasterlite2();
+      return isDbRasterLite2Active();
     }
-    if ( QgsSqliteHandle::initSpatialite( mSqliteHandle, getFileName() ) )
+    i_rc = QgsSqliteHandle::initSpatialite( mSqliteHandle, getFileName() );
+    if ( i_rc == SQLITE_OK )
     {
-      mIsSpatialiteActive = true;
+      mIsDbSpatialiteActive = true;
+    }
+    else
+    {
+      mDbErrors.insert( sFunctionName, QString( "Error loading Extension ['%1'] Filename[%2] rc=[%3,%4] error[%5]" ).arg( QStringLiteral( "mod_spatialite" ) ).arg( getFileName() ).arg( i_rc ).arg( QgsSqliteHandle::get_sqlite3_result_code_string( i_rc ) ).arg( QStringLiteral( "mod_spatialite: could not be loaded" ) ) );
     }
   }
-  return mIsSpatialiteActive;
+  return isDbSpatialiteActive();
 }
 //-----------------------------------------------------------------
 // QgsSqliteHandle::initRasterlite2
@@ -259,26 +273,42 @@ bool QgsSqliteHandle::loadSpatialite( bool bRasterLite2 )
 // Since Spatialite is a pre-condition for RasterLite2
 // - Spatialite will be started first, if not allready started
 // LoadExtension  will  be called for both
+// add error Message to class
 //-----------------------------------------------------------------
 bool QgsSqliteHandle::initRasterlite2()
 {
+  int i_rc = SQLITE_ERROR;
+  QString sFunctionName = QStringLiteral( "QgsSqliteHandle::initRasterlite2" );
   if ( mSqliteHandle )
   {
-    if ( !mIsSpatialiteActive )
+    if ( !isDbSpatialiteActive() )
     {
       // Spatialite must be active to start RasterLite2
-      if ( QgsSqliteHandle::initSpatialite( mSqliteHandle, getFileName() ) )
+      i_rc = QgsSqliteHandle::initSpatialite( mSqliteHandle, getFileName() );
+      if ( i_rc == SQLITE_OK )
       {
-        mIsSpatialiteActive = true;
+        mIsDbSpatialiteActive = true;
+      }
+      else
+      {
+        mDbErrors.insert( sFunctionName, QString( "Error loading Extension ['%1'] Filename[%2] rc=[%3,%4] error[%5]" ).arg( QStringLiteral( "mod_spatialite" ) ).arg( getFileName() ).arg( i_rc ).arg( QgsSqliteHandle::get_sqlite3_result_code_string( i_rc ) ).arg( QStringLiteral( "mod_spatialite: could not be loaded" ) ) );
       }
     }
-    if ( ( mIsSpatialiteActive ) && ( !mIsRasterLite2Active ) )
+    if ( ( isDbSpatialiteActive() ) && ( !isDbRasterLite2Active() ) )
     {
       // register the rl2-functions as sql-commands using 'mod_rasterlite2'
-      mIsRasterLite2Active = loadExtension( mSqliteHandle, true, getFileName() ); // rasterlite2
+      i_rc = loadExtension( mSqliteHandle, true, getFileName() ); // rasterlite2
+      if ( i_rc == SQLITE_OK )
+      {
+        mIsDbRasterLite2Active = true;
+      }
+      else
+      {
+        mDbErrors.insert( sFunctionName, QString( "Error loading Extension ['%1'] Filename[%2] rc=[%3,%4] error[%5]" ).arg( QStringLiteral( "mod_rasterlite2" ) ).arg( getFileName() ).arg( i_rc ).arg( QgsSqliteHandle::get_sqlite3_result_code_string( i_rc ) ).arg( QStringLiteral( "mod_rasterlite2: could not be loaded" ) ) );
+      }
     }
   }
-  return mIsRasterLite2Active;
+  return isDbRasterLite2Active();
 }
 //-----------------------------------------------------------------
 // QgsSqliteHandle::sqliteClose
@@ -316,10 +346,7 @@ int QgsSqliteHandle::sqlite3_open( const char *filename, sqlite3 **psqlite_handl
     ( void ) sqlite3_exec( *psqlite_handle, "PRAGMA foreign_keys = 1", nullptr, 0, nullptr );
     if ( bInitSpatialite )
     {
-      if ( !QgsSqliteHandle::initSpatialite( *psqlite_handle, file_info.fileName() ) )
-      {
-        i_rc = SQLITE_ABORT;
-      }
+      i_rc = QgsSqliteHandle::initSpatialite( *psqlite_handle, file_info.fileName() );
     }
   }
   if ( i_rc != SQLITE_OK )
@@ -344,15 +371,13 @@ int QgsSqliteHandle::sqlite3_open_v2( const char *filename, sqlite3 **psqlite_ha
     ( void )sqlite3_exec( *psqlite_handle, "PRAGMA foreign_keys = 1", nullptr, 0, nullptr );
     if ( bInitSpatialite )
     {
-      if ( !QgsSqliteHandle::initSpatialite( *psqlite_handle, file_info.fileName() ) )
-      {
-        i_rc = SQLITE_ABORT;
-      }
+      i_rc = QgsSqliteHandle::initSpatialite( *psqlite_handle, file_info.fileName() );
     }
   }
   if ( i_rc != SQLITE_OK )
   {
     *psqlite_handle = nullptr; // return a set pointer only when SQLITE_OK
+    // src/core/providers/spatialite/qgssqlitehandle.cpp: 382: (sqlite3_open_v2) [0ms] sqlite3_open_v2 failed: rc=[4,Callback routine requested an abort] FileName[berlin_admin_geometries.db]
     // rc=5, The database file is locked : [former crash, database file with journal file open]
     QgsDebugMsgLevel( QString( "sqlite3_open_v2 failed: rc=[%1,%2] FileName[%3]" ).arg( i_rc ).arg( QgsSqliteHandle::get_sqlite3_result_code_string( i_rc ) ).arg( file_info.fileName() ), 7 );
   }

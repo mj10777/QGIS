@@ -103,6 +103,47 @@ class QgsSpatiaLiteFeatureSource : public QgsAbstractFeatureSource
     QgsSpatialiteDbLayer *getDbLayer() const { return mDbLayer; }
 
     /**
+     * Retrieve SpatialIndex Query from DbLayer based on given Rectangle
+     * \note
+     *
+     * \see QgsSpatiaLiteFeatureIterator::whereClauseRect
+     * \since QGIS 3.0
+     */
+    QString getSpatialIndexWhereClause( QgsRectangle filterRect ) const
+    {
+      QString sSpatialIndexQuery = QString();
+      if ( getDbLayer() )
+      {
+        sSpatialIndexQuery = getDbLayer()->getSpatialIndexWhereClause( filterRect );
+      }
+      return sSpatialIndexQuery;
+    }
+
+    /**
+     * Build extent string for SpatialIndex
+     *  - for use with Spatialite  SpatialIndex
+     * \note
+     *   BuildMbr Syntax will be used when srid > -2
+     * \param filterRect Rectangle value to use
+     * \param  iSrid -2 [default]: x,y,Min,Max only ; srid=BuildMbr(x,y,Min,Max,srid)
+     * \see QgsSpatialiteDbLayer::getSpatialIndexWhereClause
+    */
+    QString mbr( const QgsRectangle &filterRect, bool bBuildMbr = false )
+    {
+      QString sBuildMbr = QString();
+      if ( getDbLayer() )
+      {
+        int iSrid = -2;
+        if ( bBuildMbr )
+        {
+          iSrid = getDbLayer()->getSrid();
+        }
+        sBuildMbr = QgsSpatiaLiteUtils::mbr( filterRect, iSrid );
+      }
+      return sBuildMbr;
+    }
+
+    /**
      * Name of the geometry column in the table
      * \note
      *  Vector: should always be filled
@@ -157,7 +198,7 @@ class QgsSpatiaLiteFeatureSource : public QgsAbstractFeatureSource
      * \see QgsSpatialiteDbLayer::getGeometryType
      * \since QGIS 3.0
      */
-    QString mGeometryTypeString;
+    QString mGeometryTypeName;
 
     /**
      * The SpatialIndex-Type used for the Geometry
@@ -206,74 +247,6 @@ class QgsSpatiaLiteFeatureSource : public QgsAbstractFeatureSource
     bool mIsQuery;
 
     /**
-     *Flag indicating if the layer data source is based on a View
-     * \note
-     *  result of getLayerType() == QgsSpatialiteDbInfo::SpatialView
-     * otherwise not used
-     * \see setDbLayer
-     * \since QGIS 3.0
-     */
-    bool mViewBased;
-
-    /**
-     * Flag indicating if the layer data source is based on a VirtualShape
-     * \note
-     *  result of getLayerType() == QgsSpatialiteDbInfo::VirtualShape
-     * otherwise not used
-     * \see setDbLayer
-     * \since QGIS 3.0
-     */
-    bool mVShapeBased;
-
-    /**
-     * Return the Table-Name to use to build the IndexTable-Name
-     * \note
-     *  For SpatialTable/VirtualShapes: result of getTableName will be used
-     *  For SpatialViews: result of getViewTableName will be used
-     * \see QgsSpatialiteDbLayer::getTableName
-     * \see QgsSpatialiteDbLayer::getViewTableName
-     * \see QgsSpatiaLiteFeatureSource::mIndexTable
-     * \since QGIS 3.0
-     */
-    QString mIndexTable;
-
-    /**
-     * Return the Geometry-Name to use to build the IndexTable-Name
-     * \note
-     *  For SpatialTable/VirtualShapes: result of getGeometryColumn will be used
-     *  For SpatialViews: result of getViewTableGeometryColumn will be used
-     * \see QgsSpatialiteDbLayer::getGeometryColumn
-     * \see QgsSpatialiteDbLayer::getViewTableGeometryColumn
-     * \see QgsSpatiaLiteFeatureSource::mIndexGeometry
-     * \since QGIS 3.0
-     */
-    QString mIndexGeometry;
-
-    /**
-     * this Geometry is supported by an R*Tree spatial index
-     * \note
-     *  result of getDbLayer()->getSpatialIndexType() == QgsSpatialiteDbInfo::SpatialIndexRTree
-     *  Used in QgsSpatiaLiteFeatureIterator
-     * \see setDbLayer
-     * \see QgsSpatiaLiteFeatureSource::mSpatialIndexRTree
-     * \see QgsSpatiaLiteFeatureIterator::whereClauseRect
-     * \since QGIS 3.0
-     */
-    bool mSpatialIndexRTree;
-
-    /**
-     * this Geometry is supported by an MBR cache spatial index
-     * \note
-     *  result of getDbLayer()->getSpatialIndexType() == QgsSpatialiteDbInfo::SpatialIndexMbrCache
-     *  Used in QgsSpatiaLiteFeatureIterator
-     * \see setDbLayer
-     * \see QgsSpatiaLiteFeatureSource::mSpatialIndexMbrCache
-     * \see QgsSpatiaLiteFeatureIterator::whereClauseRect
-     * \since QGIS 3.0
-     */
-    bool mSpatialIndexMbrCache;
-
-    /**
      * DB full path
      * extracted from dataSourceUri()
      * \note
@@ -306,7 +279,6 @@ class QgsSpatiaLiteFeatureIterator : public QgsAbstractFeatureIteratorFromSource
     QString whereClauseRect();
     QString whereClauseFid();
     QString whereClauseFids();
-    QString mbr( const QgsRectangle &rect );
     bool prepareStatement( const QString &whereClause, long limit = -1, const QString &orderBy = QString() );
     QString quotedPrimaryKey();
     bool getFeature( sqlite3_stmt *stmt, QgsFeature &feature );

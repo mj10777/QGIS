@@ -37,18 +37,18 @@ void QgsSpatiaLiteConnection::deleteConnection( const QString &name )
 }
 int QgsSpatiaLiteConnection::deleteInvalidConnections( )
 {
-  int i_count = 0;
+  int iCount = 0;
   Q_FOREACH ( const QString &name, QgsSpatiaLiteConnection::connectionList() )
   {
     // retrieving the SQLite DB name and full path
-    QFileInfo db_file( QgsSpatiaLiteConnection::connectionPath( name ) );
-    if ( !db_file.exists() )
+    QFileInfo dbFile( QgsSpatiaLiteConnection::connectionPath( name ) );
+    if ( !dbFile.exists() )
     {
       QgsSpatiaLiteConnection::deleteConnection( name );
-      i_count++;
+      iCount++;
     }
   }
-  return i_count;
+  return iCount;
 }
 QString QgsSpatiaLiteConnection::connectionPath( const QString &name )
 {
@@ -63,9 +63,9 @@ QgsSpatiaLiteConnection::QgsSpatiaLiteConnection( const QString &name )
   QgsSettings settings;
   if ( mSubKey.indexOf( '@' ) > 0 )
   {
-    QStringList sa_list = mSubKey.split( '@' );
-    mSubKey = sa_list[0];
-    mDbPath = sa_list[1];
+    QStringList saList = mSubKey.split( '@' );
+    mSubKey = saList.at( 0 );
+    mDbPath = saList.at( 1 );
   }
   mDbPath = settings.value( QStringLiteral( "SpatiaLite/connections/%1/sqlitepath" ).arg( mSubKey ) ).toString();
   if ( mDbPath.isNull() )
@@ -73,12 +73,12 @@ QgsSpatiaLiteConnection::QgsSpatiaLiteConnection( const QString &name )
     mSubKey = "";
     mDbPath = name; // not found in settings - probably it's a path
   }
-  QFileInfo file_info( mDbPath );
+  QFileInfo fileInfo( mDbPath );
   // for canonicalFilePath, the file must exist
-  if ( file_info.exists() )
+  if ( fileInfo.exists() )
   {
     // QgsSpatialiteDbInfo uses the actual absolute path [with resolved soft-links]
-    mDbPath = file_info.canonicalFilePath();
+    mDbPath = fileInfo.canonicalFilePath();
   }
 }
 QgsSpatialiteDbInfo *QgsSpatiaLiteConnection::CreateSpatialiteConnection( QString sLayerName,  bool bLoadLayers,  bool bShared, QgsSpatialiteDbInfo::SpatialMetadata dbCreateOption )

@@ -104,7 +104,7 @@ class QgsSpatialiteLayerItem : public QgsLayerItem
      * \see QgsSpatialiteDbInfo::parseLayerInfo
      * \since QGIS 3.0
      */
-    QString mProvider = "spatialite";
+    QString mProvider = QStringLiteral( "spatialite" );
 
     /**
      * The Spatialite Layer-Type of the Layer
@@ -113,7 +113,7 @@ class QgsSpatialiteLayerItem : public QgsLayerItem
      * - SpatialiteTopology, TopologyExport, GeoPackageVector, GeoPackageRaster
      * - MBTilesTable, MBTilesView
      *  \see QgsSpatialiteDbInfo::SpatialiteLayerTypeFromName
-     *  \see mLayerTypeString
+     *  \see mLayerTypeName
      * \since QGIS 3.0
      */
     QgsSpatialiteDbInfo::SpatialiteLayerType mLayerTypeSpatialite = QgsSpatialiteDbInfo::SpatialiteUnknown;

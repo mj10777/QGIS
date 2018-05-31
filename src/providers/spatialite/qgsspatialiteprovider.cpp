@@ -137,16 +137,11 @@ QGISEXTERN QList<QgsSourceSelectProvider *> *sourceSelectProviders()
 QgsSpatiaLiteProvider::QgsSpatiaLiteProvider( QString const &uri, const ProviderOptions &options )
   : QgsVectorDataProvider( uri, options )
   , mIsQuery( false )
-  , mTableBased( false )
-  , mViewBased( false )
-  , mVShapeBased( false )
   , mReadOnly( false )
   , mUriTableName( QString::null )
   , mUriGeometryColumn( QString::null )
   , mUriLayerName( QString::null )
   , mGeometryType( QgsWkbTypes::Unknown )
-  , mSpatialIndexRTree( false )
-  , mSpatialIndexMbrCache( false )
 {
   QgsDataSourceUri anUri = QgsDataSourceUri( uri );
   // parsing members from the uri structure
@@ -340,14 +335,14 @@ bool QgsSpatiaLiteProvider::setDbLayer( QgsSpatialiteDbLayer *dbLayer )
       mLayerType = getDbLayer()->getLayerType();
       mSrid = getDbLayer()->getSrid();
       mGeometryType = getDbLayer()->getGeometryType();
-      // Stor a local version based on values returned from Layer
+      // Store a local version based on values returned from Layer
       mUriLayerName = getDbLayer()->getLayerName();
       mUriTableName = getDbLayer()->getTableName();
       mTableName = getDbLayer()->getTableName();
       mGeometryColumn = getDbLayer()->getGeometryColumn();
       mUriGeometryColumn = getDbLayer()->getGeometryColumn();
       mGeometryType = getDbLayer()->getGeometryType();
-      mGeometryTypeString = getDbLayer()->getGeometryTypeString();
+      mGeometryTypeName = getDbLayer()->getGeometryTypeName();
       mViewTableName = getDbLayer()->getViewTableName();
       mViewTableGeometryColumn = getDbLayer()->getViewTableGeometryColumn();
       mAttributeFields = getDbLayer()->getAttributeFields();
@@ -357,39 +352,7 @@ bool QgsSpatiaLiteProvider::setDbLayer( QgsSpatialiteDbLayer *dbLayer )
       mPrimaryKeyAttrs = getDbLayer()->getPrimaryKeyAttrs();
       mProj4text = getDbLayer()->getProj4text();
       mAuthId = getDbLayer()->getAuthId();
-
       //-----------------------------------------------------------------
-      if ( getLayerType() == QgsSpatialiteDbInfo::SpatialView )
-      {
-        mIndexTable = mViewTableName;
-        mIndexGeometry = getDbLayer()->getViewTableGeometryColumn();
-      }
-      else
-      {
-        mIndexTable = mTableName;
-        mIndexGeometry = getDbLayer()->getGeometryColumn();;
-      }
-      if ( getSpatialIndexType() == QgsSpatialiteDbInfo::SpatialIndexRTree )
-      {
-        mSpatialIndexRTree = true;
-      }
-      if ( getSpatialIndexType() == QgsSpatialiteDbInfo::SpatialIndexMbrCache )
-      {
-        mSpatialIndexMbrCache = true;
-      }
-      if ( ( getLayerType() == QgsSpatialiteDbInfo::SpatialTable ) ||
-           ( getLayerType() == QgsSpatialiteDbInfo::TopologyExport ) )
-      {
-        mTableBased = true;
-      }
-      if ( getLayerType() == QgsSpatialiteDbInfo::SpatialView )
-      {
-        mViewBased = true;
-      }
-      if ( getLayerType() == QgsSpatialiteDbInfo::VirtualShape )
-      {
-        mVShapeBased = true;
-      }
       //fill type names into sets
       setNativeTypes( QList<NativeType>()
                       << QgsVectorDataProvider::NativeType( tr( "Binary object (BLOB)" ), QStringLiteral( "BLOB" ), QVariant::ByteArray )
@@ -406,6 +369,9 @@ bool QgsSpatiaLiteProvider::setDbLayer( QgsSpatialiteDbLayer *dbLayer )
                       << QgsVectorDataProvider::NativeType( tr( "Array of decimal numbers (double)" ), QgsSpatialiteDbInfo::SPATIALITE_ARRAY_PREFIX.toUpper() + "REAL" + QgsSpatialiteDbInfo::SPATIALITE_ARRAY_SUFFIX.toUpper(), QVariant::List, 0, 0, 0, 0, QVariant::Double )
                       << QgsVectorDataProvider::NativeType( tr( "Array of whole numbers (integer)" ), QgsSpatialiteDbInfo::SPATIALITE_ARRAY_PREFIX.toUpper() + "INTEGER" + QgsSpatialiteDbInfo::SPATIALITE_ARRAY_SUFFIX.toUpper(), QVariant::List, 0, 0, 0, 0, QVariant::LongLong )
                     );
+      //-----------------------------------------------------------------
+      updateExtents();
+      setLayerMetadata();
       // bRc = checkQuery();
     }
     else
@@ -850,7 +816,7 @@ bool QgsSpatiaLiteProvider::setSubsetString( const QString &theSQL, bool updateF
   // update feature count and extents
   if ( updateFeatureCount )
   {
-    getLayerExtent( true, true );
+    updateExtents();
     return true;
   }
   mSubsetString = prevSubsetString;
@@ -858,7 +824,8 @@ bool QgsSpatiaLiteProvider::setSubsetString( const QString &theSQL, bool updateF
   uri = QgsDataSourceUri( dataSourceUri() );
   uri.setSql( mSubsetString );
   setDataSourceUri( uri.uri() );
-  getLayerExtent( true, true );
+  updateExtents();
+  setLayerMetadata();
   emit dataChanged();
   return false;
 }
@@ -867,15 +834,104 @@ bool QgsSpatiaLiteProvider::setSubsetString( const QString &theSQL, bool updateF
 //-----------------------------------------------------------------
 QgsRectangle QgsSpatiaLiteProvider::extent() const
 {
-  return getLayerExtent( false, false );
+  return mLayerExtent;
+}
+//-----------------------------------------------------------------
+// QgsSpatiaLiteProvider::featureCount
+//-----------------------------------------------------------------
+//  Return the feature count
+//-----------------------------------------------------------------
+long QgsSpatiaLiteProvider::featureCount() const
+{
+  return mNumberFeatures;
 }
 //-----------------------------------------------------------------
 // QgsSpatiaLiteProvider::updateExtents
 //-----------------------------------------------------------------
 void QgsSpatiaLiteProvider::updateExtents()
 {
-  getLayerExtent( true, true );
+  if ( !mSubsetString.isEmpty() )
+  {
+    mNumberFeatures = 0;
+    mLayerExtent = getLayerExtentSubset( mSubsetString, mNumberFeatures );
+    return;
+  }
+  mLayerExtent = getLayerExtent( true, true );
+  mNumberFeatures = getNumberFeatures( false );
 }
+//-----------------------------------------------------------------
+// QgsSpatiaLiteProvider::setLayerMetadata
+// This will be called after a possible SubsetString and
+//   the Extent and mNumberFeatures has been set
+//-----------------------------------------------------------------
+bool QgsSpatiaLiteProvider::setLayerMetadata()
+{
+  if ( getDbLayer() )
+  {
+    mLayerMetadata = getDbLayer()->getLayerMetadata();
+    if ( !mSubsetString.isEmpty() )
+    {
+      QString sAbstract = mLayerMetadata.abstract();
+      if ( !sAbstract.isEmpty() )
+      {
+        sAbstract += QStringLiteral( "\n" );
+      }
+      sAbstract += QStringLiteral( "Created with Sub-Query: [%1]" ).arg( mSubsetString );
+      mLayerMetadata.setAbstract( sAbstract );
+      // Adapt the LayerMetdata to correspond to the Sql-Subset Query
+      QgsLayerMetadata::Extent metadataExtent;
+      QList< QgsLayerMetadata::SpatialExtent > metadataSpatialExtents = mLayerMetadata.extent().spatialExtents();
+      if ( metadataSpatialExtents.count() > 0 )
+      {
+        QList< QgsLayerMetadata::SpatialExtent > metadataSpatialExtentsSubset;
+        QgsCoordinateReferenceSystem sourceCRS = QgsCoordinateReferenceSystem::fromOgcWmsCrs( getDbLayer()->getSridEpsg() );
+        for ( int i = 0; i < metadataSpatialExtents.count(); i++ )
+        {
+          QgsLayerMetadata::SpatialExtent se = metadataSpatialExtents.at( i );
+          QString sAuthId = se.extentCrs.authid();
+          if ( getDbLayer()->getSridEpsg() == sAuthId )
+          {
+            se.bounds.setXMinimum( mLayerExtent.xMinimum() );
+            se.bounds.setXMaximum( mLayerExtent.xMaximum() );
+            se.bounds.setYMinimum( mLayerExtent.yMinimum() );
+            se.bounds.setYMaximum( mLayerExtent.yMaximum() );
+          }
+          else
+          {
+            QStringList saSrid = sAuthId.split( ':' );
+            if ( saSrid.count() == 2 )
+            {
+              int iLayerSrid = saSrid.at( 1 ).toInt();
+              QgsCoordinateTransform t( sourceCRS, se.extentCrs, getDbLayer()->getSrid(), iLayerSrid );
+              QgsRectangle layerExtent = t.transformBoundingBox( mLayerExtent );
+              se.bounds.setXMinimum( layerExtent.xMinimum() );
+              se.bounds.setXMaximum( layerExtent.xMaximum() );
+              se.bounds.setYMinimum( layerExtent.yMinimum() );
+              se.bounds.setYMaximum( layerExtent.yMaximum() );
+            }
+          }
+          metadataSpatialExtentsSubset.append( se );
+        }
+        if ( metadataSpatialExtentsSubset.count() > 0 )
+        {
+          metadataExtent.setSpatialExtents( metadataSpatialExtentsSubset );
+          mLayerMetadata.setExtent( metadataExtent );
+        }
+      }
+    }
+  }
+  return mSubsetString.isEmpty();
+}
+//-----------------------------------------------------------------
+// QgsSpatialiteDbLayer::getLayerExtentSubset
+//-----------------------------------------------------------------
+QgsRectangle QgsSpatiaLiteProvider::getLayerExtentSubset( QString sSubsetString, long &iNumberFeatures )
+{
+  return getDbLayer()->getLayerExtentSubset( sSubsetString, iNumberFeatures );
+}
+//-----------------------------------------------------------------
+// QgsSpatiaLiteProvider::layerCount
+//-----------------------------------------------------------------
 size_t QgsSpatiaLiteProvider::layerCount() const
 {
   return 1;
@@ -888,15 +944,6 @@ size_t QgsSpatiaLiteProvider::layerCount() const
 QgsWkbTypes::Type QgsSpatiaLiteProvider::wkbType() const
 {
   return getGeometryType() ;
-}
-//-----------------------------------------------------------------
-// QgsSpatiaLiteProvider::featureCount
-//-----------------------------------------------------------------
-//  Return the feature count
-//-----------------------------------------------------------------
-long QgsSpatiaLiteProvider::featureCount() const
-{
-  return getNumberFeatures( true );
 }
 //-----------------------------------------------------------------
 // QgsSpatiaLiteProvider::crs

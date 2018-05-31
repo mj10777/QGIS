@@ -879,7 +879,7 @@ void QgsSpatiaLiteTableModel::addTableEntryLayer( QgsSpatialiteDbLayer *dbLayer,
     //is there already a root item ?
     QStandardItem *dbItem = nullptr;
     QString sSortTag = "";
-    QString sSearchName = dbLayer->getLayerTypeString();
+    QString sSearchName = dbLayer->getLayerTypeName();
     if ( sSearchName == "TopologyExport" )
     {
       sSearchName = dbLayer->getTableName();
@@ -902,11 +902,11 @@ void QgsSpatiaLiteTableModel::addTableEntryLayer( QgsSpatialiteDbLayer *dbLayer,
     }
     else  //create a new toplevel item
     {
-      if ( ( dbLayer->getLayerTypeString() == "TopologyExport" ) || ( dbLayer->getLayerTypeString() == "GeoPackageRaster" ) )
+      if ( ( dbLayer->getLayerTypeName() == "TopologyExport" ) || ( dbLayer->getLayerTypeName() == "GeoPackageRaster" ) )
       {
-        QString sSearchGroupName = dbLayer->getLayerTypeString();
+        QString sSearchGroupName = dbLayer->getLayerTypeName();
         QIcon iconType = dbLayer->getLayerTypeIcon();
-        if ( dbLayer->getLayerTypeString() == "TopologyExport" )
+        if ( dbLayer->getLayerTypeName() == "TopologyExport" )
         {
           sSearchGroupName = "SpatialiteTopology";
         }
@@ -963,7 +963,7 @@ void QgsSpatiaLiteTableModel::addTableEntryLayer( QgsSpatialiteDbLayer *dbLayer,
     QList < QStandardItem * >childItemList;
     QString sTableName = dbLayer->getTableName();
     QString sGeomItemText = dbLayer->getGeometryColumn();
-    QString sGeometryTypeString = dbLayer->getGeometryTypeString();
+    QString sGeometryTypeName = dbLayer->getGeometryTypeName();
     if ( sSearchName == "MBTiles" )
     {
       if ( !dbLayer->getTitle().isEmpty() )
@@ -972,44 +972,44 @@ void QgsSpatiaLiteTableModel::addTableEntryLayer( QgsSpatialiteDbLayer *dbLayer,
         sTableName = dbLayer->getTitle();
       }
       sGeomItemText = ""; // Must remain empty
-      sGeometryTypeString = dbLayer->getAbstract();
+      sGeometryTypeName = dbLayer->getAbstract();
     }
     if ( sSearchName == "RasterLite2Raster" )
     {
       sGeomItemText = ""; // Must remain empty
-      sGeometryTypeString = dbLayer->getTitle();
+      sGeometryTypeName = dbLayer->getTitle();
     }
     QStandardItem *tableNameItem = new QStandardItem( dbLayer->getLayerTypeIcon(), sTableName );
     tableNameItem->setFlags( Qt::ItemIsEnabled | Qt::ItemIsSelectable );
     QStandardItem *geomItem = new QStandardItem( sGeomItemText );
     geomItem->setFlags( Qt::ItemIsEnabled | Qt::ItemIsSelectable );
     QIcon iconType;
-    if ( sGeometryTypeString != "Unknown" )
+    if ( sGeometryTypeName != "Unknown" )
     {
       iconType = dbLayer->getGeometryTypeIcon();
     }
     else
     {
-      QString sGroup = dbLayer->getLayerTypeString();
+      QString sGroup = dbLayer->getLayerTypeName();
       if ( sGroup == "RasterLite1" )
       {
         sGroup = "RasterLite1-Tiles";
-        sGeometryTypeString = sGroup;
+        sGeometryTypeName = sGroup;
       }
       if ( sGroup == "RasterLite2Raster" )
       {
         sGroup = "RasterLite2-Tiles";
-        sGeometryTypeString = sGroup;
+        sGeometryTypeName = sGroup;
       }
       if ( sGroup == "GeoPackageRaster" )
       {
         sGroup = "GeoPackage-Tiles";
-        sGeometryTypeString = sGroup;
+        sGeometryTypeName = sGroup;
       }
       if ( sGroup == "GeoPackageVector" )
       {
         sGroup = "GeoPackage-Vector";
-        sGeometryTypeString = sGroup;
+        sGeometryTypeName = sGroup;
       }
       iconType = QgsSpatialiteDbInfo::NonSpatialTablesTypeIcon( sGroup );
     }
@@ -1017,12 +1017,12 @@ void QgsSpatiaLiteTableModel::addTableEntryLayer( QgsSpatialiteDbLayer *dbLayer,
     QStandardItem *sqlItem  = nullptr;
     if ( sSearchName == "MBTiles" )
     {
-      geomTypeItem = new QStandardItem( sGeometryTypeString );
+      geomTypeItem = new QStandardItem( sGeometryTypeName );
       sqlItem = new QStandardItem( dbLayer->getLayerQuery() );
     }
     else
     {
-      geomTypeItem = new QStandardItem( iconType, sGeometryTypeString );
+      geomTypeItem = new QStandardItem( iconType, sGeometryTypeName );
       geomTypeItem->setFlags( Qt::ItemIsEnabled | Qt::ItemIsSelectable );
       sqlItem = new QStandardItem( dbLayer->getLayerQuery() );
       sqlItem->setFlags( Qt::ItemIsEnabled | Qt::ItemIsSelectable | Qt::ItemIsEditable );

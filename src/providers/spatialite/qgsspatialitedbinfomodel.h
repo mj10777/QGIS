@@ -121,7 +121,7 @@ class QgsSpatialiteDbInfoModel : public QAbstractItemModel
      * Returns the String value of the enum of Model-Types of the QgsSpatialiteDbInfoItem
      * - QgsSpatialiteDbInfoModel::SpatialiteDbInfoModelType
      * \note
-     * \see getItemTypeString
+     * \see getItemTypeName
      */
     static QString SpatialiteDbInfoModelTypeName( QgsSpatialiteDbInfoModel::SpatialiteDbInfoModelType modelType );
 
@@ -132,7 +132,7 @@ class QgsSpatialiteDbInfoModel : public QAbstractItemModel
     * \returns Model-Type of the QgsSpatialiteDbInfoItem
     * \see getItemType()
     */
-    QString getModelTypeString() const { return QgsSpatialiteDbInfoModel::SpatialiteDbInfoModelTypeName( mModelType ); }
+    QString getModelTypeName() const { return QgsSpatialiteDbInfoModel::SpatialiteDbInfoModelTypeName( mModelType ); }
 
     /**
      * Placeholder for Model RootItem
@@ -373,7 +373,7 @@ class QgsSpatialiteDbInfoModel : public QAbstractItemModel
     * \see QgsSpatialiteDbInfoModel::getLayerSqlQuery
     * \see QgsSpatiaLiteSourceSelect::onSourceSelectTreeView_doubleClicked
     */
-    void setLayerSqlQuery( const QModelIndex &index, const QString &sSelectedLayerSql );
+    void setLayerSqlQuery( QgsSpatialiteDbInfoItem *currentItem, const QString &sSelectedLayerSql );
 
     /**
      * Returns the Sql-Query based on  Value of the Column 'Sql' from the selected Item
@@ -402,9 +402,19 @@ class QgsSpatialiteDbInfoModel : public QAbstractItemModel
     * \param bRemoveItems are the selected Item to be added or removed
     * \returns iCountItems count of unique-Items added or removed
     * \see QgsSpatialiteDbInfoItem::handelSelectedPrepairedChildren
-    * \see QgsSpatiaLiteSourceSelec::setLayerOrderData
+    * \see QgsSpatiaLiteSourceSelec::setLayerModelData
     */
-    int setLayerOrderData( bool bRemoveItems = false );
+    int setLayerModelData( bool bRemoveItems = false );
+
+    /**
+     * Clear the LayerOrder list of database layers that have been added to the map
+     * Type: ModelTypeLayerOrder
+     * \note
+     *  Avoid the Layers from being re-submited
+     * \returns count of valid Child-Items removed (Vector/Raster Group-Items)
+     * \see QgsSpatiaLiteSourceSelect::addSelectedDbLayers
+     */
+    int clearSelectedDbLayers();
 
     /**
      * Returns the active Database file-path
@@ -896,6 +906,7 @@ class QgsSpatialiteDbInfoItem : public QObject
       ItemTypeGroupGeoPackageRaster = QgsSpatialiteDbInfo::GeoPackageRaster + 10000,
       ItemTypeGroupMBTilesTable = QgsSpatialiteDbInfo::MBTilesTable + 10000,
       ItemTypeGroupMBTilesView = QgsSpatialiteDbInfo::MBTilesView + 10000,
+      ItemTypeGroupMBTilesVector = QgsSpatialiteDbInfo::MBTilesVector + 10000,
       ItemTypeGroupMetadata = QgsSpatialiteDbInfo::Metadata + 10000,
       ItemTypeGroupAllSpatialLayers = QgsSpatialiteDbInfo::AllSpatialLayers + 10000,
       ItemTypeGroupNonSpatialTables = QgsSpatialiteDbInfo::NonSpatialTables + 10000,
@@ -1008,7 +1019,7 @@ class QgsSpatialiteDbInfoItem : public QObject
     * \returns Model-Type of the QgsSpatialiteDbInfoItem
     * \see getItemType()
     */
-    QString getModelTypeString() const { return QgsSpatialiteDbInfoModel::SpatialiteDbInfoModelTypeName( mModelType ); }
+    QString getModelTypeName() const { return QgsSpatialiteDbInfoModel::SpatialiteDbInfoModelTypeName( mModelType ); }
 
     /**
      * Set the Modul-Type
@@ -1035,7 +1046,7 @@ class QgsSpatialiteDbInfoItem : public QObject
      * Returns the String value of the enum of Item-Types of the QgsSpatialiteDbInfoItem
      * - QgsSpatialiteDbInfoItem::SpatialiteDbInfoItemType
      * \note
-     * \see getItemTypeString
+     * \see getItemTypeName
      */
     static QString SpatialiteDbInfoItemTypeName( QgsSpatialiteDbInfoItem::SpatialiteDbInfoItemType itemType );
 
@@ -1114,6 +1125,16 @@ class QgsSpatialiteDbInfoItem : public QObject
     QgsSpatialiteDbInfoItem *child( int number );
 
     /**
+     * Clear all children from a parent
+     * \note
+     *  - The childCount before removing is returned
+     *  QList.clear() can (possibly) not be called from outside the class
+     * \returns returns the childCount before removing
+     * \see QgsSpatialiteDbInfoModel::moveLayerchild
+     */
+    int clearChildren();
+
+    /**
      * Remove the child inside a parent
      * - logic test are done
      * \note
@@ -1144,7 +1165,7 @@ class QgsSpatialiteDbInfoItem : public QObject
      * \note
      *  -
     * \returns List of Item-Type of the QgsSpatialiteDbInfoItem
-    * \see getItemTypeString()
+    * \see getItemTypeName()
     */
     QList<QgsSpatialiteDbInfoItem *> getChildItems() { return mChildItems; }
 
@@ -1419,12 +1440,28 @@ class QgsSpatialiteDbInfoItem : public QObject
     QString getLayerName() const { return mLayerName; }
 
     /**
+     * Retrieve formatted Uris
+     * \note
+     *  Provider specific
+     * \see QgsSpatialiteDbInfo::getDbLayerUris
+     */
+    QString getLayerUris() const { return mLayerUris; }
+
+    /**
+     * Retrieve ProviderKey for Layer
+     * \note
+     *  Provider specific
+     * \see QgsSpatialiteDbLayer::getLayerTypeProviderKey
+     */
+    QString getLayerProviderKey() const { return mLayerProviderKey; }
+
+    /**
      * Set the Spatialite Layer-Type String
      * - representing mLayerType
      *  \see setLayerType
      * \see SpatialiteLayerTypeName
      */
-    QString getLayerTypeString() const { return mLayerTypeString; }
+    QString getLayerTypeName() const { return mLayerTypeName; }
 
     /**
      * The Spatialite internal Database structure being read
@@ -1447,7 +1484,7 @@ class QgsSpatialiteDbInfoItem : public QObject
      * \note
      *  -
     * \returns Item-Type of the QgsSpatialiteDbInfoItem
-    * \see getItemTypeString()
+    * \see getItemTypeName()
     */
     SpatialiteDbInfoItemType getItemType() const { return mItemType; }
 
@@ -1458,7 +1495,7 @@ class QgsSpatialiteDbInfoItem : public QObject
     * \returns Item-Type of the QgsSpatialiteDbInfoItem
     * \see getItemType()
     */
-    QString getItemTypeString() const { return QgsSpatialiteDbInfoItem::SpatialiteDbInfoItemTypeName( mItemType ); }
+    QString getItemTypeName() const { return QgsSpatialiteDbInfoItem::SpatialiteDbInfoItemTypeName( mItemType ); }
 
     /**
      * Returnsthecollected Metadata for the Database or Layer
@@ -1627,6 +1664,90 @@ class QgsSpatialiteDbInfoItem : public QObject
     bool isDbSelectable() const { return mIsDbSelectable; }
 
     /**
+     * Flag indicating if the layer data source (Sqkite3) has ReadOnly restrictions
+     * \note
+     *  Uses sqlite3_db_readonly( mSqliteHandle, "main" )
+     * \returns result of sqlite3_db_readonly( mSqliteHandle, "main" )
+     * \see getSniffDatabaseType
+     * \see attachQSqliteHandle
+    * \since QGIS 3.0
+    */
+    bool isDbReadOnly() const { return mDbReadOnly; }
+
+    /**
+     * Is the read Database a Spatialite Database
+     * - supported by QgsSpatiaLiteProvider
+     * \note
+     *  - Spatialite specific functions should not be called when false
+     *  -> UpdateLayerStatistics()
+     */
+    bool isDbSpatialite() const { return mIsDbSpatialite; }
+
+    /**
+     * Is the read Database a Spatialite Database that contains a RasterLite2 Layer
+     * - supported by QgsRasterLite2Provider
+     * \note
+     *  - RasterLite2 specific functions should not be called when false
+     * \see readVectorRasterCoverages
+     */
+    bool isDbRasterLite2() const { return mIsDbRasterLite2; }
+
+    /**
+     * Does the Spatialite Database support Spatialite commands 2.4 -> 3.01?
+     * - avoids execution of such cammands
+     * \note
+     *  - layer_statistics
+     */
+    bool isDbSpatialiteLegacy() const { return mIsDbSpatialiteLegacy; }
+
+    /**
+     * Does the Spatialite Database support Spatialite commands >= 4.0 ?
+     * - avoids execution of such cammands
+     * \note
+     *  - InvalidateLayerStatistics
+     */
+    bool isDbSpatialite40() const { return mIsDbSpatialite40; }
+
+    /**
+     * Does the Spatialite Database support Spatialite commands >= 4.5 ?
+     * - avoids execution of such cammands
+     * \note
+     *  - Topology
+     */
+    bool isDbSpatialite50() const { return mIsDbSpatialite50; }
+
+    /**
+     * The read Database only supported by the QgsOgrProvider or QgsGdalProvider Drivers
+     * \note
+     *  - QgsOgrProvider: GeoPackage-Vector
+     *  - QgsGdalProvider: GeoPackage-Raster, MbTiles
+     *  - QgsGdalProvider: RasterLite1 [when Gdal-RasterLite Driver is active]
+     */
+    bool isDbGdalOgr() const { return mIsDbGdalOgr; }
+
+    /**
+     * Is the read Database a MbTilesDatabase
+     * - supported by the QgsGdalProvider Driver
+     * \note
+     *  - QgsGdalProvider: MbTiles
+     */
+    bool isDbMbTiles() const { return mIsDbMbTiles; }
+
+    /**
+     * Is the Database a GeoPackage
+     * - supported by QgsGdalProvider or QgsOgrProvider
+     * \note
+     *  - GeoPackage specific functions should not be called when false
+     */
+    bool isDbGeoPackage() const { return mIsDbGeoPackage; }
+
+    /**
+     * Does the file contain the Sqlite3 'Magic Header String'
+     * - UTF-8 string "SQLite format 3" including the nul terminator character at the end.
+     */
+    bool isDbSqlite3() const { return mIsDbSqlite3; }
+
+    /**
      * Is this a valid Layer-Type a Geometry or Raster that can be displayed by a Provider
      * - used within QgsSpatiaLiteSourceSelect
      *  \see onInit
@@ -1635,20 +1756,127 @@ class QgsSpatialiteDbInfoItem : public QObject
     bool isLayerSelectable() const { return mIsLayerSelectable; }
 
     /**
-     * Is the Layer-Type a Geometry or Raster
-     * - only with mLayerType
-     *  \see setGeometryType
-     *  \see addCommonMetadataItems
+     * Is the Layer supported by QgsSpatiaLiteProvider
+     * - QgsSpatiaLiteProvider should never accept a Layer when this is not true
+     * \note
+     *  - check for valid Layer in the provider
+     * \see setLayerType
+     * \see QgsSpatiaLiteProvider::setDbLayer
      */
-    bool isVector() const { return mIsVectorType; }
+    bool isLayerSpatialite() const { return mIsLayerSpatialite; }
 
     /**
      * Is the Layer-Type a Geometry or Raster
      * - only with mLayerType
-     *  \see setGeometryType
+     *  \see setLayerType
+     */
+    bool isLayerVectorType() const { return mIsLayerVectorType; }
+
+    /**
+     * Is the Layer-Type a Geometry or Raster
+     * - only with mLayerType
+     *  \see setLayerType
+     */
+    bool isLayerRasterType() const { return mIsLayerRasterType; }
+
+    /**
+     * Is the Layer-Type a SpatialTable Layer
+     * - SpatialTable, GeoPackageVector, GdalFdoOgr, TopologyExport
      *  \see addCommonMetadataItems
      */
-    bool isRaster() const { return mIsRasterType; }
+    bool isLayerSpatialTable() const { return mIsLayerSpatialTable; }
+
+    /**
+     * Is the Layer-Type a SpatialView Layer
+     * - SpatialView
+     *  \see addCommonMetadataItems
+     */
+    bool isLayerSpatialView() const { return mIsLayerSpatialView; }
+
+    /**
+     * Is the Layer-Type a VirtualShape Layer
+     * - VirtualShape
+     *  \see addCommonMetadataItems
+     */
+    bool isLayerVirtualShape() const { return mIsLayerVirtualShape; }
+
+    /**
+     * Is the Layer supported by QgsRasterLite2Provider
+     * - QgsSpatiaLiteProvider should never accept a Layer when this is not true
+     * \note
+     *  - check for valid Layer in the provider
+     * \see setLayerType
+     * \see QgsSpatiaLiteProvider::setDbLayer
+     */
+    bool isLayerRasterLite2() const { return mIsLayerRasterLite2; }
+
+    /**
+     * Is the Layer a RasterLite1 Layer
+     * - QgsSpatiaLiteProvider should never accept a Layer when this is not true
+     * \note
+     *  - check for valid Layer in the provider
+     * \see setLayerType
+     * \see QgsSpatiaLiteProvider::setDbLayer
+     */
+    bool isLayerRasterLite1() const { return mIsLayerRasterLite1; }
+
+    /**
+     * Is the Layer a GeoPackage
+     * - QgsSpatiaLiteProvider should never accept a Layer when this is not true
+     * \note
+     *  - check for valid Layer in the provider
+     * \see setLayerType
+     * \see QgsSpatiaLiteProvider::setDbLayer
+     */
+    bool isLayerGeoPackage() const { return mIsLayerGeoPackage; }
+
+    /**
+     * Is the Layer a GeoPackage-Raster
+     * - QgsSpatiaLiteProvider should never accept a Layer when this is not true
+     * \note
+     *  - check for valid Layer in the provider
+     * \see setLayerType
+     * \see QgsSpatiaLiteProvider::setDbLayer
+     */
+    bool isLayerGeoPackageRaster() const { return mIsLayerGeoPackageRaster; }
+
+    /**
+     * Is the Layer a GeoPackage-Vector
+     * - QgsSpatiaLiteProvider should never accept a Layer when this is not true
+     * \note
+     *  - check for valid Layer in the provider
+     * \see setLayerType
+     * \see QgsSpatiaLiteProvider::setDbLayer
+     */
+    bool isLayerGeoPackageVector() const { return mIsLayerGeoPackageVector; }
+
+    /**
+     * Is the Layer a FdoOgr Layer
+     * - supported by QgsGdalProvider or QgsOgrProvider
+     * \note
+     *  - FdoOgr specific functions should not be called when false
+     */
+    bool isLayerFdoOgr() const { return mIsLayerFdoOgr; }
+
+    /**
+     * Is the Layer a MbTiles-Raster Layer
+     * - QgsSpatiaLiteProvider should never accept a Layer when this is not true
+     * \note
+     *  - check for valid Layer in the provider
+     * \see setLayerType
+     * \see QgsSpatiaLiteProvider::setDbLayer
+     */
+    bool isLayerMbTilesRaster() const { return mIsLayerMbTilesRaster; }
+
+    /**
+     * Is the Layer a MbTiles-Vector Layer
+     * - QgsSpatiaLiteProvider should never accept a Layer when this is not true
+     * \note
+     *  - check for valid Layer in the provider
+     * \see setLayerType
+     * \see QgsSpatiaLiteProvider::setDbLayer
+     */
+    bool isLayerMbTilesVector() const { return mIsLayerMbTilesVector; }
 
     /**
      * Sets whether the item is selectable
@@ -1964,7 +2192,7 @@ class QgsSpatialiteDbInfoItem : public QObject
      *  \see setLayerType
      * \see SpatialiteLayerTypeName
      */
-    QString mLayerTypeString = QString( "SpatialiteUnknown" );
+    QString mLayerTypeName = QString( "SpatialiteUnknown" );
 
     /**
      * Layer-Name
@@ -1973,6 +2201,22 @@ class QgsSpatialiteDbInfoItem : public QObject
      *  Raster: Layer format: 'coverage_name'
      */
     QString mLayerName = QString();
+
+    /**
+     * Retrieve formatted Uris
+     * \note
+     *  Provider specific
+     *  Raster: Layer format: 'coverage_name'
+     */
+    QString mLayerUris = QString();
+
+    /**
+     * Retrieve ProviderKey for Layer
+     * \note
+     *  Provider specific
+     * \see QgsSpatialiteDbLayer::getLayerTypeProviderKey
+     */
+    QString mLayerProviderKey = QString();
 
     /**
      * The Spatialite internal Database structure being read
@@ -2127,55 +2371,198 @@ class QgsSpatialiteDbInfoItem : public QObject
     bool mIsDbSelectable = false;
 
     /**
-     * Is the Layer-Type a Geometry or Raster
-     * - only with mLayerType
-     *  \see setGeometryType
-     *  \see addCommonMetadataItems
+     * Flag indicating if the layer data source (Sqkite3) has ReadOnly restrictions
+     * \note
+     *  Uses sqlite3_db_readonly( mSqliteHandle, "main" )
+     * \returns result of sqlite3_db_readonly( mSqliteHandle, "main" )
+     * \see getSniffDatabaseType
+     * \see attachQSqliteHandle
+    * \since QGIS 3.0
+    */
+    bool mDbReadOnly = false;
+
+    /**
+     * Is the read Database a Spatialite Database
+     * - supported by QgsSpatiaLiteProvider
+     * \note
+     *  - Spatialite specific functions should not be called when false
+     *  -> UpdateLayerStatistics()
      */
-    bool mIsVectorType = false;
+    bool mIsDbSpatialite = false;
+
+    /**
+     * Is the read Database a Spatialite Database that contains a RasterLite2 Layer
+     * - supported by QgsRasterLite2Provider
+     * \note
+     *  - RasterLite2 specific functions should not be called when false
+     * \see QgsSpatialiteDbLayer::rl2GetMapImageFromRaster
+     */
+    bool mIsDbRasterLite2 = false;
+
+    /**
+     * Does the Spatialite Database support Spatialite commands 2.4 -> 3.01?
+     * - avoids execution of such cammands
+     * \note
+     *  - layer_statistics
+     */
+    bool mIsDbSpatialiteLegacy = false;
+
+    /**
+     * Does the Spatialite Database support Spatialite commands >= 4?
+     * - avoids execution of such cammands
+     * \note
+     *  - InvalidateLayerStatistics
+     */
+    bool mIsDbSpatialite40 = false;
+
+    /**
+     * Does the Spatialite Database support Spatialite commands >= 4.5?
+     * - avoids execution of such cammands
+     * \note
+     *  - Topology
+     */
+    bool mIsDbSpatialite50 = false;
+
+    /**
+     * Is the read Database not supported by QgsSpatiaLiteProvider but
+     * - supported by the QgsOgrProvider or QgsGdalProvider Drivers
+     * \note
+     *  - QgsOgrProvider: GeoPackage-Vector
+     *  - QgsGdalProvider: GeoPackage-Raster, MbTiles
+     *  - QgsGdalProvider: RasterLite1 [when Gdal-RasterLite Driver is active]
+     */
+    bool mIsDbGdalOgr = false;
+
+    /**
+     * Is the read Database a MbTilesDatabase
+     * - supported by the QgsGdalProvider Driver
+     * \note
+     *  - QgsGdalProvider: MbTiles
+     */
+    bool mIsDbMbTiles = false;
+
+    /**
+     * Is the Database a GeoPackage
+     * - supported by QgsGdalProvider or QgsOgrProvider
+     * \note
+     *  - GeoPackage specific functions should not be called when false
+     */
+    bool mIsDbGeoPackage = false;
+
+    /**
+     * Does the file contain the Sqlite3 'Magic Header String'
+     * - UTF-8 string "SQLite format 3" including the nul terminator character at the end.
+     */
+    bool mIsDbSqlite3 = false;
+
+    /**
+     * Is the Layer
+     * - supported by QgsSpatiaLiteProvider
+     * \note
+     *  - Spatialite specific functions should not be called when false
+     *  -> UpdateLayerStatistics()
+     */
+    bool mIsLayerSpatialite = false;
 
     /**
      * Is the Layer-Type a Geometry or Raster
      * - only with mLayerType
-     *  \see setGeometryType
-     *  \see addCommonMetadataItems
+     *  \see setLayerType
      */
-    bool mIsRasterType = false;
+    bool mIsLayerVectorType = false;
 
     /**
-     * Is the Layer-Type a RasterLite2 Layer
+     * Is the Layer-Type a Geometry or Raster
      * - only with mLayerType
-     *  \see addCommonMetadataItems
+     *  \see setLayerType
      */
-    bool mIsSpatialView = false;
+    bool mIsLayerRasterType = false;
 
     /**
-     * Is the Layer-Type a RasterLite2 Layer
-     * - only with mLayerType
+     * Is the Layer-Type a SpatialTable Layer
+     * - SpatialTable, GeoPackageVector, GdalFdoOgr, TopologyExport
      *  \see addCommonMetadataItems
      */
-    bool mIsRasterLite2 = false;
+    bool mIsLayerSpatialTable = false;
 
     /**
-     * Is the Layer-Type a RasterLite1 Layer
-     * - Without title, Abstract and copywrite Information
+     * Is the Layer-Type a SpatialView Layer
+     * - SpatialView
      *  \see addCommonMetadataItems
      */
-    bool mIsRasterLite1 = false;
+    bool mIsLayerSpatialView = false;
 
     /**
-     * Is the Layer-Type a MbTiles Layer
-     * - only with mLayerType
+     * Is the Layer-Type a VirtualShape Layer
+     * - VirtualShape
      *  \see addCommonMetadataItems
      */
-    bool mIsMbTiles = false;
+    bool mIsLayerVirtualShape = false;
 
     /**
-     * Is the Layer-Type a GeoPackage
-     * - only with mLayerType
-     *  \see addCommonMetadataItems
+     * Is the Layer
+     * - supported by QgsRasterLite2Provider
+     * \note
+     *  - RasterLite2 specific functions should not be called when false
+     *  -> rl2GetMapImageFromRaster()
      */
-    bool mIsGeoPackage = false;
+    bool mIsLayerRasterLite2 = false;
+
+    /**
+     * Is the Layer a RasterLite1 Layer
+     * - supported by QgsGdalProvider
+     * \note
+     *  - RasterLite1 specific functions should not be called when false
+     */
+    bool mIsLayerRasterLite1 = false;
+
+    /**
+     * Is the Layer a GeoPackage Layer
+     * - supported by QgsGdalProvider or QgsOgrProvider
+     * \note
+     *  - GeoPackage specific functions should not be called when false
+     */
+    bool mIsLayerGeoPackage = false;
+
+    /**
+     * Is the Layer a GeoPackage-Raster Layer
+     * - supported by QgsGdalProvider or QgsOgrProvider
+     * \note
+     *  - GeoPackage specific functions should not be called when false
+     */
+    bool mIsLayerGeoPackageRaster = false;
+
+    /**
+     * Is the Layer a GeoPackage-Vector Layer
+     * - supported by QgsGdalProvider or QgsOgrProvider
+     * \note
+     *  - GeoPackage specific functions should not be called when false
+     */
+    bool mIsLayerGeoPackageVector = false;
+
+    /**
+     * Is the Layer a FdoOgr Layer
+     * - supported by QgsGdalProvider or QgsOgrProvider
+     * \note
+     *  - FdoOgr specific functions should not be called when false
+     */
+    bool mIsLayerFdoOgr = false;
+
+    /**
+     * Is the Layer a MbTiles-Raster Layer
+     * - supported by the QgsOgrProvider or QgsGdalProvider Drivers
+     * \note
+     *  - QgsGdalProvider:  MbTiles
+     */
+    bool mIsLayerMbTilesRaster = false;
+
+    /**
+     * Is the Layer a MbTiles-Vector Layer
+     * - supported by the QgsOgrProvider or QgsGdalProvider Drivers
+     * \note
+     *  - QgsOgrProvider:  MbTiles
+     */
+    bool mIsLayerMbTilesVector = false;
 
     /**
      * Helper Function to implement row() and column()

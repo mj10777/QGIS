@@ -468,7 +468,7 @@ class QgsSpatiaLiteProvider: public QgsVectorDataProvider
      *  - bsed on values offrom spatialite_version()
      * \see QgsSpatialiteDbInfo::isDbVersion45
     */
-    bool isDbVersion45() const { return getSpatialiteDbInfo()-> isDbVersion45(); }
+    bool isDbVersion50() const { return getSpatialiteDbInfo()->isDbVersion50(); }
 
     /**
      * Loaded Layers-Counter
@@ -568,7 +568,7 @@ class QgsSpatiaLiteProvider: public QgsVectorDataProvider
      *  - QgsSpatialiteDbLayer will use a copy of QgsSpatialiteDbInfo  mLayerMetadata as starting point
      * \see QgsSpatialiteDbLayer::getLayerMetadata
     */
-    QgsLayerMetadata layerMetadata() const { return getDbLayer()->getLayerMetadata(); };
+    QgsLayerMetadata layerMetadata() const { return mLayerMetadata; };
 
     /**
      * The sqlite handler
@@ -748,7 +748,7 @@ class QgsSpatiaLiteProvider: public QgsVectorDataProvider
      *  - QgsWkbTypes::displayString(mGeometryType)
      * \see QgsSpatialiteDbLayer::getGeometryType
      */
-    QString getGeometryTypeString() const { return mGeometryTypeString; }
+    QString getGeometryTypeName() const { return mGeometryTypeName; }
 
     /**
      * The Spatialite Coord-Dimensions of the Layer
@@ -769,6 +769,18 @@ class QgsSpatiaLiteProvider: public QgsVectorDataProvider
      * \see QgsSpatialiteDbLayer::getNumberFeatures
      */
     QgsRectangle getLayerExtent( bool bUpdate = false, bool bUpdateStatistics = false ) const { return getDbLayer()->getLayerExtent( bUpdate, bUpdateStatistics ); }
+
+    /**
+     * Rectangle that contains the extent (bounding box) of the layer base on a Sql-Subset Query
+     * \note
+     *  the extent and NumberFeaturs should NOT be stored in the Layer, since the Layer may be used elsrwhere
+     *  Only for Vectors. Invalid Syntax or Raster will return Layer Extent and NumFeatures
+     * \param sSubsetString Sql-Subset Query [without 'WHERE']
+     * \param iNumberFeatures OUT NumFeatures based on Sql-Subset Query
+     * \see getLayerExtent
+     * \see getNumberFeatures
+     */
+    QgsRectangle getLayerExtentSubset( QString sSubsetString, long &iNumberFeatures );
 
     /**
      * Number of features in the layer
@@ -1071,33 +1083,6 @@ class QgsSpatiaLiteProvider: public QgsVectorDataProvider
     bool mIsQuery;
 
     /**
-     * Flag indicating if the layer data source is based on a Spatial Table
-     * \note
-     *  result of getLayerType() == QgsSpatialiteDbInfo::SpatialTable or TopologyExport
-     * otherwise not used
-     * \see setDbLayer
-     */
-    bool mTableBased;
-
-    /**
-     *Flag indicating if the layer data source is based on a View
-     * \note
-     *  result of getLayerType() == QgsSpatialiteDbInfo::SpatialView
-     * otherwise not used
-     * \see setDbLayer
-     */
-    bool mViewBased;
-
-    /**
-     * Flag indicating if the layer data source is based on a VirtualShape
-     * \note
-     *  result of getLayerType() == QgsSpatialiteDbInfo::VirtualShape
-     * otherwise not used
-     * \see setDbLayer
-     */
-    bool mVShapeBased;
-
-    /**
      * Flag indicating if the layer data source has ReadOnly restrictions
      * \note
      *
@@ -1236,7 +1221,7 @@ class QgsSpatiaLiteProvider: public QgsVectorDataProvider
      *  - QgsWkbTypes::displayString(mGeometryType)
      * \see QgsSpatialiteDbLayer::getGeometryType
      */
-    QString mGeometryTypeString;
+    QString mGeometryTypeName;
 
     /**
      * List of layer fields in the table
@@ -1369,26 +1354,45 @@ class QgsSpatiaLiteProvider: public QgsVectorDataProvider
     QString mSubsetString;
 
     /**
-     * this Geometry is supported by an R*Tree spatial index
+     * Contains collected Metadata for the Layer
+     * \brief A structured metadata store for a map layer.
      * \note
-     *  result of getDbLayer()->getSpatialIndexType() == QgsSpatialiteDbInfo::SpatialIndexRTree
-     *  Used in QgsSpatiaLiteFeatureIterator
-     * \see setDbLayer
-     * \see QgsSpatiaLiteFeatureSource::mSpatialIndexRTree
-     * \see QgsSpatiaLiteFeatureIterator::whereClauseRect
-     */
-    bool mSpatialIndexRTree;
+     *  - QgsSpatialiteDbLayer will use a copy of QgsSpatialiteDbInfo  mLayerMetadata as starting point
+     * \see QgsMapLayer::htmlMetadata()
+     * \see QgsMapLayer::metadata
+     * \see QgsMapLayer::setMetadata
+    */
+    QgsLayerMetadata mLayerMetadata;
 
     /**
-     * this Geometry is supported by an MBR cache spatial index
+     * Set the collected Metadata for the Layer
+     * \brief A structured metadata store for a map layer.
      * \note
-     *  result of getDbLayer()->getSpatialIndexType() == QgsSpatialiteDbInfo::SpatialIndexMbrCache
-     *  Used in QgsSpatiaLiteFeatureIterator
-     * \see setDbLayer
-     * \see QgsSpatiaLiteFeatureSource::mSpatialIndexMbrCache
-     * \see QgsSpatiaLiteFeatureIterator::whereClauseRect
+     *  - QgsSpatialiteDbLayer will use a copy of QgsSpatialiteDbInfo  mLayerMetadata as starting point
+     * \see prepare
+     * \see QgsMapLayer::htmlMetadata()
+     * \see QgsMapLayer::metadata
+     * \see QgsMapLayer::setMetadata
+    */
+    bool setLayerMetadata();
+
+    /**
+     * Rectangle that contains the extent (bounding box) of the layer
+     * - based on the Srid of the Layer
+     * \note
+     *  - QgsWkbTypes::displayString(mGeometryType)
      */
-    bool mSpatialIndexMbrCache;
+    QgsRectangle mLayerExtent;
+
+    /**
+     * Number of features in the layer
+     * \note
+     *  With UpdateLayerStatistics the Extent will also be updated and retrieved
+     * \param bUpdateStatistics UpdateLayerStatistics before reading
+     * \see getLayerExtent
+     * \see getNumberFeatures
+     */
+    long mNumberFeatures = 0;
 
     /**
      * Retrieve a specific of layer fields of the table

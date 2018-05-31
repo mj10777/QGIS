@@ -176,11 +176,22 @@ void QgsRasterLite2Provider::invalidateConnections( const QString &connection )
 }
 //-----------------------------------------------------------------
 // QgsRasterLite2Provider::capabilities
-// Size | ReadLayerMetadata
+// Size
 //-----------------------------------------------------------------
 int QgsRasterLite2Provider::capabilities() const
 {
   return getDbLayer()->getRasterCapabilities();
+}
+//-----------------------------------------------------------------
+// QgsRasterLite2Provider::capabilities
+//  ReadLayerMetadata | WriteLayerMetadata
+//-----------------------------------------------------------------
+QgsRasterDataProvider::ProviderCapabilities QgsRasterLite2Provider::providerCapabilities() const
+{
+  QgsRasterDataProvider::ProviderCapabilities providerCapabilities;
+  providerCapabilities |= QgsRasterDataProvider::ReadLayerMetadata;
+  providerCapabilities |= QgsRasterDataProvider::WriteLayerMetadata;
+  return providerCapabilities;
 }
 //-----------------------------------------------------------------
 // QgsRasterLite2Provider::setSqliteHandle
@@ -414,10 +425,10 @@ int QgsRasterLite2Provider::createLayerMetadata( int i_debug )
     }
     sMetadata = QStringLiteral( "%1\n" ).arg( sMetadataBands );
     sHtmlMetadata = QStringLiteral( "%1\n" ).arg( sHtmlMetadataBands );
-    sMetadataBuild = QStringLiteral( "Data-Type   : %1 [%2]\n" ).arg( getDbLayer()->getLayerRasterSampleType() ).arg( getDbLayer()->getLayerRasterDataTypeString() );
+    sMetadataBuild = QStringLiteral( "Data-Type   : %1 [%2]\n" ).arg( getDbLayer()->getLayerRasterSampleType() ).arg( getDbLayer()->getLayerRasterDataTypeName() );
     sMetadata += sMetadataBuild;
     sHtmlMetadata += QString( "%1%2%3" ).arg( htmlTrTdStart ).arg( sMetadataBuild.replace( "\n", "" ).replace( ": ", htmlTdEndTdStart ) ).arg( htmlTrTdEnd );
-    sMetadataBuild = QStringLiteral( "Pixel-Type  : %1\n" ).arg( getDbLayer()->getLayerRasterPixelTypeString() );
+    sMetadataBuild = QStringLiteral( "Pixel-Type  : %1\n" ).arg( getDbLayer()->getLayerRasterPixelTypeName() );
     sMetadata += sMetadataBuild;
     sHtmlMetadata += QString( "%1%2%3" ).arg( htmlTrTdStart ).arg( sMetadataBuild.replace( "\n", "" ).replace( ": ", htmlTdEndTdStart ) ).arg( htmlTrTdEnd );
     sMetadataBuild = QStringLiteral( "Compression : %1\n" ).arg( getDbLayer()->getLayerRasterCompressionType() );
@@ -657,7 +668,7 @@ QString QgsRasterLite2Provider::generateBandName( int bandNumber ) const
   QString sLayerPixelType = QString();
   if ( isValid() )
   {
-    sLayerPixelType = getDbLayer()->getLayerRasterPixelTypeString();
+    sLayerPixelType = getDbLayer()->getLayerRasterPixelTypeName();
     if ( sLayerPixelType == QLatin1String( "RGB" ) )
     {
       switch ( bandNumber )

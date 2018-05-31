@@ -183,6 +183,12 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      */
     int capabilities() const override;
 
+    /**
+     * Returns a bitmask containing the supported capabilities
+     *
+     */
+    QgsRasterDataProvider::ProviderCapabilities providerCapabilities() const override;
+
     /* Inherited from QgsRasterDataProvider */
 
     /**
@@ -412,7 +418,6 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      * \note
      *  - QgsSpatialiteDbLayer will use a copy of QgsSpatialiteDbInfo  mLayerMetadata as starting point
      * \see QgsSpatialiteDbLayer::getLayerMetadata
-    * \since QGIS 3.0
     */
     QgsLayerMetadata layerMetadata() const { return getDbLayer()->getLayerMetadata(); };
 
@@ -429,7 +434,6 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
     /**
      * The Database filename (with Path)
     * \returns mDatabaseFileName complete Path (without without symbolic links)
-    * \since QGIS 3.0
     */
     QString getDatabaseFileName() const { return getSpatialiteDbInfo()->getDatabaseFileName(); }
 
@@ -438,7 +442,6 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      * \note
      *  -  based on result of CheckSpatialMetaData
      * \see QgsSpatialiteDbInfo::getSniffDatabaseType
-    * \since QGIS 3.0
     */
     QgsSpatialiteDbInfo::SpatialMetadata dbSpatialMetadata() const { return getSpatialiteDbInfo()->dbSpatialMetadata(); }
 
@@ -447,7 +450,6 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      * \note
      *  - returned from spatialite_version()
      * \see QgsSpatialiteDbInfo::getSniffDatabaseType
-    * \since QGIS 3.0
     */
     QString dbSpatialiteVersionInfo() const { return getSpatialiteDbInfo()->dbSpatialiteVersionInfo(); }
 
@@ -472,7 +474,6 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      * \note
      *  - extracted from spatialite_version()
      * \see QgsSpatialiteDbInfo::getSniffDatabaseType
-    * \since QGIS 3.0
     */
     int dbSpatialiteVersionRevision() const { return getSpatialiteDbInfo()->dbSpatialiteVersionRevision(); }
 
@@ -481,7 +482,6 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      * \note
      *  -  based on result of CheckSpatialMetaData
      * \see getSniffDatabaseType
-    * \since QGIS 3.0
     *
     */
     QString dbSpatialMetadataString() const { return getSpatialiteDbInfo()->dbSpatialMetadataString(); }
@@ -491,7 +491,6 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      * \note
      *  - returned from RL2_Version()
      * \see QgsSpatialiteDbInfo::dbHasRasterlite2
-    * \since QGIS 3.0
     */
     QString dbRasterLite2VersionInfo() const { return getSpatialiteDbInfo()->dbRasterLite2VersionInfo(); }
 
@@ -516,7 +515,6 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      * \note
      *  - extracted from RL2_Version()
      * \see QgsSpatialiteDbInfo::dbHasRasterlite2
-    * \since QGIS 3.0
     */
     int dbRasterLite2VersionRevision() const { return getSpatialiteDbInfo()->dbRasterLite2VersionRevision(); }
 
@@ -597,7 +595,6 @@ class QgsRasterLite2Provider : public QgsRasterDataProvider
      * \note
      *  - can be used to set the needed QgsCoordinateReferenceSystem
      * \see crs()
-    * \since QGIS 3.0
     */
     QString getSridEpsg() const { return getDbLayer()->getSridEpsg(); }
 

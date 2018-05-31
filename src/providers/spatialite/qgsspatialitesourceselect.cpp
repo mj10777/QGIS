@@ -246,6 +246,7 @@ void QgsSpatiaLiteSourceSelect::onSourceSelectTreeView_clicked( const QModelInde
   QTreeView *treeviewSender = qobject_cast<QTreeView *>( sender() );
   QModelIndex item_index;
   bool bValidSelection = false;
+  bool bVectorSelection = false;
   bool bIsSpatialite = false;
   if ( getCurrentTabSourceSelectIndex() == getTabConnectionsIndex() )
   {
@@ -259,6 +260,15 @@ void QgsSpatiaLiteSourceSelect::onSourceSelectTreeView_clicked( const QModelInde
       if ( mConnectionsSpatialiteDbInfoModel.isSpatialite() )
       {
         bIsSpatialite = true;
+      }
+      QgsSpatialiteDbInfoItem *currentItem = mConnectionsSpatialiteDbInfoModel.getLayerItem( item_index );
+      if ( currentItem )
+      {
+        if ( ( currentItem->isLayerSelectable() ) && ( currentItem->isLayerVectorType() ) )
+        {
+          // Only a (main, not its Children) Layer-Item but also a Vector Layer
+          bVectorSelection = true;
+        }
       }
     }
   }
@@ -279,7 +289,7 @@ void QgsSpatiaLiteSourceSelect::onSourceSelectTreeView_clicked( const QModelInde
   }
   // Only known and valid layers will be enabled [directories, Non-Spatial will not]
   mSourceSelectAddLayersButton->setEnabled( bValidSelection );
-  mSourceSelectBuildQueryButton->setEnabled( bValidSelection );
+  mSourceSelectBuildQueryButton->setEnabled( bVectorSelection );
   mSourceSelectUpdateLayerStatiticsButton->setEnabled( bIsSpatialite );
 }
 //-----------------------------------------------------------------
@@ -302,14 +312,14 @@ void QgsSpatiaLiteSourceSelect::onSourceSelectTreeView_doubleClicked( const QMod
     if ( treeviewSender == mConnectionsTreeView )
     {
       item_index = mConnectionsProxyModel.mapToSource( index );
-      QgsDebugMsgLevel( QString( "QgsSpatiaLiteSourceSelect::onSourceSelectTreeView_doubleClicked [retrieving] index.row[%1] index.column[%2]" ).arg( index.row() ).arg( index.column() ), 7 );
       QgsSpatialiteDbInfoItem *currentItem = mConnectionsSpatialiteDbInfoModel.getLayerItem( item_index );
       if ( currentItem )
       {
+        QgsDebugMsgLevel( QString( "QgsSpatiaLiteSourceSelect::onSourceSelectTreeView_doubleClicked [retrieving] index.row[%1] index.column[%2]" ).arg( index.row() ).arg( index.column() ), 7 );
         switch ( currentItem->getItemType() )
         {
           case QgsSpatialiteDbInfoItem::ItemTypeLayer:
-            if ( mConnectionsSpatialiteDbInfoModel.getSqlQueryIndex() == item_index.column() )
+            if ( ( mConnectionsSpatialiteDbInfoModel.getSqlQueryIndex() == item_index.column() ) && ( currentItem->isLayerVectorType() ) )
             {
               // Only double-click on the SqlQuery-Column will call the Sql-Query Dialog
               setLayerSqlQuery( index );
@@ -317,7 +327,7 @@ void QgsSpatiaLiteSourceSelect::onSourceSelectTreeView_doubleClicked( const QMod
             else
             {
               // Only double-click on the SqlQuery-Column will call the Sql-Query Dialog
-              QgsDebugMsgLevel( QString( "QgsSpatiaLiteSourceSelect::onSourceSelectTreeView_doubleClicked [ItemTypeLayer] item_index.row[%1] item_index.column[%2] ItemType[%3]" ).arg( item_index.row() ).arg( item_index.column() ).arg( currentItem->getItemType() ), 7 );
+              QgsDebugMsgLevel( QString( "QgsSpatiaLiteSourceSelect::onSourceSelectTreeView_doubleClicked [ItemTypeLayer] item_index.row[%1] item_index.column[%2] ItemType[%3]" ).arg( item_index.row() ).arg( item_index.column() ).arg( currentItem->getItemTypeName() ), 7 );
               mTabWidgetSourceSelect->setTabEnabled( getTabLayerMaintenanceIndex(), true );
               // A Layer-Item, that is not a Database-Item or in the SqlQuery-Column
               setMaintenanceDatabaseLayerInfo( nullptr, currentItem->getDbLayer() );
@@ -330,7 +340,7 @@ void QgsSpatiaLiteSourceSelect::onSourceSelectTreeView_doubleClicked( const QMod
             mTabWidgetSourceSelect->setTabEnabled( getTabLayerMaintenanceIndex(), true );
             break;
           default:
-            showStatusMessage( QString( "doubleClicked -default- ItemText[%1 ] LayerName[%2 ] ItemType[%3]" ).arg( currentItem->text() ).arg( currentItem->getLayerName() ).arg( currentItem->getItemTypeString() ), 0 );
+            showStatusMessage( QString( "doubleClicked -default- ItemText[%1 ] LayerName[%2 ] ItemType[%3]" ).arg( currentItem->text() ).arg( currentItem->getLayerName() ).arg( currentItem->getItemTypeName() ), 0 );
             break;
         }
       }
@@ -348,7 +358,7 @@ void QgsSpatiaLiteSourceSelect::onSourceSelectTreeView_doubleClicked( const QMod
         {
           case QgsSpatialiteDbInfoItem::ItemTypeLayerOrderVectorLayer:
           case QgsSpatialiteDbInfoItem::ItemTypeLayerOrderRasterLayer:
-            showStatusMessage( QString( "doubleClicked -Layer- ItemText[%1 ] LayerName[%2 ] ItemType[%3]" ).arg( currentItem->text() ).arg( currentItem->getLayerName() ).arg( currentItem->getItemTypeString() ), 0 );
+            showStatusMessage( QString( "doubleClicked -Layer- ItemText[%1 ] LayerName[%2 ] ItemType[%3]" ).arg( currentItem->text() ).arg( currentItem->getLayerName() ).arg( currentItem->getItemTypeName() ), 0 );
             break;
           case QgsSpatialiteDbInfoItem::ItemTypeStylesMetadata:
             // Set the selected Style in the Layer-Style column
@@ -358,7 +368,7 @@ void QgsSpatiaLiteSourceSelect::onSourceSelectTreeView_doubleClicked( const QMod
             }
             break;
           default:
-            showStatusMessage( QString( "doubleClicked -default- ItemText[%1 ] LayerName[%2 ] ItemType[%3]" ).arg( currentItem->text() ).arg( currentItem->getLayerName() ).arg( currentItem->getItemTypeString() ), 0 );
+            showStatusMessage( QString( "doubleClicked -default- ItemText[%1 ] LayerName[%2 ] ItemType[%3]" ).arg( currentItem->text() ).arg( currentItem->getLayerName() ).arg( currentItem->getItemTypeName() ), 0 );
             break;
         }
       }
@@ -419,7 +429,7 @@ void QgsSpatiaLiteSourceSelect::onSourceSelectTreeView_SelectionChanged( const Q
         bValidSelection = true;
       }
       // When 'bRemoveItems = true', the Items NOT in the LayerOrder list will be removed
-      iCountItems = setLayerOrderData( bRemoveItems );
+      iCountItems = setLayerModelData( bRemoveItems );
       showStatusMessage( QString( "Layer(s) have been  %2: %1." ).arg( iCountItems ).arg( sSelectedType ), 0 );
       mSourceSelectAddLayersButton->setEnabled( bValidSelection );
     }
@@ -716,7 +726,7 @@ void QgsSpatiaLiteSourceSelect::spatialiteDbInfoContextMenuRequested( QPoint poi
           case 20:
           case 30:
             sMenuTextCopy = QStringLiteral( "Copy Cell text" );
-            sToolTipCopy = QStringLiteral( "Copy Cell text for ItemType[%1] ModelType[%2]" ).arg( currentItem->getItemTypeString() ).arg( currentItem->getModelTypeString() );
+            sToolTipCopy = QStringLiteral( "Copy Cell text for ItemType[%1] ModelType[%2]" ).arg( currentItem->getItemTypeName() ).arg( currentItem->getModelTypeName() );
             break;
           default:
             sMenuTextCopy = sMenuText;
@@ -724,7 +734,7 @@ void QgsSpatiaLiteSourceSelect::spatialiteDbInfoContextMenuRequested( QPoint poi
             if ( sMenuTextCopy.isEmpty() )
             {
               sMenuTextCopy = QStringLiteral( "Copy Cell text" );
-              sToolTipCopy = QStringLiteral( "Copy Cell text for ItemType[%1] ModelType[%2]" ).arg( currentItem->getItemTypeString() ).arg( currentItem->getModelTypeString() );
+              sToolTipCopy = QStringLiteral( "Copy Cell text for ItemType[%1] ModelType[%2]" ).arg( currentItem->getItemTypeName() ).arg( currentItem->getModelTypeName() );
             }
             break;
         }
@@ -813,12 +823,12 @@ void QgsSpatiaLiteSourceSelect::spatialiteDbInfoContextMenuRequested( QPoint poi
     }
 #else
       // This is only needed during development of new Item-Type settings
-      QString sMessage = QStringLiteral( "CopyCellText: Column[%1] EditRole[%2] MenuText[%3] ToolTip[%4] LayerName[%5] ItemType[%6]" ).arg( itemColumn ).arg( iCommandRole ).arg( sMenuText ).arg( sToolTip ).arg( currentItem->getLayerName() ).arg( currentItem->getItemTypeString() );
+      QString sMessage = QStringLiteral( "CopyCellText: Column[%1] EditRole[%2] MenuText[%3] ToolTip[%4] LayerName[%5] ItemType[%6]" ).arg( itemColumn ).arg( iCommandRole ).arg( sMenuText ).arg( sToolTip ).arg( currentItem->getLayerName() ).arg( currentItem->getItemTypeName() );
       showStatusMessage( sMessage, 0 );
     }
     else if ( getCurrentTabSourceSelectIndex() == getTabLayerOrderIndex() )
     {
-      QString sMessage = QStringLiteral( "CopyCellText: Column[%1] EditRole[%2] MenuText[%3] ToolTip[%4] LayerName[%5] ItemType[%6]" ).arg( itemColumn ).arg( iCommandRole ).arg( sMenuText ).arg( sToolTip ).arg( currentItem->getLayerName() ).arg( currentItem->getItemTypeString() );
+      QString sMessage = QStringLiteral( "CopyCellText: Column[%1] EditRole[%2] MenuText[%3] ToolTip[%4] LayerName[%5] ItemType[%6]" ).arg( itemColumn ).arg( iCommandRole ).arg( sMenuText ).arg( sToolTip ).arg( currentItem->getLayerName() ).arg( currentItem->getItemTypeName() );
       showStatusMessage( sMessage, 0 );
     }
 #endif
@@ -1229,15 +1239,14 @@ int QgsSpatiaLiteSourceSelect::collectConnectionsSelectedTables()
     {
       continue;
     }
-
     QString currentSchemaName;
-    currentSchemaName = currentItem->getLayerTypeString(); // ItemTypeLayer [isLayerSelectable]
+    currentSchemaName = currentItem->getLayerTypeName(); // ItemTypeLayer [isLayerSelectable]
     int currentRow = currentItem->row();
     if ( !dbInfo[currentSchemaName].contains( currentRow ) )
     {
       dbInfo[currentSchemaName][currentRow] = true;
       m_selectedLayers.append( mConnectionsSpatialiteDbInfoModel.getLayerName( mConnectionsProxyModel.mapToSource( *selected_it ) ) );
-      QgsDebugMsgLevel( QStringLiteral( "QgsSpatiaLiteSourceSelect::collectConnectionsSelectedTables row[%4] getItem[%1] m_selectedLayers[%2] m_selectedLayersSql[%3]" ).arg( currentItem->getItemTypeString() ).arg( mConnectionsSpatialiteDbInfoModel.getLayerName( mConnectionsProxyModel.mapToSource( *selected_it ) ) ).arg( layerUriSql( mConnectionsProxyModel.mapToSource( *selected_it ) ) ).arg( currentRow ), 7 );
+      QgsDebugMsgLevel( QStringLiteral( "QgsSpatiaLiteSourceSelect::collectConnectionsSelectedTables row[%4] getItem[%1] m_selectedLayers[%2] m_selectedLayersSql[%3]" ).arg( currentItem->getItemTypeName() ).arg( mConnectionsSpatialiteDbInfoModel.getLayerName( mConnectionsProxyModel.mapToSource( *selected_it ) ) ).arg( layerUriSql( mConnectionsProxyModel.mapToSource( *selected_it ) ) ).arg( currentRow ), 7 );
       m_selectedLayersSql  << layerUriSql( mConnectionsProxyModel.mapToSource( *selected_it ) );
     }
   }
@@ -1268,13 +1277,18 @@ void QgsSpatiaLiteSourceSelect::addSelectedDbLayers()
   else
   {
     showStatusMessage( QStringLiteral( "%1 Layers will be added to the QGis-MapCanvas" ).arg( m_selectedLayers.count() ), 0 );
-    addConnectionsDbMapLayers();
-    if ( mWidgetMode == QgsProviderRegistry::WidgetMode::None && ! mHoldDialogOpen->isChecked() )
+    if ( addConnectionsDbMapLayers() > 0 )
     {
-      accept();
+      if ( mWidgetMode == QgsProviderRegistry::WidgetMode::None && ! mHoldDialogOpen->isChecked() )
+      {
+        accept();
+      }
+      if ( ( mLayerOrderRootItem ) && ( mLayerOrderRootItem->childCount() > 0 ) )
+      {
+        mLayerOrderSpatialiteDbInfoModel.clearSelectedDbLayers();
+      }
     }
   }
-
 }
 //-----------------------------------------------------------------
 // QgsSpatiaLiteSourceSelect::addConnectionDatabaseSource
@@ -1382,7 +1396,7 @@ void QgsSpatiaLiteSourceSelect::setMaintenanceDatabaseLayerInfo( QgsSpatialiteDb
     mMaintenanceLayerLayerInfoGroupBox->setCollapsed( true );
     mMaintenanceColumnsRootItem->getChildItems().clear();
     bool bRemoveItems = true;
-    mMaintenanceColumnsSpatialiteDbInfoModel.setLayerOrderData( bRemoveItems );
+    mMaintenanceColumnsSpatialiteDbInfoModel.setLayerModelData( bRemoveItems );
   }
   else if ( dbLayer )
   {
@@ -1566,7 +1580,7 @@ void QgsSpatiaLiteSourceSelect::setMaintenanceLayerInfo( QgsSpatialiteDbLayer *d
     mMaintenanceLayerLayerNameLabel->setText( dbLayer->getLayerName() );
     mMaintenanceLayerLayerNameIcon->setPixmap( dbLayer->getGeometryTypeIcon().pixmap( 16, 16 ) );
     // Layer Type, with Layer Capabilities
-    mMaintenanceLayerLayerTypeLabel->setText( dbLayer->getLayerTypeString() );
+    mMaintenanceLayerLayerTypeLabel->setText( dbLayer->getLayerTypeName() );
     mMaintenanceLayerLayerTypeIcon->setPixmap( dbLayer->getLayerTypeIcon().pixmap( 16, 16 ) );
     mMaintenanceLayerLayerTypeIcon->setToolTip( dbLayer->getCapabilitiesString() );
     // Layer Features
@@ -1580,7 +1594,7 @@ void QgsSpatiaLiteSourceSelect::setMaintenanceLayerInfo( QgsSpatialiteDbLayer *d
         if ( mMaintenanceColumnsRootItem->getPrepairedChildItems().count() > 0 )
         {
           bool bRemoveItems = false;
-          mMaintenanceColumnsSpatialiteDbInfoModel.setLayerOrderData( bRemoveItems );
+          mMaintenanceColumnsSpatialiteDbInfoModel.setLayerModelData( bRemoveItems );
           mMaintenanceColumnsTreeView->setColumnHidden( mMaintenanceColumnsSpatialiteDbInfoModel.getColumnSortHidden(), true );
           // mMaintenanceColumnsTreeView->sortByColumn( mMaintenanceColumnsSpatialiteDbInfoModel.getColumnSortHidden(), Qt::AscendingOrder );
           mMaintenanceColumnsTreeView->expandToDepth( mMaintenanceColumnsSpatialiteDbInfoModel.getExpandToDepth() );
@@ -1592,11 +1606,11 @@ void QgsSpatiaLiteSourceSelect::setMaintenanceLayerInfo( QgsSpatialiteDbLayer *d
   }
 }
 //-----------------------------------------------------------------
-// QgsSpatiaLiteSourceSelect::setLayerOrderData
+// QgsSpatiaLiteSourceSelect::setLayerModelData
 // - Tab 'Connections'
 // - Tab 'Layer Order'
 //-----------------------------------------------------------------
-int QgsSpatiaLiteSourceSelect::setLayerOrderData( bool bRemoveItems )
+int QgsSpatiaLiteSourceSelect::setLayerModelData( bool bRemoveItems )
 {
   int iCountItems = 0;
   if ( ( getCurrentTabSourceSelectIndex() == getTabConnectionsIndex() ) ||
@@ -1604,7 +1618,7 @@ int QgsSpatiaLiteSourceSelect::setLayerOrderData( bool bRemoveItems )
   {
     if ( mLayerOrderRootItem )
     {
-      iCountItems = mLayerOrderSpatialiteDbInfoModel.setLayerOrderData( bRemoveItems );
+      iCountItems = mLayerOrderSpatialiteDbInfoModel.setLayerModelData( bRemoveItems );
       mTabWidgetSourceSelect->setTabEnabled( getTabLayerOrderIndex(), mLayerOrderRootItem->childCount() > 0 );
       // Even if nothing has changed (iRc== 0), expandToDepth still must be called
       // mLayerOrderTreeView->setColumnHidden( mLayerOrderSpatialiteDbInfoModel.getColumnSortHidden(), true );
@@ -1624,31 +1638,36 @@ int QgsSpatiaLiteSourceSelect::setLayerOrderData( bool bRemoveItems )
 void QgsSpatiaLiteSourceSelect::setLayerSqlQuery( const QModelIndex &index )
 {
   QModelIndex item_index;
-  QString tableName;
-  QString sLayerNameUris;
+
   if ( getCurrentTabSourceSelectIndex() == getTabConnectionsIndex() )
   {
     item_index = mConnectionsProxyModel.mapToSource( index );
-    tableName = mConnectionsSpatialiteDbInfoModel.getTableName( item_index );
-    sLayerNameUris = mConnectionsSpatialiteDbInfoModel.getLayerNameUris( item_index );
-    if ( sLayerNameUris.isEmpty() )
+    QgsSpatialiteDbInfoItem *currentItem = mConnectionsSpatialiteDbInfoModel.getLayerItem( item_index );
+    if ( ( currentItem ) && ( currentItem->isLayerSelectable() ) && ( currentItem->isLayerVectorType() ) )
     {
-      return;
-    }
-    QgsVectorLayer *vlayer = new QgsVectorLayer( sLayerNameUris, tableName, mSpatialiteProviderKey );
-    if ( !vlayer->isValid() )
-    {
+      // Only a (main, not its Children) Layer-Item but also a Vector Layer
+      QString sLayerName = currentItem->getLayerName();
+      QString sLayerUris = currentItem->getLayerUris();
+      QString sLayerProviderKey = currentItem->getLayerProviderKey();
+      if ( sLayerUris.isEmpty() )
+      {
+        return;
+      }
+      QgsVectorLayer *vlayer = new QgsVectorLayer( sLayerUris, sLayerName, sLayerProviderKey );
+      if ( !vlayer->isValid() )
+      {
+        delete vlayer;
+        return;
+      }
+      // create a query builder object
+      QgsQueryBuilder *gb = new QgsQueryBuilder( vlayer, this );
+      if ( gb->exec() )
+      {
+        mConnectionsSpatialiteDbInfoModel.setLayerSqlQuery( currentItem, gb->sql() );
+      }
+      delete gb;
       delete vlayer;
-      return;
     }
-    // create a query builder object
-    QgsQueryBuilder *gb = new QgsQueryBuilder( vlayer, this );
-    if ( gb->exec() )
-    {
-      mConnectionsSpatialiteDbInfoModel.setLayerSqlQuery( mConnectionsProxyModel.mapToSource( index ), gb->sql() );
-    }
-    delete gb;
-    delete vlayer;
   }
 }
 //-----------------------------------------------------------------

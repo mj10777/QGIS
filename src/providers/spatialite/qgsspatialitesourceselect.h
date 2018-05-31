@@ -242,9 +242,9 @@ class QgsSpatiaLiteSourceSelect: public QgsAbstractDataSourceWidget, private Ui:
     * \param bRemoveItems are the selected Item to be added or removed
     * \returns iCountItems count of unique-Items added or removed
     * \see onSourceSelectTreeView_SelectionChanged
-    * \see QgsSpatialiteDbInfoModel::setLayerOrderData
+    * \see QgsSpatialiteDbInfoModel::setLayerModelData
     */
-    int setLayerOrderData( bool bRemoveItems = false );
+    int setLayerModelData( bool bRemoveItems = false );
 
   public slots:
 
