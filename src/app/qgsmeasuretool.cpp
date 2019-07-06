@@ -28,23 +28,19 @@
 #include "qgssettings.h"
 #include "qgsproject.h"
 #include "qgssnapindicator.h"
+#include "qgsmapmouseevent.h"
 
 #include <QMessageBox>
-#include <QMouseEvent>
+
 
 QgsMeasureTool::QgsMeasureTool( QgsMapCanvas *canvas, bool measureArea )
   : QgsMapTool( canvas )
-  , mWrongProjectProjection( false )
+  , mMeasureArea( measureArea )
   , mSnapIndicator( new QgsSnapIndicator( canvas ) )
 {
-  mMeasureArea = measureArea;
-
   mRubberBand = new QgsRubberBand( canvas, mMeasureArea ? QgsWkbTypes::PolygonGeometry : QgsWkbTypes::LineGeometry );
   mRubberBandPoints = new QgsRubberBand( canvas, QgsWkbTypes::PointGeometry );
 
-  setCursor( QgsApplication::getThemeCursor( QgsApplication::Cursor::CrossHair ) );
-
-  mDone = true;
   // Append point we will move
   mPoints.append( QgsPointXY( 0, 0 ) );
   mDestinationCrs = canvas->mapSettings().destinationCrs();
@@ -58,13 +54,12 @@ QgsMeasureTool::QgsMeasureTool( QgsMapCanvas *canvas, bool measureArea )
 
 QgsMeasureTool::~QgsMeasureTool()
 {
+  // important - dialog is not parented to this tool (it's parented to the main window)
+  // but we want to clean it up now
   delete mDialog;
-  delete mRubberBand;
-  delete mRubberBandPoints;
 }
 
-
-QVector<QgsPointXY> QgsMeasureTool::points()
+QVector<QgsPointXY> QgsMeasureTool::points() const
 {
   return mPoints;
 }
@@ -73,6 +68,8 @@ QVector<QgsPointXY> QgsMeasureTool::points()
 void QgsMeasureTool::activate()
 {
   mDialog->show();
+  mRubberBand->show();
+  mRubberBandPoints->show();
   QgsMapTool::activate();
 
   // ensure that we have correct settings
@@ -103,6 +100,8 @@ void QgsMeasureTool::deactivate()
   mSnapIndicator->setMatch( QgsPointLocator::Match() );
 
   mDialog->hide();
+  mRubberBand->hide();
+  mRubberBandPoints->hide();
   QgsMapTool::deactivate();
 }
 
@@ -140,7 +139,8 @@ void QgsMeasureTool::updateSettings()
     mDone = lastDone;
     QgsCoordinateTransform ct( mDestinationCrs, mCanvas->mapSettings().destinationCrs(), QgsProject::instance() );
 
-    Q_FOREACH ( const QgsPointXY &previousPoint, points )
+    const auto constPoints = points;
+    for ( const QgsPointXY &previousPoint : constPoints )
     {
       try
       {
@@ -181,7 +181,7 @@ void QgsMeasureTool::updateSettings()
 
 void QgsMeasureTool::canvasPressEvent( QgsMapMouseEvent *e )
 {
-  Q_UNUSED( e );
+  Q_UNUSED( e )
 }
 
 void QgsMeasureTool::canvasMoveEvent( QgsMapMouseEvent *e )

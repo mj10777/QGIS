@@ -19,7 +19,7 @@
 
 #include <QWidget>
 #include <QLabel>
-#include "qgis.h"
+#include "qgis_sip.h"
 
 #include "ui_qgsauthconfigselect.h"
 #include "qgsauthconfig.h"
@@ -44,13 +44,13 @@ class GUI_EXPORT QgsAuthConfigSelect : public QWidget, private Ui::QgsAuthConfig
      */
     explicit QgsAuthConfigSelect( QWidget *parent SIP_TRANSFERTHIS = nullptr, const QString &dataprovider = QString() );
 
-    //! Set the authentication config id for the resource
+    //! Sets the authentication config id for the resource
     void setConfigId( const QString &authcfg );
 
-    //! Get the authentication config id for the resource
+    //! Gets the authentication config id for the resource
     const QString configId() const { return mAuthCfg; }
 
-    //! Set key of layer provider, if applicable
+    //! Sets key of layer provider, if applicable
     void setDataProviderKey( const QString &key );
 
   signals:
@@ -93,6 +93,7 @@ class GUI_EXPORT QgsAuthConfigSelect : public QWidget, private Ui::QgsAuthConfig
     bool mDisabled = false;
     QVBoxLayout *mAuthNotifyLayout = nullptr;
     QLabel *mAuthNotify = nullptr;
+    bool mTemporarilyBlockLoad = false;
 };
 
 
@@ -122,7 +123,7 @@ class GUI_EXPORT QgsAuthConfigUriEdit : public QDialog, private Ui::QgsAuthConfi
                                    const QString &datauri = QString(),
                                    const QString &dataprovider = QString() );
 
-    //! Set the data source URI to parse
+    //! Sets the data source URI to parse
     void setDataSourceUri( const QString &datauri );
 
     //! The returned, possibly edited data source URI

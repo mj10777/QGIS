@@ -140,9 +140,9 @@ void QgsSingleBandGrayRendererWidget::minMaxModified()
 
 void QgsSingleBandGrayRendererWidget::loadMinMax( int bandNo, double min, double max )
 {
-  Q_UNUSED( bandNo );
+  Q_UNUSED( bandNo )
 
-  QgsDebugMsg( QString( "theBandNo = %1 min = %2 max = %3" ).arg( bandNo ).arg( min ).arg( max ) );
+  QgsDebugMsg( QStringLiteral( "theBandNo = %1 min = %2 max = %3" ).arg( bandNo ).arg( min ).arg( max ) );
 
   mDisableMinMaxWidgetRefresh = true;
   if ( std::isnan( min ) )

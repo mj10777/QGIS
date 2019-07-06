@@ -23,8 +23,8 @@ class QgsVectorLayer;
 
 #define SIP_NO_FILE
 
-#include "qgsfeature.h"
 #include "qgsgeometry.h"
+#include "qgsfeatureid.h"
 #include <QMap>
 #include <memory>
 
@@ -32,8 +32,8 @@ class QgsVectorLayer;
  * \ingroup core
  * \class QgsGeometryEditUtils
  * \brief Convenience functions for geometry editing
- * \since QGIS 2.10
  * \note not available in Python bindings
+ * \since QGIS 2.10
  */
 class QgsGeometryEditUtils
 {
@@ -57,13 +57,13 @@ class QgsGeometryEditUtils
 
     /**
      * Deletes a ring from a geometry.
-     * \returns true if delete was successful
+     * \returns TRUE if delete was successful
      */
     static bool deleteRing( QgsAbstractGeometry *geom, int ringNum, int partNum = 0 );
 
     /**
      * Deletes a part from a geometry.
-     * \returns true if delete was successful
+     * \returns TRUE if delete was successful
      */
     static bool deletePart( QgsAbstractGeometry *geom, int partNum );
 

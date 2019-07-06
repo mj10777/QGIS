@@ -28,8 +28,8 @@ class QgsReadWriteContext;
 
 /**
  * Base metadata class for 3D renderers. Instances of derived classes may be registered in Qgs3DRendererRegistry.
- * \since QGIS 3.0
  * \ingroup core
+ * \since QGIS 3.0
  */
 class CORE_EXPORT Qgs3DRendererAbstractMetadata
 {
@@ -43,7 +43,7 @@ class CORE_EXPORT Qgs3DRendererAbstractMetadata
     QString type() const;
 
     /**
-     * Returns new instance of the renderer given the DOM element. Returns NULL on error.
+     * Returns new instance of the renderer given the DOM element. Returns NULLPTR on error.
      * Pure virtual function: must be implemented in derived classes.
      */
     virtual QgsAbstract3DRenderer *createRenderer( QDomElement &elem, const QgsReadWriteContext &context ) = 0 SIP_FACTORY;
@@ -63,8 +63,8 @@ class CORE_EXPORT Qgs3DRendererAbstractMetadata
 
 /**
  * Keeps track of available 3D renderers. Should be accessed through QgsApplication::renderer3DRegistry() singleton.
- * \since QGIS 3.0
  * \ingroup core
+ * \since QGIS 3.0
  */
 class CORE_EXPORT Qgs3DRendererRegistry
 {

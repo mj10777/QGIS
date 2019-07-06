@@ -45,16 +45,19 @@ class GUI_EXPORT QgsValueMapConfigDlg : public QgsEditorConfigWidget, private Ui
     /**
      * Populates a \a comboBox with the appropriate entries based on a value map \a configuration.
      *
-     * If \a skipNull is true, then NULL entries will not be added.
+     * If \a skipNull is TRUE, then NULL entries will not be added.
      *
      * \since QGIS 3.0
      */
     static void populateComboBox( QComboBox *comboBox, const QVariantMap &configuration, bool skipNull );
 
+    bool eventFilter( QObject *watched, QEvent *event ) override;
+
   private:
     void setRow( int row, const QString &value, const QString &description );
 
   private slots:
+    void copySelectionToClipboard();
     void vCellChanged( int row, int column );
     void addNullButtonPushed();
     void removeSelectedButtonPushed();

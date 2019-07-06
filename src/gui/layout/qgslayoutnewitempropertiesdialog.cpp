@@ -17,14 +17,17 @@
 #include "qgssettings.h"
 #include "qgslayout.h"
 #include "qgslayoutpagecollection.h"
+#include "qgshelp.h"
 #include "qgsgui.h"
+
+#include <QButtonGroup>
 
 QgsLayoutItemPropertiesDialog::QgsLayoutItemPropertiesDialog( QWidget *parent, Qt::WindowFlags flags )
   : QDialog( parent, flags )
 {
   setupUi( this );
 
-  QgsGui::instance()->enableAutoGeometryRestore( this );
+  QgsGui::enableAutoGeometryRestore( this );
 
   //make button exclusive
   QButtonGroup *buttonGroup = new QButtonGroup( this );
@@ -42,7 +45,7 @@ QgsLayoutItemPropertiesDialog::QgsLayoutItemPropertiesDialog( QWidget *parent, Q
   QgsSettings settings;
   double lastWidth = settings.value( QStringLiteral( "LayoutDesigner/lastItemWidth" ), QStringLiteral( "50" ) ).toDouble();
   double lastHeight = settings.value( QStringLiteral( "LayoutDesigner/lastItemHeight" ), QStringLiteral( "50" ) ).toDouble();
-  QgsUnitTypes::LayoutUnit lastSizeUnit = settings.enumSettingValue( QStringLiteral( "LayoutDesigner/lastSizeUnit" ), QgsUnitTypes::LayoutMillimeters );
+  QgsUnitTypes::LayoutUnit lastSizeUnit = settings.enumValue( QStringLiteral( "LayoutDesigner/lastSizeUnit" ), QgsUnitTypes::LayoutMillimeters );
   setItemSize( QgsLayoutSize( lastWidth, lastHeight, lastSizeUnit ) );
 
   mPosUnitsComboBox->linkToWidget( mXPosSpin );
@@ -52,6 +55,8 @@ QgsLayoutItemPropertiesDialog::QgsLayoutItemPropertiesDialog( QWidget *parent, Q
 
   mLockAspectRatio->setWidthSpinBox( mWidthSpin );
   mLockAspectRatio->setHeightSpinBox( mHeightSpin );
+
+  connect( buttonBox, &QDialogButtonBox::helpRequested, this, &QgsLayoutItemPropertiesDialog::showHelp );
 }
 
 void QgsLayoutItemPropertiesDialog::setItemPosition( QgsLayoutPoint position )
@@ -179,4 +184,9 @@ void QgsLayoutItemPropertiesDialog::setLayout( QgsLayout *layout )
   mSizeUnitsComboBox->setConverter( &layout->renderContext().measurementConverter() );
   mPosUnitsComboBox->setConverter( &layout->renderContext().measurementConverter() );
   mLayout = layout;
+}
+
+void QgsLayoutItemPropertiesDialog::showHelp()
+{
+  QgsHelp::openHelp( QStringLiteral( "print_composer/composer_items/composer_items_options.html#creating-a-layout-item" ) );
 }

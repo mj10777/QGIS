@@ -21,7 +21,6 @@
 #define QGSOWSSOURCESELECT_H
 #include "ui_qgsowssourceselectbase.h"
 #include "qgis_sip.h"
-#include "qgis.h"
 #include "qgsdatasourceuri.h"
 #include "qgsguiutils.h"
 #include "qgsproviderregistry.h"
@@ -64,8 +63,6 @@ class GUI_EXPORT QgsOWSSourceSelect : public QgsAbstractDataSourceWidget, protec
     //! Constructor
     QgsOWSSourceSelect( const QString &service, QWidget *parent SIP_TRANSFERTHIS = nullptr, Qt::WindowFlags fl = QgsGuiUtils::ModalDialogFlags, QgsProviderRegistry::WidgetMode widgetMode = QgsProviderRegistry::WidgetMode::None );
 
-    ~QgsOWSSourceSelect() override;
-
   public slots:
 
     //! Triggered when the provider's connections need to be refreshed
@@ -75,7 +72,7 @@ class GUI_EXPORT QgsOWSSourceSelect : public QgsAbstractDataSourceWidget, protec
     //! show whatever error is exposed.
     void showError( const QString &title, const QString &format, const QString &error );
 
-    //! Set status message to theMessage
+    //! Sets status message to theMessage
     void showStatusMessage( const QString &message );
 
   protected:
@@ -106,7 +103,7 @@ class GUI_EXPORT QgsOWSSourceSelect : public QgsAbstractDataSourceWidget, protec
     //! Clear previously set formats
     void clearFormats();
 
-    //! Set supported CRSs
+    //! Sets supported CRSs
     void populateCrs();
 
     //! Clear CRSs
@@ -124,7 +121,7 @@ class GUI_EXPORT QgsOWSSourceSelect : public QgsAbstractDataSourceWidget, protec
     //! Connection info (uri)
     QString connectionInfo();
 
-    //! Set the server connection combo box to that stored in the config file.
+    //! Sets the server connection combo box to that stored in the config file.
     void setConnectionListPosition();
 
     //! Add a few example servers to the list.
@@ -136,7 +133,7 @@ class GUI_EXPORT QgsOWSSourceSelect : public QgsAbstractDataSourceWidget, protec
     /**
      * \brief Populate the layer list.
      *
-     * \retval false if the layers could not be retrieved or parsed
+     * \returns FALSE if the layers could not be retrieved or parsed
      */
     virtual void populateLayerList();
 

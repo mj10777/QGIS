@@ -15,6 +15,8 @@
 ***************************************************************************/
 
 #include <QHBoxLayout>
+#include <QObject>
+#include <QKeyEvent>
 
 #include "qgsapplication.h"
 #include "qgsfieldexpressionwidget.h"
@@ -24,6 +26,8 @@
 #include "qgsfieldmodel.h"
 #include "qgsvectorlayer.h"
 #include "qgsproject.h"
+#include "qgsexpressioncontextutils.h"
+#include "qgsexpressioncontextgenerator.h"
 
 QgsFieldExpressionWidget::QgsFieldExpressionWidget( QWidget *parent )
   : QWidget( parent )
@@ -62,12 +66,12 @@ QgsFieldExpressionWidget::QgsFieldExpressionWidget( QWidget *parent )
   connect( mButton, &QAbstractButton::clicked, this, &QgsFieldExpressionWidget::editExpression );
   connect( mFieldProxyModel, &QAbstractItemModel::modelAboutToBeReset, this, &QgsFieldExpressionWidget::beforeResetModel );
   connect( mFieldProxyModel, &QAbstractItemModel::modelReset, this, &QgsFieldExpressionWidget::afterResetModel );
-  // NW TODO - Fix in 2.6
-//  connect( mCombo->lineEdit(), SIGNAL( returnPressed() ), this, SIGNAL( returnPressed() ) );
 
   mExpressionContext = QgsExpressionContext();
   mExpressionContext << QgsExpressionContextUtils::globalScope()
                      << QgsExpressionContextUtils::projectScope( QgsProject::instance() );
+
+  mCombo->installEventFilter( this );
 }
 
 void QgsFieldExpressionWidget::setExpressionDialogTitle( const QString &title )
@@ -78,6 +82,17 @@ void QgsFieldExpressionWidget::setExpressionDialogTitle( const QString &title )
 void QgsFieldExpressionWidget::setFilters( QgsFieldProxyModel::Filters filters )
 {
   mFieldProxyModel->setFilters( filters );
+}
+
+void QgsFieldExpressionWidget::setAllowEmptyFieldName( bool allowEmpty )
+{
+  mCombo->lineEdit()->setClearButtonEnabled( allowEmpty );
+  mFieldProxyModel->sourceFieldModel()->setAllowEmptyFieldName( allowEmpty );
+}
+
+bool QgsFieldExpressionWidget::allowEmptyFieldName() const
+{
+  return mFieldProxyModel->sourceFieldModel()->allowEmptyFieldName();
 }
 
 void QgsFieldExpressionWidget::setLeftHandButtonStyle( bool isLeft )
@@ -175,6 +190,8 @@ void QgsFieldExpressionWidget::setField( const QString &fieldName )
   if ( fieldName.isEmpty() )
   {
     setRow( -1 );
+    emit fieldChanged( QString() );
+    emit fieldChanged( QString(), true );
     return;
   }
 
@@ -269,6 +286,20 @@ void QgsFieldExpressionWidget::afterResetModel()
   mCombo->lineEdit()->setText( mBackupExpression );
 }
 
+bool QgsFieldExpressionWidget::eventFilter( QObject *watched, QEvent *event )
+{
+  if ( watched == mCombo && event->type() == QEvent::KeyPress )
+  {
+    QKeyEvent *keyEvent = static_cast<QKeyEvent *>( event );
+    if ( keyEvent->key() == Qt::Key_Enter || keyEvent->key() == Qt::Key_Return )
+    {
+      expressionEditingFinished();
+      return true;
+    }
+  }
+  return QObject::eventFilter( watched, event );
+}
+
 bool QgsFieldExpressionWidget::allowEvalErrors() const
 {
   return mAllowEvalErrors;
@@ -298,7 +329,7 @@ void QgsFieldExpressionWidget::currentFieldChanged()
   }
   else
   {
-    mCombo->setToolTip( QLatin1String( "" ) );
+    mCombo->setToolTip( QString() );
   }
 
   emit fieldChanged( fieldName );
@@ -307,10 +338,10 @@ void QgsFieldExpressionWidget::currentFieldChanged()
 
 void QgsFieldExpressionWidget::updateLineEditStyle( const QString &expression )
 {
-  QPalette palette;
+  QString stylesheet;
   if ( !isEnabled() )
   {
-    palette.setColor( QPalette::Text, Qt::gray );
+    stylesheet = QStringLiteral( "QLineEdit { color: %1; } Qt::gray );" ).arg( QColor( Qt::gray ).name() );
   }
   else
   {
@@ -330,14 +361,10 @@ void QgsFieldExpressionWidget::updateLineEditStyle( const QString &expression )
 
     if ( isExpression && !isValid )
     {
-      palette.setColor( QPalette::Text, Qt::red );
-    }
-    else
-    {
-      palette.setColor( QPalette::Text, Qt::black );
+      stylesheet = QStringLiteral( "QLineEdit { color: %1; } Qt::gray );" ).arg( QColor( Qt::red ).name() );
     }
   }
-  mCombo->lineEdit()->setPalette( palette );
+  mCombo->lineEdit()->setStyleSheet( stylesheet );
 }
 
 bool QgsFieldExpressionWidget::isExpressionValid( const QString &expressionStr )
@@ -345,4 +372,9 @@ bool QgsFieldExpressionWidget::isExpressionValid( const QString &expressionStr )
   QgsExpression expression( expressionStr );
   expression.prepare( &mExpressionContext );
   return !expression.hasParserError();
+}
+
+void QgsFieldExpressionWidget::appendScope( QgsExpressionContextScope *scope )
+{
+  mExpressionContext.appendScope( scope );
 }

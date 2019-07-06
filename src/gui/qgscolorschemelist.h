@@ -21,7 +21,7 @@
 #include <QItemDelegate>
 #include <QFile>
 #include "qgis_gui.h"
-#include "qgis.h"
+#include "qgis_sip.h"
 
 class QMimeData;
 class QgsPanelWidget;
@@ -111,14 +111,14 @@ class GUI_EXPORT QgsColorSchemeModel: public QAbstractItemModel
     void setScheme( QgsColorScheme *scheme, const QString &context = QString(), const QColor &baseColor = QColor() );
 
     /**
-     * Get the current color scheme context for the model
+     * Gets the current color scheme context for the model
      * \returns context string which is passed to scheme for color generation
      * \see baseColor
      */
     QString context() const { return mContext; }
 
     /**
-     * Get the base color for the color scheme used by the model
+     * Gets the base color for the color scheme used by the model
      * \returns base color which is passed to scheme for color generation
      * \see context
      */
@@ -128,13 +128,13 @@ class GUI_EXPORT QgsColorSchemeModel: public QAbstractItemModel
      * Add a color to the list
      * \param color color to add
      * \param label label for color
-     * \param allowDuplicate set to true to allow duplicate colors to be added (colors which are already present in the list)
+     * \param allowDuplicate set to TRUE to allow duplicate colors to be added (colors which are already present in the list)
      */
     void addColor( const QColor &color, const QString &label = QString(), bool allowDuplicate = false );
 
     /**
      * Returns whether the color scheme model has been modified
-     * \returns true if colors have been modified
+     * \returns TRUE if colors have been modified
      */
     bool isDirty() const { return mIsDirty; }
 
@@ -198,14 +198,14 @@ class GUI_EXPORT QgsColorSchemeList: public QTreeView
 
     /**
      * Returns whether the color scheme list has been modified
-     * \returns true if colors have been modified
+     * \returns TRUE if colors have been modified
      */
     bool isDirty() const;
 
     /**
      * Returns the scheme currently selected in the list.
-     * \since QGIS 3.0
      * \see setScheme()
+     * \since QGIS 3.0
      */
     QgsColorScheme *scheme();
 
@@ -229,7 +229,7 @@ class GUI_EXPORT QgsColorSchemeList: public QTreeView
      * Adds a color to the list
      * \param color color to add
      * \param label optional label for color
-     * \param allowDuplicate set to true to allow duplicate colors to be added, ie colors which already exist in the list
+     * \param allowDuplicate set to TRUE to allow duplicate colors to be added, ie colors which already exist in the list
      */
     void addColor( const QColor &color, const QString &label = QString(), bool allowDuplicate = false );
 
@@ -247,15 +247,15 @@ class GUI_EXPORT QgsColorSchemeList: public QTreeView
 
     /**
      * Displays a file picker dialog allowing users to import colors into the list from a file.
-     * \since QGIS 3.0
      * \see showExportColorsDialog()
+     * \since QGIS 3.0
      */
     void showImportColorsDialog();
 
     /**
      * Displays a file picker dialog allowing users to export colors from the list into a file.
-     * \since QGIS 3.0
      * \see showImportColorsDialog()
+     * \since QGIS 3.0
      */
     void showExportColorsDialog();
 

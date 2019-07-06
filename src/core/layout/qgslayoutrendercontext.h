@@ -45,6 +45,8 @@ class CORE_EXPORT QgsLayoutRenderContext : public QObject
       FlagUseAdvancedEffects = 1 << 4, //!< Enable advanced effects such as blend modes.
       FlagForceVectorOutput = 1 << 5, //!< Force output in vector format where possible, even if items require rasterization to keep their correct appearance.
       FlagHideCoverageLayer = 1 << 6, //!< Hide coverage layer in outputs
+      FlagDrawSelection = 1 << 7, //!< Draw selection
+      FlagDisableTiledRasterLayerRenders = 1 << 8, //!< If set, then raster layers will not be drawn as separate tiles. This may improve the appearance in exported files, at the cost of much higher memory usage during exports.
     };
     Q_DECLARE_FLAGS( Flags, Flag )
 
@@ -59,7 +61,7 @@ class CORE_EXPORT QgsLayoutRenderContext : public QObject
      * \see flags()
      * \see testFlag()
      */
-    void setFlags( const QgsLayoutRenderContext::Flags flags );
+    void setFlags( QgsLayoutRenderContext::Flags flags );
 
     /**
      * Enables or disables a particular rendering \a flag for the layout. Other existing
@@ -68,7 +70,7 @@ class CORE_EXPORT QgsLayoutRenderContext : public QObject
      * \see flags()
      * \see testFlag()
      */
-    void setFlag( const QgsLayoutRenderContext::Flag flag, const bool on = true );
+    void setFlag( QgsLayoutRenderContext::Flag flag, bool on = true );
 
     /**
      * Returns the current combination of flags used for rendering the layout.
@@ -84,7 +86,7 @@ class CORE_EXPORT QgsLayoutRenderContext : public QObject
      * \see setFlag()
      * \see flags()
      */
-    bool testFlag( const Flag flag ) const;
+    bool testFlag( Flag flag ) const;
 
     /**
      * Returns the combination of render context flags matched to the layout context's settings.
@@ -105,6 +107,20 @@ class CORE_EXPORT QgsLayoutRenderContext : public QObject
     double dpi() const;
 
     /**
+     * Sets color that is used for drawing of selected vector features
+     * \see selectionColor()
+     * \since QGIS 3.4
+     */
+    void setSelectionColor( const QColor &color ) { mSelectionColor = color; }
+
+    /**
+     * Gets color that is used for drawing of selected vector features
+     * \see setSelectionColor()
+     * \since QGIS 3.4
+     */
+    QColor selectionColor() const { return mSelectionColor; }
+
+    /**
      * Returns the layout measurement converter to be used in the layout. This converter is used
      * for translating between other measurement units and the layout's native unit.
      */
@@ -117,14 +133,14 @@ class CORE_EXPORT QgsLayoutRenderContext : public QObject
     QgsLayoutMeasurementConverter &measurementConverter() { return mMeasurementConverter; }
 
     /**
-     * Returns true if the render current being conducted is a preview render,
+     * Returns TRUE if the render current being conducted is a preview render,
      * i.e. it is being rendered inside a QGraphicsView widget as opposed to a destination
      * device (such as an image).
      */
     bool isPreviewRender() const { return mIsPreviewRender; }
 
     /**
-     * Returns true if the page grid should be drawn.
+     * Returns TRUE if the page grid should be drawn.
      * \see setGridVisible()
      */
     bool gridVisible() const;
@@ -136,7 +152,7 @@ class CORE_EXPORT QgsLayoutRenderContext : public QObject
     void setGridVisible( bool visible );
 
     /**
-     * Returns true if the item bounding boxes should be drawn.
+     * Returns TRUE if the item bounding boxes should be drawn.
      * \see setBoundingBoxesVisible()
      */
     bool boundingBoxesVisible() const;
@@ -166,7 +182,7 @@ class CORE_EXPORT QgsLayoutRenderContext : public QObject
     /**
      * Sets the current item \a layer to draw while exporting. QgsLayoutItem subclasses
      * which support multi-layer SVG exports must check the currentExportLayer()
-     * and customise their rendering based on the layer.
+     * and customize their rendering based on the layer.
      *
      * If \a layer is -1, all item layers will be rendered.
      *
@@ -177,13 +193,35 @@ class CORE_EXPORT QgsLayoutRenderContext : public QObject
     /**
      * Returns the current item layer to draw while exporting. QgsLayoutItem subclasses
      * which support multi-layer SVG exports must check this
-     * and customise their rendering based on the layer.
+     * and customize their rendering based on the layer.
      *
      * If \a layer is -1, all item layers should be rendered.
      *
      * \see setCurrentExportLayer()
      */
     int currentExportLayer() const { return mCurrentExportLayer; }
+
+    /**
+     * Returns the text render format, which dictates how text is rendered (e.g. as paths or real text objects).
+     *
+     * \see setTextRenderFormat()
+     * \since QGIS 3.4.3
+     */
+    QgsRenderContext::TextRenderFormat textRenderFormat() const
+    {
+      return mTextRenderFormat;
+    }
+
+    /**
+     * Sets the text render \a format, which dictates how text is rendered (e.g. as paths or real text objects).
+     *
+     * \see textRenderFormat()
+     * \since QGIS 3.4.3
+     */
+    void setTextRenderFormat( QgsRenderContext::TextRenderFormat format )
+    {
+      mTextRenderFormat = format;
+    }
 
   signals:
 
@@ -206,12 +244,16 @@ class CORE_EXPORT QgsLayoutRenderContext : public QObject
 
     int mCurrentExportLayer = -1;
 
+    QColor mSelectionColor = Qt::yellow;
+
     QgsLayoutMeasurementConverter mMeasurementConverter;
 
     bool mIsPreviewRender = true;
     bool mGridVisible = false;
     bool mBoundingBoxesVisible = true;
     bool mPagesVisible = true;
+
+    QgsRenderContext::TextRenderFormat mTextRenderFormat = QgsRenderContext::TextFormatAlwaysOutlines;
 
     friend class QgsLayoutExporter;
     friend class TestQgsLayout;

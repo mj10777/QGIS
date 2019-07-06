@@ -17,7 +17,7 @@
 #define QGSRENDERCHECKER_H
 
 #include "qgis_core.h"
-#include "qgis.h"
+#include "qgis_sip.h"
 #include <QDir>
 #include <QString>
 #include <QRegExp>
@@ -74,7 +74,7 @@ class CORE_EXPORT QgsRenderChecker
 
     void setControlPathSuffix( const QString &name );
 
-    //! Get an md5 hash that uniquely identifies an image
+    //! Gets an md5 hash that uniquely identifies an image
     QString imageToHash( const QString &imageFile );
 
     void setRenderedImage( const QString &imageFileName ) { mRenderedImageFile = imageFileName; }
@@ -133,7 +133,7 @@ class CORE_EXPORT QgsRenderChecker
     bool compareImages( const QString &testName, unsigned int mismatchCount = 0, const QString &renderedImageFile = QString() );
 
     /**
-     * Get a list of all the anomalies. An anomaly is a rendered difference
+     * Gets a list of all the anomalies. An anomaly is a rendered difference
      * file where there is some red pixel content (indicating a render check
      * mismatch), but where the output was still acceptable. If the render
      * diff matches one of these anomalies we will still consider it to be
@@ -165,11 +165,10 @@ class CORE_EXPORT QgsRenderChecker
     void enableDashBuffering( bool enable ) { mBufferDashMessages = enable; }
 
     /**
-     * Get access to buffered dash messages.
-     * Only will return something if you call enableDashBuffering( true ); before.
+     * Gets access to buffered dash messages.
+     * Only will return something if you call enableDashBuffering( TRUE ); before.
      *
      * \returns buffered dash messages
-     * \note not available in Python bindings
      */
     QVector<QgsDartMeasurement> dartMeasurements() const { return mDashMessages; }
 
@@ -208,14 +207,14 @@ class CORE_EXPORT QgsRenderChecker
 
 inline bool compareWkt( const QString &a, const QString &b, double tolerance = 0.000001 )
 {
-  QgsDebugMsg( QString( "a:%1 b:%2 tol:%3" ).arg( a, b ).arg( tolerance ) );
+  QgsDebugMsg( QStringLiteral( "a:%1 b:%2 tol:%3" ).arg( a, b ).arg( tolerance ) );
   QRegExp re( "-?\\d+(?:\\.\\d+)?(?:[eE]\\d+)?" );
 
   QString a0( a ), b0( b );
   a0.replace( re, QStringLiteral( "#" ) );
   b0.replace( re, QStringLiteral( "#" ) );
 
-  QgsDebugMsg( QString( "a0:%1 b0:%2" ).arg( a0, b0 ) );
+  QgsDebugMsg( QStringLiteral( "a0:%1 b0:%2" ).arg( a0, b0 ) );
 
   if ( a0 != b0 )
     return false;

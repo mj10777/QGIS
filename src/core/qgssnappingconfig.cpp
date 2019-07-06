@@ -22,6 +22,7 @@
 #include "qgslogger.h"
 #include "qgsvectorlayer.h"
 #include "qgsproject.h"
+#include "qgsapplication.h"
 
 
 QgsSnappingConfig::IndividualLayerSettings::IndividualLayerSettings( bool enabled, SnappingType type, double tolerance, QgsTolerance::UnitType units )
@@ -118,16 +119,16 @@ void QgsSnappingConfig::reset()
 {
   // get defaults values. They are both used for standard and advanced configuration (per layer)
   bool enabled = QgsSettings().value( QStringLiteral( "/qgis/digitizing/default_snap_enabled" ), false ).toBool();
-  SnappingMode mode = QgsSettings().enumSettingValue( QStringLiteral( "/qgis/digitizing/default_snap_mode" ),  AllLayers );
+  SnappingMode mode = QgsSettings().enumValue( QStringLiteral( "/qgis/digitizing/default_snap_mode" ),  AllLayers );
   if ( mode == 0 )
   {
     // backward compatibility with QGIS 2.x
     // could be removed in 3.4+
     mode = AllLayers;
   }
-  SnappingType type = QgsSettings().enumSettingValue( QStringLiteral( "/qgis/digitizing/default_snap_type" ),  Vertex );
+  SnappingType type = QgsSettings().enumValue( QStringLiteral( "/qgis/digitizing/default_snap_type" ),  Vertex );
   double tolerance = QgsSettings().value( QStringLiteral( "/qgis/digitizing/default_snapping_tolerance" ), Qgis::DEFAULT_SNAP_TOLERANCE ).toDouble();
-  QgsTolerance::UnitType units = QgsSettings().enumSettingValue( QStringLiteral( "/qgis/digitizing/default_snapping_tolerance_unit" ),  Qgis::DEFAULT_SNAP_UNITS );
+  QgsTolerance::UnitType units = QgsSettings().enumValue( QStringLiteral( "/qgis/digitizing/default_snapping_tolerance_unit" ),  Qgis::DEFAULT_SNAP_UNITS );
 
   // assign main (standard) config
   mEnabled = enabled;
@@ -147,9 +148,10 @@ void QgsSnappingConfig::reset()
 
   // set advanced config
   mIndividualLayerSettings = QHash<QgsVectorLayer *, IndividualLayerSettings>();
-  Q_FOREACH ( QgsMapLayer *ml, mProject->mapLayers() )
+  const auto constMapLayers = mProject->mapLayers();
+  for ( QgsMapLayer *ml : constMapLayers )
   {
-    QgsVectorLayer *vl = dynamic_cast<QgsVectorLayer *>( ml );
+    QgsVectorLayer *vl = qobject_cast<QgsVectorLayer *>( ml );
     if ( vl )
     {
       mIndividualLayerSettings.insert( vl, IndividualLayerSettings( enabled, type, tolerance, units ) );
@@ -324,7 +326,7 @@ void QgsSnappingConfig::readProject( const QDomDocument &doc )
       QgsTolerance::UnitType units = ( QgsTolerance::UnitType )settingElement.attribute( QStringLiteral( "units" ) ).toInt();
 
       QgsMapLayer *ml = mProject->mapLayer( layerId );
-      if ( !ml || ml->type() != QgsMapLayer::VectorLayer )
+      if ( !ml || ml->type() != QgsMapLayerType::VectorLayer )
         continue;
 
       QgsVectorLayer *vl = qobject_cast<QgsVectorLayer *>( ml );
@@ -339,10 +341,10 @@ void QgsSnappingConfig::writeProject( QDomDocument &doc )
 {
   QDomElement snapSettingsElem = doc.createElement( QStringLiteral( "snapping-settings" ) );
   snapSettingsElem.setAttribute( QStringLiteral( "enabled" ), QString::number( mEnabled ) );
-  snapSettingsElem.setAttribute( QStringLiteral( "mode" ), ( int )mMode );
-  snapSettingsElem.setAttribute( QStringLiteral( "type" ), ( int )mType );
+  snapSettingsElem.setAttribute( QStringLiteral( "mode" ), static_cast<int>( mMode ) );
+  snapSettingsElem.setAttribute( QStringLiteral( "type" ), static_cast<int>( mType ) );
   snapSettingsElem.setAttribute( QStringLiteral( "tolerance" ), mTolerance );
-  snapSettingsElem.setAttribute( QStringLiteral( "unit" ), ( int )mUnits );
+  snapSettingsElem.setAttribute( QStringLiteral( "unit" ), static_cast<int>( mUnits ) );
   snapSettingsElem.setAttribute( QStringLiteral( "intersection-snapping" ), QString::number( mIntersectionSnapping ) );
 
   QDomElement ilsElement = doc.createElement( QStringLiteral( "individual-layer-settings" ) );
@@ -354,9 +356,9 @@ void QgsSnappingConfig::writeProject( QDomDocument &doc )
     QDomElement layerElement = doc.createElement( QStringLiteral( "layer-setting" ) );
     layerElement.setAttribute( QStringLiteral( "id" ), layerIt.key()->id() );
     layerElement.setAttribute( QStringLiteral( "enabled" ), QString::number( setting.enabled() ) );
-    layerElement.setAttribute( QStringLiteral( "type" ), ( int )setting.type() );
+    layerElement.setAttribute( QStringLiteral( "type" ), static_cast<int>( setting.type() ) );
     layerElement.setAttribute( QStringLiteral( "tolerance" ), setting.tolerance() );
-    layerElement.setAttribute( QStringLiteral( "units" ), ( int )setting.units() );
+    layerElement.setAttribute( QStringLiteral( "units" ), static_cast<int>( setting.units() ) );
     ilsElement.appendChild( layerElement );
   }
   snapSettingsElem.appendChild( ilsElement );
@@ -368,11 +370,12 @@ bool QgsSnappingConfig::addLayers( const QList<QgsMapLayer *> &layers )
 {
   bool changed = false;
   bool enabled = QgsSettings().value( QStringLiteral( "/qgis/digitizing/default_snap_enabled" ), true ).toBool();
-  SnappingType type = ( SnappingType )QgsSettings().value( QStringLiteral( "/qgis/digitizing/default_snap_type" ), Vertex ).toInt();
+  SnappingType type = QgsSettings().enumValue( QStringLiteral( "/qgis/digitizing/default_snap_type" ), Vertex );
   double tolerance = QgsSettings().value( QStringLiteral( "/qgis/digitizing/default_snapping_tolerance" ), Qgis::DEFAULT_SNAP_TOLERANCE ).toDouble();
-  QgsTolerance::UnitType units = QgsSettings().enumSettingValue( QStringLiteral( "/qgis/digitizing/default_snapping_tolerance_unit" ), Qgis::DEFAULT_SNAP_UNITS );
+  QgsTolerance::UnitType units = QgsSettings().enumValue( QStringLiteral( "/qgis/digitizing/default_snapping_tolerance_unit" ), Qgis::DEFAULT_SNAP_UNITS );
 
-  Q_FOREACH ( QgsMapLayer *ml, layers )
+  const auto constLayers = layers;
+  for ( QgsMapLayer *ml : constLayers )
   {
     QgsVectorLayer *vl = qobject_cast<QgsVectorLayer *>( ml );
     if ( vl && vl->isSpatial() )
@@ -387,7 +390,8 @@ bool QgsSnappingConfig::addLayers( const QList<QgsMapLayer *> &layers )
 bool QgsSnappingConfig::removeLayers( const QList<QgsMapLayer *> &layers )
 {
   bool changed = false;
-  Q_FOREACH ( QgsMapLayer *ml, layers )
+  const auto constLayers = layers;
+  for ( QgsMapLayer *ml : constLayers )
   {
     QgsVectorLayer *vl = qobject_cast<QgsVectorLayer *>( ml );
     if ( vl )

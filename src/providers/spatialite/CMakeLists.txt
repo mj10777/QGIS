@@ -24,9 +24,12 @@ SET(SPATIALITE_MOC_HDRS
 
 IF (WITH_GUI)
   SET(SPATIALITE_SRCS ${SPATIALITE_SRCS}
+    qgsspatialiteprovidergui.cpp
+    qgsspatialitedataitemguiprovider.cpp
     qgsspatialitesourceselect.cpp
   )
   SET(SPATIALITE_MOC_HDRS ${SPATIALITE_MOC_HDRS}
+    qgsspatialitedataitemguiprovider.h
     qgsspatialitesourceselect.h
   )
 ENDIF ()
@@ -44,11 +47,13 @@ IF (WITH_GUI)
 ENDIF ()
 
 INCLUDE_DIRECTORIES(
+  ${CMAKE_SOURCE_DIR}/external
   ${CMAKE_SOURCE_DIR}/src/core
   ${CMAKE_SOURCE_DIR}/src/core/expression
   ${CMAKE_SOURCE_DIR}/src/core/geometry
   ${CMAKE_SOURCE_DIR}/src/core/metadata
   ${CMAKE_SOURCE_DIR}/src/gui
+  ${CMAKE_SOURCE_DIR}/external
 
   ${CMAKE_BINARY_DIR}/src/core
   ${CMAKE_BINARY_DIR}/src/gui
@@ -57,7 +62,6 @@ INCLUDE_DIRECTORIES(
 INCLUDE_DIRECTORIES(SYSTEM
   ${SQLITE3_INCLUDE_DIR}
   ${SPATIALITE_INCLUDE_DIR}
-  ${GEOS_INCLUDE_DIR}
 )
 
 ADD_LIBRARY (spatialiteprovider MODULE ${SPATIALITE_SRCS} ${SPATIALITE_MOC_SRCS})

@@ -19,7 +19,7 @@
 #define QGSTRIANGLE_H
 
 #include "qgis_core.h"
-#include "qgis.h"
+#include "qgis_sip.h"
 #include "qgspolygon.h"
 #include "qgscircle.h"
 #include "qgslinestring.h"
@@ -57,7 +57,7 @@ class CORE_EXPORT QgsTriangle : public QgsPolygon
      * \param p2 second point
      * \param p3 third point
      */
-    explicit QgsTriangle( const QPointF p1, const QPointF p2, const QPointF p3 );
+    explicit QgsTriangle( QPointF p1, QPointF p2, QPointF p3 );
 
     bool operator==( const QgsTriangle &other ) const;
     bool operator!=( const QgsTriangle &other ) const;
@@ -72,7 +72,7 @@ class CORE_EXPORT QgsTriangle : public QgsPolygon
 
     // inherited: QString asWkt( int precision = 17 ) const;
     // inherited (as a polygon): QDomElement asGML2( QDomDocument &doc, int precision = 17, const QString &ns = "gml" ) const;
-    QDomElement asGml3( QDomDocument &doc, int precision = 17, const QString &ns = "gml" ) const override;
+    QDomElement asGml3( QDomDocument &doc, int precision = 17, const QString &ns = "gml", QgsAbstractGeometry::AxisOrder axisOrder = QgsAbstractGeometry::AxisOrder::XY ) const override;
 
     QgsPolygon *surfaceToPolygon() const override SIP_FACTORY;
 
@@ -86,9 +86,9 @@ class CORE_EXPORT QgsTriangle : public QgsPolygon
      * \note not available in Python bindings
      */
     void setInteriorRings( const QVector< QgsCurve *> &rings ) = delete;
-    //! Inherited method not used. You cannot delete or insert a vertex directly. Returns always false.
+    //! Inherited method not used. You cannot delete or insert a vertex directly. Returns always FALSE.
     bool deleteVertex( QgsVertexId position ) override;
-    //! Inherited method not used. You cannot delete or insert a vertex directly. Returns always false.
+    //! Inherited method not used. You cannot delete or insert a vertex directly. Returns always FALSE.
     bool insertVertex( QgsVertexId position, const QgsPoint &vertex ) override;
     bool moveVertex( QgsVertexId vId, const QgsPoint &newPos ) override;
 
@@ -137,7 +137,7 @@ class CORE_EXPORT QgsTriangle : public QgsPolygon
 
     /**
      * Convenient method checking if the geometry is degenerate (have duplicate or colinear point(s)).
-     * \returns True if the triangle is degenerate or empty, otherwise false.
+     * \returns TRUE if the triangle is degenerate or empty, otherwise FALSE.
      * Example:
      * \code{.py}
      *   tri = QgsTriangle()
@@ -159,7 +159,7 @@ class CORE_EXPORT QgsTriangle : public QgsPolygon
     /**
      * Is the triangle isocele (two sides with the same length)?
      * \param lengthTolerance The tolerance to use
-     * \returns True or False. Always false for empty triangle.
+     * \returns TRUE or FALSE. Always FALSE for empty triangle.
      * * Example:
      * \code{.py}
      *   tri = QgsTriangle( QgsPoint( 0, 0 ), QgsPoint( 0, 5 ), QgsPoint( 5, 5 ) )
@@ -177,7 +177,7 @@ class CORE_EXPORT QgsTriangle : public QgsPolygon
     /**
      * Is the triangle equilateral (three sides with the same length)?
      * \param lengthTolerance The tolerance to use
-     * \returns True or False. Always false for empty triangle.
+     * \returns TRUE or FALSE. Always FALSE for empty triangle.
      * * Example:
      * \code{.py}
      *   tri = QgsTriangle( QgsPoint( 10, 10 ), QgsPoint( 16, 10 ), QgsPoint( 13, 15.1962 ) )
@@ -195,7 +195,7 @@ class CORE_EXPORT QgsTriangle : public QgsPolygon
     /**
      * Is the triangle right-angled?
      * \param angleTolerance The tolerance to use
-     * \returns True or False. Always false for empty triangle.
+     * \returns TRUE or FALSE. Always FALSE for empty triangle.
      * * Example:
      * \code{.py}
      *   tri = QgsTriangle( QgsPoint( 0, 0 ), QgsPoint( 0, 5 ), QgsPoint( 5, 5 ) )
@@ -211,9 +211,9 @@ class CORE_EXPORT QgsTriangle : public QgsPolygon
     bool isRight( double angleTolerance = 0.0001 ) const;
 
     /**
-     * Is the triangle scalene (all sides have differen lengths)?
+     * Is the triangle scalene (all sides have different lengths)?
      * \param lengthTolerance The tolerance to use
-     * \returns True or False. Always false for empty triangle.
+     * \returns TRUE or FALSE. Always FALSE for empty triangle.
      * * Example:
      * \code{.py}
      *   tri = QgsTriangle( QgsPoint( 7.2825, 4.2368 ), QgsPoint( 13.0058, 3.3218 ), QgsPoint( 9.2145, 6.5242 ) )

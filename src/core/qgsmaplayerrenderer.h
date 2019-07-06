@@ -55,15 +55,15 @@ class CORE_EXPORT QgsMapLayerRenderer
     virtual bool render() = 0;
 
     /**
-     * Access to feedback object of the layer renderer (may be null)
+     * Access to feedback object of the layer renderer (may be NULLPTR)
      * \since QGIS 3.0
      */
     virtual QgsFeedback *feedback() const { return nullptr; }
 
-    //! Return list of errors (problems) that happened during the rendering
+    //! Returns list of errors (problems) that happened during the rendering
     QStringList errors() const { return mErrors; }
 
-    //! Get access to the ID of the layer rendered by this class
+    //! Gets access to the ID of the layer rendered by this class
     QString layerId() const { return mLayerID; }
 
   protected:

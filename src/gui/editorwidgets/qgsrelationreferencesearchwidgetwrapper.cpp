@@ -22,6 +22,7 @@
 #include "qgsrelationreferencewidget.h"
 #include "qgsrelationmanager.h"
 #include "qgssettings.h"
+#include "qgsapplication.h"
 
 #include <QStringListModel>
 
@@ -54,11 +55,6 @@ QVariant QgsRelationReferenceSearchWidgetWrapper::value() const
 QgsSearchWidgetWrapper::FilterFlags QgsRelationReferenceSearchWidgetWrapper::supportedFlags() const
 {
   return EqualTo | NotEqualTo | IsNull | IsNotNull;
-}
-
-QgsSearchWidgetWrapper::FilterFlags QgsRelationReferenceSearchWidgetWrapper::defaultFlags() const
-{
-  return EqualTo;
 }
 
 QString QgsRelationReferenceSearchWidgetWrapper::createExpression( QgsSearchWidgetWrapper::FilterFlags flags ) const

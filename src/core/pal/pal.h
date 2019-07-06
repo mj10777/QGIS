@@ -35,6 +35,7 @@
 
 #include "qgis_core.h"
 #include "qgsgeometry.h"
+#include "qgsgeos.h"
 #include "qgspallabeling.h"
 #include <QList>
 #include <iostream>
@@ -48,9 +49,6 @@ class QgsAbstractLabelProvider;
 
 namespace pal
 {
-  //! Get GEOS context handle to be used in all GEOS library calls with reentrant API
-  GEOSContextHandle_t geosContext();
-
   class Layer;
   class LabelPosition;
   class PalStat;
@@ -64,7 +62,7 @@ namespace pal
     POPMUSIC_TABU_CHAIN = 1, //!< Is the best but slowest
     POPMUSIC_TABU = 2, //!< Is a little bit better than CHAIN but slower
     POPMUSIC_CHAIN = 3, //!< Is slower and best than TABU, worse and faster than TABU_CHAIN
-    FALP = 4 //! only initial solution
+    FALP = 4 //!< Only initial solution
   };
 
   //! Enumeration line arrangement flags. Flags can be combined.
@@ -114,12 +112,10 @@ namespace pal
        * \param arrangement Howto place candidates
        * \param defaultPriority layer's prioriry (0 is the best, 1 the worst)
        * \param active is the layer is active (currently displayed)
-       * \param toLabel the layer will be labeled only if toLablel is true
-       * \param displayAll if true, all features will be labelled even though overlaps occur
+       * \param toLabel the layer will be labeled only if toLablel is TRUE
+       * \param displayAll if TRUE, all features will be labelled even though overlaps occur
        *
        * \throws PalException::LayerExists
-       *
-       * @todo add symbolUnit
        */
       Layer *addLayer( QgsAbstractLabelProvider *provider, const QString &layerName, QgsPalLayerSettings::Placement arrangement, double defaultPriority, bool active, bool toLabel, bool displayAll = false );
 
@@ -133,7 +129,7 @@ namespace pal
       typedef bool ( *FnIsCanceled )( void *ctx );
 
       //! Register a function that returns whether this job has been canceled - PAL calls it during the computation
-      void registerCancelationCallback( FnIsCanceled fnCanceled, void *context );
+      void registerCancellationCallback( FnIsCanceled fnCanceled, void *context );
 
       //! Check whether the job has been canceled
       inline bool isCanceled() { return fnIsCanceled ? fnIsCanceled( fnIsCanceledContext ) : false; }
@@ -157,9 +153,7 @@ namespace pal
       void setShowPartial( bool show );
 
       /**
-       * \brief Get flag show partial label
-       *
-       * \returns value of flag
+       * Returns whether partial labels should be allowed.
        */
       bool getShowPartial();
 
@@ -188,17 +182,17 @@ namespace pal
       void setPolyP( int poly_p );
 
       /**
-       *  \brief get # candidates to generate for point features
+       * Returns the number of candidates to generate for point features.
        */
       int getPointP();
 
       /**
-       *  \brief get maximum  # candidates to generate for line features
+       * Returns the number of candidates to generate for line features.
        */
       int getLineP();
 
       /**
-       *  \brief get maximum # candidates to generate for polygon features
+       * Returns the number of candidates to generate for polygon features.
        */
       int getPolyP();
 
@@ -213,9 +207,7 @@ namespace pal
       void setSearch( SearchMethod method );
 
       /**
-       * \brief get the search method in use
-       *
-       * \returns the search method
+       * Returns the search method in use.
        */
       SearchMethod getSearch();
 
@@ -261,7 +253,7 @@ namespace pal
 
       //! Callback that may be called from PAL to check whether the job has not been canceled in meanwhile
       FnIsCanceled fnIsCanceled;
-      //! Application-specific context for the cancelation check function
+      //! Application-specific context for the cancellation check function
       void *fnIsCanceledContext = nullptr;
 
       /**
@@ -309,14 +301,14 @@ namespace pal
 
 
       /**
-       * \brief Get the minimum # of iteration doing in POPMUSIC_TABU, POPMUSIC_CHAIN and POPMUSIC_TABU_CHAIN
-       * \returns minimum # of iteration
+       * Returns the minimum number of iterations used for POPMUSIC_TABU, POPMUSIC_CHAIN and POPMUSIC_TABU_CHAIN.
+       * \see getMaxIt()
        */
       int getMinIt();
 
       /**
-       * \brief Get the maximum # of iteration doing in POPMUSIC_TABU, POPMUSIC_CHAIN and POPMUSIC_TABU_CHAIN
-       * \returns maximum # of iteration
+       * Returns the maximum number of iterations allowed for POPMUSIC_TABU, POPMUSIC_CHAIN and POPMUSIC_TABU_CHAIN.
+       * \see getMinIt()
        */
       int getMaxIt();
 

@@ -71,7 +71,7 @@ class CORE_EXPORT QgsLayoutPageCollection : public QObject, public QgsLayoutSeri
      * Returns a specific page (by \a pageNumber) from the collection.
      * Internal page numbering starts at 0 - so a \a pageNumber of 0
      * corresponds to the first page in the collection.
-     * A nullptr is returned if an invalid page number is specified.
+     * A NULLPTR is returned if an invalid page number is specified.
      * \see pages()
      */
     QgsLayoutItemPage *page( int pageNumber );
@@ -80,7 +80,7 @@ class CORE_EXPORT QgsLayoutPageCollection : public QObject, public QgsLayoutSeri
      * Returns a specific page (by \a pageNumber) from the collection.
      * Internal page numbering starts at 0 - so a \a pageNumber of 0
      * corresponds to the first page in the collection.
-     * A nullptr is returned if an invalid page number is specified.
+     * A NULLPTR is returned if an invalid page number is specified.
      * \see pages()
      * \note Not available in Python bindings.
      */
@@ -97,14 +97,14 @@ class CORE_EXPORT QgsLayoutPageCollection : public QObject, public QgsLayoutSeri
      * \a region (in layout coordinates).
      * \see visiblePageNumbers()
      */
-    QList< QgsLayoutItemPage * > visiblePages( QRectF region ) const;
+    QList< QgsLayoutItemPage * > visiblePages( const QRectF &region ) const;
 
     /**
      * Returns a list of the page numbers which are visible within the specified
      * \a region (in layout coordinates).
      * \see visiblePages()
      */
-    QList< int > visiblePageNumbers( QRectF region ) const;
+    QList< int > visiblePageNumbers( const QRectF &region ) const;
 
     /**
      * Returns whether a given \a page index is empty, ie, it contains no items except for the background
@@ -138,6 +138,10 @@ class CORE_EXPORT QgsLayoutPageCollection : public QObject, public QgsLayoutSeri
 
     /**
      * Returns whether the specified \a page number should be included in exports of the layouts.
+     *
+     * \warning This will always return TRUE unless the layout is being currently exported -- it cannot
+     * be used in advance to determine whether a given page will be exported!
+     *
      * \see pageIsEmpty()
      */
     bool shouldExportPage( int page ) const;
@@ -270,7 +274,7 @@ class CORE_EXPORT QgsLayoutPageCollection : public QObject, public QgsLayoutSeri
     QSizeF maximumPageSize() const;
 
     /**
-     * Returns true if the layout has uniform page sizes, e.g. all pages are the same size.
+     * Returns TRUE if the layout has uniform page sizes, e.g. all pages are the same size.
      *
      * This method does not consider differing units as non-uniform sizes, only the actual
      * physical size of the pages.
@@ -287,7 +291,7 @@ class CORE_EXPORT QgsLayoutPageCollection : public QObject, public QgsLayoutSeri
      * it does not consider x coordinates and vertical coordinates before the first page or
      * after the last page will still return the nearest page.
      *
-     * \see predicatePageNumberForPoint()
+     * \see predictPageNumberForPoint()
      * \see pageAtPoint()
      * \see positionOnPage()
      */
@@ -313,7 +317,7 @@ class CORE_EXPORT QgsLayoutPageCollection : public QObject, public QgsLayoutSeri
     /**
      * Returns the page at a specified \a point (in layout coordinates).
      *
-     * If no page exists at \a point, nullptr will be returned.
+     * If no page exists at \a point, NULLPTR will be returned.
      *
      * \note Unlike pageNumberForPoint(), this method only returns pages which
      * directly intersect with the specified point.

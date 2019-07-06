@@ -27,6 +27,7 @@
 #include "evisdatabaseconnectiongui.h"
 
 #include "qgsapplication.h"
+#include "qgsgui.h"
 
 #include <QMessageBox>
 #include <QTextStream>
@@ -42,13 +43,15 @@
 
 /**
 * Constructor
-* @param parent - Pointer the to parent QWidget for modality
-* @param fl - Windown flags
+* \param parent - Pointer the to parent QWidget for modality
+* \param fl - Windown flags
 */
 eVisDatabaseConnectionGui::eVisDatabaseConnectionGui( QList<QTemporaryFile *> *temporaryFileList, QWidget *parent, Qt::WindowFlags fl )
   : QDialog( parent, fl )
 {
   setupUi( this );
+  QgsGui::instance()->enableAutoGeometryRestore( this );
+
   connect( buttonBox, &QDialogButtonBox::accepted, this, &eVisDatabaseConnectionGui::buttonBox_accepted );
   connect( cboxDatabaseType, static_cast<void ( QComboBox::* )( int )>( &QComboBox::currentIndexChanged ), this, &eVisDatabaseConnectionGui::cboxDatabaseType_currentIndexChanged );
   connect( cboxPredefinedQueryList, static_cast<void ( QComboBox::* )( int )>( &QComboBox::currentIndexChanged ), this, &eVisDatabaseConnectionGui::cboxPredefinedQueryList_currentIndexChanged );
@@ -57,9 +60,6 @@ eVisDatabaseConnectionGui::eVisDatabaseConnectionGui( QList<QTemporaryFile *> *t
   connect( pbtnOpenFile, &QPushButton::clicked, this, &eVisDatabaseConnectionGui::pbtnOpenFile_clicked );
   connect( pbtnRunQuery, &QPushButton::clicked, this, &eVisDatabaseConnectionGui::pbtnRunQuery_clicked );
   connect( buttonBox, &QDialogButtonBox::helpRequested, this, &eVisDatabaseConnectionGui::showHelp );
-
-  QSettings settings;
-  restoreGeometry( settings.value( QStringLiteral( "eVis/db-geometry" ) ).toByteArray() );
 
   mTempOutputFileList = temporaryFileList;
 
@@ -91,12 +91,6 @@ eVisDatabaseConnectionGui::eVisDatabaseConnectionGui( QList<QTemporaryFile *> *t
   pbtnLoadPredefinedQueries->setToolTip( tr( "Open File" ) );
 }
 
-eVisDatabaseConnectionGui::~eVisDatabaseConnectionGui()
-{
-  QSettings settings;
-  settings.setValue( QStringLiteral( "eVis/db-geometry" ), saveGeometry() );
-}
-
 /*
  *
  * Public and Private Slots
@@ -105,9 +99,9 @@ eVisDatabaseConnectionGui::~eVisDatabaseConnectionGui()
 
 /**
 * Slot called after the user selects the x, y fields in the field selection gui component
-* @param layerName - Name to display in the legend
-* @param xCoordinate - Name of the field containing the x coordinate
-* @param yCoordinate - Name of the field containing the y coordinate
+* \param layerName - Name to display in the legend
+* \param xCoordinate - Name of the field containing the x coordinate
+* \param yCoordinate - Name of the field containing the y coordinate
 */
 void eVisDatabaseConnectionGui::drawNewVectorLayer( const QString &layerName, const QString &xCoordinate, const QString &yCoordinate )
 {
@@ -155,11 +149,11 @@ void eVisDatabaseConnectionGui::buttonBox_accepted()
 
 /**
 * Slot called when the cboxDatabaseType combo box index changes
-* @param currentIndex - The new index of the currently selected field
+* \param currentIndex - The new index of the currently selected field
 */
 void eVisDatabaseConnectionGui::cboxDatabaseType_currentIndexChanged( int currentIndex )
 {
-  Q_UNUSED( currentIndex );
+  Q_UNUSED( currentIndex )
   if ( cboxDatabaseType->currentText() == QLatin1String( "MYSQL" ) )
   {
     lblDatabaseHost->setEnabled( true );
@@ -428,7 +422,7 @@ void eVisDatabaseConnectionGui::pbtnLoadPredefinedQueries_clicked()
 
 /**
 * Slot called when cboxPredefinedQueryList combo box index changes
-* @param index - The current index of the selected item
+* \param index - The current index of the selected item
 */
 void eVisDatabaseConnectionGui::cboxPredefinedQueryList_currentIndexChanged( int index )
 {
@@ -545,5 +539,5 @@ void eVisDatabaseConnectionGui::pbtnRunQuery_clicked()
 
 void eVisDatabaseConnectionGui::showHelp()
 {
-  QgsHelp::openHelp( QStringLiteral( "plugins/plugins_evis.html#database-connection" ) );
+  QgsHelp::openHelp( QStringLiteral( "plugins/core_plugins/plugins_evis.html#database-connection" ) );
 }

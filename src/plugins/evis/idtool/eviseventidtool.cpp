@@ -1,4 +1,5 @@
 /*
+ *
 ** File: eviseventidtool.cpp
 ** Author: Peter J. Ersts ( ersts at amnh.org )
 ** Creation Date: 2007-03-19
@@ -24,6 +25,11 @@
 ** National Oceanic and Atmospheric Administration or the Department of Commerce.
 **
 **/
+
+
+#include <QObject>
+#include <QMessageBox>
+
 #include "eviseventidtool.h"
 
 #include "qgsmaptopixel.h"
@@ -31,14 +37,14 @@
 #include "qgsvectorlayer.h"
 #include "qgsvectordataprovider.h"
 #include "qgsfeatureiterator.h"
+#include "qgsmapmouseevent.h"
+#include "qgsapplication.h"
 
-#include <QObject>
-#include <QMessageBox>
 
 /**
 * Constructor for the id style tool, this tool inherits the QgsMapTool and requires a pointer to
 * to the map canvas.
-* @param canvas - Pointer to the QGIS map canvas
+* \param canvas - Pointer to the QGIS map canvas
 */
 eVisEventIdTool::eVisEventIdTool( QgsMapCanvas *canvas )
   : QgsMapTool( canvas )
@@ -55,7 +61,7 @@ eVisEventIdTool::eVisEventIdTool( QgsMapCanvas *canvas )
 
 /**
 * Mouse release, i.e., select, event
-* @param mouseEvent - Pointer to a QMouseEvent
+* \param mouseEvent - Pointer to a QMouseEvent
 */
 void eVisEventIdTool::canvasReleaseEvent( QgsMapMouseEvent *mouseEvent )
 {
@@ -66,24 +72,24 @@ void eVisEventIdTool::canvasReleaseEvent( QgsMapMouseEvent *mouseEvent )
   if ( mCanvas->currentLayer() )
   {
     //Check to see if the current layer is a vector layer
-    if ( QgsMapLayer::VectorLayer == mCanvas->currentLayer()->type() )
+    if ( QgsMapLayerType::VectorLayer == mCanvas->currentLayer()->type() )
     {
       select( mCanvas->getCoordinateTransform()->toMapCoordinates( mouseEvent->x(), mouseEvent->y() ) );
     }
     else
     {
-      QMessageBox::warning( mCanvas, QObject::tr( "Warning" ), QObject::tr( "This tool only supports vector data" ) );
+      QMessageBox::warning( mCanvas, QObject::tr( "eVis Event Id Tool" ), QObject::tr( "This tool only supports vector data." ) );
     }
   }
   else
   {
-    QMessageBox::warning( mCanvas, QObject::tr( "Warning" ), QObject::tr( "No active layers found" ) );
+    QMessageBox::warning( mCanvas, QObject::tr( "eVis Event Id Tool" ), QObject::tr( "No active layers found." ) );
   }
 }
 
 /**
 * Selection routine called by the mouse release event
-* @param point = QgsPointXY representing the x, y coordinates of the mouse release event
+* \param point = QgsPointXY representing the x, y coordinates of the mouse release event
 */
 void eVisEventIdTool::select( const QgsPointXY &point )
 {
@@ -106,7 +112,7 @@ void eVisEventIdTool::select( const QgsPointXY &point )
   myRectangle = toLayerCoordinates( myLayer, myRectangle );
 
   //select features
-  QgsFeatureIterator fit = myLayer->getFeatures( QgsFeatureRequest().setFilterRect( myRectangle ).setFlags( QgsFeatureRequest::ExactIntersect ).setSubsetOfAttributes( QgsAttributeList() ) );
+  QgsFeatureIterator fit = myLayer->getFeatures( QgsFeatureRequest().setFilterRect( myRectangle ).setFlags( QgsFeatureRequest::ExactIntersect ).setNoAttributes() );
 
   QgsFeature f;
   QgsFeatureIds newSelectedFeatures;

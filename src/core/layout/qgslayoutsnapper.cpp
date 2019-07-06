@@ -206,8 +206,8 @@ QPointF QgsLayoutSnapper::snapPointsToGrid( const QList<QPointF> &points, double
 
   double deltaX = 0;
   double deltaY = 0;
-  double smallestDiffX = DBL_MAX;
-  double smallestDiffY = DBL_MAX;
+  double smallestDiffX = std::numeric_limits<double>::max();
+  double smallestDiffY = std::numeric_limits<double>::max();
   for ( QPointF point : points )
   {
     //calculate y offset to current page
@@ -278,11 +278,12 @@ double QgsLayoutSnapper::snapPointsToGuides( const QList<double> &points, Qt::Or
   double alignThreshold = mTolerance / scaleFactor;
 
   double bestDelta = 0;
-  double smallestDiff = DBL_MAX;
+  double smallestDiff = std::numeric_limits<double>::max();
 
   for ( double p : points )
   {
-    Q_FOREACH ( QgsLayoutGuide *guide, mLayout->guides().guides( orientation ) )
+    const auto constGuides = mLayout->guides().guides( orientation );
+    for ( QgsLayoutGuide *guide : constGuides )
     {
       double guidePos = guide->layoutPosition();
       double diff = std::fabs( p - guidePos );
@@ -325,7 +326,7 @@ double QgsLayoutSnapper::snapPointsToItems( const QList<double> &points, Qt::Ori
   double alignThreshold = mTolerance / scaleFactor;
 
   double bestDelta = 0;
-  double smallestDiff = DBL_MAX;
+  double smallestDiff = std::numeric_limits<double>::max();
   double closest = 0;
   const QList<QGraphicsItem *> itemList = mLayout->items();
   QList< double > currentCoords;

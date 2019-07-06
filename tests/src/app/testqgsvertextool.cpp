@@ -21,7 +21,7 @@
 #include "qgsmapcanvassnappingutils.h"
 #include "qgsproject.h"
 #include "qgsvectorlayer.h"
-
+#include "qgsmapmouseevent.h"
 #include "vertextool/qgsvertextool.h"
 
 bool operator==( const QgsGeometry &g1, const QgsGeometry &g2 )
@@ -60,11 +60,18 @@ class TestQgsVertexTool : public QObject
     void testMoveEdge();
     void testAddVertex();
     void testAddVertexAtEndpoint();
+    void testAddVertexDoubleClick();
+    void testAddVertexDoubleClickWithShift();
     void testDeleteVertex();
     void testMoveMultipleVertices();
+    void testMoveMultipleVertices2();
     void testMoveVertexTopo();
     void testDeleteVertexTopo();
+    void testAddVertexTopo();
+    void testMoveEdgeTopo();
+    void testAddVertexTopoFirstSegment();
     void testActiveLayerPriority();
+    void testSelectedFeaturesPriority();
 
   private:
     QPoint mapToScreen( double mapX, double mapY )
@@ -94,6 +101,18 @@ class TestQgsVertexTool : public QObject
     void mouseClick( double mapX, double mapY, Qt::MouseButton button, Qt::KeyboardModifiers stateKey = Qt::KeyboardModifiers() )
     {
       mousePress( mapX, mapY, button, stateKey );
+      mouseRelease( mapX, mapY, button, stateKey );
+    }
+
+    void mouseDoubleClick( double mapX, double mapY, Qt::MouseButton button, Qt::KeyboardModifiers stateKey = Qt::KeyboardModifiers() )
+    {
+      // this is how Qt passes the events: 1. mouse press, 2. mouse release, 3. mouse double-click, 4. mouse release
+
+      mouseClick( mapX, mapY, button, stateKey );
+
+      QgsMapMouseEvent e( mCanvas, QEvent::MouseButtonDblClick, mapToScreen( mapX, mapY ), button, button, stateKey );
+      mVertexTool->canvasDoubleClickEvent( &e );
+
       mouseRelease( mapX, mapY, button, stateKey );
     }
 
@@ -368,6 +387,7 @@ void TestQgsVertexTool::testAddVertexAtEndpoint()
   mouseMove( 1, 3 ); // first we need to move to the vertex
   mouseClick( 1, 3 + offsetInMapUnits, Qt::LeftButton );
   mouseClick( 2, 3, Qt::LeftButton );
+  mouseClick( 2, 3, Qt::RightButton ); // we need a right click to stop adding new nodes
 
   QCOMPARE( mLayerLine->undoStack()->index(), 2 );
   QCOMPARE( mLayerLine->getFeature( mFidLineF1 ).geometry(), QgsGeometry::fromWkt( "LINESTRING(2 1, 1 1, 1 3, 2 3)" ) );
@@ -382,6 +402,7 @@ void TestQgsVertexTool::testAddVertexAtEndpoint()
   mouseMove( 2, 1 ); // first we need to move to the vertex
   mouseClick( 2 + offsetInMapUnits, 1, Qt::LeftButton );
   mouseClick( 2, 2, Qt::LeftButton );
+  mouseClick( 2, 2, Qt::RightButton ); // we need a right click to stop adding new nodes
 
   QCOMPARE( mLayerLine->undoStack()->index(), 2 );
   QCOMPARE( mLayerLine->getFeature( mFidLineF1 ).geometry(), QgsGeometry::fromWkt( "LINESTRING(2 2, 2 1, 1 1, 1 3)" ) );
@@ -390,6 +411,89 @@ void TestQgsVertexTool::testAddVertexAtEndpoint()
   QCOMPARE( mLayerLine->undoStack()->index(), 1 );
 
   QCOMPARE( mLayerLine->getFeature( mFidLineF1 ).geometry(), QgsGeometry::fromWkt( "LINESTRING(2 1, 1 1, 1 3)" ) );
+
+  // add three vertices at once
+
+  mouseMove( 2, 1 ); // first we need to move to the vertex
+  mouseClick( 2 + offsetInMapUnits, 1, Qt::LeftButton );
+  mouseClick( 2, 2, Qt::LeftButton );
+  mouseClick( 2, 3, Qt::LeftButton );
+  mouseClick( 2, 4, Qt::LeftButton );
+  mouseClick( 2, 2, Qt::RightButton ); // we need a right click to stop adding new nodes
+
+  QCOMPARE( mLayerLine->undoStack()->index(), 4 );
+  QCOMPARE( mLayerLine->getFeature( mFidLineF1 ).geometry(), QgsGeometry::fromWkt( "LINESTRING(2 4, 2 3, 2 2, 2 1, 1 1, 1 3)" ) );
+
+  mLayerLine->undoStack()->undo();
+  mLayerLine->undoStack()->undo();
+  mLayerLine->undoStack()->undo();
+  QCOMPARE( mLayerLine->undoStack()->index(), 1 );
+
+  QCOMPARE( mLayerLine->getFeature( mFidLineF1 ).geometry(), QgsGeometry::fromWkt( "LINESTRING(2 1, 1 1, 1 3)" ) );
+}
+
+void TestQgsVertexTool::testAddVertexDoubleClick()
+{
+  // add vertex in linestring with double-click and then place the point to the new location
+
+  mouseDoubleClick( 1, 1.5, Qt::LeftButton );
+  mouseClick( 2, 2, Qt::LeftButton );
+
+  QCOMPARE( mLayerLine->undoStack()->index(), 2 );
+  QCOMPARE( mLayerLine->getFeature( mFidLineF1 ).geometry(), QgsGeometry::fromWkt( "LINESTRING(2 1, 1 1, 2 2, 1 3)" ) );
+
+  mLayerLine->undoStack()->undo();
+  QCOMPARE( mLayerLine->undoStack()->index(), 1 );
+
+  QCOMPARE( mLayerLine->getFeature( mFidLineF1 ).geometry(), QgsGeometry::fromWkt( "LINESTRING(2 1, 1 1, 1 3)" ) );
+
+  // add vertex in polygon
+  mouseDoubleClick( 4, 2, Qt::LeftButton );
+  mouseClick( 3, 2.5, Qt::LeftButton );
+
+  QCOMPARE( mLayerPolygon->undoStack()->index(), 2 );
+  QCOMPARE( mLayerPolygon->getFeature( mFidPolygonF1 ).geometry(), QgsGeometry::fromWkt( "POLYGON((4 1, 7 1, 7 4, 4 4, 3 2.5, 4 1))" ) );
+
+  mLayerPolygon->undoStack()->undo();
+
+  QCOMPARE( mLayerPolygon->getFeature( mFidPolygonF1 ).geometry(), QgsGeometry::fromWkt( "POLYGON((4 1, 7 1, 7 4, 4 4, 4 1))" ) );
+
+  // no other unexpected changes happened
+  QCOMPARE( mLayerLine->undoStack()->index(), 1 );
+  QCOMPARE( mLayerPolygon->undoStack()->index(), 1 );
+  QCOMPARE( mLayerPoint->undoStack()->index(), 1 );
+
+}
+
+void TestQgsVertexTool::testAddVertexDoubleClickWithShift()
+{
+  // add vertex in linestring with shift + double-click to immediately place the new vertex
+
+  mouseDoubleClick( 1, 1.5, Qt::LeftButton, Qt::ShiftModifier );
+
+  QCOMPARE( mLayerLine->undoStack()->index(), 2 );
+  QCOMPARE( mLayerLine->getFeature( mFidLineF1 ).geometry(), QgsGeometry::fromWkt( "LINESTRING(2 1, 1 1, 1 1.5, 1 3)" ) );
+
+  mLayerLine->undoStack()->undo();
+  QCOMPARE( mLayerLine->undoStack()->index(), 1 );
+
+  QCOMPARE( mLayerLine->getFeature( mFidLineF1 ).geometry(), QgsGeometry::fromWkt( "LINESTRING(2 1, 1 1, 1 3)" ) );
+
+  // add vertex in polygon
+  mouseDoubleClick( 4, 2, Qt::LeftButton, Qt::ShiftModifier );
+
+  QCOMPARE( mLayerPolygon->undoStack()->index(), 2 );
+  QCOMPARE( mLayerPolygon->getFeature( mFidPolygonF1 ).geometry(), QgsGeometry::fromWkt( "POLYGON((4 1, 7 1, 7 4, 4 4, 4 2, 4 1))" ) );
+
+  mLayerPolygon->undoStack()->undo();
+
+  QCOMPARE( mLayerPolygon->getFeature( mFidPolygonF1 ).geometry(), QgsGeometry::fromWkt( "POLYGON((4 1, 7 1, 7 4, 4 4, 4 1))" ) );
+
+  // no other unexpected changes happened
+  QCOMPARE( mLayerLine->undoStack()->index(), 1 );
+  QCOMPARE( mLayerPolygon->undoStack()->index(), 1 );
+  QCOMPARE( mLayerPoint->undoStack()->index(), 1 );
+
 }
 
 
@@ -464,8 +568,30 @@ void TestQgsVertexTool::testMoveMultipleVertices()
   mouseClick( 1, 1, Qt::LeftButton );
   mouseClick( 0, 0, Qt::LeftButton );
 
+  // extra click away from everything to clear the selection
+  mouseClick( 8, 8, Qt::LeftButton );
+
   QCOMPARE( mLayerLine->undoStack()->index(), 2 );
   QCOMPARE( mLayerLine->getFeature( mFidLineF1 ).geometry(), QgsGeometry::fromWkt( "LINESTRING(2 1, 0 0, 0 2)" ) );
+
+  mLayerLine->undoStack()->undo();
+  QCOMPARE( mLayerLine->undoStack()->index(), 1 );
+
+  QCOMPARE( mLayerLine->getFeature( mFidLineF1 ).geometry(), QgsGeometry::fromWkt( "LINESTRING(2 1, 1 1, 1 3)" ) );
+}
+
+void TestQgsVertexTool::testMoveMultipleVertices2()
+{
+  // this time select two vertices with shift
+  mouseClick( 1, 1, Qt::LeftButton, Qt::ShiftModifier );
+  mouseClick( 2, 1, Qt::LeftButton, Qt::ShiftModifier );
+
+  // move them by +1, +1
+  mouseClick( 1, 1, Qt::LeftButton );
+  mouseClick( 2, 2, Qt::LeftButton );
+
+  QCOMPARE( mLayerLine->undoStack()->index(), 2 );
+  QCOMPARE( mLayerLine->getFeature( mFidLineF1 ).geometry(), QgsGeometry::fromWkt( "LINESTRING(3 2, 2 2, 1 3)" ) );
 
   mLayerLine->undoStack()->undo();
   QCOMPARE( mLayerLine->undoStack()->index(), 1 );
@@ -531,6 +657,115 @@ void TestQgsVertexTool::testDeleteVertexTopo()
   QgsProject::instance()->setTopologicalEditing( false );
 }
 
+void TestQgsVertexTool::testAddVertexTopo()
+{
+  // test addition of a vertex on a segment shared with another geometry
+
+  // add a temporary polygon
+  QgsFeature fTmp;
+  fTmp.setGeometry( QgsGeometry::fromWkt( "POLYGON((4 4, 7 4, 7 6, 4 6, 4 4))" ) );
+  bool resAdd = mLayerPolygon->addFeature( fTmp );
+  QVERIFY( resAdd );
+  QgsFeatureId fTmpId = fTmp.id();
+
+  QCOMPARE( mLayerPolygon->undoStack()->index(), 2 );
+
+  QgsProject::instance()->setTopologicalEditing( true );
+
+  mouseClick( 5.5, 4, Qt::LeftButton );
+  mouseClick( 5, 5, Qt::LeftButton );
+
+  QCOMPARE( mLayerPolygon->undoStack()->index(), 3 );
+
+  QCOMPARE( mLayerPolygon->getFeature( mFidPolygonF1 ).geometry(), QgsGeometry::fromWkt( "POLYGON((4 1, 7 1, 7 4, 5 5, 4 4, 4 1))" ) );
+  QCOMPARE( mLayerPolygon->getFeature( fTmpId ).geometry(), QgsGeometry::fromWkt( "POLYGON((4 4, 5 5, 7 4, 7 6, 4 6, 4 4))" ) );
+
+  mLayerPolygon->undoStack()->undo();
+  mLayerPolygon->undoStack()->undo();
+
+  QCOMPARE( mLayerPolygon->getFeature( mFidPolygonF1 ).geometry(), QgsGeometry::fromWkt( "POLYGON((4 1, 7 1, 7 4, 4 4, 4 1))" ) );
+
+  QgsProject::instance()->setTopologicalEditing( false );
+}
+
+void TestQgsVertexTool::testMoveEdgeTopo()
+{
+  // test move of an edge shared with another feature
+
+  // add a temporary polygon
+  QgsFeature fTmp;
+  fTmp.setGeometry( QgsGeometry::fromWkt( "POLYGON((4 4, 7 4, 7 6, 4 6, 4 4))" ) );
+  bool resAdd = mLayerPolygon->addFeature( fTmp );
+  QVERIFY( resAdd );
+  QgsFeatureId fTmpId = fTmp.id();
+
+  QCOMPARE( mLayerPolygon->undoStack()->index(), 2 );
+
+  QgsProject::instance()->setTopologicalEditing( true );
+
+  // move shared segment
+  mouseClick( 6, 4, Qt::LeftButton );
+  mouseClick( 6, 5, Qt::LeftButton );
+
+  QCOMPARE( mLayerPolygon->undoStack()->index(), 3 );
+
+  QCOMPARE( mLayerPolygon->getFeature( mFidPolygonF1 ).geometry(), QgsGeometry::fromWkt( "POLYGON((4 1, 7 1, 7 5, 4 5, 4 1))" ) );
+  QCOMPARE( mLayerPolygon->getFeature( fTmpId ).geometry(), QgsGeometry::fromWkt( "POLYGON((4 5, 7 5, 7 6, 4 6, 4 5))" ) );
+
+  mLayerPolygon->undoStack()->undo();
+
+  // another test to move a shared segment - but this time we just pick two individual points of a feature
+  // and do vertex move
+
+  QgsProject::instance()->setTopologicalEditing( false );
+
+  // this time select two vertices with shift
+  mouseClick( 4, 4, Qt::LeftButton, Qt::ShiftModifier );
+  mouseClick( 7, 4, Qt::LeftButton, Qt::ShiftModifier );
+
+  QgsProject::instance()->setTopologicalEditing( true );
+
+  // now move the shared segment
+  mouseClick( 4, 4, Qt::LeftButton );
+  mouseClick( 4, 3, Qt::LeftButton );
+
+  QCOMPARE( mLayerPolygon->undoStack()->index(), 3 );
+
+  QCOMPARE( mLayerPolygon->getFeature( mFidPolygonF1 ).geometry(), QgsGeometry::fromWkt( "POLYGON((4 1, 7 1, 7 3, 4 3, 4 1))" ) );
+  QCOMPARE( mLayerPolygon->getFeature( fTmpId ).geometry(), QgsGeometry::fromWkt( "POLYGON((4 3, 7 3, 7 6, 4 6, 4 3))" ) );
+
+  mLayerPolygon->undoStack()->undo();
+
+  //
+
+  mLayerPolygon->undoStack()->undo();
+
+  QCOMPARE( mLayerPolygon->getFeature( mFidPolygonF1 ).geometry(), QgsGeometry::fromWkt( "POLYGON((4 1, 7 1, 7 4, 4 4, 4 1))" ) );
+
+  QgsProject::instance()->setTopologicalEditing( false );
+}
+
+void TestQgsVertexTool::testAddVertexTopoFirstSegment()
+{
+  // check that when adding a vertex to the first segment of a polygon's ring with topo editing
+  // enabled, the geometry does not get corrupted (#20774)
+
+  QgsProject::instance()->setTopologicalEditing( true );
+
+  mouseClick( 5.5, 1, Qt::LeftButton );
+  mouseClick( 5, 2, Qt::LeftButton );
+
+  QCOMPARE( mLayerPolygon->undoStack()->index(), 2 );
+
+  QCOMPARE( mLayerPolygon->getFeature( mFidPolygonF1 ).geometry(), QgsGeometry::fromWkt( "POLYGON((4 1, 5 2, 7 1, 7 4, 4 4, 4 1))" ) );
+
+  mLayerPolygon->undoStack()->undo();
+
+  QCOMPARE( mLayerPolygon->getFeature( mFidPolygonF1 ).geometry(), QgsGeometry::fromWkt( "POLYGON((4 1, 7 1, 7 4, 4 4, 4 1))" ) );
+
+  QgsProject::instance()->setTopologicalEditing( false );
+}
+
 void TestQgsVertexTool::testActiveLayerPriority()
 {
   // check that features from current layer get priority when picking points
@@ -571,9 +806,91 @@ void TestQgsVertexTool::testActiveLayerPriority()
   QCOMPARE( layerLine2->getFeature( fidLineF1 ).geometry(), QgsGeometry::fromWkt( "LINESTRING(0 1, 0 0, 1 0)" ) );
   layerLine2->undoStack()->undo();
 
+  mCanvas->setCurrentLayer( nullptr );
+
   // get rid of the temporary layer
   mCanvas->setLayers( QList<QgsMapLayer *>() << mLayerLine << mLayerPolygon << mLayerPoint );
   QgsProject::instance()->removeMapLayer( layerLine2 );
+}
+
+void TestQgsVertexTool::testSelectedFeaturesPriority()
+{
+  // preparation: make the polygon feature touch line feature
+  mouseClick( 4, 1, Qt::LeftButton );
+  mouseClick( 2, 1, Qt::LeftButton );
+
+  //
+  // test that clicking a location with selected and non-selected feature will always pick the selected feature
+  //
+
+  mLayerLine->selectByIds( QgsFeatureIds() << mFidLineF1 );
+  mLayerPolygon->selectByIds( QgsFeatureIds() );
+
+  mouseClick( 2, 1, Qt::LeftButton );
+  mouseClick( 3, 1, Qt::LeftButton );
+
+  // check that move of (2,1) to (3,1) affects only line layer
+  QCOMPARE( mLayerLine->getFeature( mFidLineF1 ).geometry(), QgsGeometry::fromWkt( "LINESTRING(3 1, 1 1, 1 3)" ) );
+  QCOMPARE( mLayerPolygon->getFeature( mFidPolygonF1 ).geometry(), QgsGeometry::fromWkt( "POLYGON((2 1, 7 1, 7 4, 4 4, 2 1))" ) );
+  mLayerLine->undoStack()->undo();
+
+  mLayerLine->selectByIds( QgsFeatureIds() );
+  mLayerPolygon->selectByIds( QgsFeatureIds() << mFidPolygonF1 );
+
+  mouseClick( 2, 1, Qt::LeftButton );
+  mouseClick( 3, 1, Qt::LeftButton );
+
+  // check that move of (2,1) to (3,1) affects only polygon layer
+  QCOMPARE( mLayerLine->getFeature( mFidLineF1 ).geometry(), QgsGeometry::fromWkt( "LINESTRING(2 1, 1 1, 1 3)" ) );
+  QCOMPARE( mLayerPolygon->getFeature( mFidPolygonF1 ).geometry(), QgsGeometry::fromWkt( "POLYGON((3 1, 7 1, 7 4, 4 4, 3 1))" ) );
+  mLayerPolygon->undoStack()->undo();
+
+  //
+  // test that dragging rectangle to pick vertices in location with selected and non-selected feature
+  // will always pick vertices only from the selected feature
+  //
+
+  mLayerLine->selectByIds( QgsFeatureIds() );
+  mLayerPolygon->selectByIds( QgsFeatureIds() );
+
+  mousePress( 1.5, 0.5, Qt::LeftButton );
+  mouseMove( 2.5, 1.5 );
+  mouseRelease( 2.5, 1.5, Qt::LeftButton );
+  keyClick( Qt::Key_Delete );
+
+  // check we have deleted vertex at (2,1) from both line and polygon features
+  QCOMPARE( mLayerLine->getFeature( mFidLineF1 ).geometry(), QgsGeometry::fromWkt( "LINESTRING(1 1, 1 3)" ) );
+  QCOMPARE( mLayerPolygon->getFeature( mFidPolygonF1 ).geometry(), QgsGeometry::fromWkt( "POLYGON((7 1, 7 4, 4 4, 7 1))" ) );
+  mLayerLine->undoStack()->undo();
+  mLayerPolygon->undoStack()->undo();
+
+  mLayerLine->selectByIds( QgsFeatureIds() << mFidLineF1 );
+  mLayerPolygon->selectByIds( QgsFeatureIds() );
+
+  mousePress( 1.5, 0.5, Qt::LeftButton );
+  mouseMove( 2.5, 1.5 );
+  mouseRelease( 2.5, 1.5, Qt::LeftButton );
+  keyClick( Qt::Key_Delete );
+
+  // check we have deleted vertex at (2,1) just from line feature
+  QCOMPARE( mLayerLine->getFeature( mFidLineF1 ).geometry(), QgsGeometry::fromWkt( "LINESTRING(1 1, 1 3)" ) );
+  QCOMPARE( mLayerPolygon->getFeature( mFidPolygonF1 ).geometry(), QgsGeometry::fromWkt( "POLYGON((2 1, 7 1, 7 4, 4 4, 2 1))" ) );
+  mLayerLine->undoStack()->undo();
+
+  mLayerLine->selectByIds( QgsFeatureIds() );
+  mLayerPolygon->selectByIds( QgsFeatureIds() << mFidPolygonF1 );
+
+  mousePress( 1.5, 0.5, Qt::LeftButton );
+  mouseMove( 2.5, 1.5 );
+  mouseRelease( 2.5, 1.5, Qt::LeftButton );
+  keyClick( Qt::Key_Delete );
+
+  // check we have deleted vertex at (2,1) just from polygon feature
+  QCOMPARE( mLayerLine->getFeature( mFidLineF1 ).geometry(), QgsGeometry::fromWkt( "LINESTRING(2 1, 1 1, 1 3)" ) );
+  QCOMPARE( mLayerPolygon->getFeature( mFidPolygonF1 ).geometry(), QgsGeometry::fromWkt( "POLYGON((7 1, 7 4, 4 4, 7 1))" ) );
+  mLayerPolygon->undoStack()->undo();
+
+  mLayerPolygon->undoStack()->undo();  // undo the initial change
 }
 
 QGSTEST_MAIN( TestQgsVertexTool )

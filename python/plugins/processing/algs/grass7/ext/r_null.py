@@ -21,36 +21,32 @@ __author__ = 'Médéric Ribreux'
 __date__ = 'February 2016'
 __copyright__ = '(C) 2016, Médéric Ribreux'
 
-# This will get replaced with a git SHA1 when you do a git archive
-
-__revision__ = '$Format:%H$'
-
 
 def checkParameterValuesBeforeExecuting(alg, parameters, context):
     """ Verify if we have the right parameters """
     if (alg.parameterAsString(parameters, 'setnull', context)
             or alg.parameterAsString(parameters, 'null', context)):
-        return None
+        return True, None
 
-    return alg.tr("You need to set at least 'setnull' or 'null' parameters for this algorithm!")
+    return False, alg.tr("You need to set at least 'setnull' or 'null' parameters for this algorithm!")
 
 
-def processInputs(alg, parameters, context):
+def processInputs(alg, parameters, context, feedback):
     """Prepare the GRASS import commands"""
     if 'map' in alg.exportedLayers:
         return
 
     # We need to import without r.external
     alg.loadRasterLayerFromParameter('map', parameters, context, False)
-    alg.postInputs()
+    alg.postInputs(context)
 
 
-def processCommand(alg, parameters, context):
+def processCommand(alg, parameters, context, feedback):
     # We temporary remove the output 'sequence'
-    alg.processCommand(parameters, context, True)
+    alg.processCommand(parameters, context, feedback, True)
 
 
-def processOutputs(alg, parameters, context):
+def processOutputs(alg, parameters, context, feedback):
     fileName = alg.parameterAsOutputLayer(parameters, 'output', context)
     grassName = alg.exportedLayers['map']
     alg.exportRasterLayer(grassName, fileName, False)

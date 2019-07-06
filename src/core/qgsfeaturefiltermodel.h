@@ -18,7 +18,6 @@
 
 #include <QAbstractItemModel>
 
-#include "qgsvectorlayer.h"
 #include "qgsconditionalstyle.h"
 
 class QgsFieldExpressionValuesGatherer;
@@ -261,7 +260,7 @@ class CORE_EXPORT QgsFeatureFilterModel : public QAbstractItemModel
 
   private:
     QSet<QString> requestedAttributes() const;
-    void setExtraIdentifierValueIndex( int index );
+    void setExtraIdentifierValueIndex( int index, bool force = false );
     void setExtraValueDoesNotExist( bool extraValueDoesNotExist );
     void reload();
     void reloadCurrentFeature();
@@ -298,6 +297,7 @@ class CORE_EXPORT QgsFeatureFilterModel : public QAbstractItemModel
     bool mShouldReloadCurrentFeature = false;
     bool mExtraValueDoesNotExist = false;
     bool mAllowNull = false;
+    bool mIsSettingExtraIdentifierValue = false;
 
     QString mIdentifierField;
 

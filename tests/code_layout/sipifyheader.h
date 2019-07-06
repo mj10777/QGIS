@@ -90,8 +90,8 @@ typedef QVector<QVariant> QgsSuperClass;
  * Documentation goes here
  *
  * Here's some comment mentioning another class QgsAutoAwesomemater::makeAwesome.
- * \since QGIS 3.0
  * \note some other note
+ * \since QGIS 3.0
  */
 class CORE_EXPORT QgsSipifyHeader : public QtClass<QVariant>, private Ui::QgsBaseClass
 {
@@ -134,6 +134,7 @@ class CORE_EXPORT QgsSipifyHeader : public QtClass<QVariant>, private Ui::QgsBas
       QString mName;
       int mCount = 100;
       QgsMapLayer *mLayer = nullptr;
+      QList<QAction *> contextMenuActions = QList<QAction *>();
     };
 
     static const int MONTHS = 60 * 60 * 24 * 30; // something
@@ -216,7 +217,7 @@ class CORE_EXPORT QgsSipifyHeader : public QtClass<QVariant>, private Ui::QgsBas
     void LongDocStringMethodWithBrief();
 
     /**
-     * I return a pointer. If something bad happens, I return nullptr.
+     * I return a pointer. If something bad happens, I return NULLPTR.
     * \returns pointer to something cool
      */
     MyPointer *pointerReturnValue();

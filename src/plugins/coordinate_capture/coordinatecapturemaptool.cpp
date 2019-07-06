@@ -13,17 +13,18 @@
  *                                                                         *
  ***************************************************************************/
 
+#include <QSettings>
+#include <QCursor>
+#include <QPixmap>
+
 #include "coordinatecapturemaptool.h"
 #include "qgsmapcanvas.h"
 #include "qgsmaptopixel.h"
 #include "qgsrubberband.h"
 #include "qgscoordinatereferencesystem.h"
+#include "qgsmapmouseevent.h"
+#include "qgsapplication.h"
 
-#include <QSettings>
-
-#include <QMouseEvent>
-#include <QCursor>
-#include <QPixmap>
 
 CoordinateCaptureMapTool::CoordinateCaptureMapTool( QgsMapCanvas *thepCanvas )
   : QgsMapTool( thepCanvas )
@@ -44,7 +45,7 @@ void CoordinateCaptureMapTool::canvasMoveEvent( QgsMapMouseEvent *thepEvent )
 
 void CoordinateCaptureMapTool::canvasPressEvent( QgsMapMouseEvent *thepEvent )
 {
-  Q_UNUSED( thepEvent );
+  Q_UNUSED( thepEvent )
 }
 
 void CoordinateCaptureMapTool::canvasReleaseEvent( QgsMapMouseEvent *thepEvent )

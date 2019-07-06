@@ -221,7 +221,43 @@ QString createDatabaseURI( const QString &connectionType, const QString &host, c
 QString createProtocolURI( const QString &type, const QString &url,  const QString &configId, const QString &username, const QString &password, bool expandAuthConfig )
 {
   QString uri;
-  if ( type == QLatin1String( "GeoJSON" ) )
+  if ( type == QLatin1String( "HTTP/HTTPS/FTP" ) )
+  {
+    uri = url;
+    // If no protocol is provided in the URL, default to HTTP
+    if ( !uri.startsWith( "http://" ) && !uri.startsWith( "https://" ) && !uri.startsWith( "ftp://" ) )
+    {
+      uri.prepend( QStringLiteral( "http://" ) );
+    }
+    uri.prepend( QStringLiteral( "/vsicurl/" ) );
+  }
+  else if ( type == QLatin1String( "AWS S3" ) )
+  {
+    uri = url;
+    uri.prepend( QStringLiteral( "/vsis3/" ) );
+  }
+  else if ( type == QLatin1String( "Google Cloud Storage" ) )
+  {
+    uri = url;
+    uri.prepend( QStringLiteral( "/vsigs/" ) );
+  }
+  else if ( type == QLatin1String( "Microsoft Azure Blob" ) )
+  {
+    uri = url;
+    uri.prepend( QStringLiteral( "/vsiaz/" ) );
+  }
+  else if ( type == QLatin1String( "Alibaba Cloud OSS" ) )
+  {
+    uri = url;
+    uri.prepend( QStringLiteral( "/vsioss/" ) );
+  }
+  else if ( type == QLatin1String( "OpenStack Swift Object Storage" ) )
+  {
+    uri = url;
+    uri.prepend( QStringLiteral( "/vsiswift/" ) );
+  }
+  // catching both GeoJSON and GeoJSONSeq
+  else if ( type.startsWith( QLatin1String( "GeoJSON" ) ) )
   {
     uri = url;
   }
@@ -232,6 +268,11 @@ QString createProtocolURI( const QString &type, const QString &url,  const QStri
   else if ( type == QLatin1String( "DODS/OPeNDAP" ) )
   {
     uri = QStringLiteral( "DODS:%1" ).arg( url );
+  }
+  // Check beginning because of "experimental"
+  else if ( type.startsWith( QLatin1String( "WFS3" ) ) )
+  {
+    uri = QStringLiteral( "WFS3:%1" ).arg( url );
   }
   QgsDebugMsg( "Connection type is=" + type + " and uri=" + uri );
   // Update URI with authentication information

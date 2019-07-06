@@ -18,7 +18,7 @@
 #ifndef QGSMAPRENDERERTASK_H
 #define QGSMAPRENDERERTASK_H
 
-#include "qgis.h"
+#include "qgis_sip.h"
 #include "qgis_core.h"
 #include "qgsannotation.h"
 #include "qgsannotationmanager.h"
@@ -46,8 +46,9 @@ class CORE_EXPORT QgsMapRendererTask : public QgsTask
     //! \brief Error type
     enum ErrorType
     {
-      ImageAllocationFail = 1,  // Image allocation failure
-      ImageSaveFail             // Image save failure
+      ImageAllocationFail = 1, //!< Image allocation failure
+      ImageSaveFail, //!< Image save failure
+      ImageUnsupportedFormat //!< Format is unsupported on the platform \since QGIS 3.4
     };
 
     /**
@@ -56,7 +57,7 @@ class CORE_EXPORT QgsMapRendererTask : public QgsTask
     QgsMapRendererTask( const QgsMapSettings &ms,
                         const QString &fileName,
                         const QString &fileFormat = QString( "PNG" ),
-                        const bool forceRaster = false );
+                        bool forceRaster = false );
 
     /**
      * Constructor for QgsMapRendererTask to render a map to a QPainter object.

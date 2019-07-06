@@ -84,7 +84,7 @@ namespace pal
        * Tests whether point set contains a specified point.
        * \param x x-coordinate of point
        * \param y y-coordinate of point
-       * \returns true if point set contains a specified point
+       * \returns TRUE if point set contains a specified point
        */
       bool containsPoint( double x, double y ) const;
 
@@ -95,7 +95,7 @@ namespace pal
        * \param width label width
        * \param height label height
        * \param alpha label angle
-       * \returns true if point set completely contains candidate label
+       * \returns TRUE if point set completely contains candidate label
        */
       bool containsLabelCandidate( double x, double y, double width, double height, double alpha = 0 ) const;
 
@@ -131,13 +131,13 @@ namespace pal
         max[1] = ymax;
       }
 
-      //! Returns NULL if this isn't a hole. Otherwise returns pointer to parent pointset.
+      //! Returns NULLPTR if this isn't a hole. Otherwise returns pointer to parent pointset.
       PointSet *getHoleOf() { return holeOf; }
 
       int getNumPoints() const { return nbPoints; }
 
       /**
-       * Get a point a set distance along a line geometry.
+       * Gets a point a set distance along a line geometry.
        * \param d array of distances between points
        * \param ad cumulative total distance from pt0 to each point (ad0 = pt0->pt0)
        * \param dl distance to traverse along line
@@ -156,13 +156,18 @@ namespace pal
        */
       double length() const;
 
+      /**
+       * Returns TRUE if pointset is closed.
+       */
+      bool isClosed() const;
+
     protected:
       mutable GEOSGeometry *mGeos = nullptr;
       mutable bool mOwnsGeom = false;
 
       int nbPoints;
       double *x = nullptr;
-      double *y;   // points order is counterclockwise
+      double *y = nullptr;   // points order is counterclockwise
 
       int *cHull = nullptr;
       int cHullSize;
@@ -181,10 +186,10 @@ namespace pal
       const GEOSPreparedGeometry *preparedGeom() const;
       void invalidateGeos();
 
-      double xmin = DBL_MAX;
-      double xmax = -DBL_MAX;
-      double ymin = DBL_MAX;
-      double ymax = -DBL_MAX;
+      double xmin = std::numeric_limits<double>::max();
+      double xmax = std::numeric_limits<double>::lowest();
+      double ymin = std::numeric_limits<double>::max();
+      double ymax = std::numeric_limits<double>::lowest();
 
     private:
 

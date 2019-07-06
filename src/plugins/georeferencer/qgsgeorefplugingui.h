@@ -57,7 +57,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
 
   public:
     QgsGeorefPluginGui( QgisInterface *qgisInterface, QWidget *parent = nullptr, Qt::WindowFlags fl = nullptr );
-    ~QgsGeorefPluginGui();
+    ~QgsGeorefPluginGui() override;
 
   protected:
     void closeEvent( QCloseEvent * ) override;
@@ -104,7 +104,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     void showGeorefConfigDialog();
 
     // plugin info
-    void contextHelp();
+    void showHelp();
 
     // comfort
     void jumpToGCP( uint theGCPIndex );
@@ -228,6 +228,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     QgsCoordinateReferenceSystem mProjection;
     QString mPdfOutputFile;
     QString mPdfOutputMapFile;
+    QString mSaveGcp;
     double  mUserResX, mUserResY;  // User specified target scale
 
     QgsGeorefTransform::TransformParametrisation mTransformParam;
@@ -259,6 +260,7 @@ class QgsGeorefPluginGui : public QMainWindow, private Ui::QgsGeorefPluginGuiBas
     bool mExtentsChangedRecursionGuard;
     bool mGCPsDirty;
     bool mLoadInQgis;
+
 
     QgsDockWidget *mDock = nullptr;
     int messageTimeout();

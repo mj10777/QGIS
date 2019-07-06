@@ -19,6 +19,7 @@
 #include "qgslayoutitemscalebar.h"
 #include "qgslayout.h"
 #include "qgsguiutils.h"
+
 #include <QColorDialog>
 #include <QFontDialog>
 #include <QWidget>
@@ -35,7 +36,6 @@ QgsLayoutScaleBarWidget::QgsLayoutScaleBarWidget( QgsLayoutItemScaleBar *scaleBa
   connect( mNumberOfSegmentsSpinBox, static_cast < void ( QSpinBox::* )( int ) > ( &QSpinBox::valueChanged ), this, &QgsLayoutScaleBarWidget::mNumberOfSegmentsSpinBox_valueChanged );
   connect( mUnitLabelLineEdit, &QLineEdit::textChanged, this, &QgsLayoutScaleBarWidget::mUnitLabelLineEdit_textChanged );
   connect( mMapUnitsPerBarUnitSpinBox, static_cast < void ( QDoubleSpinBox::* )( double ) > ( &QDoubleSpinBox::valueChanged ), this, &QgsLayoutScaleBarWidget::mMapUnitsPerBarUnitSpinBox_valueChanged );
-  connect( mFontColorButton, &QgsColorButton::colorChanged, this, &QgsLayoutScaleBarWidget::mFontColorButton_colorChanged );
   connect( mFillColorButton, &QgsColorButton::colorChanged, this, &QgsLayoutScaleBarWidget::mFillColorButton_colorChanged );
   connect( mFillColor2Button, &QgsColorButton::colorChanged, this, &QgsLayoutScaleBarWidget::mFillColor2Button_colorChanged );
   connect( mStrokeColorButton, &QgsColorButton::colorChanged, this, &QgsLayoutScaleBarWidget::mStrokeColorButton_colorChanged );
@@ -97,18 +97,21 @@ QgsLayoutScaleBarWidget::QgsLayoutScaleBarWidget( QgsLayoutItemScaleBar *scaleBa
   mFillColor2Button->setColorDialogTitle( tr( "Select Alternate Fill Color" ) );
   mFillColor2Button->setAllowOpacity( true );
   mFillColor2Button->setContext( QStringLiteral( "composer" ) );
-  mFillColor2Button->setNoColorString( tr( "Transparent fill" ) );
+  mFillColor2Button->setNoColorString( tr( "Transparent Fill" ) );
   mFillColor2Button->setShowNoColor( true );
 
-  mFontColorButton->setColorDialogTitle( tr( "Select Font Color" ) );
-  mFontColorButton->setAllowOpacity( true );
-  mFontColorButton->setContext( QStringLiteral( "composer" ) );
+  mFontButton->setDialogTitle( tr( "Scalebar Font" ) );
+  mFontButton->setMode( QgsFontButton::ModeTextRenderer );
 
   mStrokeColorButton->setColorDialogTitle( tr( "Select Line Color" ) );
   mStrokeColorButton->setAllowOpacity( true );
   mStrokeColorButton->setContext( QStringLiteral( "composer" ) );
-  mStrokeColorButton->setNoColorString( tr( "Transparent line" ) );
+  mStrokeColorButton->setNoColorString( tr( "Transparent Line" ) );
   mStrokeColorButton->setShowNoColor( true );
+
+  mFillColorDDBtn->registerLinkedWidget( mFillColorButton );
+  mFillColor2DDBtn->registerLinkedWidget( mFillColor2Button );
+  mLineColorDDBtn->registerLinkedWidget( mStrokeColorButton );
 
   if ( mScalebar )
   {
@@ -134,7 +137,7 @@ QgsLayoutScaleBarWidget::QgsLayoutScaleBarWidget( QgsLayoutItemScaleBar *scaleBa
   blockMemberSignals( false );
   setGuiElements(); //set the GUI elements to the state of scaleBar
 
-  connect( mFontButton, &QgsFontButton::changed, this, &QgsLayoutScaleBarWidget::fontChanged );
+  connect( mFontButton, &QgsFontButton::changed, this, &QgsLayoutScaleBarWidget::textFormatChanged );
 }
 
 bool QgsLayoutScaleBarWidget::setNewItem( QgsLayoutItem *item )
@@ -180,11 +183,10 @@ void QgsLayoutScaleBarWidget::setGuiElements()
   mUnitLabelLineEdit->setText( mScalebar->unitLabel() );
   mLineJoinStyleCombo->setPenJoinStyle( mScalebar->lineJoinStyle() );
   mLineCapStyleCombo->setPenCapStyle( mScalebar->lineCapStyle() );
-  mFontColorButton->setColor( mScalebar->fontColor() );
   mFillColorButton->setColor( mScalebar->fillColor() );
   mFillColor2Button->setColor( mScalebar->fillColor2() );
   mStrokeColorButton->setColor( mScalebar->lineColor() );
-  mFontButton->setCurrentFont( mScalebar->font() );
+  mFontButton->setTextFormat( mScalebar->textFormat() );
 
   //map combo box
   mMapItemComboBox->setItem( mScalebar->linkedMap() );
@@ -195,7 +197,7 @@ void QgsLayoutScaleBarWidget::setGuiElements()
   toggleStyleSpecificControls( style );
 
   //alignment
-  mAlignmentComboBox->setCurrentIndex( ( int )( mScalebar->alignment() ) );
+  mAlignmentComboBox->setCurrentIndex( static_cast< int >( mScalebar->alignment() ) );
 
   //units
   mUnitsComboBox->setCurrentIndex( mUnitsComboBox->findData( static_cast< int >( mScalebar->units() ) ) );
@@ -299,7 +301,7 @@ void QgsLayoutScaleBarWidget::mHeightSpinBox_valueChanged( double d )
   mScalebar->endCommand();
 }
 
-void QgsLayoutScaleBarWidget::fontChanged()
+void QgsLayoutScaleBarWidget::textFormatChanged()
 {
   if ( !mScalebar )
   {
@@ -308,25 +310,10 @@ void QgsLayoutScaleBarWidget::fontChanged()
 
   mScalebar->beginCommand( tr( "Set Scalebar Font" ) );
   disconnectUpdateSignal();
-  mScalebar->setFont( mFontButton->currentFont() );
+  mScalebar->setTextFormat( mFontButton->textFormat() );
   connectUpdateSignal();
   mScalebar->endCommand();
   mScalebar->update();
-}
-
-void QgsLayoutScaleBarWidget::mFontColorButton_colorChanged( const QColor &newColor )
-{
-  if ( !mScalebar )
-  {
-    return;
-  }
-
-  mScalebar->beginCommand( tr( "Set Scalebar Font Color" ), QgsLayoutItem::UndoScaleBarFontColor );
-  disconnectUpdateSignal();
-  mScalebar->setFontColor( newColor );
-  mScalebar->update();
-  connectUpdateSignal();
-  mScalebar->endCommand();
 }
 
 void QgsLayoutScaleBarWidget::mFillColorButton_colorChanged( const QColor &newColor )
@@ -534,7 +521,7 @@ void QgsLayoutScaleBarWidget::mAlignmentComboBox_currentIndexChanged( int index 
 
   mScalebar->beginCommand( tr( "Set Scalebar Alignment" ) );
   disconnectUpdateSignal();
-  mScalebar->setAlignment( ( QgsScaleBarSettings::Alignment ) index );
+  mScalebar->setAlignment( static_cast< QgsScaleBarSettings::Alignment >( index ) );
   mScalebar->update();
   connectUpdateSignal();
   mScalebar->endCommand();
@@ -582,7 +569,6 @@ void QgsLayoutScaleBarWidget::blockMemberSignals( bool block )
   mUnitsComboBox->blockSignals( block );
   mLineJoinStyleCombo->blockSignals( block );
   mLineCapStyleCombo->blockSignals( block );
-  mFontColorButton->blockSignals( block );
   mFillColorButton->blockSignals( block );
   mFillColor2Button->blockSignals( block );
   mStrokeColorButton->blockSignals( block );
@@ -611,7 +597,7 @@ void QgsLayoutScaleBarWidget::disconnectUpdateSignal()
 
 void QgsLayoutScaleBarWidget::mLineJoinStyleCombo_currentIndexChanged( int index )
 {
-  Q_UNUSED( index );
+  Q_UNUSED( index )
   if ( !mScalebar )
   {
     return;
@@ -624,7 +610,7 @@ void QgsLayoutScaleBarWidget::mLineJoinStyleCombo_currentIndexChanged( int index
 
 void QgsLayoutScaleBarWidget::mLineCapStyleCombo_currentIndexChanged( int index )
 {
-  Q_UNUSED( index );
+  Q_UNUSED( index )
   if ( !mScalebar )
   {
     return;

@@ -12,11 +12,11 @@
  *   (at your option) any later version.                                   *
  *                                                                         *
  ***************************************************************************/
-#ifndef QGSDIAGRAMRENDERERV2_H
-#define QGSDIAGRAMRENDERERV2_H
+#ifndef QGSDIAGRAMRENDERER_H
+#define QGSDIAGRAMRENDERER_H
 
 #include "qgis_core.h"
-#include "qgis.h"
+#include "qgis_sip.h"
 #include <QColor>
 #include <QFont>
 #include <QList>
@@ -89,15 +89,15 @@ class CORE_EXPORT QgsDiagramLayerSettings
       BackgroundColor, //!< Diagram background color
       StrokeColor, //!< Stroke color
       StrokeWidth, //!< Stroke width
-      PositionX, //! x-coordinate data defined diagram position
-      PositionY, //! y-coordinate data defined diagram position
-      Distance, //! Distance to diagram from feature
-      Priority, //! Diagram priority (between 0 and 10)
-      ZIndex, //! Z-index for diagram ordering
-      IsObstacle, //! Whether diagram features act as obstacles for other diagrams/labels
-      Show, //! Whether to show the diagram
-      AlwaysShow, //! Whether the diagram should always be shown, even if it overlaps other diagrams/labels
-      StartAngle, //! Angle offset for pie diagram
+      PositionX, //!< X-coordinate data defined diagram position
+      PositionY, //!< Y-coordinate data defined diagram position
+      Distance, //!< Distance to diagram from feature
+      Priority, //!< Diagram priority (between 0 and 10)
+      ZIndex, //!< Z-index for diagram ordering
+      IsObstacle, //!< Whether diagram features act as obstacles for other diagrams/labels
+      Show, //!< Whether to show the diagram
+      AlwaysShow, //!< Whether the diagram should always be shown, even if it overlaps other diagrams/labels
+      StartAngle, //!< Angle offset for pie diagram
     };
 
     /**
@@ -145,7 +145,7 @@ class CORE_EXPORT QgsDiagramLayerSettings
      * Sets the the diagram placement flags. These are only used if the diagram placement
      * is set to a line type.
      * \param flags placement value
-     * \see getPlacement()
+     * \see linePlacementFlags()
      * \since QGIS 2.16
      */
     void setLinePlacementFlags( LinePlacementFlags flags ) { mPlacementFlags = flags; }
@@ -196,7 +196,7 @@ class CORE_EXPORT QgsDiagramLayerSettings
 
     /**
      * Sets whether the feature associated with a diagram acts as an obstacle for other labels or diagrams.
-     * \param isObstacle set to true for feature to act as obstacle
+     * \param isObstacle set to TRUE for feature to act as obstacle
      * \see isObstacle()
      * \since QGIS 2.16
      */
@@ -227,8 +227,8 @@ class CORE_EXPORT QgsDiagramLayerSettings
     /**
      * Returns the diagram renderer associated with the layer.
      * \see setRenderer()
-     * \since QGIS 2.16
      * \note not available in Python bindings
+     * \since QGIS 2.16
      */
     const QgsDiagramRenderer *renderer() const { return mRenderer; } SIP_SKIP
 
@@ -265,7 +265,7 @@ class CORE_EXPORT QgsDiagramLayerSettings
 
     /**
      * Sets whether the layer should show all diagrams, including overlapping diagrams
-     * \param showAllDiagrams set to true to show all diagrams
+     * \param showAllDiagrams set to TRUE to show all diagrams
      * \see showAllDiagrams()
      * \since QGIS 2.16
      */
@@ -286,7 +286,7 @@ class CORE_EXPORT QgsDiagramLayerSettings
     /**
      * Prepares the diagrams for a specified expression context. Calling prepare before rendering
      * multiple diagrams allows precalculation of expensive setup tasks such as parsing expressions.
-     * Returns true if preparation was successful.
+     * Returns TRUE if preparation was successful.
      * \since QGIS 3.0
      */
     bool prepare( const QgsExpressionContext &context = QgsExpressionContext() ) const;
@@ -300,24 +300,26 @@ class CORE_EXPORT QgsDiagramLayerSettings
 
     /**
      * Returns a reference to the diagram's property collection, used for data defined overrides.
-     * \since QGIS 3.0
      * \see setDataDefinedProperties()
+     * \since QGIS 3.0
      */
     QgsPropertyCollection &dataDefinedProperties() { return mDataDefinedProperties; }
 
     /**
      * Returns a reference to the diagram's property collection, used for data defined overrides.
-     * \since QGIS 3.0
-     * \see setProperties()
+     * \see setDataDefinedProperties()
+     * \see Property
      * \note not available in Python bindings
+     * \since QGIS 3.0
      */
     const QgsPropertyCollection &dataDefinedProperties() const { return mDataDefinedProperties; } SIP_SKIP
 
     /**
      * Sets the diagram's property collection, used for data defined overrides.
      * \param collection property collection. Existing properties will be replaced.
-     * \since QGIS 3.0
      * \see dataDefinedProperties()
+     * \see Property
+     * \since QGIS 3.0
      */
     void setDataDefinedProperties( const QgsPropertyCollection &collection ) { mDataDefinedProperties = collection; }
 
@@ -581,19 +583,17 @@ class CORE_EXPORT QgsDiagramRenderer
     virtual QList< QgsLayerTreeModelLegendNode * > legendItems( QgsLayerTreeLayer *nodeLayer ) const SIP_FACTORY;
 
     /**
-     * Returns true if renderer will show legend items for diagram attributes.
-     * \since QGIS 2.16
+     * Returns TRUE if renderer will show legend items for diagram attributes.
      * \see setAttributeLegend()
-     * \see sizeLegend()
+     * \since QGIS 2.16
      */
     bool attributeLegend() const { return mShowAttributeLegend; }
 
     /**
      * Sets whether the renderer will show legend items for diagram attributes.
-     * \param enabled set to true to show diagram attribute legend
-     * \since QGIS 2.16
+     * \param enabled set to TRUE to show diagram attribute legend
      * \see attributeLegend()
-     * \see setSizeLegend()
+     * \since QGIS 2.16
      */
     void setAttributeLegend( bool enabled ) { mShowAttributeLegend = enabled; }
 
@@ -602,7 +602,7 @@ class CORE_EXPORT QgsDiagramRenderer
     QgsDiagramRenderer &operator=( const QgsDiagramRenderer &other );
 
     /**
-     * Returns diagram settings for a feature (or false if the diagram for the feature is not to be rendered). Used internally within renderDiagram()
+     * Returns diagram settings for a feature (or FALSE if the diagram for the feature is not to be rendered). Used internally within renderDiagram()
      * \param feature the feature
      * \param c render context
      * \param s out: diagram settings for the feature
@@ -741,7 +741,7 @@ class CORE_EXPORT QgsLinearlyInterpolatedDiagramRenderer : public QgsDiagramRend
     void setDataDefinedSizeLegend( QgsDataDefinedSizeLegend *settings SIP_TRANSFER );
 
     /**
-     * Returns configuration of appearance of legend. Will return null if no configuration has been set.
+     * Returns configuration of appearance of legend. Will return NULLPTR if no configuration has been set.
      * \since QGIS 3.0
      */
     QgsDataDefinedSizeLegend *dataDefinedSizeLegend() const;
@@ -762,4 +762,4 @@ class CORE_EXPORT QgsLinearlyInterpolatedDiagramRenderer : public QgsDiagramRend
     QgsDataDefinedSizeLegend *mDataDefinedSizeLegend = nullptr;
 };
 
-#endif // QGSDIAGRAMRENDERERV2_H
+#endif // QGSDIAGRAMRENDERER_H

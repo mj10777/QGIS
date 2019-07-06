@@ -18,12 +18,17 @@
 
 class QgsPointXY;
 class QgsVectorLayer;
+class QgsFeatureRenderer;
+class QgsRenderContext;
+class QgsRectangle;
 
 #include "qgis_core.h"
-#include "qgsfeature.h"
 #include "qgspointxy.h"
 #include "qgscoordinatereferencesystem.h"
 #include "qgscoordinatetransform.h"
+#include "qgsfeatureid.h"
+#include "qgsgeometry.h"
+#include <memory>
 
 class QgsPointLocator_VisitorNearestVertex;
 class QgsPointLocator_VisitorNearestEdge;
@@ -60,7 +65,7 @@ class CORE_EXPORT QgsPointLocator : public QObject
      * to set the correct \a transformContext if a \a destinationCrs is specified. This is usually taken
      * from the current QgsProject::transformContext().
      *
-     * If \a extent is not null, the locator will index only a subset of the layer which falls within that extent.
+     * If \a extent is not NULLPTR, the locator will index only a subset of the layer which falls within that extent.
      */
     explicit QgsPointLocator( QgsVectorLayer *layer, const QgsCoordinateReferenceSystem &destinationCrs = QgsCoordinateReferenceSystem(),
                               const QgsCoordinateTransformContext &transformContext = QgsCoordinateTransformContext(),
@@ -69,28 +74,34 @@ class CORE_EXPORT QgsPointLocator : public QObject
     ~QgsPointLocator() override;
 
     /**
-     * Get associated layer
+     * Gets associated layer
      * \since QGIS 2.14
      */
     QgsVectorLayer *layer() const { return mLayer; }
 
     /**
-     * Get destination CRS - may be an invalid QgsCoordinateReferenceSystem if not doing OTF reprojection
+     * Gets destination CRS - may be an invalid QgsCoordinateReferenceSystem if not doing OTF reprojection
      * \since QGIS 2.14
      */
     QgsCoordinateReferenceSystem destinationCrs() const;
 
     /**
-     * Get extent of the area point locator covers - if null then it caches the whole layer
+     * Gets extent of the area point locator covers - if NULLPTR then it caches the whole layer
      * \since QGIS 2.14
      */
-    const QgsRectangle *extent() const { return mExtent; }
+    const QgsRectangle *extent() const { return mExtent.get(); }
 
     /**
-     * Configure extent - if not null, it will index only that area
+     * Configure extent - if not NULLPTR, it will index only that area
      * \since QGIS 2.14
      */
     void setExtent( const QgsRectangle *extent );
+
+    /**
+     * Configure render context  - if not NULLPTR, it will use to index only visible feature
+     * \since QGIS 3.2
+     */
+    void setRenderContext( const QgsRenderContext *context );
 
     /**
      * The type of a snap result or the filter type for a snap request.
@@ -110,7 +121,8 @@ class CORE_EXPORT QgsPointLocator : public QObject
      * Prepare the index for queries. Does nothing if the index already exists.
      * If the number of features is greater than the value of maxFeaturesToIndex, creation of index is stopped
      * to make sure we do not run out of memory. If maxFeaturesToIndex is -1, no limits are used. Returns
-     * false if the creation of index has been prematurely stopped due to the limit of features, otherwise true */
+     * FALSE if the creation of index has been prematurely stopped due to the limit of features, otherwise TRUE
+    */
     bool init( int maxFeaturesToIndex = -1 );
 
     //! Indicate whether the data have been already indexed
@@ -160,7 +172,7 @@ class CORE_EXPORT QgsPointLocator : public QObject
 
         /**
          * The vector layer where the snap occurred.
-         * Will be null if the snap happened on an intersection.
+         * Will be NULLPTR if the snap happened on an intersection.
          */
         QgsVectorLayer *layer() const { return mLayer; }
 
@@ -245,16 +257,27 @@ class CORE_EXPORT QgsPointLocator : public QObject
     //! Override of edgesInRect that construct rectangle from a center point and tolerance
     MatchList edgesInRect( const QgsPointXY &point, double tolerance, QgsPointLocator::MatchFilter *filter = nullptr );
 
+    /**
+     * Find vertices within a specified recangle
+     * Optional filter may discard unwanted matches.
+     * \since QGIS 3.6
+     */
+    MatchList verticesInRect( const QgsRectangle &rect, QgsPointLocator::MatchFilter *filter = nullptr );
+
+    /**
+     * Override of verticesInRect that construct rectangle from a center point and tolerance
+     * \since QGIS 3.6
+     */
+    MatchList verticesInRect( const QgsPointXY &point, double tolerance, QgsPointLocator::MatchFilter *filter = nullptr );
+
     // point-in-polygon query
 
     // TODO: function to return just the first match?
     //! find out if the point is in any polygons
     MatchList pointInPolygon( const QgsPointXY &point );
 
-    //
-
     /**
-     * Return how many geometries are cached in the index
+     * Returns how many geometries are cached in the index
      * \since QGIS 2.14
      */
     int cachedGeometryCount() const { return mGeoms.count(); }
@@ -267,26 +290,31 @@ class CORE_EXPORT QgsPointLocator : public QObject
     void onFeatureAdded( QgsFeatureId fid );
     void onFeatureDeleted( QgsFeatureId fid );
     void onGeometryChanged( QgsFeatureId fid, const QgsGeometry &geom );
+    void onAttributeValueChanged( QgsFeatureId fid, int idx, const QVariant &value );
 
   private:
     //! Storage manager
-    SpatialIndex::IStorageManager *mStorage = nullptr;
+    std::unique_ptr< SpatialIndex::IStorageManager > mStorage;
 
     QHash<QgsFeatureId, QgsGeometry *> mGeoms;
-    SpatialIndex::ISpatialIndex *mRTree = nullptr;
+    std::unique_ptr< SpatialIndex::ISpatialIndex > mRTree;
 
-    //! flag whether the layer is currently empty (i.e. mRTree is null but it is not necessary to rebuild it)
-    bool mIsEmptyLayer;
+    //! flag whether the layer is currently empty (i.e. mRTree is NULLPTR but it is not necessary to rebuild it)
+    bool mIsEmptyLayer = false;
+
 
     //! R-tree containing spatial index
     QgsCoordinateTransform mTransform;
     QgsVectorLayer *mLayer = nullptr;
-    QgsRectangle *mExtent = nullptr;
+    std::unique_ptr< QgsRectangle > mExtent;
+
+    std::unique_ptr<QgsRenderContext> mContext;
 
     friend class QgsPointLocator_VisitorNearestVertex;
     friend class QgsPointLocator_VisitorNearestEdge;
     friend class QgsPointLocator_VisitorArea;
     friend class QgsPointLocator_VisitorEdgesInRect;
+    friend class QgsPointLocator_VisitorVerticesInRect;
 };
 
 

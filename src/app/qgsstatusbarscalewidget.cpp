@@ -17,7 +17,6 @@
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QLineEdit>
-#include <QToolButton>
 #include <QValidator>
 
 #include "qgsstatusbarscalewidget.h"
@@ -46,21 +45,12 @@ QgsStatusBarScaleWidget::QgsStatusBarScaleWidget( QgsMapCanvas *canvas, QWidget 
   // so we need to set font for it separately
   mScale->setMinimumWidth( 10 );
   mScale->setContentsMargins( 0, 0, 0, 0 );
-  mScale->setWhatsThis( tr( "Displays the current map scale" ) );
   mScale->setToolTip( tr( "Current map scale (formatted as x:y)" ) );
-
-  mLockButton = new QToolButton();
-  mLockButton->setIcon( QIcon( QgsApplication::getThemeIcon( "/lockedGray.svg" ) ) );
-  mLockButton->setToolTip( tr( "Lock the scale to use magnifier to zoom in or out." ) );
-  mLockButton->setCheckable( true );
-  mLockButton->setChecked( false );
-  mLockButton->setAutoRaise( true );
 
   // layout
   mLayout = new QHBoxLayout( this );
   mLayout->addWidget( mLabel );
   mLayout->addWidget( mScale );
-  mLayout->addWidget( mLockButton );
   mLayout->setContentsMargins( 0, 0, 0, 0 );
   mLayout->setAlignment( Qt::AlignRight );
   mLayout->setSpacing( 0 );
@@ -68,9 +58,6 @@ QgsStatusBarScaleWidget::QgsStatusBarScaleWidget( QgsMapCanvas *canvas, QWidget 
   setLayout( mLayout );
 
   connect( mScale, &QgsScaleComboBox::scaleChanged, this, &QgsStatusBarScaleWidget::userScale );
-
-  connect( mLockButton, &QAbstractButton::toggled, this, &QgsStatusBarScaleWidget::scaleLockChanged );
-  connect( mLockButton, &QAbstractButton::toggled, mScale, &QWidget::setDisabled );
 }
 
 void QgsStatusBarScaleWidget::setScale( double scale )
@@ -78,11 +65,21 @@ void QgsStatusBarScaleWidget::setScale( double scale )
   mScale->blockSignals( true );
   mScale->setScale( scale );
   mScale->blockSignals( false );
+
+  if ( mScale->width() > mScale->minimumWidth() )
+  {
+    mScale->setMinimumWidth( mScale->width() );
+  }
 }
 
 bool QgsStatusBarScaleWidget::isLocked() const
 {
-  return mLockButton->isChecked();
+  return !mScale->isEnabled();
+}
+
+void QgsStatusBarScaleWidget::setLocked( bool state )
+{
+  mScale->setDisabled( state );
 }
 
 void QgsStatusBarScaleWidget::setFont( const QFont &font )

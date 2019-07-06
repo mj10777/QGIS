@@ -65,19 +65,6 @@ class CORE_EXPORT QgsCoordinateTransform
     QgsCoordinateTransform();
 
     /**
-     * Constructs a QgsCoordinateTransform using QgsCoordinateReferenceSystem objects.
-     * \param source source CRS, typically of the layer's coordinate system
-     * \param destination CRS, typically of the map canvas coordinate system
-     * \deprecated Use of this constructor is strongly discouraged, as it will not
-     * correctly handle the user's datum transform setup. Instead the constructor
-     * variant which accepts a QgsCoordinateTransformContext or QgsProject
-     * argument should be used instead. It is highly likely that this constructor
-     * will be removed in future QGIS versions.
-     * \note Not available in Python bindings.
-     */
-    Q_DECL_DEPRECATED explicit QgsCoordinateTransform( const QgsCoordinateReferenceSystem &source, const QgsCoordinateReferenceSystem &destination ) SIP_SKIP;
-
-    /**
      * Constructs a QgsCoordinateTransform to transform from the \a source
      * to \a destination coordinate reference system.
      *
@@ -150,7 +137,7 @@ class CORE_EXPORT QgsCoordinateTransform
     ~QgsCoordinateTransform();
 
     /**
-     * Returns true if the coordinate transform is valid, ie both the source and destination
+     * Returns TRUE if the coordinate transform is valid, ie both the source and destination
      * CRS have been set and are valid.
      * \since QGIS 3.0
      */
@@ -175,9 +162,18 @@ class CORE_EXPORT QgsCoordinateTransform
     /**
      * Sets the \a context in which the coordinate transform should be
      * calculated.
+     * \see context()
      * \since QGIS 3.0
      */
     void setContext( const QgsCoordinateTransformContext &context );
+
+    /**
+     * Returns the context in which the coordinate transform will be
+     * calculated.
+     * \see setContext()
+     * \since QGIS 3.4
+     */
+    QgsCoordinateTransformContext context() const;
 
     /**
      * Returns the source coordinate reference system, which the transform will
@@ -203,7 +199,7 @@ class CORE_EXPORT QgsCoordinateTransform
      * \param direction transform direction (defaults to ForwardTransform)
      * \returns transformed point
      */
-    QgsPointXY transform( const QgsPointXY &point, TransformDirection direction = ForwardTransform ) const;
+    QgsPointXY transform( const QgsPointXY &point, TransformDirection direction = ForwardTransform ) const SIP_THROW( QgsCsException );
 
     /**
      * Transform the point specified by x,y from the source CRS to the destination CRS.
@@ -214,7 +210,7 @@ class CORE_EXPORT QgsCoordinateTransform
      * \param direction transform direction (defaults to ForwardTransform)
      * \returns transformed point
      */
-    QgsPointXY transform( const double x, const double y, TransformDirection direction = ForwardTransform ) const;
+    QgsPointXY transform( double x, double y, TransformDirection direction = ForwardTransform ) const;
 
     /**
      * Transforms a rectangle from the source CRS to the destination CRS.
@@ -225,11 +221,11 @@ class CORE_EXPORT QgsCoordinateTransform
      * the returned rectangle.
      * \param rectangle rectangle to transform
      * \param direction transform direction (defaults to ForwardTransform)
-     * \param handle180Crossover set to true if destination CRS is geographic and handling of extents
+     * \param handle180Crossover set to TRUE if destination CRS is geographic and handling of extents
      * crossing the 180 degree longitude line is required
      * \returns rectangle in destination CRS
      */
-    QgsRectangle transformBoundingBox( const QgsRectangle &rectangle, TransformDirection direction = ForwardTransform, const bool handle180Crossover = false ) const;
+    QgsRectangle transformBoundingBox( const QgsRectangle &rectangle, TransformDirection direction = ForwardTransform, bool handle180Crossover = false ) const SIP_THROW( QgsCsException );
 
     /**
      * Transforms an array of x, y and z double coordinates in place, from the source CRS to the destination CRS.
@@ -242,7 +238,7 @@ class CORE_EXPORT QgsCoordinateTransform
      * heights) and must be expressed in its vertical units (generally meters)
      * \param direction transform direction (defaults to ForwardTransform)
      */
-    void transformInPlace( double &x, double &y, double &z, TransformDirection direction = ForwardTransform ) const;
+    void transformInPlace( double &x, double &y, double &z, TransformDirection direction = ForwardTransform ) const SIP_THROW( QgsCsException );
 
     /**
      * Transforms an array of x, y and z float coordinates in place, from the source CRS to the destination CRS.
@@ -307,7 +303,7 @@ class CORE_EXPORT QgsCoordinateTransform
      * \param polygon polygon to transform (occurs in place)
      * \param direction transform direction (defaults to forward transformation)
      */
-    void transformPolygon( QPolygonF &polygon, TransformDirection direction = ForwardTransform ) const;
+    void transformPolygon( QPolygonF &polygon, TransformDirection direction = ForwardTransform ) const SIP_THROW( QgsCsException );
 
     /**
      * Transforms a rectangle to the destination CRS.
@@ -317,7 +313,7 @@ class CORE_EXPORT QgsCoordinateTransform
      * \param direction transform direction (defaults to ForwardTransform)
      * \returns transformed rectangle
      */
-    QgsRectangle transform( const QgsRectangle &rectangle, TransformDirection direction = ForwardTransform ) const;
+    QgsRectangle transform( const QgsRectangle &rectangle, TransformDirection direction = ForwardTransform ) const SIP_THROW( QgsCsException );
 
     /**
      * Transform an array of coordinates to the destination CRS.
@@ -329,12 +325,39 @@ class CORE_EXPORT QgsCoordinateTransform
      * \param z array of z coordinates to transform
      * \param direction transform direction (defaults to ForwardTransform)
      */
-    void transformCoords( int numPoint, double *x, double *y, double *z, TransformDirection direction = ForwardTransform ) const;
+    void transformCoords( int numPoint, double *x, double *y, double *z, TransformDirection direction = ForwardTransform ) const SIP_THROW( QgsCsException );
 
     /**
-     * Returns true if the transform short circuits because the source and destination are equivalent.
+     * Returns TRUE if the transform short circuits because the source and destination are equivalent.
      */
     bool isShortCircuited() const;
+
+    /**
+     * Returns a Proj string representing the coordinate operation which will be used to transform
+     * coordinates.
+     *
+     * \note Requires Proj 6.0 or later. Builds based on earlier Proj versions will always return
+     * an empty string, and the deprecated sourceDatumTransformId() or destinationDatumTransformId() methods should be used instead.
+     *
+     * \see setCoordinateOperation()
+     * \since QGIS 3.8
+     */
+    QString coordinateOperation() const;
+
+    /**
+     * Sets a Proj string representing the coordinate \a operation which will be used to transform
+     * coordinates.
+     *
+     * \warning It is the caller's responsibility to ensure that \a operation is a valid Proj
+     * coordinate operation string.
+     *
+     * \note Requires Proj 6.0 or later. Builds based on earlier Proj versions will ignore this setting,
+     * and the deprecated setSourceDatumTransformId() or setDestinationDatumTransformId() methods should be used instead.
+     *
+     * \see coordinateOperation()
+     * \since QGIS 3.8
+     */
+    void setCoordinateOperation( const QString &operation ) const;
 
     /**
      * Returns the ID of the datum transform to use when projecting from the source
@@ -346,9 +369,10 @@ class CORE_EXPORT QgsCoordinateTransform
      * \see QgsDatumTransform
      * \see setSourceDatumTransformId()
      * \see destinationDatumTransformId()
-     * \see datumTransformInfo()
+     *
+     * \deprecated Unused on builds based on Proj 6.0 or later
      */
-    int sourceDatumTransformId() const;
+    Q_DECL_DEPRECATED int sourceDatumTransformId() const SIP_DEPRECATED;
 
     /**
      * Sets the \a datumId ID of the datum transform to use when projecting from the source
@@ -360,9 +384,10 @@ class CORE_EXPORT QgsCoordinateTransform
      * \see QgsDatumTransform
      * \see sourceDatumTransformId()
      * \see setDestinationDatumTransformId()
-     * \see datumTransformInfo()
+     *
+     * \deprecated Unused on builds based on Proj 6.0 or later
      */
-    void setSourceDatumTransformId( int datumId );
+    Q_DECL_DEPRECATED void setSourceDatumTransformId( int datumId ) SIP_DEPRECATED;
 
     /**
      * Returns the ID of the datum transform to use when projecting to the destination
@@ -374,9 +399,10 @@ class CORE_EXPORT QgsCoordinateTransform
      * \see QgsDatumTransform
      * \see setDestinationDatumTransformId()
      * \see sourceDatumTransformId()
-     * \see datumTransformInfo()
+     *
+     * \deprecated Unused on builds based on Proj 6.0 or later
      */
-    int destinationDatumTransformId() const;
+    Q_DECL_DEPRECATED int destinationDatumTransformId() const SIP_DEPRECATED;
 
     /**
      * Sets the \a datumId ID of the datum transform to use when projecting to the destination
@@ -388,9 +414,10 @@ class CORE_EXPORT QgsCoordinateTransform
      * \see QgsDatumTransform
      * \see destinationDatumTransformId()
      * \see setSourceDatumTransformId()
-     * \see datumTransformInfo()
+     *
+     * \deprecated Unused on builds based on Proj 6.0 or later
      */
-    void setDestinationDatumTransformId( int datumId );
+    Q_DECL_DEPRECATED void setDestinationDatumTransformId( int datumId ) SIP_DEPRECATED;
 
     /**
      * Clears the internal cache used to initialize QgsCoordinateTransform objects.
@@ -399,6 +426,89 @@ class CORE_EXPORT QgsCoordinateTransform
      * \since QGIS 3.0
      */
     static void invalidateCache();
+
+    /**
+     * Computes an *estimated* conversion factor between source and destination units:
+     *
+     *   sourceUnits * scaleFactor = destinationUnits
+     *
+     * \param referenceExtent A reference extent based on which to perform the computation
+     *
+     * \since QGIS 3.4
+     */
+    double scaleFactor( const QgsRectangle &referenceExtent ) const;
+
+#ifndef SIP_RUN
+
+    /**
+     * Sets a custom handler to use when a coordinate transform is created between \a sourceCrs and
+     * \a destinationCrs, yet the coordinate operation requires a transform \a grid which is not present
+     * on the system.
+     *
+     * \see setCustomMissingPreferredGridHandler()
+     * \see setCustomCoordinateOperationCreationErrorHandler()
+     * \see setCustomMissingGridUsedByContextHandler()
+     *
+     * \note Not available in Python bindings
+     * \since QGIS 3.8
+     */
+    static void setCustomMissingRequiredGridHandler( const std::function< void( const QgsCoordinateReferenceSystem &sourceCrs,
+        const QgsCoordinateReferenceSystem &destinationCrs,
+        const QgsDatumTransform::GridDetails &grid )> &handler );
+
+    /**
+     * Sets a custom handler to use when a coordinate transform is created between \a sourceCrs and
+     * \a destinationCrs, yet a preferred (more accurate?) operation is available which could not
+     * be created on the system (e.g. due to missing transform grids).
+     *
+     * \a preferredOperation gives the details of the preferred coordinate operation, and
+     * \a availableOperation gives the details of the actual operation to be used during the
+     * transform.
+     *
+     * \see setCustomMissingRequiredGridHandler()
+     * \see setCustomCoordinateOperationCreationErrorHandler()
+     * \see setCustomMissingGridUsedByContextHandler()
+     *
+     * \note Not available in Python bindings
+     * \since QGIS 3.8
+     */
+    static void setCustomMissingPreferredGridHandler( const std::function< void( const QgsCoordinateReferenceSystem &sourceCrs,
+        const QgsCoordinateReferenceSystem &destinationCrs,
+        const QgsDatumTransform::TransformDetails &preferredOperation,
+        const QgsDatumTransform::TransformDetails &availableOperation )> &handler );
+
+    /**
+     * Sets a custom handler to use when a coordinate transform was required between \a sourceCrs and
+     * \a destinationCrs, yet the coordinate operation could not be created. The \a error argument
+     * specifies the error message obtained.
+     *
+     * \see setCustomMissingRequiredGridHandler()
+     * \see setCustomMissingPreferredGridHandler()
+     * \see setCustomMissingGridUsedByContextHandler()
+     *
+     * \note Not available in Python bindings
+     * \since QGIS 3.8
+     */
+    static void setCustomCoordinateOperationCreationErrorHandler( const std::function< void( const QgsCoordinateReferenceSystem &sourceCrs,
+        const QgsCoordinateReferenceSystem &destinationCrs,
+        const QString &error )> &handler );
+
+    /**
+     * Sets a custom handler to use when a coordinate operation was specified for use between \a sourceCrs and
+     * \a destinationCrs by the transform context, yet the coordinate operation could not be created. The \a desiredOperation argument
+     * specifies the desired transform details as specified by the context.
+     *
+     * \see setCustomMissingRequiredGridHandler()
+     * \see setCustomMissingPreferredGridHandler()
+     * \see setCustomCoordinateOperationCreationErrorHandler()
+     *
+     * \note Not available in Python bindings
+     * \since QGIS 3.8
+     */
+    static void setCustomMissingGridUsedByContextHandler( const std::function< void( const QgsCoordinateReferenceSystem &sourceCrs,
+        const QgsCoordinateReferenceSystem &destinationCrs,
+        const QgsDatumTransform::TransformDetails &desiredOperation )> &handler );
+#endif
 
   private:
 
@@ -411,10 +521,16 @@ class CORE_EXPORT QgsCoordinateTransform
     bool mHasContext = false;
 #endif
 
+#if PROJ_VERSION_MAJOR>=6
+    bool setFromCache( const QgsCoordinateReferenceSystem &src,
+                       const QgsCoordinateReferenceSystem &dest,
+                       const QString &coordinateOperationProj );
+#else
     bool setFromCache( const QgsCoordinateReferenceSystem &src,
                        const QgsCoordinateReferenceSystem &dest,
                        int srcDatumTransform,
                        int destDatumTransform );
+#endif
     void addToCache();
 
     // cache

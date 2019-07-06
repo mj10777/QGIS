@@ -44,7 +44,7 @@ class CORE_EXPORT QgsInvertedPolygonRenderer : public QgsFeatureRenderer
 
     /**
      * Constructor
-     * \param embeddedRenderer optional embeddedRenderer. If null, a default one will be assigned.
+     * \param embeddedRenderer optional embeddedRenderer. If NULLPTR, a default one will be assigned.
      * Ownership will be transferred.
      */
     QgsInvertedPolygonRenderer( QgsFeatureRenderer *embeddedRenderer SIP_TRANSFER = nullptr );
@@ -65,9 +65,9 @@ class CORE_EXPORT QgsInvertedPolygonRenderer : public QgsFeatureRenderer
      * \param layer the symbol layer to render, if that makes sense
      * \param selected whether this feature has been selected (this will add decorations)
      * \param drawVertexMarker whether this feature has vertex markers (in edit mode usually)
-     * \returns true if the rendering was OK
+     * \returns TRUE if the rendering was OK
      */
-    bool renderFeature( QgsFeature &feature, QgsRenderContext &context, int layer = -1, bool selected = false, bool drawVertexMarker = false ) override;
+    bool renderFeature( const QgsFeature &feature, QgsRenderContext &context, int layer = -1, bool selected = false, bool drawVertexMarker = false ) override SIP_THROW( QgsCsException );
 
     /**
      * The actual rendering will take place here.
@@ -76,46 +76,16 @@ class CORE_EXPORT QgsInvertedPolygonRenderer : public QgsFeatureRenderer
     void stopRender( QgsRenderContext &context ) override;
 
     QString dump() const override;
-
-    //! Proxy that will call this method on the embedded renderer.
     QSet<QString> usedAttributes( const QgsRenderContext &context ) const override;
-    //! Proxy that will call this method on the embedded renderer.
+    bool filterNeedsGeometry() const override;
     QgsFeatureRenderer::Capabilities capabilities() override;
-
-    /**
-     * Proxy that will call this method on the embedded renderer.
-     */
-    QgsSymbolList symbols( QgsRenderContext &context ) override;
-
-    /**
-     * Proxy that will call this method on the embedded renderer.
-     */
-    QgsSymbol *symbolForFeature( QgsFeature &feature, QgsRenderContext &context ) override;
-
-    /**
-     * Proxy that will call this method on the embedded renderer.
-     */
-    QgsSymbol *originalSymbolForFeature( QgsFeature &feat, QgsRenderContext &context ) override;
-
-    /**
-     * Proxy that will call this method on the embedded renderer.
-     */
-    QgsSymbolList symbolsForFeature( QgsFeature &feat, QgsRenderContext &context ) override;
-
-    /**
-     * Proxy that will call this method on the embedded renderer.
-     */
-    QgsSymbolList originalSymbolsForFeature( QgsFeature &feat, QgsRenderContext &context ) override;
-
-    /**
-     * Proxy that will call this method on the embedded renderer.
-     */
+    QgsSymbolList symbols( QgsRenderContext &context ) const override;
+    QgsSymbol *symbolForFeature( const QgsFeature &feature, QgsRenderContext &context ) const override;
+    QgsSymbol *originalSymbolForFeature( const QgsFeature &feature, QgsRenderContext &context ) const override;
+    QgsSymbolList symbolsForFeature( const QgsFeature &feature, QgsRenderContext &context ) const override;
+    QgsSymbolList originalSymbolsForFeature( const QgsFeature &feature, QgsRenderContext &context ) const override;
     QgsLegendSymbolList legendSymbolItems() const override;
-
-    /**
-     * Proxy that will call this method on the embedded renderer.
-     */
-    bool willRenderFeature( QgsFeature &feat, QgsRenderContext &context ) override;
+    bool willRenderFeature( const QgsFeature &feature, QgsRenderContext &context ) const override;
 
     //! Creates a renderer out of an XML, for loading
     static QgsFeatureRenderer *create( QDomElement &element, const QgsReadWriteContext &context ) SIP_FACTORY;
@@ -130,8 +100,9 @@ class CORE_EXPORT QgsInvertedPolygonRenderer : public QgsFeatureRenderer
     bool legendSymbolItemsCheckable() const override;
     bool legendSymbolItemChecked( const QString &key ) override;
     void checkLegendSymbolItem( const QString &key, bool state = true ) override;
+    bool accept( QgsStyleEntityVisitorInterface *visitor ) const override;
 
-    //! \returns true if the geometries are to be preprocessed (merged with an union) before rendering.
+    //! \returns TRUE if the geometries are to be preprocessed (merged with an union) before rendering.
     bool preprocessingEnabled() const { return mPreprocessingEnabled; }
 
     /**
@@ -186,7 +157,7 @@ class CORE_EXPORT QgsInvertedPolygonRenderer : public QgsFeatureRenderer
       bool selected;
       bool drawMarkers;
       int layer;
-      FeatureDecoration( QgsFeature &a_feature, bool a_selected, bool a_drawMarkers, int a_layer )
+      FeatureDecoration( const QgsFeature &a_feature, bool a_selected, bool a_drawMarkers, int a_layer )
         : feature( a_feature )
         , selected( a_selected )
         , drawMarkers( a_drawMarkers )
@@ -200,4 +171,4 @@ class CORE_EXPORT QgsInvertedPolygonRenderer : public QgsFeatureRenderer
 };
 
 
-#endif // QGSMASKRENDERERV2_H
+#endif // QGSINVERTEDPOLYGONRENDERER_H

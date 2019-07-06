@@ -81,7 +81,7 @@ class APP_EXPORT QgsMergeAttributesDialog: public QDialog, private Ui::QgsMergeA
     //! Calculates the merged value of a column (depending on the selected merge behavior) and inserts the value in the corresponding cell
     void refreshMergedValue( int col );
     //! Inserts the attribute value of a specific feature into the row of merged attributes
-    QVariant featureAttribute( QgsFeatureId featureId, int col );
+    QVariant featureAttribute( QgsFeatureId featureId, int fieldIdx );
     //! Appends the values of the features for the final value
     QVariant concatenationAttribute( int col );
 
@@ -102,6 +102,7 @@ class APP_EXPORT QgsMergeAttributesDialog: public QDialog, private Ui::QgsMergeA
 
     QgsFields mFields;
     QSet<int> mHiddenAttributes;
+    bool mUpdating = false;
 
     static const QList< QgsStatisticalSummary::Statistic > DISPLAY_STATS;
 

@@ -23,7 +23,6 @@
 #include <QColor>
 #include <memory>
 
-#include "qgsabstractgeometry.h"
 #include "qgscoordinatetransform.h"
 #include "qgsexpressioncontext.h"
 #include "qgsfeaturefilterprovider.h"
@@ -76,6 +75,50 @@ class CORE_EXPORT QgsRenderContext
     Q_DECLARE_FLAGS( Flags, Flag )
 
     /**
+     * Options for rendering text.
+     * \since QGIS 3.4.3
+     */
+    enum TextRenderFormat
+    {
+      // refs for below dox: https://github.com/qgis/QGIS/pull/1286#issuecomment-39806854
+      // https://github.com/qgis/QGIS/pull/8573#issuecomment-445585826
+
+      /**
+       * Always render text using path objects (AKA outlines/curves).
+       *
+       * This setting guarantees the best quality rendering, even when using a raster paint surface
+       * (where sub-pixel path based text rendering is superior to sub-pixel text-based rendering).
+       * The downside is that text is converted to paths only, so users cannot open created vector
+       * outputs for post-processing in other applications and retain text editability.
+       *
+       * This setting also guarantees complete compatibility with the full range of formatting options available
+       * through QgsTextRenderer and QgsTextFormat, some of which may not be possible to reproduce when using
+       * a vector-based paint surface and TextFormatAlwaysText mode.
+       *
+       * A final benefit to this setting is that vector exports created using text as outlines do
+       * not require all users to have the original fonts installed in order to display the
+       * text in its original style.
+       */
+      TextFormatAlwaysOutlines,
+
+      /**
+       * Always render text as text objects.
+       *
+       * While this mode preserves text objects as text for post-processing in external vector editing applications,
+       * it can result in rendering artifacts or poor quality rendering, depending on the text format settings.
+       *
+       * Even with raster based paint devices, TextFormatAlwaysText can result in inferior rendering quality
+       * to TextFormatAlwaysOutlines.
+       *
+       * When rendering using TextFormatAlwaysText to a vector based device (e.g. PDF or SVG), care must be
+       * taken to ensure that the required fonts are available to users when opening the created files,
+       * or default fallback fonts will be used to display the output instead. (Although PDF exports MAY
+       * automatically embed some fonts when possible, depending on the user's platform).
+       */
+      TextFormatAlwaysText,
+    };
+
+    /**
      * Set combination of flags that will be used for rendering.
      * \since QGIS 2.14
      */
@@ -88,7 +131,7 @@ class CORE_EXPORT QgsRenderContext
     void setFlag( Flag flag, bool on = true );
 
     /**
-     * Return combination of flags used for rendering.
+     * Returns combination of flags used for rendering.
      * \since QGIS 2.14
      */
     Flags flags() const;
@@ -122,8 +165,14 @@ class CORE_EXPORT QgsRenderContext
     QPainter *painter() {return mPainter;}
 
     /**
-     * Returns the current coordinate transform for the context, or an invalid
-     * transform is no coordinate transformation is required.
+     * Returns the current coordinate transform for the context.
+     *
+     * This represents the coordinate transform required to transform a layer
+     * which is being rendered back to the CRS of the rendered map. If no coordinate
+     * transformation is required, or the render context is not associated with
+     * a map layer render, then an invalid coordinate transformation is returned.
+     *
+     * \see setCoordinateTransform()
      */
     QgsCoordinateTransform coordinateTransform() const {return mCoordTransform;}
 
@@ -138,8 +187,8 @@ class CORE_EXPORT QgsRenderContext
      * information regarding which datum transforms should be used when transforming points
      * from a source to destination coordinate reference system.
      *
-     * \since QGIS 3.0
      * \see setTransformContext()
+     * \since QGIS 3.0
      */
     QgsCoordinateTransformContext transformContext() const;
 
@@ -148,8 +197,8 @@ class CORE_EXPORT QgsRenderContext
      * information regarding which datum transforms should be used when transforming points
      * from a source to destination coordinate reference system.
      *
-     * \since QGIS 3.0
      * \see transformContext()
+     * \since QGIS 3.0
      */
     void setTransformContext( const QgsCoordinateTransformContext &context );
 
@@ -157,8 +206,8 @@ class CORE_EXPORT QgsRenderContext
      * Returns the path resolver for conversion between relative and absolute paths
      * during rendering operations, e.g. for resolving relative symbol paths.
      *
-     * \since QGIS 3.0
      * \see setPathResolver()
+     * \since QGIS 3.0
      */
     const QgsPathResolver &pathResolver() const { return mPathResolver; }
 
@@ -166,13 +215,45 @@ class CORE_EXPORT QgsRenderContext
      * Sets the path \a resolver for conversion between relative and absolute paths
      * during rendering operations, e.g. for resolving relative symbol paths.
      *
-     * \since QGIS 3.0
      * \see pathResolver()
+     * \since QGIS 3.0
      */
     void setPathResolver( const QgsPathResolver &resolver ) { mPathResolver = resolver; }
 
-    const QgsRectangle &extent() const {return mExtent;}
+    /**
+     * When rendering a map layer, calling this method returns the "clipping"
+     * extent for the layer (in the layer's CRS).
+     *
+     * This extent is a "worst-case" scenario, which is guaranteed to cover the complete
+     * visible portion of the layer when it is rendered to a map. It is often larger
+     * than the actual visible portion of that layer.
+     *
+     * \warning For some layers, depending on the visible extent and the coordinate
+     * transforms involved, this extent will represent the entire globe. This method
+     * should never be used to determine the actual visible extent of a map render.
+     *
+     * \see setExtent()
+     * \see mapExtent()
+     */
+    const QgsRectangle &extent() const { return mExtent; }
 
+    /**
+     * Returns the original extent of the map being rendered.
+     *
+     * Unlike extent(), this extent is always in the final destination CRS for the map
+     * render and represents the exact bounds of the map being rendered.
+     *
+     * \see extent()
+     * \see setMapExtent()
+     * \since QGIS 3.4.8
+     */
+    QgsRectangle mapExtent() const { return mOriginalMapExtent; }
+
+    /**
+     * Returns the context's map to pixel transform, which transforms between map coordinates and device coordinates.
+     *
+     * \see setMapToPixel()
+     */
     const QgsMapToPixel &mapToPixel() const {return mMapToPixel;}
 
     /**
@@ -183,12 +264,24 @@ class CORE_EXPORT QgsRenderContext
      */
     double scaleFactor() const {return mScaleFactor;}
 
+    /**
+     * Returns TRUE if the rendering operation has been stopped and any ongoing
+     * rendering should be canceled immediately.
+     *
+     * \see setRenderingStopped()
+     */
     bool renderingStopped() const {return mRenderingStopped;}
 
+    /**
+     * Returns TRUE if rendering operations should use vector operations instead
+     * of any faster raster shortcuts.
+     *
+     * \see setForceVectorOutput()
+     */
     bool forceVectorOutput() const;
 
     /**
-     * Returns true if advanced effects such as blend modes such be used
+     * Returns TRUE if advanced effects such as blend modes such be used
      */
     bool useAdvancedEffects() const;
 
@@ -197,6 +290,11 @@ class CORE_EXPORT QgsRenderContext
      */
     void setUseAdvancedEffects( bool enabled );
 
+    /**
+     * Returns TRUE if edit markers should be drawn during the render operation.
+     *
+     * \see setDrawEditingInformation()
+     */
     bool drawEditingInformation() const;
 
     /**
@@ -207,16 +305,21 @@ class CORE_EXPORT QgsRenderContext
     double rendererScale() const {return mRendererScale;}
 
     /**
-     * Get access to new labeling engine (may be nullptr)
+     * Gets access to new labeling engine (may be NULLPTR)
      * \note not available in Python bindings
      */
     QgsLabelingEngine *labelingEngine() const { return mLabelingEngine; } SIP_SKIP
 
+    /**
+     * Returns the color to use when rendering selected features.
+     *
+     * \see setSelectionColor()
+     */
     QColor selectionColor() const { return mSelectionColor; }
 
     /**
-     * Returns true if vector selections should be shown in the rendered map
-     * \returns true if selections should be shown
+     * Returns TRUE if vector selections should be shown in the rendered map
+     * \returns TRUE if selections should be shown
      * \see setShowSelection
      * \see selectionColor
      * \since QGIS v2.4
@@ -225,13 +328,64 @@ class CORE_EXPORT QgsRenderContext
 
     //setters
 
-    //! Sets coordinate transformation.
+    /**
+     * Sets the current coordinate transform for the context.
+     *
+     * This represents the coordinate transform required to transform the layer
+     * which is being rendered back to the CRS of the rendered map.
+     *
+     * Set to an invalid QgsCoordinateTransform to indicate that no transformation is required.
+     *
+     * \see coordinateTransform()
+     */
     void setCoordinateTransform( const QgsCoordinateTransform &t );
+
+    /**
+     * Sets the context's map to pixel transform, which transforms between map coordinates and device coordinates.
+     *
+     * \see mapToPixel()
+     */
     void setMapToPixel( const QgsMapToPixel &mtp ) {mMapToPixel = mtp;}
+
+    /**
+     * When rendering a map layer, calling this method sets the "clipping"
+     * extent for the layer (in the layer's CRS).
+     *
+     * This extent should be a "worst-case" scenario, which is guaranteed to
+     * completely cover the entire visible portion of the layer when it is rendered
+     * to the map. It may be larger than the actual visible area, but MUST contain at least the
+     * entire visible area.
+     *
+     * \see setExtent()
+     * \see setMapExtent()
+     */
     void setExtent( const QgsRectangle &extent ) {mExtent = extent;}
 
+    /**
+     * Sets the original \a extent of the map being rendered.
+     *
+     * Unlike setExtent(), this extent is always in the final destination CRS for the map
+     * render and represents the exact bounds of the map being rendered.
+     *
+     * \see mapExtent()
+     * \see setExtent()
+     * \since QGIS 3.4.8
+     */
+    void setMapExtent( const QgsRectangle &extent ) { mOriginalMapExtent = extent; }
+
+    /**
+     * Sets whether edit markers should be drawn during the render operation.
+     *
+     * \see drawEditingInformation()
+     */
     void setDrawEditingInformation( bool b );
 
+    /**
+     * Sets whether the rendering operation has been \a stopped and any ongoing
+     * rendering should be canceled immediately.
+     *
+     * \see renderingStopped()
+     */
     void setRenderingStopped( bool stopped ) {mRenderingStopped = stopped;}
 
     /**
@@ -264,6 +418,12 @@ class CORE_EXPORT QgsRenderContext
      */
     void setPainter( QPainter *p ) {mPainter = p;}
 
+    /**
+     * Sets whether rendering operations should use vector operations instead
+     * of any faster raster shortcuts.
+     *
+     * \see forceVectorOutput()
+     */
     void setForceVectorOutput( bool force );
 
     /**
@@ -271,19 +431,25 @@ class CORE_EXPORT QgsRenderContext
      * \note not available in Python bindings
      */
     void setLabelingEngine( QgsLabelingEngine *engine2 ) { mLabelingEngine = engine2; } SIP_SKIP
+
+    /**
+     * Sets the \a color to use when rendering selected features.
+     *
+     * \see selectionColor()
+     */
     void setSelectionColor( const QColor &color ) { mSelectionColor = color; }
 
     /**
      * Sets whether vector selections should be shown in the rendered map
-     * \param showSelection set to true if selections should be shown
+     * \param showSelection set to TRUE if selections should be shown
      * \see showSelection
      * \see setSelectionColor
      * \since QGIS v2.4
      */
-    void setShowSelection( const bool showSelection );
+    void setShowSelection( bool showSelection );
 
     /**
-     * Returns true if the rendering optimization (geometry simplification) can be executed
+     * Returns TRUE if the rendering optimization (geometry simplification) can be executed
      */
     bool useRenderingOptimization() const;
 
@@ -313,8 +479,8 @@ class CORE_EXPORT QgsRenderContext
      * Gets the expression context (const version). This context should be used for all expression evaluation
      * associated with this render context.
      * \see setExpressionContext()
-     * \since QGIS 2.12
      * \note not available in Python bindings
+     * \since QGIS 2.12
      */
     const QgsExpressionContext &expressionContext() const { return mExpressionContext; } SIP_SKIP
 
@@ -326,16 +492,16 @@ class CORE_EXPORT QgsRenderContext
     /**
      * Set a filter feature provider used for additional filtering of rendered features.
      * \param ffp the filter feature provider
-     * \since QGIS 2.14
      * \see featureFilterProvider()
+     * \since QGIS 2.14
      */
     void setFeatureFilterProvider( const QgsFeatureFilterProvider *ffp );
 
     /**
-     * Get the filter feature provider used for additional filtering of rendered features.
+     * Gets the filter feature provider used for additional filtering of rendered features.
      * \returns the filter feature provider
-     * \since QGIS 2.14
      * \see setFeatureFilterProvider()
+     * \since QGIS 2.14
      */
     const QgsFeatureFilterProvider *featureFilterProvider() const;
 
@@ -358,23 +524,23 @@ class CORE_EXPORT QgsRenderContext
     /**
      * Converts a size from the specified units to painter units (pixels). The conversion respects the limits
      * specified by the optional scale parameter.
-     * \since QGIS 3.0
      * \see convertToMapUnits()
+     * \since QGIS 3.0
      */
     double convertToPainterUnits( double size, QgsUnitTypes::RenderUnit unit, const QgsMapUnitScale &scale = QgsMapUnitScale() ) const;
 
     /**
      * Converts a size from the specified units to map units. The conversion respects the limits
      * specified by the optional scale parameter.
-     * \since QGIS 3.0
      * \see convertToPainterUnits()
+     * \since QGIS 3.0
      */
     double convertToMapUnits( double size, QgsUnitTypes::RenderUnit unit, const QgsMapUnitScale &scale = QgsMapUnitScale() ) const;
 
     /**
      * Converts a size from map units to the specified units.
-     * \since QGIS 3.0
      * \see convertToMapUnits()
+     * \since QGIS 3.0
      */
     double convertFromMapUnits( double sizeInMapUnits, QgsUnitTypes::RenderUnit outputUnit ) const;
 
@@ -385,6 +551,28 @@ class CORE_EXPORT QgsRenderContext
      * \since QGIS 3.0
      */
     double convertMetersToMapUnits( double meters ) const;
+
+    /**
+     * Returns the text render format, which dictates how text is rendered (e.g. as paths or real text objects).
+     *
+     * \see setTextRenderFormat()
+     * \since QGIS 3.4.3
+     */
+    TextRenderFormat textRenderFormat() const
+    {
+      return mTextRenderFormat;
+    }
+
+    /**
+     * Sets the text render \a format, which dictates how text is rendered (e.g. as paths or real text objects).
+     *
+     * \see textRenderFormat()
+     * \since QGIS 3.4.3
+     */
+    void setTextRenderFormat( TextRenderFormat format )
+    {
+      mTextRenderFormat = format;
+    }
 
   private:
 
@@ -404,6 +592,7 @@ class CORE_EXPORT QgsRenderContext
     QgsDistanceArea mDistanceArea;
 
     QgsRectangle mExtent;
+    QgsRectangle mOriginalMapExtent;
 
     QgsMapToPixel mMapToPixel;
 
@@ -416,7 +605,7 @@ class CORE_EXPORT QgsRenderContext
     //! Map scale
     double mRendererScale = 1.0;
 
-    //! Newer labeling engine implementation (can be nullptr)
+    //! Newer labeling engine implementation (can be NULLPTR)
     QgsLabelingEngine *mLabelingEngine = nullptr;
 
     //! Color used for features that are marked as selected
@@ -441,6 +630,8 @@ class CORE_EXPORT QgsRenderContext
     QgsCoordinateTransformContext mTransformContext;
 
     QgsPathResolver mPathResolver;
+
+    TextRenderFormat mTextRenderFormat = TextFormatAlwaysOutlines;
 
 #ifdef QGISDEBUG
     bool mHasTransformContext = false;

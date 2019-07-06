@@ -10,16 +10,29 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.    **
 ******************************************************************************/
 
+// uncomment to get detailed debug output on DWG read. Caution: this option makes DWG import super-slow!
+// #define DWGDEBUG 1
+
 #include "drw_header.h"
 #include "intern/dxfreader.h"
 #include "intern/dxfwriter.h"
 #include "intern/drw_dbg.h"
 #include "intern/dwgbuffer.h"
 
-#include "qgslogger.h"
 #include <QStringList>
 
 #include <cassert>
+
+#include "qgslogger.h"
+
+#ifndef DWGDEBUG
+#undef QgsDebugCall
+#undef QgsDebugMsg
+#undef QgsDebugMsgLevel
+#define QgsDebugCall
+#define QgsDebugMsg(str)
+#define QgsDebugMsgLevel(str, level)
+#endif
 
 DRW_Header::DRW_Header()
   : curr( nullptr )
@@ -1947,8 +1960,8 @@ bool DRW_Header::parseDwg( DRW::Version version, dwgBuffer *buf, dwgBuffer *hBbu
   if ( version > DRW::AC1021 && mv > 3 ) //2010+
   {
     duint32 hSize = buf->getRawLong32();
-    endBitPos += 32; //start bit: + 4 hight size
-    QgsDebugMsg( QString( "2010+ & MV> 3, higth 32b:%1" ).arg( hSize ) );
+    endBitPos += 32; //start bit: + 4 height size
+    QgsDebugMsg( QString( "2010+ & MV> 3, height 32b:%1" ).arg( hSize ) );
     Q_UNUSED( hSize );
   }
 //RLZ TODO add $ACADVER var & $DWGCODEPAGE & $MEASUREMENT

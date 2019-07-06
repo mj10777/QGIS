@@ -21,20 +21,17 @@ __author__ = 'Nyall Dawson'
 __date__ = 'November 2016'
 __copyright__ = '(C) 2016, Nyall Dawson'
 
-# This will get replaced with a git SHA1 when you do a git archive323
-
-__revision__ = '$Format:%H$'
-
 import os
 
-from qgis.core import (QgsWkbTypes,
+from qgis.core import (QgsApplication,
+                       QgsWkbTypes,
                        QgsField,
                        NULL,
                        QgsFeatureSink,
                        QgsProcessing,
                        QgsProcessingException,
+                       QgsProcessingParameterDistance,
                        QgsProcessingParameterFeatureSource,
-                       QgsProcessingParameterNumber,
                        QgsProcessingParameterFeatureSink)
 
 from qgis.PyQt.QtCore import QVariant
@@ -52,7 +49,10 @@ class PoleOfInaccessibility(QgisAlgorithm):
     OUTPUT = 'OUTPUT'
 
     def icon(self):
-        return QIcon(os.path.join(pluginPath, 'images', 'ftools', 'centroids.png'))
+        return QgsApplication.getThemeIcon("/algorithms/mAlgorithmCentroids.svg")
+
+    def svgIconPath(self):
+        return QgsApplication.iconPath("/algorithms/mAlgorithmCentroids.svg")
 
     def tags(self):
         return self.tr('furthest,point,distant,extreme,maximum,centroid,center,centre').split(',')
@@ -69,10 +69,10 @@ class PoleOfInaccessibility(QgisAlgorithm):
     def initAlgorithm(self, config=None):
         self.addParameter(QgsProcessingParameterFeatureSource(self.INPUT, self.tr('Input layer'),
                                                               [QgsProcessing.TypeVectorPolygon]))
-        self.addParameter(QgsProcessingParameterNumber(self.TOLERANCE,
-                                                       self.tr('Tolerance (layer units)'),
-                                                       type=QgsProcessingParameterNumber.Double,
-                                                       defaultValue=1.0, minValue=0.0))
+        self.addParameter(QgsProcessingParameterDistance(self.TOLERANCE,
+                                                         self.tr('Tolerance'),
+                                                         parentParameterName=self.INPUT,
+                                                         defaultValue=1.0, minValue=0.0))
 
         self.addParameter(
             QgsProcessingParameterFeatureSink(self.OUTPUT, self.tr('Point'), QgsProcessing.TypeVectorPoint))
@@ -85,12 +85,17 @@ class PoleOfInaccessibility(QgisAlgorithm):
 
     def processAlgorithm(self, parameters, context, feedback):
         source = self.parameterAsSource(parameters, self.INPUT, context)
+        if source is None:
+            raise QgsProcessingException(self.invalidSourceError(parameters, self.INPUT))
+
         tolerance = self.parameterAsDouble(parameters, self.TOLERANCE, context)
 
         fields = source.fields()
         fields.append(QgsField('dist_pole', QVariant.Double))
         (sink, dest_id) = self.parameterAsSink(parameters, self.OUTPUT, context,
                                                fields, QgsWkbTypes.Point, source.sourceCrs())
+        if sink is None:
+            raise QgsProcessingException(self.invalidSinkError(parameters, self.OUTPUT))
 
         features = source.getFeatures()
         total = 100.0 / source.featureCount() if source.featureCount() else 0

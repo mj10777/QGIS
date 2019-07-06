@@ -21,13 +21,10 @@ __author__ = 'Victor Olaya'
 __date__ = 'April 2014'
 __copyright__ = '(C) 201, Victor Olaya'
 
-# This will get replaced with a git SHA1 when you do a git archive
-
-__revision__ = '$Format:%H$'
-
 import os
 import shutil
 
+from qgis.PyQt.QtCore import QCoreApplication
 from qgis.PyQt.QtWidgets import QFileDialog
 
 from qgis.core import Qgis, QgsApplication, QgsMessageLog, QgsSettings
@@ -40,7 +37,7 @@ from processing.script import ScriptUtils
 class AddScriptFromFileAction(ToolboxAction):
 
     def __init__(self):
-        self.name = self.tr("Add script from file")
+        self.name = QCoreApplication.translate("AddScriptFromFileAction", "Add Script to Toolbox…")
         self.group = self.tr("Tools")
 
     def execute(self):
@@ -49,7 +46,7 @@ class AddScriptFromFileAction(ToolboxAction):
         files, _ = QFileDialog.getOpenFileNames(self.toolbox,
                                                 self.tr("Add script(s)"),
                                                 lastDir,
-                                                self.tr("Script files (*.py *.PY)"))
+                                                self.tr("Processing scripts (*.py *.PY)"))
         if files:
             settings.setValue("processing/lastScriptsDir", os.path.dirname(files[0]))
 

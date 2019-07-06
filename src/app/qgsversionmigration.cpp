@@ -3,7 +3,7 @@
 
  ---------------------
  begin                : 30.7.2017
- copyright            : (C) 2017 by nathan
+ copyright            : (C) 2017 by Nathan Woodrow
  email                : woodrow.nathan at gmail dot com
  ***************************************************************************
  *                                                                         *
@@ -33,11 +33,11 @@
 #include <QSqlError>
 #include <QDomDocument>
 
-QgsVersionMigration *QgsVersionMigration::canMigrate( int fromVersion, int toVersion )
+std::unique_ptr<QgsVersionMigration> QgsVersionMigration::canMigrate( int fromVersion, int toVersion )
 {
   if ( fromVersion == 20000 && toVersion >= 29900 )
   {
-    return new Qgs2To3Migration();
+    return qgis::make_unique< Qgs2To3Migration >();
   }
   return nullptr;
 }
@@ -89,13 +89,13 @@ bool Qgs2To3Migration::requiresMigration()
     {
       QStringList parts = line.split( '=' );
       mMigrationFileVersion = parts.at( 1 ).toInt();
-      QgsDebugMsg( QString( "File version is=%1" ).arg( mMigrationFileVersion ) );
+      QgsDebugMsg( QStringLiteral( "File version is=%1" ).arg( mMigrationFileVersion ) );
     }
     migrationFile.close();
   }
   else
   {
-    QgsDebugMsg( QString( "Can not open %1" ).arg( migrationFile.fileName() ) );
+    QgsDebugMsg( QStringLiteral( "Can not open %1" ).arg( migrationFile.fileName() ) );
     mMigrationFileVersion = settingsMigrationVersion;
   }
 
@@ -107,7 +107,7 @@ QgsError Qgs2To3Migration::migrateStyles()
   QgsError error;
   QString oldHome = QStringLiteral( "%1/.qgis2" ).arg( QDir::homePath() );
   QString oldStyleFile = QStringLiteral( "%1/symbology-ng-style.db" ).arg( oldHome );
-  QgsDebugMsg( QString( "OLD STYLE FILE %1" ).arg( oldStyleFile ) );
+  QgsDebugMsg( QStringLiteral( "OLD STYLE FILE %1" ).arg( oldStyleFile ) );
   QSqlDatabase db = QSqlDatabase::addDatabase( "QSQLITE", "migration" );
   db.setDatabaseName( oldStyleFile );
   if ( !db.open() )
@@ -150,7 +150,7 @@ QgsError Qgs2To3Migration::migrateStyles()
       }
 
       QDomElement symElement = doc.documentElement();
-      QgsDebugMsg( QString( "MIGRATION: Importing %1" ).arg( name ) );
+      QgsDebugMsg( QStringLiteral( "MIGRATION: Importing %1" ).arg( name ) );
       QgsSymbol *symbol = QgsSymbolLayerUtils::loadSymbol( symElement, QgsReadWriteContext() );
       tags << "QGIS 2";
       if ( style->symbolId( name ) == 0 )
@@ -234,7 +234,7 @@ QgsError Qgs2To3Migration::migrateSettings()
 
   if ( keys.count() > 0 )
   {
-    QgsDebugMsg( "MIGRATION: Translating settings keys" );
+    QgsDebugMsg( QStringLiteral( "MIGRATION: Translating settings keys" ) );
     QList<QPair<QString, QString>>::iterator i;
     for ( i = keys.begin(); i != keys.end(); ++i )
     {
@@ -245,7 +245,7 @@ QgsError Qgs2To3Migration::migrateSettings()
 
       if ( oldKey.contains( oldKey ) )
       {
-        QgsDebugMsg( QString( " -> %1 -> %2" ).arg( oldKey, newKey ) );
+        QgsDebugMsg( QStringLiteral( " -> %1 -> %2" ).arg( oldKey, newKey ) );
         newSettings.setValue( newKey, mOldSettings->value( oldKey ) );
       }
     }
@@ -299,13 +299,15 @@ QList<QPair<QString, QString> > Qgs2To3Migration::walk( QString group, QString n
 {
   mOldSettings->beginGroup( group );
   QList<QPair<QString, QString> > foundKeys;
-  Q_FOREACH ( const QString &group, mOldSettings->childGroups() )
+  const auto constChildGroups = mOldSettings->childGroups();
+  for ( const QString &group : constChildGroups )
   {
     QList<QPair<QString, QString> > data = walk( group, newkey );
     foundKeys.append( data );
   }
 
-  Q_FOREACH ( const QString &key, mOldSettings->childKeys() )
+  const auto constChildKeys = mOldSettings->childKeys();
+  for ( const QString &key : constChildKeys )
   {
     QString fullKey = mOldSettings->group() + "/" + key;
     foundKeys.append( transformKey( fullKey, newkey ) );
@@ -342,5 +344,5 @@ QPair<QString, QString> Qgs2To3Migration::transformKey( QString fullOldKey, QStr
 
 QString Qgs2To3Migration::migrationFilePath()
 {
-  return QgsApplication::pkgDataPath() +  "/resources/2to3migration.txt";
+  return QgsApplication::resolvePkgPath() +  "/resources/2to3migration.txt";
 }

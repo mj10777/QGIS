@@ -34,6 +34,10 @@ class QgsPointXY;
 class QgsSymbolLayer;
 class QIODevice;
 class QgsPalLayerSettings;
+class QgsCurve;
+class QgsCurvePolygon;
+class QgsCircularString;
+class QgsCompoundCurve;
 
 #define DXF_HANDSEED 100
 #define DXF_HANDMAX 9999999
@@ -63,11 +67,11 @@ class CORE_EXPORT QgsDxfExport
           , mLayerOutputAttributeIndex( layerOutputAttributeIndex )
         {}
 
-        //! Return the layer
+        //! Returns the layer
         QgsVectorLayer *layer() const {return mLayer;}
 
         /**
-         * Return the attribute index used to split into multiple layers.
+         * Returns the attribute index used to split into multiple layers.
          * The attribute value is used for layer names.
          */
         int layerOutputAttributeIndex() const {return mLayerOutputAttributeIndex;}
@@ -106,15 +110,15 @@ class CORE_EXPORT QgsDxfExport
 
     /**
      * Sets the export flags.
-     * \since QGIS 3.0
      * \see flags()
+     * \since QGIS 3.0
      */
     void setFlags( QgsDxfExport::Flags flags );
 
     /**
      * Returns the export flags.
-     * \since QGIS 3.0
      * \see setFlags()
+     * \since QGIS 3.0
      */
     QgsDxfExport::Flags flags() const;
 
@@ -136,16 +140,16 @@ class CORE_EXPORT QgsDxfExport
     /**
      * Set reference \a scale for output.
      * The \a scale value indicates the scale denominator, e.g. 1000.0 for a 1:1000 map.
-     * \since QGIS 3.0
      * \see symbologyScale()
+     * \since QGIS 3.0
      */
     void setSymbologyScale( double scale ) { mSymbologyScale = scale; }
 
     /**
      * Returns the reference scale for output.
      * The  scale value indicates the scale denominator, e.g. 1000.0 for a 1:1000 map.
-     * \since QGIS 3.0
      * \see setSymbologyScale()
+     * \since QGIS 3.0
      */
     double symbologyScale() const { return mSymbologyScale; }
 
@@ -176,7 +180,7 @@ class CORE_EXPORT QgsDxfExport
     void setSymbologyExport( QgsDxfExport::SymbologyExport e ) { mSymbologyExport = e; }
 
     /**
-     * Get symbology export mode
+     * Gets symbology export mode
      * \returns mode
      * \see setSymbologyExport
      */
@@ -189,7 +193,7 @@ class CORE_EXPORT QgsDxfExport
     void setExtent( const QgsRectangle &r ) { mExtent = r; }
 
     /**
-     * Get extent of area to export
+     * Gets extent of area to export
      * \returns area to export
      * \see setExtent
      */
@@ -225,13 +229,13 @@ class CORE_EXPORT QgsDxfExport
     bool force2d() { return mForce2d; }
 
     /**
-     * Get DXF palette index of nearest entry for given color
+     * Gets DXF palette index of nearest entry for given color
      * \param color
      */
     static int closestColorMatch( QRgb color );
 
     /**
-     * Get layer name for feature
+     * Gets layer name for feature
      * \param id layer id of layer
      * \param f feature of layer
      * \returns layer name for feature
@@ -239,7 +243,7 @@ class CORE_EXPORT QgsDxfExport
     QString layerName( const QString &id, const QgsFeature &f ) const;
 
     /**
-     * Get name for layer respecting the use layer title as layer name mode
+     * Gets name for layer respecting the use layer title as layer name mode
      * \param vl the vector layer
      * \returns name of layer
      * \see setLayerTitleAsName
@@ -333,6 +337,18 @@ class CORE_EXPORT QgsDxfExport
     void writePolyline( const QgsPointSequence &line, const QString &layer, const QString &lineStyleName, const QColor &color, double width = -1 ) SIP_SKIP;
 
     /**
+     * Draw dxf primitives (LWPOLYLINE)
+     * \param curve polyline (including curved)
+     * \param layer layer name to use
+     * \param lineStyleName line type to use
+     * \param color color to use
+     * \param width line width to use
+     * \note not available in Python bindings
+     * \since QGIS 3.8
+     */
+    void writePolyline( const QgsCurve &curve, const QString &layer, const QString &lineStyleName, const QColor &color, double width = -1 ) SIP_SKIP;
+
+    /**
      * Draw dxf filled polygon (HATCH)
      * \param polygon polygon
      * \param layer layer name to use
@@ -342,6 +358,17 @@ class CORE_EXPORT QgsDxfExport
      * \since QGIS 2.15
      */
     void writePolygon( const QgsRingSequence &polygon, const QString &layer, const QString &hatchPattern, const QColor &color ) SIP_SKIP;
+
+    /**
+     * Draw dxf curved filled polygon (HATCH)
+     * \param polygon polygon (including curves)
+     * \param layer layer name to use
+     * \param hatchPattern hatchPattern to use
+     * \param color color to use
+     * \note not available in Python bindings
+     * \since QGIS 3.8
+     */
+    void writePolygon( const QgsCurvePolygon &polygon, const QString &layer, const QString &hatchPattern, const QColor &color ) SIP_SKIP;
 
     /**
      * Write line (as a polyline)
@@ -385,18 +412,29 @@ class CORE_EXPORT QgsDxfExport
     void writeMText( const QString &layer, const QString &text, const QgsPoint &pt, double width, double angle, const QColor &color );
 
     /**
-     * Calculates a scaling factor to convert from map units to a specified symbol unit.
-     * The \a scale parameter indicates the scale denominator, e.g. 1000.0 for a 1:1000 map.
-     */
-    static double mapUnitScaleFactor( double scale, QgsUnitTypes::RenderUnit symbolUnits, QgsUnitTypes::DistanceUnit mapUnits );
+     * Returns scale factor for conversion to map units
+     * \param scale the map scale denominator
+     * \param symbolUnits the symbol output units
+     * \param mapUnits the map units
+     * \param mapUnitsPerPixel Map units per pixel
+    */
+    static double mapUnitScaleFactor( double scale, QgsUnitTypes::RenderUnit symbolUnits, QgsUnitTypes::DistanceUnit mapUnits, double mapUnitsPerPixel = 1.0 );
 
-    //! Return cleaned layer name for use in DXF
+    /**
+     * Clips value to scale minimum/maximum
+     * \param value the value to clip
+     * \param scale the scale dependent minimum/maximum values
+     * \param pixelToMMFactor pixels per mm
+    */
+    void clipValueToMapUnitScale( double &value, const QgsMapUnitScale &scale, double pixelToMMFactor ) const;
+
+    //! Returns cleaned layer name for use in DXF
     static QString dxfLayerName( const QString &name );
 
-    //! return DXF encoding for Qt encoding
+    //! Returns DXF encoding for Qt encoding
     static QString dxfEncoding( const QString &name );
 
-    //! return list of available DXF encodings
+    //! Returns list of available DXF encodings
     static QStringList encodings();
 
     /**
@@ -454,6 +492,16 @@ class CORE_EXPORT QgsDxfExport
     void writeSymbolLayerLinetype( const QgsSymbolLayer *symbolLayer );
     void writeLinetype( const QString &styleName, const QVector<qreal> &pattern, QgsUnitTypes::RenderUnit u );
 
+    /**
+     * Writes geometry generator symbol layer
+     * \param ctx the symbol render context
+     * \param ct the coordinate transform
+     * \param layer the layer name
+     * \param symbolLayer the symbollayer to write to the dxf file
+     * \param allSymbolLayers if TRUE, all symbol layers of the subsymbol are written. If FALSE, only the first one is written
+    */
+    void addGeometryGeneratorSymbolLayer( QgsSymbolRenderContext &ctx, const QgsCoordinateTransform &ct, const QString &layer, QgsSymbolLayer *symbolLayer, bool allSymbolLayers );
+
     void addFeature( QgsSymbolRenderContext &ctx, const QgsCoordinateTransform &ct, const QString &layer, const QgsSymbolLayer *symbolLayer, const QgsSymbol *symbol );
 
     //returns dxf palette index from symbol layer color
@@ -490,6 +538,10 @@ class CORE_EXPORT QgsDxfExport
 
     QgsDxfExport::Flags mFlags = nullptr;
 
+    void appendCurve( const QgsCurve &c, QVector<QgsPoint> &points, QVector<double> &bulges );
+    void appendLineString( const QgsLineString &ls, QVector<QgsPoint> &points, QVector<double> &bulges );
+    void appendCircularString( const QgsCircularString &cs, QVector<QgsPoint> &points, QVector<double> &bulges );
+    void appendCompoundCurve( const QgsCompoundCurve &cc, QVector<QgsPoint> &points, QVector<double> &bulges );
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS( QgsDxfExport::Flags )

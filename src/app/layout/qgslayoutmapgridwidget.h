@@ -42,7 +42,8 @@ class QgsLayoutMapGridWidget: public QgsLayoutItemBaseWidget, private Ui::QgsLay
     void mOffsetYSpinBox_valueChanged( double value );
     void mCrossWidthSpinBox_valueChanged( double val );
     void mFrameWidthSpinBox_valueChanged( double val );
-    void mFrameStyleComboBox_currentIndexChanged( const QString &text );
+    void mGridFrameMarginSpinBox_valueChanged( double val );
+    void mFrameStyleComboBox_currentIndexChanged( int );
     void mGridFramePenSizeSpinBox_valueChanged( double d );
     void mGridFramePenColorButton_colorChanged( const QColor &newColor );
     void mGridFrameFill1ColorButton_colorChanged( const QColor &newColor );
@@ -112,7 +113,7 @@ class QgsLayoutMapGridWidget: public QgsLayoutItemBaseWidget, private Ui::QgsLay
     //! Blocks / unblocks the signals of all GUI elements
     void blockAllSignals( bool b );
 
-    void handleChangedFrameDisplay( QgsLayoutItemMapGrid::BorderSide border, const QgsLayoutItemMapGrid::DisplayMode mode );
+    void handleChangedFrameDisplay( QgsLayoutItemMapGrid::BorderSide border, QgsLayoutItemMapGrid::DisplayMode mode );
     void handleChangedAnnotationDisplay( QgsLayoutItemMapGrid::BorderSide border, const QString &text );
     void handleChangedAnnotationPosition( QgsLayoutItemMapGrid::BorderSide border, const QString &text );
     void handleChangedAnnotationDirection( QgsLayoutItemMapGrid::BorderSide border, QgsLayoutItemMapGrid::AnnotationDirection direction );

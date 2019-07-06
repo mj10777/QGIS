@@ -34,12 +34,12 @@ class QgsSingleSymbolRenderer;
 
 typedef QList<int> QgsAttributeList;
 
-#include "qgis.h"
+#include "qgis_sip.h"
 #include "qgsfields.h"  // QgsFields
-#include "qgsfeature.h"  // QgsFeatureIds
 #include "qgsfeatureiterator.h"
 #include "qgsvectorsimplifymethod.h"
 #include "qgsfeedback.h"
+#include "qgsfeatureid.h"
 
 #include "qgsmaplayerrenderer.h"
 
@@ -68,14 +68,15 @@ class QgsVectorLayerRendererInterruptionChecker: public QgsFeedback
  * \ingroup core
  * Implementation of threaded rendering for vector layers.
  *
- * \since QGIS 2.4
  * \note not available in Python bindings
+ * \since QGIS 2.4
  */
 class QgsVectorLayerRenderer : public QgsMapLayerRenderer
 {
   public:
     QgsVectorLayerRenderer( QgsVectorLayer *layer, QgsRenderContext &context );
     ~QgsVectorLayerRenderer() override;
+    QgsFeedback *feedback() const override;
 
     bool render() override;
 
@@ -107,7 +108,7 @@ class QgsVectorLayerRenderer : public QgsMapLayerRenderer
 
     QgsRenderContext &mContext;
 
-    QgsVectorLayerRendererInterruptionChecker mInterruptionChecker;
+    std::unique_ptr< QgsVectorLayerRendererInterruptionChecker > mInterruptionChecker;
 
     //! The rendered layer
     QgsVectorLayer *mLayer = nullptr;
@@ -122,7 +123,8 @@ class QgsVectorLayerRenderer : public QgsMapLayerRenderer
 
     bool mDrawVertexMarkers;
     bool mVertexMarkerOnlyForSelection;
-    int mVertexMarkerStyle, mVertexMarkerSize;
+    int mVertexMarkerStyle = 0;
+    double mVertexMarkerSize = 2.0;
 
     QgsWkbTypes::GeometryType mGeometryType;
 
@@ -135,13 +137,13 @@ class QgsVectorLayerRenderer : public QgsMapLayerRenderer
 
     /**
      * used with new labeling engine (QgsLabelingEngine): provider for labels.
-     * may be null. no need to delete: if exists it is owned by labeling engine
+     * may be NULLPTR. no need to delete: if exists it is owned by labeling engine
      */
     QgsVectorLayerLabelProvider *mLabelProvider = nullptr;
 
     /**
      * used with new labeling engine (QgsLabelingEngine): provider for diagrams.
-     * may be null. no need to delete: if exists it is owned by labeling engine
+     * may be NULLPTR. no need to delete: if exists it is owned by labeling engine
      */
     QgsVectorLayerDiagramProvider *mDiagramProvider = nullptr;
 

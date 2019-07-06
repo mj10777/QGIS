@@ -21,10 +21,6 @@ __author__ = 'Piotr Pociask'
 __date__ = 'March 2013'
 __copyright__ = '(C) 2013, Piotr Pociask'
 
-# This will get replaced with a git SHA1 when you do a git archive
-
-__revision__ = '$Format:%H$'
-
 from qgis.PyQt.QtCore import QCoreApplication
 from qgis.core import (QgsFields,
                        QgsFeature,
@@ -33,6 +29,7 @@ from qgis.core import (QgsFields,
                        QgsWkbTypes,
                        QgsFeatureRequest,
                        QgsProcessing,
+                       QgsProcessingException,
                        QgsProcessingParameterFeatureSource,
                        QgsProcessingParameterBoolean,
                        QgsProcessingParameterFeatureSink)
@@ -72,13 +69,18 @@ class Polygonize(QgisAlgorithm):
 
     def processAlgorithm(self, parameters, context, feedback):
         source = self.parameterAsSource(parameters, self.INPUT, context)
-        if self.parameterAsBool(parameters, self.KEEP_FIELDS, context):
+        if source is None:
+            raise QgsProcessingException(self.invalidSourceError(parameters, self.INPUT))
+
+        if self.parameterAsBoolean(parameters, self.KEEP_FIELDS, context):
             fields = source.fields()
         else:
             fields = QgsFields()
 
         (sink, dest_id) = self.parameterAsSink(parameters, self.OUTPUT, context,
                                                fields, QgsWkbTypes.Polygon, source.sourceCrs())
+        if sink is None:
+            raise QgsProcessingException(self.invalidSinkError(parameters, self.OUTPUT))
 
         allLinesList = []
         features = source.getFeatures(QgsFeatureRequest().setSubsetOfAttributes([]))

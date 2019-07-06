@@ -16,6 +16,7 @@
  ***************************************************************************/
 
 #include "qgsalgorithmsaveselectedfeatures.h"
+#include "qgsvectorlayer.h"
 
 ///@cond PRIVATE
 
@@ -26,8 +27,9 @@ QgsProcessingAlgorithm::Flags QgsSaveSelectedFeatures::flags() const
 
 void QgsSaveSelectedFeatures::initAlgorithm( const QVariantMap & )
 {
-  addParameter( new QgsProcessingParameterVectorLayer( QStringLiteral( "INPUT" ), QObject::tr( "Input layer" ) ) );
-  addParameter( new QgsProcessingParameterFeatureSink( QStringLiteral( "OUTPUT" ), QObject::tr( "Selected features" ), QgsProcessing::TypeVectorPoint ) );
+  addParameter( new QgsProcessingParameterVectorLayer( QStringLiteral( "INPUT" ), QObject::tr( "Input layer" ),
+                QList< int >() << QgsProcessing::TypeVector ) );
+  addParameter( new QgsProcessingParameterFeatureSink( QStringLiteral( "OUTPUT" ), QObject::tr( "Selected features" ) ) );
 }
 
 QString QgsSaveSelectedFeatures::name() const
@@ -37,12 +39,12 @@ QString QgsSaveSelectedFeatures::name() const
 
 QString QgsSaveSelectedFeatures::displayName() const
 {
-  return QObject::tr( "Save Selected Features" );
+  return QObject::tr( "Extract selected features" );
 }
 
 QStringList QgsSaveSelectedFeatures::tags() const
 {
-  return QObject::tr( "selection,save" ).split( ',' );
+  return QObject::tr( "selection,save,by" ).split( ',' );
 }
 
 QString QgsSaveSelectedFeatures::group() const
@@ -69,18 +71,20 @@ QgsSaveSelectedFeatures *QgsSaveSelectedFeatures::createInstance() const
 QVariantMap QgsSaveSelectedFeatures::processAlgorithm( const QVariantMap &parameters, QgsProcessingContext &context, QgsProcessingFeedback *feedback )
 {
   QgsVectorLayer *selectLayer = parameterAsVectorLayer( parameters, QStringLiteral( "INPUT" ), context );
+  if ( !selectLayer )
+    throw QgsProcessingException( invalidSourceError( parameters, QStringLiteral( "INPUT" ) ) );
 
   QString dest;
   std::unique_ptr< QgsFeatureSink > sink( parameterAsSink( parameters, QStringLiteral( "OUTPUT" ), context, dest, selectLayer->fields(), selectLayer->wkbType(), selectLayer->sourceCrs() ) );
   if ( !sink )
-    return QVariantMap();
+    throw QgsProcessingException( invalidSinkError( parameters, QStringLiteral( "OUTPUT" ) ) );
 
 
   int count = selectLayer->selectedFeatureCount();
   int current = 0;
   double step = count > 0 ? 100.0 / count : 1;
 
-  QgsFeatureIterator it = selectLayer->getSelectedFeatures();;
+  QgsFeatureIterator it = selectLayer->getSelectedFeatures();
   QgsFeature feat;
   while ( it.nextFeature( feat ) )
   {

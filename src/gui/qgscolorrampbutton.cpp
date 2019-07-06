@@ -50,7 +50,7 @@ QgsColorRampButton::QgsColorRampButton( QWidget *parent, const QString &dialogTi
   setMenu( mMenu );
 
   mAllRampsMenu = new QMenu( mMenu );
-  mAllRampsMenu->setTitle( tr( "All color ramps" ) );
+  mAllRampsMenu->setTitle( tr( "All Color Ramps" ) );
 
   setPopupMode( QToolButton::MenuButtonPopup );
 
@@ -210,7 +210,8 @@ void QgsColorRampButton::mousePressEvent( QMouseEvent *e )
 QPixmap QgsColorRampButton::createMenuIcon( QgsColorRamp *colorramp )
 {
   //create an icon pixmap
-  QPixmap pixmap = QgsSymbolLayerUtils::colorRampPreviewPixmap( colorramp, QSize( 16, 16 ) );
+  const int iconSize = QgsGuiUtils::scaleIconSize( 16 );
+  QPixmap pixmap = QgsSymbolLayerUtils::colorRampPreviewPixmap( colorramp, QSize( iconSize, iconSize ) );
   return pixmap;
 }
 
@@ -230,14 +231,14 @@ void QgsColorRampButton::prepareMenu()
 {
   mMenu->clear();
 
-  QAction *invertAction = new QAction( tr( "Invert color ramp" ), this );
+  QAction *invertAction = new QAction( tr( "Invert Color Ramp" ), this );
   invertAction->setEnabled( !isNull() && !isRandomColorRamp() );
   mMenu->addAction( invertAction );
   connect( invertAction, &QAction::triggered, this, &QgsColorRampButton::invertColorRamp );
 
   if ( mShowNull )
   {
-    QAction *nullAction = new QAction( tr( "Clear current ramp" ), this );
+    QAction *nullAction = new QAction( tr( "Clear Current Ramp" ), this );
     mMenu->addAction( nullAction );
     connect( nullAction, &QAction::triggered, this, &QgsColorRampButton::setToNull );
   }
@@ -247,7 +248,7 @@ void QgsColorRampButton::prepareMenu()
   //show default color option if set
   if ( mDefaultColorRamp )
   {
-    QAction *defaultColorRampAction = new QAction( tr( "Default color ramp" ), this );
+    QAction *defaultColorRampAction = new QAction( tr( "Default Color Ramp" ), this );
     defaultColorRampAction->setIcon( createMenuIcon( mDefaultColorRamp ) );
     mMenu->addAction( defaultColorRampAction );
     connect( defaultColorRampAction, &QAction::triggered, this, &QgsColorRampButton::setToDefaultColorRamp );
@@ -255,7 +256,7 @@ void QgsColorRampButton::prepareMenu()
 
   if ( mShowRandomColorRamp )
   {
-    QAction *randomColorRampAction = new QAction( tr( "Random color ramp" ), this );
+    QAction *randomColorRampAction = new QAction( tr( "Random Color Ramp" ), this );
     randomColorRampAction->setCheckable( true );
     randomColorRampAction->setChecked( isRandomColorRamp() );
     mMenu->addAction( randomColorRampAction );
@@ -263,7 +264,7 @@ void QgsColorRampButton::prepareMenu()
 
     if ( isRandomColorRamp() || dynamic_cast<QgsLimitedRandomColorRamp *>( mColorRamp ) )
     {
-      QAction *shuffleRandomColorRampAction = new QAction( tr( "Shuffle random colors" ), this );
+      QAction *shuffleRandomColorRampAction = new QAction( tr( "Shuffle Random Colors" ), this );
       mMenu->addAction( shuffleRandomColorRampAction );
       connect( shuffleRandomColorRampAction, &QAction::triggered, this, &QgsColorRampButton::colorRampChanged );
     }
@@ -273,13 +274,14 @@ void QgsColorRampButton::prepareMenu()
 
   QStringList rampNames = mStyle->symbolsOfFavorite( QgsStyle::ColorrampEntity );
   rampNames.sort();
+  const int iconSize = QgsGuiUtils::scaleIconSize( 16 );
   for ( QStringList::iterator it = rampNames.begin(); it != rampNames.end(); ++it )
   {
     std::unique_ptr< QgsColorRamp > ramp( mStyle->colorRamp( *it ) );
 
     if ( !mShowGradientOnly || ( ramp->type() == QLatin1String( "gradient" ) || ramp->type() == QLatin1String( "cpt-city" ) ) )
     {
-      QIcon icon = QgsSymbolLayerUtils::colorRampPreviewIcon( ramp.get(), QSize( 16, 16 ) );
+      QIcon icon = QgsSymbolLayerUtils::colorRampPreviewIcon( ramp.get(), QSize( iconSize, iconSize ) );
       QAction *ra = new QAction( *it, this );
       ra->setIcon( icon );
       connect( ra, &QAction::triggered, this, &QgsColorRampButton::loadColorRamp );
@@ -299,7 +301,7 @@ void QgsColorRampButton::prepareMenu()
 
     if ( !mShowGradientOnly || ( ramp->type() == QLatin1String( "gradient" ) || ramp->type() == QLatin1String( "cpt-city" ) ) )
     {
-      QIcon icon = QgsSymbolLayerUtils::colorRampPreviewIcon( ramp.get(), QSize( 16, 16 ) );
+      QIcon icon = QgsSymbolLayerUtils::colorRampPreviewIcon( ramp.get(), QSize( iconSize, iconSize ) );
       QAction *ra = new QAction( *it, this );
       ra->setIcon( icon );
       connect( ra, &QAction::triggered, this, &QgsColorRampButton::loadColorRamp );
@@ -309,16 +311,16 @@ void QgsColorRampButton::prepareMenu()
 
   mMenu->addSeparator();
 
-  QAction *newColorRampAction = new QAction( tr( "Create new color ramp…" ), this );
+  QAction *newColorRampAction = new QAction( tr( "Create New Color Ramp…" ), this );
   connect( newColorRampAction, &QAction::triggered, this, &QgsColorRampButton::createColorRamp );
   mMenu->addAction( newColorRampAction );
 
-  QAction *editColorRampAction = new QAction( tr( "Edit color ramp…" ), this );
+  QAction *editColorRampAction = new QAction( tr( "Edit Color Ramp…" ), this );
   editColorRampAction->setEnabled( !isNull() && !isRandomColorRamp() );
   connect( editColorRampAction, &QAction::triggered, this, &QgsColorRampButton::showColorRampDialog );
   mMenu->addAction( editColorRampAction );
 
-  QAction *saveColorRampAction = new QAction( tr( "Save color ramp…" ), this );
+  QAction *saveColorRampAction = new QAction( tr( "Save Color Ramp…" ), this );
   saveColorRampAction->setEnabled( !isNull() && !isRandomColorRamp() );
   connect( saveColorRampAction, &QAction::triggered, this, &QgsColorRampButton::saveColorRamp );
   mMenu->addAction( saveColorRampAction );
@@ -375,7 +377,7 @@ void QgsColorRampButton::createColorRamp()
   }
   else if ( rampType == tr( "Catalog: cpt-city" ) )
   {
-    ramp = new QgsCptCityColorRamp( QLatin1String( "" ), QLatin1String( "" ) );
+    ramp = new QgsCptCityColorRamp( QString(), QString() );
   }
   else
   {
@@ -553,7 +555,7 @@ void QgsColorRampButton::setButtonBackground( QgsColorRamp *colorramp )
     pm.fill( Qt::transparent );
 
     QPainter painter;
-    QPen pen  = ( QApplication::palette().buttonText().color() );
+    QPen pen  = ( palette().buttonText().color() );
 
     painter.begin( &pm );
     painter.setPen( pen );

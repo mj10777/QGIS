@@ -155,10 +155,19 @@ void QgsPanelWidgetStack::mouseReleaseEvent( QMouseEvent *e )
   }
 }
 
+void QgsPanelWidgetStack::keyPressEvent( QKeyEvent *e )
+{
+  if ( e->key() == Qt::Key_Escape )
+  {
+    acceptCurrentPanel();
+  }
+}
+
 void QgsPanelWidgetStack::updateBreadcrumb()
 {
   QString breadcrumb;
-  Q_FOREACH ( QString title, mTitles )
+  const auto constMTitles = mTitles;
+  for ( QString title : constMTitles )
   {
     breadcrumb += QStringLiteral( " %1 >" ).arg( title );
   }

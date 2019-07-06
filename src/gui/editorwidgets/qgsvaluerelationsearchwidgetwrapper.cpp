@@ -21,6 +21,7 @@
 #include "qgsfilterlineedit.h"
 #include "qgsvaluerelationwidgetwrapper.h"
 #include "qgssettings.h"
+#include "qgsapplication.h"
 
 #include <QStringListModel>
 #include <QCompleter>
@@ -54,22 +55,10 @@ QVariant QgsValueRelationSearchWidgetWrapper::value() const
     }
   }
 
-  if ( mListWidget )
-  {
-    QStringList selection;
-    for ( int i = 0; i < mListWidget->count(); ++i )
-    {
-      QListWidgetItem *item = mListWidget->item( i );
-      if ( item->checkState() == Qt::Checked )
-        selection << item->data( Qt::UserRole ).toString();
-    }
-
-    v = selection.join( QStringLiteral( "," ) ).prepend( '{' ).append( '}' );
-  }
-
   if ( mLineEdit )
   {
-    Q_FOREACH ( const QgsValueRelationFieldFormatter::ValueRelationItem &i, mCache )
+    const auto constMCache = mCache;
+    for ( const QgsValueRelationFieldFormatter::ValueRelationItem &i : constMCache )
     {
       if ( i.value == mLineEdit->text() )
       {
@@ -141,10 +130,6 @@ void QgsValueRelationSearchWidgetWrapper::clearWidget()
   {
     mComboBox->setCurrentIndex( 0 );
   }
-  if ( mListWidget )
-  {
-    mListWidget->clearSelection();
-  }
   if ( mLineEdit )
   {
     mLineEdit->setText( QString() );
@@ -156,10 +141,6 @@ void QgsValueRelationSearchWidgetWrapper::setEnabled( bool enabled )
   if ( mComboBox )
   {
     mComboBox->setEnabled( enabled );
-  }
-  if ( mListWidget )
-  {
-    mListWidget->setEnabled( enabled );
   }
   if ( mLineEdit )
   {
@@ -182,7 +163,6 @@ void QgsValueRelationSearchWidgetWrapper::onValueChanged()
   }
   else
   {
-    QgsSettings settings;
     setExpression( vl.isNull() ? QgsApplication::nullRepresentation() : vl.toString() );
     emit valueChanged();
   }
@@ -231,7 +211,6 @@ void QgsValueRelationSearchWidgetWrapper::initWidget( QWidget *editor )
   mCache = QgsValueRelationFieldFormatter::createCache( config() );
 
   mComboBox = qobject_cast<QComboBox *>( editor );
-  mListWidget = qobject_cast<QListWidget *>( editor );
   mLineEdit = qobject_cast<QLineEdit *>( editor );
 
   if ( mComboBox )
@@ -242,30 +221,19 @@ void QgsValueRelationSearchWidgetWrapper::initWidget( QWidget *editor )
       mComboBox->addItem( tr( "(no selection)" ), QVariant( layer()->fields().at( mFieldIdx ).type() ) );
     }
 
-    Q_FOREACH ( const QgsValueRelationFieldFormatter::ValueRelationItem &element, mCache )
+    const auto constMCache = mCache;
+    for ( const QgsValueRelationFieldFormatter::ValueRelationItem &element : constMCache )
     {
       mComboBox->addItem( element.value, element.key );
     }
 
     connect( mComboBox, static_cast<void ( QComboBox::* )( int )>( &QComboBox::currentIndexChanged ), this, &QgsValueRelationSearchWidgetWrapper::onValueChanged );
   }
-  else if ( mListWidget )
-  {
-    Q_FOREACH ( const QgsValueRelationFieldFormatter::ValueRelationItem &element, mCache )
-    {
-      QListWidgetItem *item = nullptr;
-      item = new QListWidgetItem( element.value );
-      item->setData( Qt::UserRole, element.key );
-
-      mListWidget->addItem( item );
-    }
-    connect( mListWidget, &QListWidget::itemChanged, this, &QgsValueRelationSearchWidgetWrapper::onValueChanged );
-  }
   else if ( mLineEdit )
   {
     QStringList values;
     values.reserve( mCache.size() );
-    Q_FOREACH ( const QgsValueRelationFieldFormatter::ValueRelationItem &i,  mCache )
+    for ( const QgsValueRelationFieldFormatter::ValueRelationItem &i : qgis::as_const( mCache ) )
     {
       values << i.value;
     }

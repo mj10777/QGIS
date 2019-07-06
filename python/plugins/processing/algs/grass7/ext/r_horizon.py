@@ -21,9 +21,6 @@ __author__ = 'Médéric Ribreux'
 __date__ = 'September 2017'
 __copyright__ = '(C) 2017, Médéric Ribreux'
 
-# This will get replaced with a git SHA1 when you do a git archive
-
-__revision__ = '$Format:%H$'
 import os
 
 
@@ -34,13 +31,13 @@ def checkParameterValuesBeforeExecuting(alg, parameters, context):
     step = alg.parameterAsDouble(parameters, 'step', context)
 
     if start >= end:
-        return alg.tr("The start position must be inferior to the end position!")
+        return False, alg.tr("The start position must be inferior to the end position!")
     if step == 0.0:
-        return alg.tr("The step must be greater than zero!")
-    return None
+        return False, alg.tr("The step must be greater than zero!")
+    return True, None
 
 
-def processOutputs(alg, parameters, context):
+def processOutputs(alg, parameters, context, feedback):
     # There will be as many outputs as the difference between start and end divided by steps
     start = alg.parameterAsDouble(parameters, 'start', context)
     end = alg.parameterAsDouble(parameters, 'end', context)

@@ -21,10 +21,6 @@ __author__ = 'Médéric Ribreux'
 __date__ = 'February 2016'
 __copyright__ = '(C) 2016, Médéric Ribreux'
 
-# This will get replaced with a git SHA1 when you do a git archive
-
-__revision__ = '$Format:%H$'
-
 from processing.tools.system import getTempFilename
 from processing.algs.grass7.Grass7Utils import Grass7Utils
 
@@ -36,14 +32,14 @@ def checkParameterValuesBeforeExecuting(alg, parameters, context):
     raster = alg.parameterAsString(parameters, 'raster', context)
 
     if rules and txtrules:
-        return alg.tr("You need to set either a rules file or write directly the rules!")
+        return False, alg.tr("You need to set either a rules file or write directly the rules!")
     elif (rules and raster) or (txtrules and raster):
-        return alg.tr("You need to set either rules or a raster from which to copy categories!")
+        return False, alg.tr("You need to set either rules or a raster from which to copy categories!")
 
-    return None
+    return True, None
 
 
-def processInputs(alg, parameters, context):
+def processInputs(alg, parameters, context, feedback):
     # If there is another raster to copy categories from
     # we need to import it with r.in.gdal rather than r.external
     raster = alg.parameterAsString(parameters, 'raster', context)
@@ -52,10 +48,10 @@ def processInputs(alg, parameters, context):
                                          parameters, context,
                                          False, None)
     alg.loadRasterLayerFromParameter('map', parameters, context)
-    alg.postInputs()
+    alg.postInputs(context)
 
 
-def processCommand(alg, parameters, context):
+def processCommand(alg, parameters, context, feedback):
     # Handle inline rules
     txtRules = alg.parameterAsString(parameters, 'txtrules', context)
     if txtRules:
@@ -68,10 +64,10 @@ def processCommand(alg, parameters, context):
         alg.removeParameter('txtrules')
         parameters['rules'] = tempRulesName
 
-    alg.processCommand(parameters, context, True)
+    alg.processCommand(parameters, context, feedback, True)
 
 
-def processOutputs(alg, parameters, context):
+def processOutputs(alg, parameters, context, feedback):
     # Output results ('map' layer)
     createOpt = alg.parameterAsString(parameters, alg.GRASS_RASTER_FORMAT_OPT, context)
     metaOpt = alg.parameterAsString(parameters, alg.GRASS_RASTER_FORMAT_META, context)

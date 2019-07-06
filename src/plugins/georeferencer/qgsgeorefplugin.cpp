@@ -72,12 +72,6 @@ static const QString sPluginIcon = QStringLiteral( ":/icons/default/mGeorefRun.p
 //
 //////////////////////////////////////////////////////////////////////
 
-/**
- * Constructor for the plugin. The plugin is passed a pointer to the main app
- * and an interface object that provides access to exposed functions in QGIS.
- * @param theQGisApp - Pointer to the QGIS main window
- * @param theQGisInterface - Pointer to the QGIS interface object
- */
 QgsGeorefPlugin::QgsGeorefPlugin( QgisInterface *qgisInterface )
   : QgisPlugin( sName, sDescription, sCategory, sPluginVersion, sPluginType )
   , mQGisIface( qgisInterface )
@@ -98,13 +92,13 @@ void QgsGeorefPlugin::initGui()
   // Connect the action to the run
   connect( mActionRunGeoref, &QAction::triggered, this, &QgsGeorefPlugin::run );
 
-  setCurrentTheme( QLatin1String( "" ) );
+  setCurrentTheme( QString() );
   // this is called when the icon theme is changed
   connect( mQGisIface, &QgisInterface::currentThemeChanged, this, &QgsGeorefPlugin::setCurrentTheme );
 
   // Add to the toolbar & menu
   mQGisIface->addRasterToolBarIcon( mActionRunGeoref );
-  mQGisIface->addPluginToRasterMenu( tr( "&Georeferencer" ), mActionRunGeoref );
+  mQGisIface->addPluginToRasterMenu( QString(), mActionRunGeoref );
 }
 
 void QgsGeorefPlugin::run()
@@ -119,7 +113,7 @@ void QgsGeorefPlugin::run()
 void QgsGeorefPlugin::unload()
 {
   // remove the GUI
-  mQGisIface->removePluginRasterMenu( tr( "&Georeferencer" ), mActionRunGeoref );
+  mQGisIface->rasterMenu()->removeAction( mActionRunGeoref );
   mQGisIface->removeRasterToolBarIcon( mActionRunGeoref );
 
   delete mActionRunGeoref;
@@ -129,7 +123,7 @@ void QgsGeorefPlugin::unload()
   mPluginGui = nullptr;
 }
 
-//! Set icons to the current theme
+//! Sets icons to the current theme
 void QgsGeorefPlugin::setCurrentTheme( const QString & )
 {
   if ( mActionRunGeoref )

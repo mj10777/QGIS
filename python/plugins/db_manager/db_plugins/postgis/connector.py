@@ -26,7 +26,7 @@ from builtins import range
 
 from functools import cmp_to_key
 
-from qgis.PyQt.QtCore import QRegExp
+from qgis.PyQt.QtCore import QRegExp, QFile, QCoreApplication
 from qgis.core import Qgis, QgsCredentials, QgsDataSourceUri
 
 from ..connector import DBConnector
@@ -66,6 +66,7 @@ class PostGisDBConnector(DBConnector):
         try:
             self.connection = psycopg2.connect(expandedConnInfo)
         except self.connection_error_types() as e:
+            # get credentials if cached or asking to the user no more than 3 times
             err = str(e)
             uri = self.uri()
             conninfo = uri.connectionInfo(False)
@@ -73,7 +74,7 @@ class PostGisDBConnector(DBConnector):
             for i in range(3):
                 (ok, username, password) = QgsCredentials.instance().get(conninfo, username, password, err)
                 if not ok:
-                    raise ConnectionError(e)
+                    raise ConnectionError(QCoreApplication.translate('db_manager', 'Could not connect to database as user {user}').format(user=username))
 
                 if username:
                     uri.setUsername(username)
@@ -88,44 +89,13 @@ class PostGisDBConnector(DBConnector):
                 except self.connection_error_types() as e:
                     if i == 2:
                         raise ConnectionError(e)
-
                     err = str(e)
                 finally:
-                    # remove certs (if any) of the expanded connectionInfo
-                    expandedUri = QgsDataSourceUri(newExpandedConnInfo)
-
-                    sslCertFile = expandedUri.param("sslcert")
-                    if sslCertFile:
-                        sslCertFile = sslCertFile.replace("'", "")
-                        os.remove(sslCertFile)
-
-                    sslKeyFile = expandedUri.param("sslkey")
-                    if sslKeyFile:
-                        sslKeyFile = sslKeyFile.replace("'", "")
-                        os.remove(sslKeyFile)
-
-                    sslCAFile = expandedUri.param("sslrootcert")
-                    if sslCAFile:
-                        sslCAFile = sslCAFile.replace("'", "")
-                        os.remove(sslCAFile)
+                    # clear certs for each time trying to connect
+                    self._clearSslTempCertsIfAny(newExpandedConnInfo)
         finally:
-            # remove certs (if any) of the expanded connectionInfo
-            expandedUri = QgsDataSourceUri(expandedConnInfo)
-
-            sslCertFile = expandedUri.param("sslcert")
-            if sslCertFile:
-                sslCertFile = sslCertFile.replace("'", "")
-                os.remove(sslCertFile)
-
-            sslKeyFile = expandedUri.param("sslkey")
-            if sslKeyFile:
-                sslKeyFile = sslKeyFile.replace("'", "")
-                os.remove(sslKeyFile)
-
-            sslCAFile = expandedUri.param("sslrootcert")
-            if sslCAFile:
-                sslCAFile = sslCAFile.replace("'", "")
-                os.remove(sslCAFile)
+            # clear certs of the first connection try
+            self._clearSslTempCertsIfAny(expandedConnInfo)
 
         self.connection.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_AUTOCOMMIT)
 
@@ -140,6 +110,33 @@ class PostGisDBConnector(DBConnector):
 
     def _connectionInfo(self):
         return str(self.uri().connectionInfo(True))
+
+    def _clearSslTempCertsIfAny(self, connectionInfo):
+        # remove certs (if any) of the connectionInfo
+        expandedUri = QgsDataSourceUri(connectionInfo)
+
+        def removeCert(certFile):
+            certFile = certFile.replace("'", "")
+            file = QFile(certFile)
+            # set permission to allow removing on Win.
+            # On linux and Mac if file is set with QFile::>ReadUser
+            # does not create problem removing certs
+            if not file.setPermissions(QFile.WriteOwner):
+                raise Exception('Cannot change permissions on {}: error code: {}'.format(file.fileName(), file.error()))
+            if not file.remove():
+                raise Exception('Cannot remove {}: error code: {}'.format(file.fileName(), file.error()))
+
+        sslCertFile = expandedUri.param("sslcert")
+        if sslCertFile:
+            removeCert(sslCertFile)
+
+        sslKeyFile = expandedUri.param("sslkey")
+        if sslKeyFile:
+            removeCert(sslKeyFile)
+
+        sslCAFile = expandedUri.param("sslrootcert")
+        if sslCAFile:
+            removeCert(sslCAFile)
 
     def _checkSpatial(self):
         """ check whether postgis_version is present in catalog """
@@ -185,6 +182,10 @@ class PostGisDBConnector(DBConnector):
             # find out whether has privileges to access geometry_columns table
             self.has_raster_columns_access = self.getTablePrivileges('raster_columns')[0]
         return self.has_raster_columns
+
+    def cancel(self):
+        if self.connection:
+            self.connection.cancel()
 
     def getInfo(self):
         c = self._execute(None, u"SELECT version()")
@@ -233,7 +234,8 @@ class PostGisDBConnector(DBConnector):
             "serial", "bigserial",  # auto-incrementing ints
             "real", "double precision", "numeric",  # floats
             "varchar", "varchar(255)", "char(20)", "text",  # strings
-            "date", "time", "timestamp"  # date/time
+            "date", "time", "timestamp",  # date/time
+            "boolean" # bool
         ]
 
     def getDatabasePrivileges(self):
@@ -741,6 +743,29 @@ class PostGisDBConnector(DBConnector):
 
         self._commit()
 
+    def commentTable(self, schema, tablename, comment=None):
+        if comment is None:
+            self._execute(None, 'COMMENT ON TABLE "{0}"."{1}" IS NULL;'.format(schema, tablename))
+        else:
+            self._execute(None, 'COMMENT ON TABLE "{0}"."{1}" IS E\'{2}\';'.format(schema, tablename, comment))
+
+    def getComment(self, tablename, field):
+        """Returns the comment for a field"""
+        # SQL Query checking if a comment exists for the field
+        sql_cpt = "Select count(*) from pg_description pd, pg_class pc, pg_attribute pa where relname = '%s' and attname = '%s' and pa.attrelid = pc.oid and pd.objoid = pc.oid and pd.objsubid = pa.attnum" % (tablename, field)
+        # SQL Query that return the comment of the field
+        sql = "Select pd.description from pg_description pd, pg_class pc, pg_attribute pa where relname = '%s' and attname = '%s' and pa.attrelid = pc.oid and pd.objoid = pc.oid and pd.objsubid = pa.attnum" % (tablename, field)
+        c = self._execute(None, sql_cpt) # Execute Check query
+        res = self._fetchone(c)[0] # Store result
+        if res == 1:
+            # When a comment exists
+            c = self._execute(None, sql) # Execute query
+            res = self._fetchone(c)[0] # Store result
+            self._close_cursor(c) # Close cursor
+            return res # Return comment
+        else:
+            return ''
+
     def moveTableToSchema(self, table, new_schema):
         schema, tablename = self.getSchemaTableName(table)
         if new_schema == schema:
@@ -856,8 +881,8 @@ class PostGisDBConnector(DBConnector):
             sql = u"ALTER TABLE %s DROP %s" % (self.quoteId(table), self.quoteId(column))
         self._execute_and_commit(sql)
 
-    def updateTableColumn(self, table, column, new_name=None, data_type=None, not_null=None, default=None):
-        if new_name is None and data_type is None and not_null is None and default is None:
+    def updateTableColumn(self, table, column, new_name=None, data_type=None, not_null=None, default=None, comment=None, test=None):
+        if new_name is None and data_type is None and not_null is None and default is None and comment is None:
             return
 
         c = self._get_cursor()
@@ -893,6 +918,13 @@ class PostGisDBConnector(DBConnector):
                 sql = u"UPDATE geometry_columns SET f_geometry_column=%s WHERE %s f_table_name=%s AND f_geometry_column=%s" % (
                     self.quoteString(new_name), schema_where, self.quoteString(tablename), self.quoteString(column))
                 self._execute(c, sql)
+
+        # comment the column
+        if comment is not None:
+            schema, tablename = self.getSchemaTableName(table)
+            column_name = new_name if new_name is not None and new_name != column else column
+            sql = u"COMMENT ON COLUMN %s.%s.%s IS '%s'" % (schema, tablename, column_name, comment)
+            self._execute(c, sql)
 
         self._commit()
 

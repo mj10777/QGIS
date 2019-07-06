@@ -18,24 +18,12 @@
 #ifndef QGIS_H
 #define QGIS_H
 
-#include <QEvent>
-#include <QString>
-#include <QRegExp>
-#include <QMetaType>
-#include <QVariant>
-#include <QDateTime>
-#include <QDate>
-#include <QTime>
-#include <QHash>
-#include <cstdlib>
+#include <QMetaEnum>
 #include <cfloat>
 #include <memory>
-#include <type_traits>
 #include <cmath>
-#include <qnumeric.h>
 
 #include "qgstolerance.h"
-#include "qgswkbtypes.h"
 #include "qgis_core.h"
 #include "qgis_sip.h"
 
@@ -175,8 +163,8 @@ class CORE_EXPORT Qgis
  * RAII signal blocking class. Used for temporarily blocking signals from a QObject
  * for the lifetime of QgsSignalBlocker object.
  * \see whileBlocking()
- * \since QGIS 2.16
  * \note not available in Python bindings
+ * \since QGIS 2.16
  */
 // based on Boojum's code from http://stackoverflow.com/questions/3556687/prevent-firing-signals-in-qt
 template<class Object> class QgsSignalBlocker SIP_SKIP SIP_SKIP // clazy:exclude=rule-of-three
@@ -216,9 +204,9 @@ template<class Object> class QgsSignalBlocker SIP_SKIP SIP_SKIP // clazy:exclude
  *
  * No signals will be emitted when calling these methods.
  *
- * \since QGIS 2.16
  * \see QgsSignalBlocker
  * \note not available in Python bindings
+ * \since QGIS 2.16
  */
 // based on Boojum's code from http://stackoverflow.com/questions/3556687/prevent-firing-signals-in-qt
 template<class Object> inline QgsSignalBlocker<Object> whileBlocking( Object *object ) SIP_SKIP SIP_SKIP
@@ -237,9 +225,35 @@ CORE_EXPORT uint qHash( const QVariant &variant );
 inline QString qgsDoubleToString( double a, int precision = 17 )
 {
   if ( precision )
-    return QString::number( a, 'f', precision ).remove( QRegExp( "\\.?0+$" ) );
+  {
+    QString str = QString::number( a, 'f', precision );
+    if ( str.contains( QLatin1Char( '.' ) ) )
+    {
+      // remove ending 0s
+      int idx = str.length() - 1;
+      while ( str.at( idx ) == '0' && idx > 1 )
+      {
+        idx--;
+      }
+      if ( idx < str.length() - 1 )
+        str.truncate( str.at( idx ) == '.' ? idx : idx + 1 );
+    }
+    return str;
+  }
   else
-    return QString::number( a, 'f', precision );
+  {
+    // avoid printing -0
+    // see https://bugreports.qt.io/browse/QTBUG-71439
+    const QString str( QString::number( a, 'f', precision ) );
+    if ( str == QLatin1String( "-0" ) )
+    {
+      return QLatin1String( "0" );
+    }
+    else
+    {
+      return str;
+    }
+  }
 }
 
 /**
@@ -248,7 +262,7 @@ inline QString qgsDoubleToString( double a, int precision = 17 )
  * \param b second double
  * \param epsilon maximum difference allowable between doubles
  */
-inline bool qgsDoubleNear( double a, double b, double epsilon = 4 * DBL_EPSILON )
+inline bool qgsDoubleNear( double a, double b, double epsilon = 4 * std::numeric_limits<double>::epsilon() )
 {
   const double diff = a - b;
   return diff > -epsilon && diff <= epsilon;
@@ -287,10 +301,11 @@ inline bool qgsDoubleNearSig( double a, double b, int significantDigits = 10 )
  *
  * \since QGIS 3.0
  */
-inline double qgsRound( double number, double places )
+inline double qgsRound( double number, int places )
 {
-  int scaleFactor = std::pow( 10, places );
-  return static_cast<double>( static_cast<qlonglong>( number * scaleFactor + 0.5 ) ) / scaleFactor;
+  double m = ( number < 0.0 ) ? -1.0 : 1.0;
+  double scaleFactor = std::pow( 10.0, places );
+  return ( std::round( number * m * scaleFactor ) / scaleFactor ) * m;
 }
 
 
@@ -299,9 +314,10 @@ inline double qgsRound( double number, double places )
 ///@cond PRIVATE
 
 /**
- * Contains "polyfills" for backporting c++ features from standards > c++11.
+ * Contains "polyfills" for backporting c++ features from standards > c++11 and Qt global methods
+ * added later than our minimum version.
  *
- * To be removed when minimum c++ build requirement includes the std implementation
+ * To be removed when minimum c++ or Qt build requirement includes the std implementation
  * for these features.
  *
  * \note not available in Python bindings.
@@ -315,8 +331,8 @@ namespace qgis
    *
    * To be used as a proxy for std::as_const until we target c++17 minimum.
    *
-   * \since QGIS 3.0
    * \note not available in Python bindings
+   * \since QGIS 3.0
    */
   template <typename T> struct QgsAddConst { typedef const T Type; };
 
@@ -361,18 +377,86 @@ namespace qgis
   template<class T, class... Args>
   typename _Unique_if<T>::_Known_bound
   make_unique( Args &&... ) = delete;
+
+  /**
+   * Used for new-style Qt connects to overloaded signals, avoiding the usual horrible connect syntax required
+   * in these circumstances.
+   *
+   * Example usage:
+   *
+   * connect( mSpinBox, qgis::overload< int >::of( &QSpinBox::valueChanged ), this, &MyClass::mySlot );
+   *
+   * This is an alternative to qOverload, which was implemented in Qt 5.7.
+   *
+   * See https://stackoverflow.com/a/16795664/1861260
+   */
+  template<typename... Args> struct overload
+  {
+    template<typename C, typename R>
+    static constexpr auto of( R( C::*pmf )( Args... ) ) -> decltype( pmf )
+    {
+      return pmf;
+    }
+  };
 }
 ///@endcond
 #endif
 
 /**
+ * Returns a map of all enum entries.
+ * The map has the enum values (int) as keys and the enum keys (QString) as values.
+ * The enum must have been declared using Q_ENUM or Q_FLAG.
+ */
+template<class T> const QMap<T, QString> qgsEnumMap() SIP_SKIP
+{
+  QMetaEnum metaEnum = QMetaEnum::fromType<T>();
+  Q_ASSERT( metaEnum.isValid() );
+  QMap<T, QString> enumMap;
+  for ( int idx = 0; idx < metaEnum.keyCount(); ++idx )
+  {
+    const char *enumKey = metaEnum.key( idx );
+    enumMap.insert( static_cast<T>( metaEnum.keyToValue( enumKey ) ), QString( enumKey ) );
+  }
+  return enumMap;
+}
+
+/**
+ * Returns the value for the given key of an enum.
+ * \since QGIS 3.6
+ */
+template<class T> QString qgsEnumValueToKey( const T &value ) SIP_SKIP
+{
+  QMetaEnum metaEnum = QMetaEnum::fromType<T>();
+  Q_ASSERT( metaEnum.isValid() );
+  return QString::fromUtf8( metaEnum.valueToKey( value ) );
+}
+
+/**
+ * Returns the value corresponding to the given \a key of an enum.
+ * If the key is invalid, it will return the \a defaultValue.
+ * \since QGIS 3.6
+ */
+template<class T> T qgsEnumKeyToValue( const QString &key, const T &defaultValue ) SIP_SKIP
+{
+  QMetaEnum metaEnum = QMetaEnum::fromType<T>();
+  Q_ASSERT( metaEnum.isValid() );
+  bool ok = false;
+  T v = static_cast<T>( metaEnum.keyToValue( key.toUtf8().data(), &ok ) );
+  if ( ok )
+    return v;
+  else
+    return defaultValue;
+}
+
+
+/**
  * Converts a string to a double in a permissive way, e.g., allowing for incorrect
  * numbers of digits between thousand separators
  * \param string string to convert
- * \param ok will be set to true if conversion was successful
+ * \param ok will be set to TRUE if conversion was successful
  * \returns string converted to double if possible
- * \since QGIS 2.9
  * \see permissiveToInt
+ * \since QGIS 2.9
  */
 CORE_EXPORT double qgsPermissiveToDouble( QString string, bool &ok );
 
@@ -380,20 +464,44 @@ CORE_EXPORT double qgsPermissiveToDouble( QString string, bool &ok );
  * Converts a string to an integer in a permissive way, e.g., allowing for incorrect
  * numbers of digits between thousand separators
  * \param string string to convert
- * \param ok will be set to true if conversion was successful
+ * \param ok will be set to TRUE if conversion was successful
  * \returns string converted to int if possible
- * \since QGIS 2.9
  * \see permissiveToDouble
+ * \since QGIS 2.9
  */
 CORE_EXPORT int qgsPermissiveToInt( QString string, bool &ok );
+
+/**
+ * Converts a string to an qlonglong in a permissive way, e.g., allowing for incorrect
+ * numbers of digits between thousand separators
+ * \param string string to convert
+ * \param ok will be set to TRUE if conversion was successful
+ * \returns string converted to int if possible
+ * \see permissiveToInt
+ * \since QGIS 3.4
+ */
+CORE_EXPORT qlonglong qgsPermissiveToLongLong( QString string, bool &ok );
 
 /**
  * Compares two QVariant values and returns whether the first is less than the second.
  * Useful for sorting lists of variants, correctly handling sorting of the various
  * QVariant data types (such as strings, numeric values, dates and times)
+ *
+ * Invalid < NULL < Values
+ *
  * \see qgsVariantGreaterThan()
  */
 CORE_EXPORT bool qgsVariantLessThan( const QVariant &lhs, const QVariant &rhs );
+
+/**
+ * Compares two QVariant values and returns whether they are equal, NULL values are treated as equal.
+ *
+ * \param lhs first value
+ * \param rhs second value
+ * \return TRUE if values are equal
+ */
+CORE_EXPORT bool qgsVariantEqual( const QVariant &lhs, const QVariant &rhs );
+
 
 /**
  * Compares two QVariant values and returns whether the first is greater than the second.
@@ -541,11 +649,50 @@ typedef unsigned long long qgssize;
 #if __cplusplus >= 201500
 #define FALLTHROUGH [[fallthrough]];
 #elif defined(__clang__)
-#define FALLTHROUGH //[[clang::fallthrough]]
+#define FALLTHROUGH [[clang::fallthrough]];
 #elif defined(__GNUC__) && __GNUC__ >= 7
 #define FALLTHROUGH [[gnu::fallthrough]];
 #else
 #define FALLTHROUGH
+#endif
+
+// see https://infektor.net/posts/2017-01-19-using-cpp17-attributes-today.html#using-the-nodiscard-attribute
+#if __cplusplus >= 201703L
+#define NODISCARD [[nodiscard]]
+#elif defined(__clang__)
+#define NODISCARD [[nodiscard]]
+#elif defined(_MSC_VER)
+#define NODISCARD // no support
+#elif defined(__has_cpp_attribute)
+#if __has_cpp_attribute(nodiscard)
+#define NODISCARD [[nodiscard]]
+#elif __has_cpp_attribute(gnu::warn_unused_result)
+#define NODISCARD [[gnu::warn_unused_result]]
+#else
+#define NODISCARD Q_REQUIRED_RESULT
+#endif
+#else
+#define NODISCARD Q_REQUIRED_RESULT
+#endif
+
+#if __cplusplus >= 201703L
+#define MAYBE_UNUSED [[maybe_unused]]
+#elif defined(__clang__)
+#define MAYBE_UNUSED [[maybe_unused]]
+#elif defined(_MSC_VER)
+#define MAYBE_UNUSED // no support
+#elif defined(__has_cpp_attribute)
+#if __has_cpp_attribute(gnu::unused)
+#define MAYBE_UNUSED [[gnu::unused]]
+#else
+#define MAYBE_UNUSED
+#endif
+#else
+#define MAYBE_UNUSED
+#endif
+
+#ifndef FINAL
+#define FINAL final
 #endif
 
 

@@ -19,10 +19,12 @@
 #include "qgsproject.h"
 #include "qgsvectorlayer.h"
 #include "qgslogger.h"
+#include "qgsrenderer.h"
 
-QgsSnappingUtils::QgsSnappingUtils( QObject *parent )
+QgsSnappingUtils::QgsSnappingUtils( QObject *parent, bool enableSnappingForInvisibleFeature )
   : QObject( parent )
   , mSnappingConfig( QgsProject::instance() )
+  , mEnableSnappingForInvisibleFeature( enableSnappingForInvisibleFeature )
 {
 }
 
@@ -87,11 +89,13 @@ bool QgsSnappingUtils::isIndexPrepared( QgsVectorLayer *vl, const QgsRectangle &
   if ( mStrategy == IndexAlwaysFull && loc->hasIndex() )
     return true;
 
+  if ( mStrategy == IndexExtent && loc->hasIndex() && loc->extent()->intersects( areaOfInterest ) )
+    return true;
+
   QgsRectangle aoi( areaOfInterest );
   aoi.scale( 0.999 );
-  return ( mStrategy == IndexHybrid || mStrategy == IndexExtent ) && loc->hasIndex() && ( !loc->extent() || loc->extent()->contains( aoi ) ); // the index - even if it exists - is not suitable
+  return mStrategy == IndexHybrid && loc->hasIndex() && ( !loc->extent() || loc->extent()->contains( aoi ) ); // the index - even if it exists - is not suitable
 }
-
 
 static QgsPointLocator::Match _findClosestSegmentIntersection( const QgsPointXY &pt, const QgsPointLocator::MatchList &segments )
 {
@@ -102,7 +106,8 @@ static QgsPointLocator::Match _findClosestSegmentIntersection( const QgsPointXY 
 
   // make a geometry
   QVector<QgsGeometry> geoms;
-  Q_FOREACH ( const QgsPointLocator::Match &m, segments )
+  const auto constSegments = segments;
+  for ( const QgsPointLocator::Match &m : constSegments )
   {
     if ( m.hasEdge() )
     {
@@ -119,7 +124,8 @@ static QgsPointLocator::Match _findClosestSegmentIntersection( const QgsPointXY 
   QList<QgsPointXY> newPoints;
   if ( g.wkbType() == QgsWkbTypes::LineString )
   {
-    Q_FOREACH ( const QgsPointXY &p, g.asPolyline() )
+    const auto constAsPolyline = g.asPolyline();
+    for ( const QgsPointXY &p : constAsPolyline )
     {
       if ( !endpoints.contains( p ) )
         newPoints << p;
@@ -127,9 +133,11 @@ static QgsPointLocator::Match _findClosestSegmentIntersection( const QgsPointXY 
   }
   if ( g.wkbType() == QgsWkbTypes::MultiLineString )
   {
-    Q_FOREACH ( const QgsPolylineXY &pl, g.asMultiPolyline() )
+    const auto constAsMultiPolyline = g.asMultiPolyline();
+    for ( const QgsPolylineXY &pl : constAsMultiPolyline )
     {
-      Q_FOREACH ( const QgsPointXY &p, pl )
+      const auto constPl = pl;
+      for ( const QgsPointXY &p : constPl )
       {
         if ( !endpoints.contains( p ) )
           newPoints << p;
@@ -143,7 +151,8 @@ static QgsPointLocator::Match _findClosestSegmentIntersection( const QgsPointXY 
   // find the closest points
   QgsPointXY minP;
   double minSqrDist = 1e20;  // "infinity"
-  Q_FOREACH ( const QgsPointXY &p, newPoints )
+  const auto constNewPoints = newPoints;
+  for ( const QgsPointXY &p : constNewPoints )
   {
     double sqrDist = pt.sqrDist( p.x(), p.y() );
     if ( sqrDist < minSqrDist )
@@ -156,9 +165,9 @@ static QgsPointLocator::Match _findClosestSegmentIntersection( const QgsPointXY 
   return QgsPointLocator::Match( QgsPointLocator::Vertex, nullptr, 0, std::sqrt( minSqrDist ), minP );
 }
 
-
 static void _replaceIfBetter( QgsPointLocator::Match &bestMatch, const QgsPointLocator::Match &candidateMatch, double maxDistance )
 {
+
   // is candidate match relevant?
   if ( !candidateMatch.isValid() || candidateMatch.distance() > maxDistance )
     return;
@@ -173,7 +182,6 @@ static void _replaceIfBetter( QgsPointLocator::Match &bestMatch, const QgsPointL
 
   bestMatch = candidateMatch; // the other match is better!
 }
-
 
 static void _updateBestMatch( QgsPointLocator::Match &bestMatch, const QgsPointXY &pointMap, QgsPointLocator *loc, QgsPointLocator::Types type, double tolerance, QgsPointLocator::MatchFilter *filter )
 {
@@ -261,7 +269,7 @@ QgsPointLocator::Match QgsSnappingUtils::snapToMap( const QgsPointXY &pointMap, 
   else if ( mSnappingConfig.mode() == QgsSnappingConfig::AdvancedConfiguration )
   {
     QList<LayerAndAreaOfInterest> layers;
-    Q_FOREACH ( const LayerConfig &layerConfig, mLayers )
+    for ( const LayerConfig &layerConfig : qgis::as_const( mLayers ) )
     {
       double tolerance = QgsTolerance::toleranceInProjectUnits( layerConfig.tolerance, layerConfig.layer, mMapSettings, layerConfig.unit );
       layers << qMakePair( layerConfig.layer, _areaOfInterest( pointMap, tolerance ) );
@@ -272,7 +280,7 @@ QgsPointLocator::Match QgsSnappingUtils::snapToMap( const QgsPointXY &pointMap, 
     QgsPointLocator::MatchList edges; // for snap on intersection
     double maxSnapIntTolerance = 0;
 
-    Q_FOREACH ( const LayerConfig &layerConfig, mLayers )
+    for ( const LayerConfig &layerConfig : qgis::as_const( mLayers ) )
     {
       double tolerance = QgsTolerance::toleranceInProjectUnits( layerConfig.tolerance, layerConfig.layer, mMapSettings, layerConfig.unit );
       if ( QgsPointLocator *loc = locatorForLayerUsingStrategy( layerConfig.layer, pointMap, tolerance ) )
@@ -300,7 +308,8 @@ QgsPointLocator::Match QgsSnappingUtils::snapToMap( const QgsPointXY &pointMap, 
     QgsRectangle aoi = _areaOfInterest( pointMap, tolerance );
 
     QList<LayerAndAreaOfInterest> layers;
-    Q_FOREACH ( QgsMapLayer *layer, mMapSettings.layers() )
+    const auto constLayers = mMapSettings.layers();
+    for ( QgsMapLayer *layer : constLayers )
       if ( QgsVectorLayer *vl = qobject_cast<QgsVectorLayer *>( layer ) )
         layers << qMakePair( vl, aoi );
     prepareIndex( layers );
@@ -308,7 +317,7 @@ QgsPointLocator::Match QgsSnappingUtils::snapToMap( const QgsPointXY &pointMap, 
     QgsPointLocator::MatchList edges; // for snap on intersection
     QgsPointLocator::Match bestMatch;
 
-    Q_FOREACH ( const LayerAndAreaOfInterest &entry, layers )
+    for ( const LayerAndAreaOfInterest &entry : qgis::as_const( layers ) )
     {
       QgsVectorLayer *vl = entry.first;
       if ( QgsPointLocator *loc = locatorForLayerUsingStrategy( vl, pointMap, tolerance ) )
@@ -329,7 +338,6 @@ QgsPointLocator::Match QgsSnappingUtils::snapToMap( const QgsPointXY &pointMap, 
   return QgsPointLocator::Match();
 }
 
-
 void QgsSnappingUtils::prepareIndex( const QList<LayerAndAreaOfInterest> &layers )
 {
   if ( mIsIndexing )
@@ -338,9 +346,11 @@ void QgsSnappingUtils::prepareIndex( const QList<LayerAndAreaOfInterest> &layers
 
   // check if we need to build any index
   QList<LayerAndAreaOfInterest> layersToIndex;
-  Q_FOREACH ( const LayerAndAreaOfInterest &entry, layers )
+  const auto constLayers = layers;
+  for ( const LayerAndAreaOfInterest &entry : constLayers )
   {
     QgsVectorLayer *vl = entry.first;
+
     if ( vl->geometryType() == QgsWkbTypes::NullGeometry || mStrategy == IndexNeverFull )
       continue;
 
@@ -354,15 +364,24 @@ void QgsSnappingUtils::prepareIndex( const QList<LayerAndAreaOfInterest> &layers
     t.start();
     int i = 0;
     prepareIndexStarting( layersToIndex.count() );
-    Q_FOREACH ( const LayerAndAreaOfInterest &entry, layersToIndex )
+    const auto constLayersToIndex = layersToIndex;
+    for ( const LayerAndAreaOfInterest &entry : constLayersToIndex )
     {
       QgsVectorLayer *vl = entry.first;
       QTime tt;
       tt.start();
+
       QgsPointLocator *loc = locatorForLayer( vl );
+
+      if ( !mEnableSnappingForInvisibleFeature )
+      {
+        QgsRenderContext ctx = QgsRenderContext::fromMapSettings( mMapSettings );
+        loc->setRenderContext( &ctx );
+      }
+
       if ( mStrategy == IndexExtent )
       {
-        QgsRectangle rect( mMapSettings.extent() );
+        QgsRectangle rect( mMapSettings.visibleExtent() );
         loc->setExtent( &rect );
         loc->init();
       }
@@ -415,10 +434,10 @@ void QgsSnappingUtils::prepareIndex( const QList<LayerAndAreaOfInterest> &layers
       else  // full index strategy
         loc->init();
 
-      QgsDebugMsg( QString( "Index init: %1 ms (%2)" ).arg( tt.elapsed() ).arg( vl->id() ) );
+      QgsDebugMsg( QStringLiteral( "Index init: %1 ms (%2)" ).arg( tt.elapsed() ).arg( vl->id() ) );
       prepareIndexProgress( ++i );
     }
-    QgsDebugMsg( QString( "Prepare index total: %1 ms" ).arg( t.elapsed() ) );
+    QgsDebugMsg( QStringLiteral( "Prepare index total: %1 ms" ).arg( t.elapsed() ) );
   }
   mIsIndexing = false;
 }
@@ -426,6 +445,11 @@ void QgsSnappingUtils::prepareIndex( const QList<LayerAndAreaOfInterest> &layers
 QgsSnappingConfig QgsSnappingUtils::config() const
 {
   return mSnappingConfig;
+}
+
+void QgsSnappingUtils::setEnableSnappingForInvisibleFeature( bool enable )
+{
+  mEnableSnappingForInvisibleFeature = enable;
 }
 
 void QgsSnappingUtils::setConfig( const QgsSnappingConfig &config )
@@ -503,7 +527,8 @@ QString QgsSnappingUtils::dump()
   }
   else if ( mSnappingConfig.mode() == QgsSnappingConfig::AllLayers )
   {
-    Q_FOREACH ( QgsMapLayer *layer, mMapSettings.layers() )
+    const auto constLayers = mMapSettings.layers();
+    for ( QgsMapLayer *layer : constLayers )
     {
       if ( QgsVectorLayer *vl = qobject_cast<QgsVectorLayer *>( layer ) )
         layers << LayerConfig( vl, _snappingTypeToPointLocatorType( mSnappingConfig.type() ), mSnappingConfig.tolerance(), mSnappingConfig.units() );
@@ -514,7 +539,8 @@ QString QgsSnappingUtils::dump()
     layers = mLayers;
   }
 
-  Q_FOREACH ( const LayerConfig &layer, layers )
+  const auto constLayers = layers;
+  for ( const LayerConfig &layer : constLayers )
   {
     msg += QString( "layer : %1\n"
                     "config: %2   tolerance %3 %4\n" )

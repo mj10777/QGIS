@@ -211,7 +211,7 @@ bool QgsTriangle::fromWkt( const QString &wkt )
   return true;
 }
 
-QDomElement QgsTriangle::asGml3( QDomDocument &doc, int precision, const QString &ns ) const
+QDomElement QgsTriangle::asGml3( QDomDocument &doc, int precision, const QString &ns, const AxisOrder axisOrder ) const
 {
 
   QDomElement elemTriangle = doc.createElementNS( ns, QStringLiteral( "Triangle" ) );
@@ -220,7 +220,7 @@ QDomElement QgsTriangle::asGml3( QDomDocument &doc, int precision, const QString
     return elemTriangle;
 
   QDomElement elemExterior = doc.createElementNS( ns, QStringLiteral( "exterior" ) );
-  QDomElement curveElem = exteriorRing()->asGml3( doc, precision, ns );
+  QDomElement curveElem = exteriorRing()->asGml3( doc, precision, ns, axisOrder );
   if ( curveElem.tagName() == QLatin1String( "LineString" ) )
   {
     curveElem.setTagName( QStringLiteral( "LinearRing" ) );
@@ -251,14 +251,14 @@ void QgsTriangle::addInteriorRing( QgsCurve *ring )
 
 bool QgsTriangle::deleteVertex( QgsVertexId position )
 {
-  Q_UNUSED( position );
+  Q_UNUSED( position )
   return false;
 }
 
 bool QgsTriangle::insertVertex( QgsVertexId position, const QgsPoint &vertex )
 {
-  Q_UNUSED( position );
-  Q_UNUSED( vertex );
+  Q_UNUSED( position )
+  Q_UNUSED( vertex )
   return false;
 }
 

@@ -62,9 +62,20 @@ QgsAssignProjectionAlgorithm *QgsAssignProjectionAlgorithm::createInstance() con
   return new QgsAssignProjectionAlgorithm();
 }
 
+bool QgsAssignProjectionAlgorithm::supportInPlaceEdit( const QgsMapLayer *layer ) const
+{
+  Q_UNUSED( layer )
+  return false;
+}
+
 void QgsAssignProjectionAlgorithm::initParameters( const QVariantMap & )
 {
   addParameter( new QgsProcessingParameterCrs( QStringLiteral( "CRS" ), QObject::tr( "Assigned CRS" ), QStringLiteral( "EPSG:4326" ) ) );
+}
+
+QgsProcessingFeatureSource::Flag QgsAssignProjectionAlgorithm::sourceFlags() const
+{
+  return QgsProcessingFeatureSource::FlagSkipGeometryValidityChecks;
 }
 
 bool QgsAssignProjectionAlgorithm::prepareAlgorithm( const QVariantMap &parameters, QgsProcessingContext &context, QgsProcessingFeedback * )
@@ -73,9 +84,9 @@ bool QgsAssignProjectionAlgorithm::prepareAlgorithm( const QVariantMap &paramete
   return true;
 }
 
-QgsFeature QgsAssignProjectionAlgorithm::processFeature( const QgsFeature &feature, QgsProcessingContext &, QgsProcessingFeedback * )
+QgsFeatureList QgsAssignProjectionAlgorithm::processFeature( const QgsFeature &feature, QgsProcessingContext &, QgsProcessingFeedback * )
 {
-  return feature;
+  return QgsFeatureList() << feature;
 }
 
 ///@endcond

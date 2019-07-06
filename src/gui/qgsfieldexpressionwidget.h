@@ -23,15 +23,15 @@
 #include <memory>
 
 #include "qgis_gui.h"
-#include "qgis.h"
+#include "qgis_sip.h"
 #include "qgsdistancearea.h"
-#include "qgsexpressioncontextgenerator.h"
 #include "qgsexpressioncontext.h"
 #include "qgsfieldproxymodel.h"
 
 
 class QgsMapLayer;
 class QgsVectorLayer;
+class QgsExpressionContextGenerator;
 
 
 /**
@@ -48,6 +48,7 @@ class GUI_EXPORT QgsFieldExpressionWidget : public QWidget
     Q_OBJECT
     Q_PROPERTY( QString expressionDialogTitle READ expressionDialogTitle WRITE setExpressionDialogTitle )
     Q_PROPERTY( QgsFieldProxyModel::Filters filters READ filters WRITE setFilters )
+    Q_PROPERTY( bool allowEmptyFieldName READ allowEmptyFieldName WRITE setAllowEmptyFieldName )
     Q_PROPERTY( bool allowEvalErrors READ allowEvalErrors WRITE setAllowEvalErrors NOTIFY allowEvalErrorsChanged )
 
   public:
@@ -60,18 +61,41 @@ class GUI_EXPORT QgsFieldExpressionWidget : public QWidget
     //! define the title used in the expression dialog
     void setExpressionDialogTitle( const QString &title );
 
-    //! return the title used for the expression dialog
+    /**
+     * Appends a scope to the current expression context.
+     *
+     * \param scope The scope to add.
+     *
+     * \since QGIS 3.2
+     */
+    void appendScope( QgsExpressionContextScope *scope SIP_TRANSFER );
+
+    //! Returns the title used for the expression dialog
     const QString expressionDialogTitle() { return mExpressionDialogTitle; }
 
     //! setFilters allows fitering according to the type of field
     void setFilters( QgsFieldProxyModel::Filters filters );
+
+    /**
+     * Sets whether an optional empty field ("not set") option is shown in the combo box.
+     * \see allowEmptyFieldName()
+     * \since QGIS 3.4.6
+     */
+    void setAllowEmptyFieldName( bool allowEmpty );
+
+    /**
+     * Returns TRUE if the combo box allows the empty field ("not set") choice.
+     * \see setAllowEmptyFieldName()
+     * \since QGIS 3.4.6
+     */
+    bool allowEmptyFieldName() const;
 
     void setLeftHandButtonStyle( bool isLeft );
 
     //! currently used filter on list of fields
     QgsFieldProxyModel::Filters filters() const { return mFieldProxyModel->filters(); }
 
-    //! set the geometry calculator used in the expression dialog
+    //! Sets the geometry calculator used in the expression dialog
     void setGeomCalculator( const QgsDistanceArea &da );
 
     /**
@@ -82,17 +106,17 @@ class GUI_EXPORT QgsFieldExpressionWidget : public QWidget
     QString currentField( bool *isExpression = nullptr, bool *isValid = nullptr ) const;
 
     /**
-      * Return true if the current expression is valid
+      * Returns TRUE if the current expression is valid
       */
     bool isValidExpression( QString *expressionError = nullptr ) const;
 
     /**
-     * If the content is not just a simple field this method will return true.
+     * If the content is not just a simple field this method will return TRUE.
      */
     bool isExpression() const;
 
     /**
-      * Return the current text that is set in the expression area
+      * Returns the current text that is set in the expression area
       */
     QString currentText() const;
 
@@ -147,7 +171,7 @@ class GUI_EXPORT QgsFieldExpressionWidget : public QWidget
     void setAllowEvalErrors( bool allowEvalErrors );
 
   signals:
-    //! the signal is emitted when the currently selected field changes
+    //! Emitted when the currently selected field changes.
     void fieldChanged( const QString &fieldName );
 
     //! fieldChanged signal with indication of the validity of the expression
@@ -206,6 +230,8 @@ class GUI_EXPORT QgsFieldExpressionWidget : public QWidget
 
   protected:
     void changeEvent( QEvent *event ) override;
+
+    bool eventFilter( QObject *watched, QEvent *event ) override;
 
   private slots:
     void reloadLayer();

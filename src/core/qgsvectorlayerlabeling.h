@@ -30,6 +30,7 @@ class QgsPalLayerSettings;
 class QgsReadWriteContext;
 class QgsVectorLayer;
 class QgsVectorLayerLabelProvider;
+class QgsStyleEntityVisitorInterface;
 
 /**
  * \ingroup core
@@ -59,23 +60,23 @@ class CORE_EXPORT QgsAbstractVectorLayerLabeling
     //! Unique type string of the labeling configuration implementation
     virtual QString type() const = 0;
 
-    //! Return a new copy of the object
+    //! Returns a new copy of the object
     virtual QgsAbstractVectorLayerLabeling *clone() const = 0 SIP_FACTORY;
 
     /**
      * Factory for label provider implementation
      * \note not available in Python bindings
      */
-    virtual QgsVectorLayerLabelProvider *provider( QgsVectorLayer *layer ) const SIP_SKIP { Q_UNUSED( layer ); return nullptr; }
+    virtual QgsVectorLayerLabelProvider *provider( QgsVectorLayer *layer ) const SIP_SKIP { Q_UNUSED( layer ) return nullptr; }
 
-    //! Return labeling configuration as XML element
+    //! Returns labeling configuration as XML element
     virtual QDomElement save( QDomDocument &doc, const QgsReadWriteContext &context ) const = 0;
 
-    //! Get list of sub-providers within the layer's labeling.
+    //! Gets list of sub-providers within the layer's labeling.
     virtual QStringList subProviders() const { return QStringList( QString() ); }
 
     /**
-     * Get associated label settings. In case of multiple sub-providers with different settings,
+     * Gets associated label settings. In case of multiple sub-providers with different settings,
      * they are identified by their ID (e.g. in case of rule-based labeling, provider ID == rule key)
      */
     virtual QgsPalLayerSettings settings( const QString &providerId = QString() ) const = 0;
@@ -91,7 +92,7 @@ class CORE_EXPORT QgsAbstractVectorLayerLabeling
     virtual void setSettings( QgsPalLayerSettings *settings SIP_TRANSFER, const QString &providerId = QString() ) = 0;
 
     /**
-     * Returns true if drawing labels requires advanced effects like composition
+     * Returns TRUE if drawing labels requires advanced effects like composition
      * modes, which could prevent it being used as an isolated cached image
      * or exported to a vector format.
      * \since QGIS 3.0
@@ -113,6 +114,17 @@ class CORE_EXPORT QgsAbstractVectorLayerLabeling
       QDomDocument doc = parent.ownerDocument();
       parent.appendChild( doc.createComment( QStringLiteral( "SE Export for %1 not implemented yet" ).arg( type() ) ) );
     }
+
+    /**
+     * Accepts the specified symbology \a visitor, causing it to visit all symbols associated
+     * with the labeling.
+     *
+     * Returns TRUE if the visitor should continue visiting other objects, or FALSE if visiting
+     * should be canceled.
+     *
+     * \since QGIS 3.10
+     */
+    virtual bool accept( QgsStyleEntityVisitorInterface *visitor ) const;
 
   protected:
 
@@ -153,6 +165,7 @@ class CORE_EXPORT QgsVectorLayerSimpleLabeling : public QgsAbstractVectorLayerLa
     QgsVectorLayerLabelProvider *provider( QgsVectorLayer *layer ) const override SIP_SKIP;
     QDomElement save( QDomDocument &doc, const QgsReadWriteContext &context ) const override;
     QgsPalLayerSettings settings( const QString &providerId = QString() ) const override;
+    bool accept( QgsStyleEntityVisitorInterface *visitor ) const override;
 
     /**
      * Set pal settings (takes ownership).

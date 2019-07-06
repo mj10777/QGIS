@@ -21,14 +21,11 @@ __author__ = 'Alexander Bruy'
 __date__ = 'December 2012'
 __copyright__ = '(C) 2012, Alexander Bruy'
 
-# This will get replaced with a git SHA1 when you do a git archive
-
-__revision__ = '$Format:%H$'
-
 import os
 import codecs
 import inspect
 import traceback
+import warnings
 
 from qgis.PyQt import uic
 from qgis.PyQt.QtCore import Qt
@@ -43,13 +40,17 @@ from qgis.core import (QgsApplication,
                        QgsProcessingAlgorithm,
                        QgsProcessingFeatureBasedAlgorithm)
 from qgis.utils import iface, OverrideCursor
+from qgis.processing import alg as algfactory
 
 from processing.gui.AlgorithmDialog import AlgorithmDialog
 from processing.script import ScriptUtils
 
 pluginPath = os.path.split(os.path.dirname(__file__))[0]
-WIDGET, BASE = uic.loadUiType(
-    os.path.join(pluginPath, "ui", "DlgScriptEditor.ui"))
+
+with warnings.catch_warnings():
+    warnings.filterwarnings("ignore", category=DeprecationWarning)
+    WIDGET, BASE = uic.loadUiType(
+        os.path.join(pluginPath, "ui", "DlgScriptEditor.ui"))
 
 
 class ScriptEditorDialog(BASE, WIDGET):
@@ -64,10 +65,12 @@ class ScriptEditorDialog(BASE, WIDGET):
         self.editor.initLexer()
         self.searchWidget.setVisible(False)
 
-        self.toolBar.setIconSize(iface.iconSize())
+        if iface is not None:
+            self.toolBar.setIconSize(iface.iconSize())
+            self.setStyleSheet(iface.mainWindow().styleSheet())
 
         self.actionOpenScript.setIcon(
-            QgsApplication.getThemeIcon('/mActionFileOpen.svg'))
+            QgsApplication.getThemeIcon('/mActionScriptOpen.svg'))
         self.actionSaveScript.setIcon(
             QgsApplication.getThemeIcon('/mActionFileSave.svg'))
         self.actionSaveScriptAs.setIcon(
@@ -106,37 +109,51 @@ class ScriptEditorDialog(BASE, WIDGET):
         self.actionDecreaseFontSize.triggered.connect(self.editor.zoomOut)
         self.editor.textChanged.connect(lambda: self.setHasChanged(True))
 
+        self.leFindText.returnPressed.connect(self.find)
         self.btnFind.clicked.connect(self.find)
         self.btnReplace.clicked.connect(self.replace)
         self.lastSearch = None
 
-        self.filePath = filePath
-        if self.filePath is not None:
-            self._loadFile(self.filePath)
+        self.filePath = None
+        if filePath is not None:
+            self._loadFile(filePath)
 
-        self.needUpdate = False
         self.setHasChanged(False)
 
-    def closeEvent(self, event):
+    def update_dialog_title(self):
+        """
+        Updates the script editor dialog title
+        """
+        if self.filePath:
+            path, file_name = os.path.split(self.filePath)
+        else:
+            file_name = self.tr('Untitled Script')
+
         if self.hasChanged:
-            ret = QMessageBox.question(self,
-                                       self.tr("Unsaved changes"),
-                                       self.tr("There are unsaved changes in the script. Continue?"),
-                                       QMessageBox.Yes | QMessageBox.No,
-                                       QMessageBox.No
-                                       )
-            if ret == QMessageBox.Yes:
-                self.updateProvider()
+            file_name = '*' + file_name
+
+        self.setWindowTitle(self.tr('{} - Processing Script Editor').format(file_name))
+
+    def closeEvent(self, event):
+        settings = QgsSettings()
+        settings.setValue("/Processing/stateScriptEditor", self.saveState())
+        settings.setValue("/Processing/geometryScriptEditor", self.saveGeometry())
+
+        if self.hasChanged:
+            ret = QMessageBox.question(
+                self, self.tr('Save Script?'),
+                self.tr('There are unsaved changes in this script. Do you want to keep those?'),
+                QMessageBox.Save | QMessageBox.Cancel | QMessageBox.Discard, QMessageBox.Cancel)
+
+            if ret == QMessageBox.Save:
+                self.saveScript(False)
+                event.accept()
+            elif ret == QMessageBox.Discard:
                 event.accept()
             else:
                 event.ignore()
         else:
-            self.updateProvider()
             event.accept()
-
-    def updateProvider(self):
-        if self.needUpdate:
-            QgsApplication.processingRegistry().providerById("script").refreshAlgorithms()
 
     def openScript(self):
         if self.hasChanged:
@@ -151,14 +168,13 @@ class ScriptEditorDialog(BASE, WIDGET):
         fileName, _ = QFileDialog.getOpenFileName(self,
                                                   self.tr("Open script"),
                                                   scriptDir,
-                                                  self.tr("Script files (*.py *.PY)"))
+                                                  self.tr("Processing scripts (*.py *.PY)"))
 
         if fileName == "":
             return
 
         with OverrideCursor(Qt.WaitCursor):
             self._loadFile(fileName)
-            self.filePath = fileName
 
     def save(self):
         self.saveScript(False)
@@ -173,7 +189,7 @@ class ScriptEditorDialog(BASE, WIDGET):
             newPath, _ = QFileDialog.getSaveFileName(self,
                                                      self.tr("Save script"),
                                                      scriptDir,
-                                                     self.tr("Script files (*.py *.PY)"))
+                                                     self.tr("Processing scripts (*.py *.PY)"))
 
             if newPath:
                 if not newPath.lower().endswith(".py"):
@@ -192,17 +208,20 @@ class ScriptEditorDialog(BASE, WIDGET):
                                     self.tr("Unable to save edits:\n{}").format(str(e))
                                     )
                 return
-            self.needUpdate = True
+
             self.setHasChanged(False)
+
+        QgsApplication.processingRegistry().providerById("script").refreshAlgorithms()
 
     def setHasChanged(self, hasChanged):
         self.hasChanged = hasChanged
         self.actionSaveScript.setEnabled(hasChanged)
+        self.update_dialog_title()
 
     def runAlgorithm(self):
-        d = {}
+        _locals = {}
         try:
-            exec(self.editor.text(), d)
+            exec(self.editor.text(), _locals)
         except Exception as e:
             error = QgsError(traceback.format_exc(), "Processing")
             QgsErrorDialog.show(error,
@@ -211,10 +230,13 @@ class ScriptEditorDialog(BASE, WIDGET):
             return
 
         alg = None
-        for k, v in d.items():
-            if inspect.isclass(v) and issubclass(v, (QgsProcessingAlgorithm, QgsProcessingFeatureBasedAlgorithm)) and v.__name__ not in ("QgsProcessingAlgorithm", "QgsProcessingFeatureBasedAlgorithm"):
-                alg = v()
-                break
+        try:
+            alg = algfactory.instances.pop().createInstance()
+        except IndexError:
+            for name, attr in _locals.items():
+                if inspect.isclass(attr) and issubclass(attr, (QgsProcessingAlgorithm, QgsProcessingFeatureBasedAlgorithm)) and attr.__name__ not in ("QgsProcessingAlgorithm", "QgsProcessingFeatureBasedAlgorithm"):
+                    alg = attr()
+                    break
 
         if alg is None:
             QMessageBox.warning(self,
@@ -226,9 +248,9 @@ class ScriptEditorDialog(BASE, WIDGET):
         alg.setProvider(QgsApplication.processingRegistry().providerById("script"))
         alg.initAlgorithm()
 
-        dlg = alg.createCustomParametersWidget(self)
+        dlg = alg.createCustomParametersWidget(iface.mainWindow())
         if not dlg:
-            dlg = AlgorithmDialog(alg)
+            dlg = AlgorithmDialog(alg, parent=iface.mainWindow())
 
         canvas = iface.mapCanvas()
         prevMapTool = canvas.mapTool()
@@ -257,6 +279,8 @@ class ScriptEditorDialog(BASE, WIDGET):
 
     def toggleSearchBox(self, checked):
         self.searchWidget.setVisible(checked)
+        if (checked):
+            self.leFindText.setFocus()
 
     def _loadFile(self, filePath):
         with codecs.open(filePath, "r", encoding="utf-8") as f:
@@ -266,3 +290,6 @@ class ScriptEditorDialog(BASE, WIDGET):
         self.hasChanged = False
         self.editor.setModified(False)
         self.editor.recolor()
+
+        self.filePath = filePath
+        self.update_dialog_title()

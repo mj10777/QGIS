@@ -17,12 +17,13 @@
 
 #include "qgsvectorlayer.h"
 #include "qgsfilterlineedit.h"
+#include "qgsapplication.h"
 
 #include <QCompleter>
 #include <QSettings>
 
-QgsUniqueValuesWidgetWrapper::QgsUniqueValuesWidgetWrapper( QgsVectorLayer *vl, int fieldIdx, QWidget *editor, QWidget *parent )
-  : QgsEditorWidgetWrapper( vl, fieldIdx, editor, parent )
+QgsUniqueValuesWidgetWrapper::QgsUniqueValuesWidgetWrapper( QgsVectorLayer *layer, int fieldIdx, QWidget *editor, QWidget *parent )
+  : QgsEditorWidgetWrapper( layer, fieldIdx, editor, parent )
 
 {
 }
@@ -62,7 +63,8 @@ void QgsUniqueValuesWidgetWrapper::initWidget( QWidget *editor )
 
   QSet< QVariant> values = layer()->uniqueValues( fieldIdx() );
 
-  Q_FOREACH ( const QVariant &v, values )
+  const auto constValues = values;
+  for ( const QVariant &v : constValues )
   {
     if ( mComboBox )
     {

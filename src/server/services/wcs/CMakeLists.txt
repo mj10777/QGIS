@@ -18,8 +18,6 @@ ADD_LIBRARY (wcs MODULE ${wcs_SRCS})
 
 INCLUDE_DIRECTORIES(SYSTEM
   ${GDAL_INCLUDE_DIR}
-  ${GEOS_INCLUDE_DIR}
-  ${PROJ_INCLUDE_DIR}
   ${POSTGRES_INCLUDE_DIR}
 )
 
@@ -29,10 +27,11 @@ INCLUDE_DIRECTORIES(
   ${CMAKE_BINARY_DIR}/src/analysis
   ${CMAKE_BINARY_DIR}/src/server
   ${CMAKE_CURRENT_BINARY_DIR}
-  ../../../core 
+  ${CMAKE_SOURCE_DIR}/external
+  ../../../core
   ../../../core/dxf
   ../../../core/expression
-  ../../../core/geometry 
+  ../../../core/geometry
   ../../../core/metadata
   ../../../core/raster
   ../../../core/symbology
@@ -43,7 +42,6 @@ INCLUDE_DIRECTORIES(
 )
 
 
-#endif
 TARGET_LINK_LIBRARIES(wcs
   qgis_core
   qgis_server

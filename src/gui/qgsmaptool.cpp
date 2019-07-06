@@ -19,6 +19,7 @@
 #include "qgsmaptopixel.h"
 #include "qgsrendercontext.h"
 #include "qgssettings.h"
+#include "qgsmapmouseevent.h"
 
 #include <QAction>
 #include <QAbstractButton>
@@ -33,7 +34,8 @@ QgsMapTool::QgsMapTool( QgsMapCanvas *canvas )
 
 QgsMapTool::~QgsMapTool()
 {
-  mCanvas->unsetMapTool( this );
+  if ( mCanvas )
+    mCanvas->unsetMapTool( this );
 }
 
 
@@ -45,7 +47,7 @@ QgsPointXY QgsMapTool::toMapCoordinates( QPoint point )
 QgsPoint QgsMapTool::toMapCoordinates( const QgsMapLayer *layer, const QgsPoint &point )
 {
   QgsPointXY result = mCanvas->mapSettings().layerToMapCoordinates( layer, QgsPointXY( point.x(), point.y() ) );
-  return QgsPoint( result.x(), result.y() );
+  return QgsPoint( result );
 }
 
 
@@ -88,7 +90,7 @@ void QgsMapTool::activate()
 
   // set cursor (map tools usually set it in constructor)
   mCanvas->setCursor( mCursor );
-  QgsDebugMsg( "Cursor has been set" );
+  QgsDebugMsg( QStringLiteral( "Cursor has been set" ) );
 
   emit activated();
 }
@@ -129,6 +131,11 @@ QAction *QgsMapTool::action()
   return mAction;
 }
 
+bool QgsMapTool::isActive() const
+{
+  return mCanvas && mCanvas->mapTool() == this;
+}
+
 void QgsMapTool::setButton( QAbstractButton *button )
 {
   mButton = button;
@@ -142,27 +149,29 @@ QAbstractButton *QgsMapTool::button()
 void QgsMapTool::setCursor( const QCursor &cursor )
 {
   mCursor = cursor;
+  if ( isActive() )
+    mCanvas->setCursor( mCursor );
 }
 
 
 void QgsMapTool::canvasMoveEvent( QgsMapMouseEvent *e )
 {
-  Q_UNUSED( e );
+  Q_UNUSED( e )
 }
 
 void QgsMapTool::canvasDoubleClickEvent( QgsMapMouseEvent *e )
 {
-  Q_UNUSED( e );
+  Q_UNUSED( e )
 }
 
 void QgsMapTool::canvasPressEvent( QgsMapMouseEvent *e )
 {
-  Q_UNUSED( e );
+  Q_UNUSED( e )
 }
 
 void QgsMapTool::canvasReleaseEvent( QgsMapMouseEvent *e )
 {
-  Q_UNUSED( e );
+  Q_UNUSED( e )
 }
 
 void QgsMapTool::wheelEvent( QWheelEvent *e )
@@ -172,17 +181,17 @@ void QgsMapTool::wheelEvent( QWheelEvent *e )
 
 void QgsMapTool::keyPressEvent( QKeyEvent *e )
 {
-  Q_UNUSED( e );
+  Q_UNUSED( e )
 }
 
 void QgsMapTool::keyReleaseEvent( QKeyEvent *e )
 {
-  Q_UNUSED( e );
+  Q_UNUSED( e )
 }
 
 bool QgsMapTool::gestureEvent( QGestureEvent *e )
 {
-  Q_UNUSED( e );
+  Q_UNUSED( e )
   return true;
 }
 

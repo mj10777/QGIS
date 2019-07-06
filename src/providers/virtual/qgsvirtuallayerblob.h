@@ -17,7 +17,7 @@ email                : hugo dot mercier at oslandia dot com
 #ifndef QGSVIRTUALLAYER_BLOB_H
 #define QGSVIRTUALLAYER_BLOB_H
 
-#include <stdint.h>
+#include <cstdint>
 
 #include "qgsgeometry.h"
 
@@ -36,10 +36,10 @@ struct SpatialiteBlobHeader
   unsigned char start = 0x00;
   unsigned char endianness = 0x01;
   int32_t srid = -1;
-  double mbrMinX = -DBL_MAX;
-  double mbrMinY = -DBL_MAX;
-  double mbrMaxX = DBL_MAX;
-  double mbrMaxY = DBL_MAX;
+  double mbrMinX = std::numeric_limits<double>::lowest();
+  double mbrMinY = std::numeric_limits<double>::lowest();
+  double mbrMaxX = std::numeric_limits<double>::max();
+  double mbrMaxY = std::numeric_limits<double>::max();
   unsigned char end = 0x7C;
 
   SpatialiteBlobHeader() = default;
@@ -58,7 +58,7 @@ struct SpatialiteBlobHeader
 void qgsGeometryToSpatialiteBlob( const QgsGeometry &geom, int32_t srid, char *&blob, int &size );
 
 /**
- * Return the bounding box of a SpatiaLite geometry blob
+ * Returns the bounding box of a SpatiaLite geometry blob
  */
 QgsRectangle spatialiteBlobBbox( const char *blob, size_t size );
 
@@ -68,7 +68,7 @@ QgsRectangle spatialiteBlobBbox( const char *blob, size_t size );
 QgsGeometry spatialiteBlobToQgsGeometry( const char *blob, size_t size );
 
 /**
- * Get geometry type and srid from a SpatiaLite geometry blob
+ * Gets geometry type and srid from a SpatiaLite geometry blob
  */
 QPair<QgsWkbTypes::Type, long> spatialiteBlobGeometryType( const char *blob, size_t size );
 

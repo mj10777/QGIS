@@ -21,15 +21,12 @@ __author__ = 'Victor Olaya'
 __date__ = 'August 2012'
 __copyright__ = '(C) 2012, Victor Olaya'
 
-# This will get replaced with a git SHA1 when you do a git archive
-
-__revision__ = '$Format:%H$'
-
 import os
 
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtCore import QVariant
-from qgis.core import (QgsFeature,
+from qgis.core import (QgsApplication,
+                       QgsFeature,
                        QgsFeatureSink,
                        QgsField,
                        QgsGeometry,
@@ -37,6 +34,7 @@ from qgis.core import (QgsFeature,
                        QgsDistanceArea,
                        QgsProject,
                        QgsProcessing,
+                       QgsProcessingException,
                        QgsProcessingParameterString,
                        QgsProcessingParameterFeatureSource,
                        QgsProcessingParameterFeatureSink,
@@ -56,7 +54,10 @@ class SumLines(QgisAlgorithm):
     OUTPUT = 'OUTPUT'
 
     def icon(self):
-        return QIcon(os.path.join(pluginPath, 'images', 'ftools', 'sum_lines.png'))
+        return QgsApplication.getThemeIcon("/algorithms/mAlgorithmSumLengthLines.svg")
+
+    def svgIconPath(self):
+        return QgsApplication.iconPath("/algorithms/mAlgorithmSumLengthLines.svg")
 
     def group(self):
         return self.tr('Vector analysis')
@@ -87,7 +88,12 @@ class SumLines(QgisAlgorithm):
 
     def processAlgorithm(self, parameters, context, feedback):
         line_source = self.parameterAsSource(parameters, self.LINES, context)
+        if line_source is None:
+            raise QgsProcessingException(self.invalidSourceError(parameters, self.LINES))
+
         poly_source = self.parameterAsSource(parameters, self.POLYGONS, context)
+        if poly_source is None:
+            raise QgsProcessingException(self.invalidSourceError(parameters, self.POLYGONS))
 
         length_field_name = self.parameterAsString(parameters, self.LEN_FIELD, context)
         count_field_name = self.parameterAsString(parameters, self.COUNT_FIELD, context)
@@ -102,6 +108,8 @@ class SumLines(QgisAlgorithm):
 
         (sink, dest_id) = self.parameterAsSink(parameters, self.OUTPUT, context,
                                                fields, poly_source.wkbType(), poly_source.sourceCrs())
+        if sink is None:
+            raise QgsProcessingException(self.invalidSinkError(parameters, self.OUTPUT))
 
         spatialIndex = QgsSpatialIndex(line_source.getFeatures(
             QgsFeatureRequest().setSubsetOfAttributes([]).setDestinationCrs(poly_source.sourceCrs(), context.transformContext())), feedback)

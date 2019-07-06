@@ -30,7 +30,6 @@
 #include <qgsapplication.h>
 #include <qgsmapcanvas.h>
 #include <qgsvectorlayer.h>
-#include <qgsfeature.h>
 #include <qgsgeometry.h>
 #include <qgspoint.h>
 #include <qgsdistancearea.h>
@@ -40,6 +39,7 @@
 #include <qgssettings.h>
 #include <qgsvectorlayerlabeling.h>
 #include <qgsproject.h>
+#include <qgsrectangle.h>
 
 #include <QAction>
 #include <QDir>
@@ -112,7 +112,7 @@ class ZoomControlHandler : public NavigationControlHandler
   public:
     ZoomControlHandler( osgEarth::Util::EarthManipulator *manip, double dx, double dy )
       : _manip( manip ), _dx( dx ), _dy( dy ) { }
-    virtual void onMouseDown() override
+    void onMouseDown() override
     {
       _manip->zoom( _dx, _dy );
     }
@@ -126,7 +126,7 @@ class HomeControlHandler : public NavigationControlHandler
 {
   public:
     HomeControlHandler( osgEarth::Util::EarthManipulator *manip ) : _manip( manip ) { }
-    virtual void onClick( const osgGA::GUIEventAdapter &ea, osgGA::GUIActionAdapter &aa ) override
+    void onClick( const osgGA::GUIEventAdapter &ea, osgGA::GUIActionAdapter &aa ) override
     {
       _manip->home( ea, aa );
     }
@@ -138,7 +138,7 @@ class SyncExtentControlHandler : public NavigationControlHandler
 {
   public:
     SyncExtentControlHandler( GlobePlugin *globe ) : mGlobe( globe ) { }
-    virtual void onClick( const osgGA::GUIEventAdapter & /*ea*/, osgGA::GUIActionAdapter & /*aa*/ ) override
+    void onClick( const osgGA::GUIEventAdapter & /*ea*/, osgGA::GUIActionAdapter & /*aa*/ ) override
     {
       mGlobe->syncExtent();
     }
@@ -150,7 +150,7 @@ class PanControlHandler : public NavigationControlHandler
 {
   public:
     PanControlHandler( osgEarth::Util::EarthManipulator *manip, double dx, double dy ) : _manip( manip ), _dx( dx ), _dy( dy ) { }
-    virtual void onMouseDown() override
+    void onMouseDown() override
     {
       _manip->pan( _dx, _dy );
     }
@@ -164,7 +164,7 @@ class RotateControlHandler : public NavigationControlHandler
 {
   public:
     RotateControlHandler( osgEarth::Util::EarthManipulator *manip, double dx, double dy ) : _manip( manip ), _dx( dx ), _dy( dy ) { }
-    virtual void onMouseDown() override
+    void onMouseDown() override
     {
       if ( 0 == _dx && 0 == _dy )
         _manip->setRotation( osg::Quat() );
@@ -913,7 +913,7 @@ void GlobePlugin::updateLayers()
     {
       if ( mapLayer )
         disconnect( mapLayer, SIGNAL( repaintRequested() ), this, SLOT( layerChanged() ) );
-      if ( dynamic_cast<QgsVectorLayer *>( mapLayer ) )
+      if ( qobject_cast<QgsVectorLayer *>( mapLayer ) )
         disconnect( static_cast<QgsVectorLayer *>( mapLayer ), SIGNAL( layerTransparencyChanged( int ) ), this, SLOT( layerChanged() ) );
     }
     osgEarth::ModelLayerVector modelLayers;
@@ -927,7 +927,7 @@ void GlobePlugin::updateLayers()
       QgsMapLayer *mapLayer = QgsProject::instance()->mapLayer( QString::fromStdString( modelLayer->getName() ) );
       if ( mapLayer )
         disconnect( mapLayer, SIGNAL( repaintRequested() ), this, SLOT( layerChanged() ) );
-      if ( dynamic_cast<QgsVectorLayer *>( mapLayer ) )
+      if ( qobject_cast<QgsVectorLayer *>( mapLayer ) )
         disconnect( static_cast<QgsVectorLayer *>( mapLayer ), SIGNAL( layerTransparencyChanged( int ) ), this, SLOT( layerChanged() ) );
       if ( !selectedLayerIds.contains( QString::fromStdString( modelLayer->getName() ) ) )
         mMapNode->getMap()->removeModelLayer( modelLayer );
@@ -939,7 +939,7 @@ void GlobePlugin::updateLayers()
       connect( mapLayer, SIGNAL( repaintRequested() ), this, SLOT( layerChanged() ) );
 
       QgsGlobeVectorLayerConfig *layerConfig = 0;
-      if ( dynamic_cast<QgsVectorLayer *>( mapLayer ) )
+      if ( qobject_cast<QgsVectorLayer *>( mapLayer ) )
       {
         layerConfig = QgsGlobeVectorLayerConfig::getConfig( static_cast<QgsVectorLayer *>( mapLayer ) );
         connect( static_cast<QgsVectorLayer *>( mapLayer ), SIGNAL( layerTransparencyChanged( int ) ), this, SLOT( layerChanged() ) );
@@ -985,7 +985,7 @@ void GlobePlugin::layerChanged( QgsMapLayer *mapLayer )
   if ( mMapNode )
   {
     QgsGlobeVectorLayerConfig *layerConfig = 0;
-    if ( dynamic_cast<QgsVectorLayer *>( mapLayer ) )
+    if ( qobject_cast<QgsVectorLayer *>( mapLayer ) )
     {
       layerConfig = QgsGlobeVectorLayerConfig::getConfig( static_cast<QgsVectorLayer *>( mapLayer ) );
     }

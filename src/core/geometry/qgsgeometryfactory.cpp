@@ -44,7 +44,7 @@ std::unique_ptr<QgsAbstractGeometry> QgsGeometryFactory::geomFromWkb( QgsConstWk
   }
   catch ( const QgsWkbException &e )
   {
-    Q_UNUSED( e );
+    Q_UNUSED( e )
     QgsDebugMsg( "WKB exception while reading header: " + e.what() );
     return nullptr;
   }
@@ -60,7 +60,7 @@ std::unique_ptr<QgsAbstractGeometry> QgsGeometryFactory::geomFromWkb( QgsConstWk
     }
     catch ( const QgsWkbException &e )
     {
-      Q_UNUSED( e );
+      Q_UNUSED( e )
       QgsDebugMsg( "WKB exception: " + e.what() );
       geom.reset();
     }
@@ -169,6 +169,7 @@ std::unique_ptr<QgsPolygon> QgsGeometryFactory::fromPolygonXY( const QgsPolygonX
   std::unique_ptr< QgsPolygon > poly = qgis::make_unique< QgsPolygon >();
 
   QVector<QgsCurve *> holes;
+  holes.reserve( polygon.size() );
   for ( int i = 0; i < polygon.size(); ++i )
   {
     std::unique_ptr< QgsLineString > l = linestringFromPolyline( polygon.at( i ) );

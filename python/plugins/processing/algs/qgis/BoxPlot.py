@@ -21,18 +21,14 @@ __author__ = 'Matteo Ghetta'
 __date__ = 'March 2017'
 __copyright__ = '(C) 2017, Matteo Ghetta'
 
-# This will get replaced with a git SHA1 when you do a git archive
-
-__revision__ = '$Format:%H$'
-
 import plotly as plt
 import plotly.graph_objs as go
 
-from qgis.core import (QgsProcessingParameterFeatureSource,
+from qgis.core import (QgsProcessingException,
+                       QgsProcessingParameterFeatureSource,
                        QgsProcessingParameterField,
                        QgsProcessingParameterEnum,
                        QgsProcessingParameterFileDestination,
-                       QgsProcessingOutputHtml,
                        QgsFeatureRequest)
 from processing.algs.qgis.QgisAlgorithm import QgisAlgorithm
 from processing.tools import vector
@@ -76,7 +72,6 @@ class BoxPlot(QgisAlgorithm):
             options=msd, defaultValue=0))
 
         self.addParameter(QgsProcessingParameterFileDestination(self.OUTPUT, self.tr('Box plot'), self.tr('HTML files (*.html)')))
-        self.addOutput(QgsProcessingOutputHtml(self.OUTPUT, self.tr('Box plot')))
 
     def name(self):
         return 'boxplot'
@@ -86,6 +81,9 @@ class BoxPlot(QgisAlgorithm):
 
     def processAlgorithm(self, parameters, context, feedback):
         source = self.parameterAsSource(parameters, self.INPUT, context)
+        if source is None:
+            raise QgsProcessingException(self.invalidSourceError(parameters, self.INPUT))
+
         namefieldname = self.parameterAsString(parameters, self.NAME_FIELD, context)
         valuefieldname = self.parameterAsString(parameters, self.VALUE_FIELD, context)
 
@@ -94,7 +92,7 @@ class BoxPlot(QgisAlgorithm):
         values = vector.values(source, valuefieldname)
 
         x_index = source.fields().lookupField(namefieldname)
-        x_var = [i[namefieldname] for i in source.getFeatures(QgsFeatureRequest().setFlags(QgsFeatureRequest.NoGeometry).setSubsetOfAttributes([x_index]))]
+        x_var = vector.convert_nulls([i[namefieldname] for i in source.getFeatures(QgsFeatureRequest().setFlags(QgsFeatureRequest.NoGeometry).setSubsetOfAttributes([x_index]))], '<NULL>')
 
         msdIndex = self.parameterAsEnum(parameters, self.MSD, context)
         msd = True

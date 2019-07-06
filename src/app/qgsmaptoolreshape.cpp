@@ -21,8 +21,8 @@
 #include "qgsproject.h"
 #include "qgsvectorlayer.h"
 #include "qgisapp.h"
+#include "qgsmapmouseevent.h"
 
-#include <QMouseEvent>
 
 QgsMapToolReshape::QgsMapToolReshape( QgsMapCanvas *canvas )
   : QgsMapToolCapture( canvas, QgisApp::instance()->cadDockWidget(), QgsMapToolCapture::CaptureLine )
@@ -91,7 +91,7 @@ bool QgsMapToolReshape::isBindingLine( QgsVectorLayer *vlayer, const QgsRectangl
   const QgsPointXY beginPoint = points().first();
   const QgsPointXY endPoint = points().last();
 
-  QgsFeatureIterator fit = vlayer->getFeatures( QgsFeatureRequest().setFilterRect( bbox ).setSubsetOfAttributes( QgsAttributeList() ) );
+  QgsFeatureIterator fit = vlayer->getFeatures( QgsFeatureRequest().setFilterRect( bbox ).setNoAttributes() );
   QgsFeature f;
 
   // check that extremities of the new line are contained by features
@@ -121,12 +121,14 @@ void QgsMapToolReshape::reshape( QgsVectorLayer *vlayer )
     bbox.combineExtentWith( points().at( i ).x(), points().at( i ).y() );
   }
 
-  QgsLineString reshapeLineString( points() );
-  if ( QgsWkbTypes::hasZ( vlayer->wkbType() ) )
-    reshapeLineString.addZValue( defaultZValue() );
+
+  QgsPointSequence pts;
+  QVector<QgsPoint> points;
+  captureCurve()->points( pts );
+  QgsLineString reshapeLineString( pts );
 
   //query all the features that intersect bounding box of capture line
-  QgsFeatureIterator fit = vlayer->getFeatures( QgsFeatureRequest().setFilterRect( bbox ).setSubsetOfAttributes( QgsAttributeList() ) );
+  QgsFeatureIterator fit = vlayer->getFeatures( QgsFeatureRequest().setFilterRect( bbox ).setNoAttributes() );
   QgsFeature f;
   int reshapeReturn;
   bool reshapeDone = false;
@@ -143,7 +145,7 @@ void QgsMapToolReshape::reshape( QgsVectorLayer *vlayer )
     {
       // in case of a binding line, we just want to update the line from
       // the starting point and not both side
-      if ( isBinding && !geom.asPolyline().contains( points().first() ) )
+      if ( isBinding && !geom.asPolyline().contains( pts.constFirst() ) )
         continue;
 
       reshapeReturn = geom.reshapeGeometry( reshapeLineString );

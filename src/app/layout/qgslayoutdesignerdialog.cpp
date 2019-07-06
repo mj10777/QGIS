@@ -39,7 +39,10 @@
 #include "qgslayoutitemmap.h"
 #include "qgsprintlayout.h"
 #include "qgsmapcanvas.h"
+#include "qgsrendercontext.h"
+#include "qgsmessagebar.h"
 #include "qgsmessageviewer.h"
+#include "qgshelp.h"
 #include "qgsgui.h"
 #include "qgsfeedback.h"
 #include "qgslayoutitemguiregistry.h"
@@ -63,6 +66,11 @@
 #include "qgsreportorganizerwidget.h"
 #include "qgsreadwritecontext.h"
 #include "ui_qgssvgexportoptions.h"
+#include "ui_qgspdfexportoptions.h"
+#include "qgsproxyprogresstask.h"
+#include "qgsvaliditycheckresultswidget.h"
+#include "qgsabstractvaliditycheck.h"
+#include "qgsvaliditycheckcontext.h"
 #include "ui_defaults.h"
 
 #include <QShortcut>
@@ -100,6 +108,11 @@ QgsAppLayoutDesignerInterface::QgsAppLayoutDesignerInterface( QgsLayoutDesignerD
   , mDesigner( dialog )
 {}
 
+QWidget *QgsAppLayoutDesignerInterface::window()
+{
+  return mDesigner;
+}
+
 QgsLayout *QgsAppLayoutDesignerInterface::layout()
 {
   return mDesigner->currentLayout();
@@ -120,14 +133,116 @@ QgsMessageBar *QgsAppLayoutDesignerInterface::messageBar()
   return mDesigner->messageBar();
 }
 
-void QgsAppLayoutDesignerInterface::selectItems( const QList<QgsLayoutItem *> items )
+void QgsAppLayoutDesignerInterface::selectItems( const QList<QgsLayoutItem *> &items )
 {
   mDesigner->selectItems( items );
+}
+
+void QgsAppLayoutDesignerInterface::setAtlasPreviewEnabled( bool enabled )
+{
+  mDesigner->setAtlasPreviewEnabled( enabled );
+}
+
+bool QgsAppLayoutDesignerInterface::atlasPreviewEnabled() const
+{
+  return mDesigner->atlasPreviewEnabled();
+}
+
+void QgsAppLayoutDesignerInterface::showItemOptions( QgsLayoutItem *item, bool bringPanelToFront )
+{
+  mDesigner->showItemOptions( item, bringPanelToFront );
+}
+
+QMenu *QgsAppLayoutDesignerInterface::layoutMenu()
+{
+  return mDesigner->mLayoutMenu;
+}
+
+QMenu *QgsAppLayoutDesignerInterface::editMenu()
+{
+  return mDesigner->menuEdit;
+}
+
+QMenu *QgsAppLayoutDesignerInterface::viewMenu()
+{
+  return mDesigner->mMenuView;
+}
+
+QMenu *QgsAppLayoutDesignerInterface::itemsMenu()
+{
+  return mDesigner->menuLayout;
+}
+
+QMenu *QgsAppLayoutDesignerInterface::atlasMenu()
+{
+  return mDesigner->mMenuAtlas;
+}
+
+QMenu *QgsAppLayoutDesignerInterface::reportMenu()
+{
+  return mDesigner->mMenuReport;
+}
+
+QMenu *QgsAppLayoutDesignerInterface::settingsMenu()
+{
+  return mDesigner->menuSettings;
+}
+
+QToolBar *QgsAppLayoutDesignerInterface::layoutToolbar()
+{
+  return mDesigner->mLayoutToolbar;
+}
+
+QToolBar *QgsAppLayoutDesignerInterface::navigationToolbar()
+{
+  return mDesigner->mNavigationToolbar;
+}
+
+QToolBar *QgsAppLayoutDesignerInterface::actionsToolbar()
+{
+  return mDesigner->mActionsToolbar;
+}
+
+QToolBar *QgsAppLayoutDesignerInterface::atlasToolbar()
+{
+  return mDesigner->mAtlasToolbar;
+}
+
+void QgsAppLayoutDesignerInterface::addDockWidget( Qt::DockWidgetArea area, QDockWidget *dock )
+{
+  mDesigner->addDockWidget( area, dock );
+}
+
+void QgsAppLayoutDesignerInterface::removeDockWidget( QDockWidget *dock )
+{
+  mDesigner->removeDockWidget( dock );
+}
+
+void QgsAppLayoutDesignerInterface::activateTool( QgsLayoutDesignerInterface::StandardTool tool )
+{
+  switch ( tool )
+  {
+    case QgsLayoutDesignerInterface::ToolMoveItemContent:
+      if ( !mDesigner->mActionMoveItemContent->isChecked() )
+        mDesigner->mActionMoveItemContent->trigger();
+      break;
+
+    case QgsLayoutDesignerInterface::ToolMoveItemNodes:
+      if ( !mDesigner->mActionEditNodesItem->isChecked() )
+        mDesigner->mActionEditNodesItem->trigger();
+      break;
+
+  }
 }
 
 void QgsAppLayoutDesignerInterface::close()
 {
   mDesigner->close();
+}
+
+void QgsAppLayoutDesignerInterface::showRulers( bool visible )
+{
+  mDesigner->showRulers( visible );
 }
 
 
@@ -156,9 +271,7 @@ QgsLayoutDesignerDialog::QgsLayoutDesignerDialog( QWidget *parent, Qt::WindowFla
   setAcceptDrops( true );
 
   setAttribute( Qt::WA_DeleteOnClose );
-#if QT_VERSION >= 0x050600
   setDockOptions( dockOptions() | QMainWindow::GroupedDragging );
-#endif
 
   //create layout view
   QGridLayout *viewLayout = new QGridLayout();
@@ -224,8 +337,6 @@ QgsLayoutDesignerDialog::QgsLayoutDesignerDialog( QWidget *parent, Qt::WindowFla
   connect( mActionShowPage, &QAction::triggered, this, &QgsLayoutDesignerDialog::showPages );
 
   connect( mActionPasteInPlace, &QAction::triggered, this, &QgsLayoutDesignerDialog::pasteInPlace );
-
-  connect( mActionAtlasSettings, &QAction::triggered, this, &QgsLayoutDesignerDialog::showAtlasSettings );
   connect( mActionAtlasPreview, &QAction::triggered, this, &QgsLayoutDesignerDialog::atlasPreviewTriggered );
   connect( mActionAtlasNext, &QAction::triggered, this, &QgsLayoutDesignerDialog::atlasNext );
   connect( mActionAtlasPrev, &QAction::triggered, this, &QgsLayoutDesignerDialog::atlasPrevious );
@@ -236,7 +347,6 @@ QgsLayoutDesignerDialog::QgsLayoutDesignerDialog( QWidget *parent, Qt::WindowFla
   connect( mActionExportAtlasAsSVG, &QAction::triggered, this, &QgsLayoutDesignerDialog::exportAtlasToSvg );
   connect( mActionExportAtlasAsPDF, &QAction::triggered, this, &QgsLayoutDesignerDialog::exportAtlasToPdf );
 
-  connect( mActionReportSettings, &QAction::triggered, this, &QgsLayoutDesignerDialog::showReportSettings );
   connect( mActionExportReportAsImage, &QAction::triggered, this, &QgsLayoutDesignerDialog::exportReportToRaster );
   connect( mActionExportReportAsSVG, &QAction::triggered, this, &QgsLayoutDesignerDialog::exportReportToSvg );
   connect( mActionExportReportAsPDF, &QAction::triggered, this, &QgsLayoutDesignerDialog::exportReportToPdf );
@@ -246,7 +356,7 @@ QgsLayoutDesignerDialog::QgsLayoutDesignerDialog( QWidget *parent, Qt::WindowFla
 
   connect( mActionOptions, &QAction::triggered, this, [ = ]
   {
-    QgisApp::instance()->showOptionsDialog( this, QString( "mOptionsPageComposer" ) );
+    QgisApp::instance()->showOptionsDialog( this, QStringLiteral( "mOptionsPageComposer" ) );
   } );
 
   mView = new QgsLayoutView();
@@ -302,9 +412,11 @@ QgsLayoutDesignerDialog::QgsLayoutDesignerDialog( QWidget *parent, Qt::WindowFla
   distributeToolButton->setToolButtonStyle( Qt::ToolButtonIconOnly );
   distributeToolButton->addAction( mActionDistributeLeft );
   distributeToolButton->addAction( mActionDistributeHCenter );
+  distributeToolButton->addAction( mActionDistributeHSpace );
   distributeToolButton->addAction( mActionDistributeRight );
   distributeToolButton->addAction( mActionDistributeTop );
   distributeToolButton->addAction( mActionDistributeVCenter );
+  distributeToolButton->addAction( mActionDistributeVSpace );
   distributeToolButton->addAction( mActionDistributeBottom );
   distributeToolButton->setDefaultAction( mActionDistributeLeft );
   mActionsToolbar->addWidget( distributeToolButton );
@@ -322,7 +434,7 @@ QgsLayoutDesignerDialog::QgsLayoutDesignerDialog( QWidget *parent, Qt::WindowFla
   mActionsToolbar->addWidget( resizeToolButton );
 
   QToolButton *atlasExportToolButton = new QToolButton( mAtlasToolbar );
-  atlasExportToolButton->setIcon( QgsApplication::getThemeIcon( "mActionExport.svg" ) );
+  atlasExportToolButton->setIcon( QgsApplication::getThemeIcon( QStringLiteral( "mActionExport.svg" ) ) );
   atlasExportToolButton->setPopupMode( QToolButton::InstantPopup );
   atlasExportToolButton->setAutoRaise( true );
   atlasExportToolButton->setToolButtonStyle( Qt::ToolButtonIconOnly );
@@ -473,6 +585,10 @@ QgsLayoutDesignerDialog::QgsLayoutDesignerDialog( QWidget *parent, Qt::WindowFla
   {
     mView->distributeSelectedItems( QgsLayoutAligner::DistributeHCenter );
   } );
+  connect( mActionDistributeHSpace, &QAction::triggered, this, [ = ]
+  {
+    mView->distributeSelectedItems( QgsLayoutAligner::DistributeHSpace );
+  } );
   connect( mActionDistributeRight, &QAction::triggered, this, [ = ]
   {
     mView->distributeSelectedItems( QgsLayoutAligner::DistributeRight );
@@ -484,6 +600,10 @@ QgsLayoutDesignerDialog::QgsLayoutDesignerDialog( QWidget *parent, Qt::WindowFla
   connect( mActionDistributeVCenter, &QAction::triggered, this, [ = ]
   {
     mView->distributeSelectedItems( QgsLayoutAligner::DistributeVCenter );
+  } );
+  connect( mActionDistributeVSpace, &QAction::triggered, this, [ = ]
+  {
+    mView->distributeSelectedItems( QgsLayoutAligner::DistributeVSpace );
   } );
   connect( mActionDistributeBottom, &QAction::triggered, this, [ = ]
   {
@@ -586,7 +706,8 @@ QgsLayoutDesignerDialog::QgsLayoutDesignerDialog( QWidget *parent, Qt::WindowFla
   QValidator *zoomValidator = new QRegularExpressionValidator( zoomRx, mStatusZoomCombo );
   mStatusZoomCombo->lineEdit()->setValidator( zoomValidator );
 
-  Q_FOREACH ( double level, sStatusZoomLevelsList )
+  const auto constSStatusZoomLevelsList = sStatusZoomLevelsList;
+  for ( double level : constSStatusZoomLevelsList )
   {
     mStatusZoomCombo->insertItem( 0, tr( "%1%" ).arg( level * 100.0, 0, 'f', 1 ), level );
   }
@@ -640,7 +761,7 @@ QgsLayoutDesignerDialog::QgsLayoutDesignerDialog( QWidget *parent, Qt::WindowFla
   int minDockWidth( fontMetrics().width( QStringLiteral( "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" ) ) );
 
   setTabPosition( Qt::AllDockWidgetAreas, QTabWidget::North );
-  mGeneralDock = new QgsDockWidget( tr( "Layout Panel" ), this );
+  mGeneralDock = new QgsDockWidget( tr( "Layout" ), this );
   mGeneralDock->setObjectName( QStringLiteral( "LayoutDock" ) );
   mGeneralDock->setMinimumWidth( minDockWidth );
   mGeneralPropertiesStack = new QgsPanelWidgetStack();
@@ -651,14 +772,14 @@ QgsLayoutDesignerDialog::QgsLayoutDesignerDialog( QWidget *parent, Qt::WindowFla
     mGeneralDock->setUserVisible( true );
   } );
 
-  mItemDock = new QgsDockWidget( tr( "Item Properties Panel" ), this );
+  mItemDock = new QgsDockWidget( tr( "Item Properties" ), this );
   mItemDock->setObjectName( QStringLiteral( "ItemDock" ) );
   mItemDock->setMinimumWidth( minDockWidth );
   mItemPropertiesStack = new QgsPanelWidgetStack();
   mItemDock->setWidget( mItemPropertiesStack );
   mPanelsMenu->addAction( mItemDock->toggleViewAction() );
 
-  mGuideDock = new QgsDockWidget( tr( "Guides Panel" ), this );
+  mGuideDock = new QgsDockWidget( tr( "Guides" ), this );
   mGuideDock->setObjectName( QStringLiteral( "GuideDock" ) );
   mGuideDock->setMinimumWidth( minDockWidth );
   mGuideStack = new QgsPanelWidgetStack();
@@ -669,13 +790,13 @@ QgsLayoutDesignerDialog::QgsLayoutDesignerDialog( QWidget *parent, Qt::WindowFla
     mGuideDock->setUserVisible( true );
   } );
 
-  mUndoDock = new QgsDockWidget( tr( "Undo History Panel" ), this );
+  mUndoDock = new QgsDockWidget( tr( "Undo History" ), this );
   mUndoDock->setObjectName( QStringLiteral( "UndoDock" ) );
   mPanelsMenu->addAction( mUndoDock->toggleViewAction() );
   mUndoView = new QUndoView( this );
   mUndoDock->setWidget( mUndoView );
 
-  mItemsDock = new QgsDockWidget( tr( "Items Panel" ), this );
+  mItemsDock = new QgsDockWidget( tr( "Items" ), this );
   mItemsDock->setObjectName( QStringLiteral( "ItemsDock" ) );
   mPanelsMenu->addAction( mItemsDock->toggleViewAction() );
 
@@ -683,13 +804,13 @@ QgsLayoutDesignerDialog::QgsLayoutDesignerDialog( QWidget *parent, Qt::WindowFla
   mItemsTreeView = new QgsLayoutItemsListView( mItemsDock, this );
   mItemsDock->setWidget( mItemsTreeView );
 
-  mAtlasDock = new QgsDockWidget( tr( "Atlas Panel" ), this );
+  mAtlasDock = new QgsDockWidget( tr( "Atlas" ), this );
   mAtlasDock->setObjectName( QStringLiteral( "AtlasDock" ) );
-  connect( mAtlasDock, &QDockWidget::visibilityChanged, mActionAtlasSettings, &QAction::setChecked );
+  mAtlasDock->setToggleVisibilityAction( mActionAtlasSettings );
 
-  mReportDock = new QgsDockWidget( tr( "Report Organizer Panel" ), this );
+  mReportDock = new QgsDockWidget( tr( "Report Organizer" ), this );
   mReportDock->setObjectName( QStringLiteral( "ReportDock" ) );
-  connect( mReportDock, &QDockWidget::visibilityChanged, mActionReportSettings, &QAction::setChecked );
+  mReportDock->setToggleVisibilityAction( mActionReportSettings );
 
   const QList<QDockWidget *> docks = findChildren<QDockWidget *>();
   for ( QDockWidget *dock : docks )
@@ -750,6 +871,8 @@ QgsLayoutDesignerDialog::QgsLayoutDesignerDialog( QWidget *parent, Qt::WindowFla
 
   //listen out to status bar updates from the view
   connect( mView, &QgsLayoutView::statusMessage, this, &QgsLayoutDesignerDialog::statusMessageReceived );
+
+  connect( QgsProject::instance(), &QgsProject::isDirtyChanged, this, &QgsLayoutDesignerDialog::updateWindowTitle );
 }
 
 QgsAppLayoutDesignerInterface *QgsLayoutDesignerDialog::iface()
@@ -791,13 +914,23 @@ QMenu *QgsLayoutDesignerDialog::createPopupMenu()
     plabel->setAlignment( Qt::AlignHCenter );
     panelstitle->setDefaultWidget( plabel );
     menu->addAction( panelstitle );
-    Q_FOREACH ( QAction *a, panels )
+    const auto constPanels = panels;
+    for ( QAction *a : constPanels )
     {
       if ( ( a == mAtlasDock->toggleViewAction() && !dynamic_cast< QgsPrintLayout * >( mMasterLayout ) ) ||
            ( a == mReportDock->toggleViewAction() && !dynamic_cast< QgsReport * >( mMasterLayout ) ) )
       {
         a->setVisible( false );
       }
+
+      if ( !a->property( "fixed_title" ).toBool() )
+      {
+        // append " Panel" to menu text. Only ever do this once, because the actions are not unique to
+        // this single popup menu
+        a->setText( tr( "%1 Panel" ).arg( a->text() ) );
+        a->setProperty( "fixed_title", true );
+      }
+
       menu->addAction( a );
     }
     menu->addSeparator();
@@ -808,7 +941,8 @@ QMenu *QgsLayoutDesignerDialog::createPopupMenu()
     toolbarstitle->setDefaultWidget( tlabel );
     menu->addAction( toolbarstitle );
     std::sort( toolbars.begin(), toolbars.end(), cmpByText_ );
-    Q_FOREACH ( QAction *a, toolbars )
+    const auto constToolbars = toolbars;
+    for ( QAction *a : constToolbars )
     {
       if ( ( a == mAtlasToolbar->toggleViewAction() && !dynamic_cast< QgsPrintLayout * >( mMasterLayout ) ) ||
            ( a == mReportToolbar->toggleViewAction() && !dynamic_cast< QgsReport * >( mMasterLayout ) ) )
@@ -833,7 +967,11 @@ void QgsLayoutDesignerDialog::setMasterLayout( QgsMasterLayoutInterface *layout 
 
   QObject *obj = dynamic_cast< QObject * >( mMasterLayout );
   if ( obj )
-    connect( obj, &QObject::destroyed, this, &QgsLayoutDesignerDialog::close );
+    connect( obj, &QObject::destroyed, this, [ = ]
+  {
+    this->close();
+    QgsApplication::sendPostedEvents( nullptr, QEvent::DeferredDelete );
+  } );
 
   setTitle( mMasterLayout->name() );
 
@@ -945,14 +1083,26 @@ void QgsLayoutDesignerDialog::setCurrentLayout( QgsLayout *layout )
 
 void QgsLayoutDesignerDialog::setIconSizes( int size )
 {
+  QSize iconSize = QSize( size, size );
+  QSize panelIconSize = QgsGuiUtils::panelIconSize( iconSize );
+
   //Set the icon size of for all the toolbars created in the future.
-  setIconSize( QSize( size, size ) );
+  setIconSize( iconSize );
 
   //Change all current icon sizes.
   QList<QToolBar *> toolbars = findChildren<QToolBar *>();
-  Q_FOREACH ( QToolBar *toolbar, toolbars )
+  const auto constToolbars = toolbars;
+  for ( QToolBar *toolbar : constToolbars )
   {
-    toolbar->setIconSize( QSize( size, size ) );
+    QString className = toolbar->parent()->metaObject()->className();
+    if ( className == QLatin1String( "QgsLayoutDesignerDialog" ) )
+    {
+      toolbar->setIconSize( iconSize );
+    }
+    else
+    {
+      toolbar->setIconSize( panelIconSize );
+    }
   }
 }
 
@@ -996,6 +1146,7 @@ void QgsLayoutDesignerDialog::showItemOptions( QgsLayoutItem *item, bool bringPa
   if ( ! widget )
     return;
 
+  widget->setDesignerInterface( iface() );
   widget->setReportTypeString( reportTypeString() );
 
   if ( QgsLayoutPagePropertiesWidget *ppWidget = qobject_cast< QgsLayoutPagePropertiesWidget * >( widget.get() ) )
@@ -1233,7 +1384,7 @@ void QgsLayoutDesignerDialog::dropEvent( QDropEvent *event )
     // [pzion 20150805] Work around
     if ( fileName.startsWith( "/.file/id=" ) )
     {
-      QgsDebugMsg( "Mac dropped URL with /.file/id= (converting)" );
+      QgsDebugMsg( QStringLiteral( "Mac dropped URL with /.file/id= (converting)" ) );
       CFStringRef relCFStringRef =
         CFStringCreateWithCString(
           kCFAllocatorDefault,
@@ -1451,7 +1602,7 @@ void QgsLayoutDesignerDialog::updateStatusZoom()
     zoomLevel = mView->transform().m11() * 100 / scale100;
   }
   whileBlocking( mStatusZoomCombo )->lineEdit()->setText( tr( "%1%" ).arg( zoomLevel, 0, 'f', 1 ) );
-  whileBlocking( mStatusZoomSlider )->setValue( zoomLevel );
+  whileBlocking( mStatusZoomSlider )->setValue( static_cast< int >( zoomLevel ) );
 }
 
 void QgsLayoutDesignerDialog::updateStatusCursorPos( QPointF position )
@@ -1533,7 +1684,7 @@ void QgsLayoutDesignerDialog::dockVisibilityChanged( bool visible )
   }
 }
 
-void QgsLayoutDesignerDialog::undoRedoOccurredForItems( const QSet<QString> itemUuids )
+void QgsLayoutDesignerDialog::undoRedoOccurredForItems( const QSet<QString> &itemUuids )
 {
   mBlockItemOptions = true;
 
@@ -1717,6 +1868,9 @@ void QgsLayoutDesignerDialog::deleteLayout()
 
 void QgsLayoutDesignerDialog::print()
 {
+  if ( !checkBeforeExport() )
+    return;
+
   if ( containsWmsLayers() )
   {
     showWmsPrintingWarning();
@@ -1744,24 +1898,33 @@ void QgsLayoutDesignerDialog::print()
 
 
   mView->setPaintingEnabled( false );
-  QApplication::setOverrideCursor( Qt::BusyCursor );
+  QgsTemporaryCursorOverride cursorOverride( Qt::BusyCursor );
 
   QgsLayoutExporter::PrintExportSettings printSettings;
   printSettings.rasterizeWholeImage = mLayout->customProperty( QStringLiteral( "rasterize" ), false ).toBool();
+
+  QgsProxyProgressTask *proxyTask = new QgsProxyProgressTask( tr( "Printing “%1”" ).arg( mMasterLayout->name() ) );
+  QgsApplication::taskManager()->addTask( proxyTask );
 
   // force a refresh, to e.g. update data defined properties, tables, etc
   mLayout->refresh();
 
   QgsLayoutExporter exporter( mLayout );
   QString printerName = printer()->printerName();
-  switch ( exporter.print( *printer(), printSettings ) )
+  QPrinter *p = printer();
+  p->setDocName( mMasterLayout->name() );
+  QgsLayoutExporter::ExportResult result = exporter.print( *p, printSettings );
+
+  proxyTask->finalize( result == QgsLayoutExporter::Success );
+
+  switch ( result )
   {
     case QgsLayoutExporter::Success:
     {
       QString message;
       if ( !printerName.isEmpty() )
       {
-        message =   tr( "Successfully printed layout to %1." ).arg( printerName );
+        message = tr( "Successfully printed layout to %1." ).arg( printerName );
       }
       else
       {
@@ -1784,6 +1947,7 @@ void QgsLayoutDesignerDialog::print()
       {
         message = tr( "Could not create print device." );
       }
+      cursorOverride.release();
       QMessageBox::warning( this, tr( "Print Layout" ),
                             message,
                             QMessageBox::Ok,
@@ -1792,6 +1956,7 @@ void QgsLayoutDesignerDialog::print()
     }
 
     case QgsLayoutExporter::MemoryError:
+      cursorOverride.release();
       QMessageBox::warning( this, tr( "Memory Allocation Error" ),
                             tr( "Printing the layout "
                                 "resulted in a memory overflow.\n\n"
@@ -1808,31 +1973,36 @@ void QgsLayoutDesignerDialog::print()
   }
 
   mView->setPaintingEnabled( true );
-  QApplication::restoreOverrideCursor();
 }
 
 void QgsLayoutDesignerDialog::exportToRaster()
 {
+  if ( !checkBeforeExport() )
+    return;
+
   if ( containsWmsLayers() )
     showWmsPrintingWarning();
 
   if ( !showFileSizeWarning() )
     return;
 
-  QgsSettings s;
-  QString outputFileName = QgsFileUtils::stringToSafeFilename( mMasterLayout->name() );
+  QString outputFileName;
   QgsLayoutAtlas *printAtlas = atlas();
+  QString lastUsedDir = defaultExportPath();
   if ( printAtlas && printAtlas->enabled() && mActionAtlasPreview->isChecked() )
   {
-    QString lastUsedDir = s.value( QStringLiteral( "lastSaveAsImageDir" ), QDir::homePath(), QgsSettings::App ).toString();
     outputFileName = QDir( lastUsedDir ).filePath( QgsFileUtils::stringToSafeFilename( printAtlas->currentFilename() ) );
+  }
+  else
+  {
+    outputFileName = QDir( lastUsedDir ).filePath( QgsFileUtils::stringToSafeFilename( mMasterLayout->name() ) );
   }
 
 #ifdef Q_OS_MAC
   QgisApp::instance()->activateWindow();
   this->raise();
 #endif
-  QPair<QString, QString> fileNExt = QgsGuiUtils::getSaveAsImageName( this, tr( "Save Layout as" ), outputFileName );
+  QPair<QString, QString> fileNExt = QgsGuiUtils::getSaveAsImageName( this, tr( "Save Layout As" ), outputFileName );
   this->activateWindow();
 
   if ( fileNExt.first.isEmpty() )
@@ -1840,25 +2010,32 @@ void QgsLayoutDesignerDialog::exportToRaster()
     return;
   }
 
+  setLastExportPath( fileNExt.first );
+
   QgsLayoutExporter::ImageExportSettings settings;
   QSize imageSize;
   if ( !getRasterExportSettings( settings, imageSize ) )
     return;
 
   mView->setPaintingEnabled( false );
-  QApplication::setOverrideCursor( Qt::BusyCursor );
+  QgsTemporaryCursorOverride cursorOverride( Qt::BusyCursor );
+  QgsProxyProgressTask *proxyTask = new QgsProxyProgressTask( tr( "Exporting “%1”" ).arg( mMasterLayout->name() ) );
+  QgsApplication::taskManager()->addTask( proxyTask );
 
   // force a refresh, to e.g. update data defined properties, tables, etc
   mLayout->refresh();
 
   QgsLayoutExporter exporter( mLayout );
 
-  QFileInfo fi( fileNExt.first );
-  switch ( exporter.exportToImage( fileNExt.first, settings ) )
+  QgsLayoutExporter::ExportResult result = exporter.exportToImage( fileNExt.first, settings );
+
+  proxyTask->finalize( result == QgsLayoutExporter::Success );
+
+  switch ( result )
   {
     case QgsLayoutExporter::Success:
       mMessageBar->pushMessage( tr( "Export layout" ),
-                                tr( "Successfully exported layout to <a href=\"%1\">%2</a>" ).arg( QUrl::fromLocalFile( fi.path() ).toString(), QDir::toNativeSeparators( fileNExt.first ) ),
+                                tr( "Successfully exported layout to <a href=\"%1\">%2</a>" ).arg( QUrl::fromLocalFile( fileNExt.first ).toString(), QDir::toNativeSeparators( fileNExt.first ) ),
                                 Qgis::Success, 0 );
       break;
 
@@ -1870,29 +2047,33 @@ void QgsLayoutDesignerDialog::exportToRaster()
       break;
 
     case QgsLayoutExporter::FileError:
+      cursorOverride.release();
       QMessageBox::warning( this, tr( "Image Export Error" ),
-                            tr( "Cannot write to %1.\n\nThis file may be open in another application." ).arg( exporter.errorFile() ),
+                            tr( "Cannot write to %1.\n\nThis file may be open in another application." ).arg( QDir::toNativeSeparators( exporter.errorFile() ) ),
                             QMessageBox::Ok,
                             QMessageBox::Ok );
       break;
 
     case QgsLayoutExporter::MemoryError:
+      cursorOverride.release();
       QMessageBox::warning( this, tr( "Image Export Error" ),
                             tr( "Trying to create image %1 (%2×%3 @ %4dpi ) "
                                 "resulted in a memory overflow.\n\n"
                                 "Please try a lower resolution or a smaller paper size." )
-                            .arg( exporter.errorFile() ).arg( imageSize.width() ).arg( imageSize.height() ).arg( settings.dpi ),
+                            .arg( QDir::toNativeSeparators( exporter.errorFile() ) ).arg( imageSize.width() ).arg( imageSize.height() ).arg( settings.dpi ),
                             QMessageBox::Ok, QMessageBox::Ok );
       break;
 
 
   }
-  QApplication::restoreOverrideCursor();
   mView->setPaintingEnabled( true );
 }
 
 void QgsLayoutDesignerDialog::exportToPdf()
 {
+  if ( !checkBeforeExport() )
+    return;
+
   if ( containsWmsLayers() )
   {
     showWmsPrintingWarning();
@@ -1908,19 +2089,17 @@ void QgsLayoutDesignerDialog::exportToPdf()
     showForceVectorWarning();
   }
 
-  QgsSettings settings;
-  QString lastUsedFile = settings.value( QStringLiteral( "lastSaveAsPdfFile" ), QStringLiteral( "qgis.pdf" ), QgsSettings::App ).toString();
-  QFileInfo file( lastUsedFile );
+  const QString exportPath = defaultExportPath();
   QString outputFileName;
 
   QgsLayoutAtlas *printAtlas = atlas();
   if ( printAtlas && printAtlas->enabled() && mActionAtlasPreview->isChecked() )
   {
-    outputFileName = QDir( file.path() ).filePath( QgsFileUtils::stringToSafeFilename( printAtlas->currentFilename() ) + QStringLiteral( ".pdf" ) );
+    outputFileName = QDir( exportPath ).filePath( QgsFileUtils::stringToSafeFilename( printAtlas->currentFilename() ) + QStringLiteral( ".pdf" ) );
   }
   else
   {
-    outputFileName = file.path() + '/' + QgsFileUtils::stringToSafeFilename( mMasterLayout->name() ) + QStringLiteral( ".pdf" );
+    outputFileName = exportPath + '/' + QgsFileUtils::stringToSafeFilename( mMasterLayout->name() ) + QStringLiteral( ".pdf" );
   }
 
 #ifdef Q_OS_MAC
@@ -1943,31 +2122,40 @@ void QgsLayoutDesignerDialog::exportToPdf()
     outputFileName += QLatin1String( ".pdf" );
   }
 
-  settings.setValue( QStringLiteral( "lastSaveAsPdfFile" ), outputFileName, QgsSettings::App );
-
-  mView->setPaintingEnabled( false );
-  QApplication::setOverrideCursor( Qt::BusyCursor );
+  setLastExportPath( outputFileName );
 
   QgsLayoutExporter::PdfExportSettings pdfSettings;
+  if ( !getPdfExportSettings( pdfSettings ) )
+    return;
+
+  mView->setPaintingEnabled( false );
+  QgsTemporaryCursorOverride cursorOverride( Qt::BusyCursor );
+
+  QgsProxyProgressTask *proxyTask = new QgsProxyProgressTask( tr( "Exporting “%1”" ).arg( mMasterLayout->name() ) );
+  QgsApplication::taskManager()->addTask( proxyTask );
+
   pdfSettings.rasterizeWholeImage = mLayout->customProperty( QStringLiteral( "rasterize" ), false ).toBool();
-  pdfSettings.forceVectorOutput = mLayout->customProperty( QStringLiteral( "forceVector" ), false ).toBool();
 
   // force a refresh, to e.g. update data defined properties, tables, etc
   mLayout->refresh();
 
-  QFileInfo fi( outputFileName );
   QgsLayoutExporter exporter( mLayout );
-  switch ( exporter.exportToPdf( outputFileName, pdfSettings ) )
+  QgsLayoutExporter::ExportResult result = exporter.exportToPdf( outputFileName, pdfSettings );
+
+  proxyTask->finalize( result == QgsLayoutExporter::Success );
+
+  switch ( result )
   {
     case QgsLayoutExporter::Success:
     {
       mMessageBar->pushMessage( tr( "Export layout" ),
-                                tr( "Successfully exported layout to <a href=\"%1\">%2</a>" ).arg( QUrl::fromLocalFile( fi.path() ).toString(), QDir::toNativeSeparators( outputFileName ) ),
+                                tr( "Successfully exported layout to <a href=\"%1\">%2</a>" ).arg( QUrl::fromLocalFile( outputFileName ).toString(), QDir::toNativeSeparators( outputFileName ) ),
                                 Qgis::Success, 0 );
       break;
     }
 
     case QgsLayoutExporter::FileError:
+      cursorOverride.release();
       QMessageBox::warning( this, tr( "Export to PDF" ),
                             tr( "Cannot write to %1.\n\nThis file may be open in another application." ).arg( outputFileName ),
                             QMessageBox::Ok,
@@ -1975,6 +2163,7 @@ void QgsLayoutDesignerDialog::exportToPdf()
       break;
 
     case QgsLayoutExporter::PrintError:
+      cursorOverride.release();
       QMessageBox::warning( this, tr( "Export to PDF" ),
                             tr( "Could not create print device." ),
                             QMessageBox::Ok,
@@ -1983,6 +2172,7 @@ void QgsLayoutDesignerDialog::exportToPdf()
 
 
     case QgsLayoutExporter::MemoryError:
+      cursorOverride.release();
       QMessageBox::warning( this, tr( "Export to PDF" ),
                             tr( "Exporting the PDF "
                                 "resulted in a memory overflow.\n\n"
@@ -1998,11 +2188,13 @@ void QgsLayoutDesignerDialog::exportToPdf()
   }
 
   mView->setPaintingEnabled( true );
-  QApplication::restoreOverrideCursor();
 }
 
 void QgsLayoutDesignerDialog::exportToSvg()
 {
+  if ( !checkBeforeExport() )
+    return;
+
   if ( containsWmsLayers() )
   {
     showWmsPrintingWarning();
@@ -2010,19 +2202,17 @@ void QgsLayoutDesignerDialog::exportToSvg()
 
   showSvgExportWarning();
 
-  QgsSettings settings;
-  QString lastUsedFile = settings.value( QStringLiteral( "lastSaveAsSvgFile" ), QStringLiteral( "qgis.svg" ), QgsSettings::App ).toString();
-  QFileInfo file( lastUsedFile );
+  const QString defaultPath = defaultExportPath();
   QString outputFileName = QgsFileUtils::stringToSafeFilename( mMasterLayout->name() );
 
   QgsLayoutAtlas *printAtlas = atlas();
   if ( printAtlas && printAtlas->enabled() && mActionAtlasPreview->isChecked() )
   {
-    outputFileName = QDir( file.path() ).filePath( QgsFileUtils::stringToSafeFilename( printAtlas->currentFilename() + QStringLiteral( ".svg" ) ) );
+    outputFileName = QDir( defaultPath ).filePath( QgsFileUtils::stringToSafeFilename( printAtlas->currentFilename() + QStringLiteral( ".svg" ) ) );
   }
   else
   {
-    outputFileName = file.path() + '/' + QgsFileUtils::stringToSafeFilename( mMasterLayout->name() ) + QStringLiteral( ".svg" );
+    outputFileName = defaultPath + '/' + QgsFileUtils::stringToSafeFilename( mMasterLayout->name() ) + QStringLiteral( ".svg" );
   }
 
 #ifdef Q_OS_MAC
@@ -2045,36 +2235,38 @@ void QgsLayoutDesignerDialog::exportToSvg()
     outputFileName += QLatin1String( ".svg" );
   }
 
-  bool prevSettingLabelsAsOutlines = mLayout->project()->readBoolEntry( QStringLiteral( "PAL" ), QStringLiteral( "/DrawOutlineLabels" ), true );
-  settings.setValue( QStringLiteral( "lastSaveAsSvgFile" ), outputFileName, QgsSettings::App );
+  setLastExportPath( outputFileName );
 
   QgsLayoutExporter::SvgExportSettings svgSettings;
-  bool exportAsText = false;
-  if ( !getSvgExportSettings( svgSettings, exportAsText ) )
+  if ( !getSvgExportSettings( svgSettings ) )
     return;
 
-  //temporarily override label draw outlines setting
-  mLayout->project()->writeEntry( QStringLiteral( "PAL" ), QStringLiteral( "/DrawOutlineLabels" ), exportAsText );
-
   mView->setPaintingEnabled( false );
-  QApplication::setOverrideCursor( Qt::BusyCursor );
+  QgsTemporaryCursorOverride cursorOverride( Qt::BusyCursor );
+
+  QgsProxyProgressTask *proxyTask = new QgsProxyProgressTask( tr( "Exporting “%1”" ).arg( mMasterLayout->name() ) );
+  QgsApplication::taskManager()->addTask( proxyTask );
 
   // force a refresh, to e.g. update data defined properties, tables, etc
   mLayout->refresh();
 
-  QFileInfo fi( outputFileName );
   QgsLayoutExporter exporter( mLayout );
-  switch ( exporter.exportToSvg( outputFileName, svgSettings ) )
+  QgsLayoutExporter::ExportResult result = exporter.exportToSvg( outputFileName, svgSettings );
+
+  proxyTask->finalize( result == QgsLayoutExporter::Success );
+
+  switch ( result )
   {
     case QgsLayoutExporter::Success:
     {
       mMessageBar->pushMessage( tr( "Export layout" ),
-                                tr( "Successfully exported layout to <a href=\"%1\">%2</a>" ).arg( QUrl::fromLocalFile( fi.path() ).toString(), QDir::toNativeSeparators( outputFileName ) ),
+                                tr( "Successfully exported layout to <a href=\"%1\">%2</a>" ).arg( QUrl::fromLocalFile( outputFileName ).toString(), QDir::toNativeSeparators( outputFileName ) ),
                                 Qgis::Success, 0 );
       break;
     }
 
     case QgsLayoutExporter::FileError:
+      cursorOverride.release();
       QMessageBox::warning( this, tr( "Export to SVG" ),
                             tr( "Cannot write to %1.\n\nThis file may be open in another application." ).arg( outputFileName ),
                             QMessageBox::Ok,
@@ -2082,6 +2274,7 @@ void QgsLayoutDesignerDialog::exportToSvg()
       break;
 
     case QgsLayoutExporter::SvgLayerError:
+      cursorOverride.release();
       QMessageBox::warning( this, tr( "Export to SVG" ),
                             tr( "Cannot create layered SVG file %1." ).arg( outputFileName ),
                             QMessageBox::Ok,
@@ -2089,6 +2282,7 @@ void QgsLayoutDesignerDialog::exportToSvg()
       break;
 
     case QgsLayoutExporter::PrintError:
+      cursorOverride.release();
       QMessageBox::warning( this, tr( "Export to SVG" ),
                             tr( "Could not create print device." ),
                             QMessageBox::Ok,
@@ -2097,6 +2291,7 @@ void QgsLayoutDesignerDialog::exportToSvg()
 
 
     case QgsLayoutExporter::MemoryError:
+      cursorOverride.release();
       QMessageBox::warning( this, tr( "Export to SVG" ),
                             tr( "Exporting the SVG "
                                 "resulted in a memory overflow.\n\n"
@@ -2111,16 +2306,6 @@ void QgsLayoutDesignerDialog::exportToSvg()
   }
 
   mView->setPaintingEnabled( true );
-  mLayout->project()->writeEntry( QStringLiteral( "PAL" ), QStringLiteral( "/DrawOutlineLabels" ), prevSettingLabelsAsOutlines );
-  QApplication::restoreOverrideCursor();
-}
-
-void QgsLayoutDesignerDialog::showAtlasSettings( bool checked )
-{
-  if ( !mAtlasDock )
-    return;
-
-  mAtlasDock->setUserVisible( checked );
 }
 
 void QgsLayoutDesignerDialog::atlasPreviewTriggered( bool checked )
@@ -2266,6 +2451,9 @@ void QgsLayoutDesignerDialog::atlasLast()
 
 void QgsLayoutDesignerDialog::printAtlas()
 {
+  if ( !checkBeforeExport() )
+    return;
+
   QgsLayoutAtlas *printAtlas = atlas();
   if ( !printAtlas || !printAtlas->enabled() )
     return;
@@ -2298,7 +2486,7 @@ void QgsLayoutDesignerDialog::printAtlas()
   }
 
   mView->setPaintingEnabled( false );
-  QApplication::setOverrideCursor( Qt::BusyCursor );
+  QgsTemporaryCursorOverride cursorOverride( Qt::BusyCursor );
 
   QgsLayoutExporter::PrintExportSettings printSettings;
   printSettings.rasterizeWholeImage = mLayout->customProperty( QStringLiteral( "rasterize" ), false ).toBool();
@@ -2307,10 +2495,15 @@ void QgsLayoutDesignerDialog::printAtlas()
   std::unique_ptr< QgsFeedback > feedback = qgis::make_unique< QgsFeedback >();
   std::unique_ptr< QProgressDialog > progressDialog = qgis::make_unique< QProgressDialog >( tr( "Printing maps…" ), tr( "Abort" ), 0, 100, this );
   progressDialog->setWindowTitle( tr( "Printing Atlas" ) );
+
+  QgsProxyProgressTask *proxyTask = new QgsProxyProgressTask( tr( "Printing “%1”" ).arg( mMasterLayout->name() ) );
+
   connect( feedback.get(), &QgsFeedback::progressChanged, this, [ & ]( double progress )
   {
-    progressDialog->setValue( progress );
+    progressDialog->setValue( static_cast< int >( progress ) );
     progressDialog->setLabelText( feedback->property( "progress" ).toString() ) ;
+
+    proxyTask->setProxyProgress( progress );
 
 #ifdef Q_OS_LINUX
     // For some reason on Windows hasPendingEvents() always return true,
@@ -2330,8 +2523,16 @@ void QgsLayoutDesignerDialog::printAtlas()
     feedback->cancel();
   } );
 
-  QString printerName = printer()->printerName();
-  switch ( QgsLayoutExporter::print( printAtlas, *printer(), printSettings, error, feedback.get() ) )
+  QgsApplication::taskManager()->addTask( proxyTask );
+
+  QPrinter *p = printer();
+  p->setDocName( mMasterLayout->name() );
+  QString printerName = p->printerName();
+  QgsLayoutExporter::ExportResult result = QgsLayoutExporter::print( printAtlas, *p, printSettings, error, feedback.get() );
+
+  proxyTask->finalize( result == QgsLayoutExporter::Success );
+
+  switch ( result )
   {
     case QgsLayoutExporter::Success:
     {
@@ -2361,6 +2562,7 @@ void QgsLayoutDesignerDialog::printAtlas()
       {
         message = tr( "Could not create print device." );
       }
+      cursorOverride.release();
       QMessageBox::warning( this, tr( "Print Atlas" ),
                             message,
                             QMessageBox::Ok,
@@ -2369,6 +2571,7 @@ void QgsLayoutDesignerDialog::printAtlas()
     }
 
     case QgsLayoutExporter::MemoryError:
+      cursorOverride.release();
       QMessageBox::warning( this, tr( "Print Atlas" ),
                             tr( "Printing the layout "
                                 "resulted in a memory overflow.\n\n"
@@ -2377,6 +2580,7 @@ void QgsLayoutDesignerDialog::printAtlas()
       break;
 
     case QgsLayoutExporter::IteratorError:
+      cursorOverride.release();
       QMessageBox::warning( this, tr( "Print Atlas" ),
                             tr( "Error encountered while printing atlas." ),
                             QMessageBox::Ok,
@@ -2391,11 +2595,13 @@ void QgsLayoutDesignerDialog::printAtlas()
   }
 
   mView->setPaintingEnabled( true );
-  QApplication::restoreOverrideCursor();
 }
 
 void QgsLayoutDesignerDialog::exportAtlasToRaster()
 {
+  if ( !checkBeforeExport() )
+    return;
+
   QgsLayoutAtlas *printAtlas = atlas();
   if ( !printAtlas || !printAtlas->enabled() )
     return;
@@ -2417,8 +2623,7 @@ void QgsLayoutDesignerDialog::exportAtlasToRaster()
     printAtlas->setFilenameExpression( QStringLiteral( "'output_'||@atlas_featurenumber" ), error );
   }
 
-  QgsSettings s;
-  QString lastUsedDir = s.value( QStringLiteral( "lastSaveAtlasAsImagesDir" ), QDir::homePath(), QgsSettings::App ).toString();
+  QString lastUsedDir = defaultExportPath();
 
   QFileDialog dlg( this, tr( "Export Atlas to Directory" ) );
   dlg.setFileMode( QFileDialog::Directory );
@@ -2441,7 +2646,7 @@ void QgsLayoutDesignerDialog::exportAtlasToRaster()
   {
     return;
   }
-  s.setValue( QStringLiteral( "lastSaveAtlasAsImagesDir" ), dir, QgsSettings::App );
+  setLastExportPath( dir );
 
   // test directory (if it exists and is writable)
   if ( !QDir( dir ).exists() || !QFileInfo( dir ).isWritable() )
@@ -2470,16 +2675,21 @@ void QgsLayoutDesignerDialog::exportAtlasToRaster()
     return;
 
   mView->setPaintingEnabled( false );
-  QApplication::setOverrideCursor( Qt::BusyCursor );
+  QgsTemporaryCursorOverride cursorOverride( Qt::BusyCursor );
 
   QString error;
   std::unique_ptr< QgsFeedback > feedback = qgis::make_unique< QgsFeedback >();
   std::unique_ptr< QProgressDialog > progressDialog = qgis::make_unique< QProgressDialog >( tr( "Rendering maps…" ), tr( "Abort" ), 0, 100, this );
   progressDialog->setWindowTitle( tr( "Exporting Atlas" ) );
+
+  QgsProxyProgressTask *proxyTask = new QgsProxyProgressTask( tr( "Exporting “%1”" ).arg( mMasterLayout->name() ) );
+
   connect( feedback.get(), &QgsFeedback::progressChanged, this, [ & ]( double progress )
   {
-    progressDialog->setValue( progress );
+    progressDialog->setValue( static_cast< int >( progress ) );
     progressDialog->setLabelText( feedback->property( "progress" ).toString() ) ;
+
+    proxyTask->setProxyProgress( progress );
 
 #ifdef Q_OS_LINUX
     // For some reason on Windows hasPendingEvents() always return true,
@@ -2499,9 +2709,14 @@ void QgsLayoutDesignerDialog::exportAtlasToRaster()
     feedback->cancel();
   } );
 
+  QgsApplication::taskManager()->addTask( proxyTask );
+
   QString fileName = QDir( dir ).filePath( QStringLiteral( "atlas" ) ); // filename is overridden by atlas
   QgsLayoutExporter::ExportResult result = QgsLayoutExporter::exportToImage( printAtlas, fileName, fileExt, settings, error, feedback.get() );
-  QApplication::restoreOverrideCursor();
+
+  proxyTask->finalize( result == QgsLayoutExporter::Success );
+
+  cursorOverride.release();
 
   switch ( result )
   {
@@ -2545,6 +2760,9 @@ void QgsLayoutDesignerDialog::exportAtlasToRaster()
 
 void QgsLayoutDesignerDialog::exportAtlasToSvg()
 {
+  if ( !checkBeforeExport() )
+    return;
+
   QgsLayoutAtlas *printAtlas = atlas();
   if ( !printAtlas || !printAtlas->enabled() )
     return;
@@ -2572,8 +2790,7 @@ void QgsLayoutDesignerDialog::exportAtlasToSvg()
     printAtlas->setFilenameExpression( QStringLiteral( "'output_'||@atlas_featurenumber" ), error );
   }
 
-  QgsSettings s;
-  QString lastUsedDir = s.value( QStringLiteral( "lastSaveAtlasAsSvgDir" ), QDir::homePath(), QgsSettings::App ).toString();
+  QString lastUsedDir = defaultExportPath();
 
   QFileDialog dlg( this, tr( "Export Atlas to Directory" ) );
   dlg.setFileMode( QFileDialog::Directory );
@@ -2599,7 +2816,7 @@ void QgsLayoutDesignerDialog::exportAtlasToSvg()
   {
     return;
   }
-  s.setValue( QStringLiteral( "lastSaveAtlasAsSvgDir" ), dir, QgsSettings::App );
+  setLastExportPath( dir );
 
   // test directory (if it exists and is writable)
   if ( !QDir( dir ).exists() || !QFileInfo( dir ).isWritable() )
@@ -2611,26 +2828,26 @@ void QgsLayoutDesignerDialog::exportAtlasToSvg()
     return;
   }
 
-  bool prevSettingLabelsAsOutlines = mLayout->project()->readBoolEntry( QStringLiteral( "PAL" ), QStringLiteral( "/DrawOutlineLabels" ), true );
   QgsLayoutExporter::SvgExportSettings svgSettings;
-  bool exportAsText = false;
-  if ( !getSvgExportSettings( svgSettings, exportAsText ) )
+  if ( !getSvgExportSettings( svgSettings ) )
     return;
 
-  //temporarily override label draw outlines setting
-  mLayout->project()->writeEntry( QStringLiteral( "PAL" ), QStringLiteral( "/DrawOutlineLabels" ), exportAsText );
-
   mView->setPaintingEnabled( false );
-  QApplication::setOverrideCursor( Qt::BusyCursor );
+  QgsTemporaryCursorOverride cursorOverride( Qt::BusyCursor );
 
   QString error;
   std::unique_ptr< QgsFeedback > feedback = qgis::make_unique< QgsFeedback >();
   std::unique_ptr< QProgressDialog > progressDialog = qgis::make_unique< QProgressDialog >( tr( "Rendering maps…" ), tr( "Abort" ), 0, 100, this );
   progressDialog->setWindowTitle( tr( "Exporting Atlas" ) );
+
+  QgsProxyProgressTask *proxyTask = new QgsProxyProgressTask( tr( "Exporting “%1”" ).arg( mMasterLayout->name() ) );
+
   connect( feedback.get(), &QgsFeedback::progressChanged, this, [ & ]( double progress )
   {
-    progressDialog->setValue( progress );
+    progressDialog->setValue( static_cast< int >( progress ) );
     progressDialog->setLabelText( feedback->property( "progress" ).toString() ) ;
+
+    proxyTask->setProxyProgress( progress );
 
 #ifdef Q_OS_LINUX
     // For some reason on Windows hasPendingEvents() always return true,
@@ -2650,10 +2867,14 @@ void QgsLayoutDesignerDialog::exportAtlasToSvg()
     feedback->cancel();
   } );
 
+  QgsApplication::taskManager()->addTask( proxyTask );
+
   QString filename = QDir( dir ).filePath( QStringLiteral( "atlas" ) ); // filename is overridden by atlas
   QgsLayoutExporter::ExportResult result = QgsLayoutExporter::exportToSvg( printAtlas, filename, svgSettings, error, feedback.get() );
 
-  QApplication::restoreOverrideCursor();
+  proxyTask->finalize( result == QgsLayoutExporter::Success );
+
+  cursorOverride.release();
   switch ( result )
   {
     case QgsLayoutExporter::Success:
@@ -2706,11 +2927,13 @@ void QgsLayoutDesignerDialog::exportAtlasToSvg()
   }
 
   mView->setPaintingEnabled( true );
-  mLayout->project()->writeEntry( QStringLiteral( "PAL" ), QStringLiteral( "/DrawOutlineLabels" ), prevSettingLabelsAsOutlines );
 }
 
 void QgsLayoutDesignerDialog::exportAtlasToPdf()
 {
+  if ( !checkBeforeExport() )
+    return;
+
   QgsLayoutAtlas *printAtlas = atlas();
   if ( !printAtlas || !printAtlas->enabled() )
     return;
@@ -2734,12 +2957,11 @@ void QgsLayoutDesignerDialog::exportAtlasToPdf()
   bool singleFile = mLayout->customProperty( QStringLiteral( "singleFile" ), true ).toBool();
 
   QString outputFileName;
-  QgsSettings settings;
+  QString dir;
   if ( singleFile )
   {
-    QString lastUsedFile = settings.value( QStringLiteral( "lastSaveAsPdfFile" ), QStringLiteral( "qgis.pdf" ), QgsSettings::App ).toString();
-    QFileInfo file( lastUsedFile );
-    outputFileName = file.path() + '/' + QgsFileUtils::stringToSafeFilename( mMasterLayout->name() ) + QStringLiteral( ".pdf" );
+    const QString defaultPath = defaultExportPath();
+    outputFileName = defaultPath + '/' + QgsFileUtils::stringToSafeFilename( mMasterLayout->name() ) + QStringLiteral( ".pdf" );
 
 #ifdef Q_OS_MAC
     QgisApp::instance()->activateWindow();
@@ -2760,7 +2982,7 @@ void QgsLayoutDesignerDialog::exportAtlasToPdf()
     {
       outputFileName += QLatin1String( ".pdf" );
     }
-    settings.setValue( QStringLiteral( "lastSaveAsPdfFile" ), outputFileName, QgsSettings::App );
+    setLastExportPath( outputFileName );
   }
   else
   {
@@ -2779,7 +3001,7 @@ void QgsLayoutDesignerDialog::exportAtlasToPdf()
     }
 
 
-    QString lastUsedDir = settings.value( QStringLiteral( "lastSaveAtlasAsPdfDir" ), QDir::homePath(), QgsSettings::App ).toString();
+    const QString lastUsedDir = defaultExportPath();
 
     QFileDialog dlg( this, tr( "Export Atlas to Directory" ) );
     dlg.setFileMode( QFileDialog::Directory );
@@ -2800,12 +3022,12 @@ void QgsLayoutDesignerDialog::exportAtlasToPdf()
     {
       return;
     }
-    QString dir = files.at( 0 );
+    dir = files.at( 0 );
     if ( dir.isEmpty() )
     {
       return;
     }
-    settings.setValue( QStringLiteral( "lastSaveAtlasAsPdfDir" ), dir, QgsSettings::App );
+    setLastExportPath( dir );
 
     // test directory (if it exists and is writable)
     if ( !QDir( dir ).exists() || !QFileInfo( dir ).isWritable() )
@@ -2820,23 +3042,27 @@ void QgsLayoutDesignerDialog::exportAtlasToPdf()
     outputFileName = QDir( dir ).filePath( QStringLiteral( "atlas" ) ); // filename is overridden by atlas
   }
 
-  mView->setPaintingEnabled( false );
-  QApplication::setOverrideCursor( Qt::BusyCursor );
-
   QgsLayoutExporter::PdfExportSettings pdfSettings;
-  pdfSettings.rasterizeWholeImage = mLayout->customProperty( QStringLiteral( "rasterize" ), false ).toBool();
-  pdfSettings.forceVectorOutput = mLayout->customProperty( QStringLiteral( "forceVector" ), false ).toBool();
+  if ( !getPdfExportSettings( pdfSettings ) )
+    return;
 
-  QFileInfo fi( outputFileName );
+  mView->setPaintingEnabled( false );
+  QgsTemporaryCursorOverride cursorOverride( Qt::BusyCursor );
+  pdfSettings.rasterizeWholeImage = mLayout->customProperty( QStringLiteral( "rasterize" ), false ).toBool();
 
   QString error;
   std::unique_ptr< QgsFeedback > feedback = qgis::make_unique< QgsFeedback >();
   std::unique_ptr< QProgressDialog > progressDialog = qgis::make_unique< QProgressDialog >( tr( "Rendering maps…" ), tr( "Abort" ), 0, 100, this );
+
+  QgsProxyProgressTask *proxyTask = new QgsProxyProgressTask( tr( "Exporting “%1”" ).arg( mMasterLayout->name() ) );
+
   progressDialog->setWindowTitle( tr( "Exporting Atlas" ) );
   connect( feedback.get(), &QgsFeedback::progressChanged, this, [ & ]( double progress )
   {
-    progressDialog->setValue( progress );
+    progressDialog->setValue( static_cast< int >( progress ) );
     progressDialog->setLabelText( feedback->property( "progress" ).toString() ) ;
+
+    proxyTask->setProxyProgress( progress );
 
 #ifdef Q_OS_LINUX
     // For some reason on Windows hasPendingEvents() always return true,
@@ -2856,6 +3082,8 @@ void QgsLayoutDesignerDialog::exportAtlasToPdf()
     feedback->cancel();
   } );
 
+  QgsApplication::taskManager()->addTask( proxyTask );
+
   QgsLayoutExporter::ExportResult result = QgsLayoutExporter::Success;
   if ( singleFile )
   {
@@ -2866,6 +3094,9 @@ void QgsLayoutDesignerDialog::exportAtlasToPdf()
     result = QgsLayoutExporter::exportToPdfs( printAtlas, outputFileName, pdfSettings, error, feedback.get() );
   }
 
+  proxyTask->finalize( result == QgsLayoutExporter::Success );
+
+  cursorOverride.release();
   switch ( result )
   {
     case QgsLayoutExporter::Success:
@@ -2873,13 +3104,13 @@ void QgsLayoutDesignerDialog::exportAtlasToPdf()
       if ( singleFile )
       {
         mMessageBar->pushMessage( tr( "Export atlas" ),
-                                  tr( "Successfully exported atlas to <a href=\"%1\">%2</a>" ).arg( QUrl::fromLocalFile( fi.path() ).toString(), QDir::toNativeSeparators( outputFileName ) ),
+                                  tr( "Successfully exported atlas to <a href=\"%1\">%2</a>" ).arg( QUrl::fromLocalFile( outputFileName ).toString(), QDir::toNativeSeparators( outputFileName ) ),
                                   Qgis::Success, 0 );
       }
       else
       {
         mMessageBar->pushMessage( tr( "Export atlas" ),
-                                  tr( "Successfully exported atlas to <a href=\"%1\">%2</a>" ).arg( QUrl::fromLocalFile( outputFileName ).toString(), QDir::toNativeSeparators( outputFileName ) ),
+                                  tr( "Successfully exported atlas to <a href=\"%1\">%2</a>" ).arg( QUrl::fromLocalFile( dir ).toString(), QDir::toNativeSeparators( dir ) ),
                                   Qgis::Success, 0 );
       }
       break;
@@ -2924,21 +3155,24 @@ void QgsLayoutDesignerDialog::exportAtlasToPdf()
   }
 
   mView->setPaintingEnabled( true );
-  QApplication::restoreOverrideCursor();
 }
 
 void QgsLayoutDesignerDialog::exportReportToRaster()
 {
-  QgsSettings s;
+  if ( !checkBeforeExport() )
+    return;
+
   QString outputFileName = QgsFileUtils::stringToSafeFilename( mMasterLayout->name() );
 
-  QPair<QString, QString> fileNExt = QgsGuiUtils::getSaveAsImageName( this, tr( "Save Report as" ), outputFileName );
+  QPair<QString, QString> fileNExt = QgsGuiUtils::getSaveAsImageName( this, tr( "Save Report As" ), outputFileName );
   this->activateWindow();
 
   if ( fileNExt.first.isEmpty() )
   {
     return;
   }
+
+  setLastExportPath( fileNExt.first );
 
 #ifdef Q_OS_MAC
   QgisApp::instance()->activateWindow();
@@ -2951,12 +3185,15 @@ void QgsLayoutDesignerDialog::exportReportToRaster()
     return;
 
   mView->setPaintingEnabled( false );
-  QApplication::setOverrideCursor( Qt::BusyCursor );
+  QgsTemporaryCursorOverride cursorOverride( Qt::BusyCursor );
 
   QString error;
   std::unique_ptr< QgsFeedback > feedback = qgis::make_unique< QgsFeedback >();
   std::unique_ptr< QProgressDialog > progressDialog = qgis::make_unique< QProgressDialog >( tr( "Rendering report…" ), tr( "Abort" ), 0, 0, this );
   progressDialog->setWindowTitle( tr( "Exporting Report" ) );
+
+  QgsProxyProgressTask *proxyTask = new QgsProxyProgressTask( tr( "Exporting “%1”" ).arg( mMasterLayout->name() ) );
+
   connect( feedback.get(), &QgsFeedback::progressChanged, this, [ & ]( double )
   {
     //progressDialog->setValue( progress );
@@ -2980,11 +3217,15 @@ void QgsLayoutDesignerDialog::exportReportToRaster()
     feedback->cancel();
   } );
 
+  QgsApplication::taskManager()->addTask( proxyTask );
+
   QFileInfo fi( fileNExt.first );
   QString dir = fi.path();
   QString fileName = dir + '/' + fi.baseName();
-  QgsLayoutExporter::ExportResult result = QgsLayoutExporter::exportToImage( dynamic_cast< QgsReport * >( mMasterLayout ), fileName, fileNExt.second, settings, error, feedback.get() );
-  QApplication::restoreOverrideCursor();
+  QgsLayoutExporter::ExportResult result = QgsLayoutExporter::exportToImage( static_cast< QgsReport * >( mMasterLayout ), fileName, fileNExt.second, settings, error, feedback.get() );
+
+  proxyTask->finalize( result == QgsLayoutExporter::Success );
+  cursorOverride.release();
 
   switch ( result )
   {
@@ -3028,12 +3269,13 @@ void QgsLayoutDesignerDialog::exportReportToRaster()
 
 void QgsLayoutDesignerDialog::exportReportToSvg()
 {
+  if ( !checkBeforeExport() )
+    return;
+
   showSvgExportWarning();
 
-  QgsSettings settings;
-  QString lastUsedFile = settings.value( QStringLiteral( "lastSaveAsSvgFile" ), QStringLiteral( "qgis.svg" ), QgsSettings::App ).toString();
-  QFileInfo file( lastUsedFile );
-  QString outputFileName = file.path() + '/' + QgsFileUtils::stringToSafeFilename( mMasterLayout->name() ) + QStringLiteral( ".svg" );
+  const QString defaultPath = defaultExportPath();
+  QString outputFileName = defaultPath + '/' + QgsFileUtils::stringToSafeFilename( mMasterLayout->name() ) + QStringLiteral( ".svg" );
 
   outputFileName = QFileDialog::getSaveFileName(
                      this,
@@ -3054,24 +3296,22 @@ void QgsLayoutDesignerDialog::exportReportToSvg()
   QgisApp::instance()->activateWindow();
   this->raise();
 #endif
-  bool prevSettingLabelsAsOutlines = mMasterLayout->layoutProject()->readBoolEntry( QStringLiteral( "PAL" ), QStringLiteral( "/DrawOutlineLabels" ), true );
-  settings.setValue( QStringLiteral( "lastSaveAsSvgFile" ), outputFileName, QgsSettings::App );
+  setLastExportPath( outputFileName );
 
   QgsLayoutExporter::SvgExportSettings svgSettings;
-  bool exportAsText = false;
-  if ( !getSvgExportSettings( svgSettings, exportAsText ) )
+  if ( !getSvgExportSettings( svgSettings ) )
     return;
 
-  //temporarily override label draw outlines setting
-  mMasterLayout->layoutProject()->writeEntry( QStringLiteral( "PAL" ), QStringLiteral( "/DrawOutlineLabels" ), exportAsText );
-
   mView->setPaintingEnabled( false );
-  QApplication::setOverrideCursor( Qt::BusyCursor );
+  QgsTemporaryCursorOverride cursorOverride( Qt::BusyCursor );
 
   QString error;
   std::unique_ptr< QgsFeedback > feedback = qgis::make_unique< QgsFeedback >();
   std::unique_ptr< QProgressDialog > progressDialog = qgis::make_unique< QProgressDialog >( tr( "Rendering maps…" ), tr( "Abort" ), 0, 0, this );
   progressDialog->setWindowTitle( tr( "Exporting Report" ) );
+
+  QgsProxyProgressTask *proxyTask = new QgsProxyProgressTask( tr( "Exporting “%1”" ).arg( mMasterLayout->name() ) );
+
   connect( feedback.get(), &QgsFeedback::progressChanged, this, [ & ]( double )
   {
     //progressDialog->setValue( progress );
@@ -3095,12 +3335,15 @@ void QgsLayoutDesignerDialog::exportReportToSvg()
     feedback->cancel();
   } );
 
+  QgsApplication::taskManager()->addTask( proxyTask );
+
   QFileInfo fi( outputFileName );
   QString outFile = fi.path() + '/' + fi.baseName();
   QString dir = fi.path();
-  QgsLayoutExporter::ExportResult result = QgsLayoutExporter::exportToSvg( dynamic_cast< QgsReport * >( mMasterLayout ), outFile, svgSettings, error, feedback.get() );
+  QgsLayoutExporter::ExportResult result = QgsLayoutExporter::exportToSvg( static_cast< QgsReport * >( mMasterLayout ), outFile, svgSettings, error, feedback.get() );
 
-  QApplication::restoreOverrideCursor();
+  proxyTask->finalize( result == QgsLayoutExporter::Success );
+  cursorOverride.release();
   switch ( result )
   {
     case QgsLayoutExporter::Success:
@@ -3153,17 +3396,16 @@ void QgsLayoutDesignerDialog::exportReportToSvg()
   }
 
   mView->setPaintingEnabled( true );
-  mMasterLayout->layoutProject()->writeEntry( QStringLiteral( "PAL" ), QStringLiteral( "/DrawOutlineLabels" ), prevSettingLabelsAsOutlines );
 }
 
 void QgsLayoutDesignerDialog::exportReportToPdf()
 {
-  QgsSettings settings;
+  if ( !checkBeforeExport() )
+    return;
 
-  QString lastUsedFile = settings.value( QStringLiteral( "lastSaveAsPdfFile" ), QStringLiteral( "qgis.pdf" ), QgsSettings::App ).toString();
-  QFileInfo file( lastUsedFile );
+  const QString defaultPath = defaultExportPath();
 
-  QString outputFileName = file.path() + '/' + QgsFileUtils::stringToSafeFilename( mMasterLayout->name() ) + QStringLiteral( ".pdf" );
+  QString outputFileName = defaultPath + '/' + QgsFileUtils::stringToSafeFilename( mMasterLayout->name() ) + QStringLiteral( ".pdf" );
 
 #ifdef Q_OS_MAC
   QgisApp::instance()->activateWindow();
@@ -3184,28 +3426,29 @@ void QgsLayoutDesignerDialog::exportReportToPdf()
   {
     outputFileName += QLatin1String( ".pdf" );
   }
-  settings.setValue( QStringLiteral( "lastSaveAsPdfFile" ), outputFileName, QgsSettings::App );
-
-  mView->setPaintingEnabled( false );
-  QApplication::setOverrideCursor( Qt::BusyCursor );
+  setLastExportPath( outputFileName );
 
   bool rasterize = false;
-  bool forceVectorOutput = false;
   if ( mLayout )
   {
     rasterize = mLayout->customProperty( QStringLiteral( "rasterize" ), false ).toBool();
-    forceVectorOutput = mLayout->customProperty( QStringLiteral( "forceVector" ), false ).toBool();
   }
   QgsLayoutExporter::PdfExportSettings pdfSettings;
-  pdfSettings.rasterizeWholeImage = rasterize;
-  pdfSettings.forceVectorOutput = forceVectorOutput;
+  if ( !getPdfExportSettings( pdfSettings ) )
+    return;
 
-  QFileInfo fi( outputFileName );
+  mView->setPaintingEnabled( false );
+  QgsTemporaryCursorOverride cursorOverride( Qt::BusyCursor );
+
+  pdfSettings.rasterizeWholeImage = rasterize;
 
   QString error;
   std::unique_ptr< QgsFeedback > feedback = qgis::make_unique< QgsFeedback >();
   std::unique_ptr< QProgressDialog > progressDialog = qgis::make_unique< QProgressDialog >( tr( "Rendering maps…" ), tr( "Abort" ), 0, 0, this );
   progressDialog->setWindowTitle( tr( "Exporting Report" ) );
+
+  QgsProxyProgressTask *proxyTask = new QgsProxyProgressTask( tr( "Exporting “%1”" ).arg( mMasterLayout->name() ) );
+
   connect( feedback.get(), &QgsFeedback::progressChanged, this, [ & ]( double )
   {
     //progressDialog->setValue( progress );
@@ -3229,14 +3472,19 @@ void QgsLayoutDesignerDialog::exportReportToPdf()
     feedback->cancel();
   } );
 
-  QgsLayoutExporter::ExportResult result = QgsLayoutExporter::exportToPdf( dynamic_cast< QgsReport * >( mMasterLayout ), outputFileName, pdfSettings, error, feedback.get() );
+  QgsApplication::taskManager()->addTask( proxyTask );
+
+  QgsLayoutExporter::ExportResult result = QgsLayoutExporter::exportToPdf( static_cast< QgsReport * >( mMasterLayout ), outputFileName, pdfSettings, error, feedback.get() );
+
+  proxyTask->finalize( result == QgsLayoutExporter::Success );
+  cursorOverride.release();
 
   switch ( result )
   {
     case QgsLayoutExporter::Success:
     {
       mMessageBar->pushMessage( tr( "Export report" ),
-                                tr( "Successfully exported report to <a href=\"%1\">%2</a>" ).arg( QUrl::fromLocalFile( fi.path() ).toString(), QDir::toNativeSeparators( outputFileName ) ),
+                                tr( "Successfully exported report to <a href=\"%1\">%2</a>" ).arg( QUrl::fromLocalFile( outputFileName ).toString(), QDir::toNativeSeparators( outputFileName ) ),
                                 Qgis::Success, 0 );
       break;
     }
@@ -3280,11 +3528,13 @@ void QgsLayoutDesignerDialog::exportReportToPdf()
   }
 
   mView->setPaintingEnabled( true );
-  QApplication::restoreOverrideCursor();
 }
 
 void QgsLayoutDesignerDialog::printReport()
 {
+  if ( !checkBeforeExport() )
+    return;
+
   QPrintDialog printDialog( printer(), nullptr );
   if ( printDialog.exec() != QDialog::Accepted )
   {
@@ -3292,7 +3542,7 @@ void QgsLayoutDesignerDialog::printReport()
   }
 
   mView->setPaintingEnabled( false );
-  QApplication::setOverrideCursor( Qt::BusyCursor );
+  QgsTemporaryCursorOverride cursorOverride( Qt::BusyCursor );
 
   QgsLayoutExporter::PrintExportSettings printSettings;
   if ( mLayout )
@@ -3302,6 +3552,9 @@ void QgsLayoutDesignerDialog::printReport()
   std::unique_ptr< QgsFeedback > feedback = qgis::make_unique< QgsFeedback >();
   std::unique_ptr< QProgressDialog > progressDialog = qgis::make_unique< QProgressDialog >( tr( "Printing maps…" ), tr( "Abort" ), 0, 0, this );
   progressDialog->setWindowTitle( tr( "Printing Report" ) );
+
+  QgsProxyProgressTask *proxyTask = new QgsProxyProgressTask( tr( "Printing “%1”" ).arg( mMasterLayout->name() ) );
+
   connect( feedback.get(), &QgsFeedback::progressChanged, this, [ & ]( double )
   {
     //progressDialog->setValue( progress );
@@ -3325,15 +3578,23 @@ void QgsLayoutDesignerDialog::printReport()
     feedback->cancel();
   } );
 
-  QString printerName = printer()->printerName();
-  switch ( QgsLayoutExporter::print( dynamic_cast< QgsReport * >( mMasterLayout ), *printer(), printSettings, error, feedback.get() ) )
+  QgsApplication::taskManager()->addTask( proxyTask );
+
+  QPrinter *p = printer();
+  QString printerName = p->printerName();
+  p->setDocName( mMasterLayout->name() );
+  QgsLayoutExporter::ExportResult result = QgsLayoutExporter::print( static_cast< QgsReport * >( mMasterLayout ), *p, printSettings, error, feedback.get() );
+
+  proxyTask->finalize( result == QgsLayoutExporter::Success );
+
+  switch ( result )
   {
     case QgsLayoutExporter::Success:
     {
       QString message;
       if ( !printerName.isEmpty() )
       {
-        message =   tr( "Successfully printed report to %1." ).arg( printerName );
+        message = tr( "Successfully printed report to %1." ).arg( printerName );
       }
       else
       {
@@ -3356,6 +3617,7 @@ void QgsLayoutDesignerDialog::printReport()
       {
         message = tr( "Could not create print device." );
       }
+      cursorOverride.release();
       QMessageBox::warning( this, tr( "Print Report" ),
                             message,
                             QMessageBox::Ok,
@@ -3364,6 +3626,7 @@ void QgsLayoutDesignerDialog::printReport()
     }
 
     case QgsLayoutExporter::MemoryError:
+      cursorOverride.release();
       QMessageBox::warning( this, tr( "Print Report" ),
                             tr( "Printing the report "
                                 "resulted in a memory overflow.\n\n"
@@ -3372,6 +3635,7 @@ void QgsLayoutDesignerDialog::printReport()
       break;
 
     case QgsLayoutExporter::IteratorError:
+      cursorOverride.release();
       QMessageBox::warning( this, tr( "Print Report" ),
                             tr( "Error encountered while printing report." ),
                             QMessageBox::Ok,
@@ -3386,15 +3650,6 @@ void QgsLayoutDesignerDialog::printReport()
   }
 
   mView->setPaintingEnabled( true );
-  QApplication::restoreOverrideCursor();
-}
-
-void QgsLayoutDesignerDialog::showReportSettings( bool checked )
-{
-  if ( !mReportDock )
-    return;
-
-  mReportDock->setUserVisible( checked );
 }
 
 void QgsLayoutDesignerDialog::pageSetup()
@@ -3476,12 +3731,12 @@ void QgsLayoutDesignerDialog::restoreWindowState()
 
   if ( !restoreState( settings.value( QStringLiteral( "LayoutDesigner/state" ), QByteArray::fromRawData( reinterpret_cast< const char * >( defaultLayerDesignerUIstate ), sizeof defaultLayerDesignerUIstate ), QgsSettings::App ).toByteArray() ) )
   {
-    QgsDebugMsg( "restore of layout UI state failed" );
+    QgsDebugMsg( QStringLiteral( "restore of layout UI state failed" ) );
   }
   // restore window geometry
   if ( !restoreGeometry( settings.value( QStringLiteral( "LayoutDesigner/geometry" ), QgsSettings::App ).toByteArray() ) )
   {
-    QgsDebugMsg( "restore of layout UI geometry failed" );
+    QgsDebugMsg( QStringLiteral( "restore of layout UI geometry failed" ) );
     // default to 80% of screen size, at 10% from top left corner
     resize( QDesktopWidget().availableGeometry( this ).size() * 0.8 );
     QSize pos = QDesktopWidget().availableGeometry( this ).size() * 0.1;
@@ -3530,6 +3785,9 @@ void QgsLayoutDesignerDialog::createLayoutPropertiesWidget()
 void QgsLayoutDesignerDialog::createAtlasWidget()
 {
   QgsPrintLayout *printLayout = dynamic_cast< QgsPrintLayout * >( mMasterLayout );
+  if ( !printLayout )
+    return;
+
   QgsLayoutAtlas *atlas = printLayout->atlas();
   QgsLayoutAtlasWidget *atlasWidget = new QgsLayoutAtlasWidget( mAtlasDock, printLayout );
   atlasWidget->setMessageBar( mMessageBar );
@@ -3617,10 +3875,9 @@ void QgsLayoutDesignerDialog::showSvgExportWarning()
     m.setCheckBoxVisible( true );
     m.setCheckBoxQgsSettingsLabel( QStringLiteral( "/UI/displaySVGWarning" ) );
     m.setMessageAsHtml( tr( "<p>The SVG export function in QGIS has several "
-                            "problems due to bugs and deficiencies in the " )
-                        + tr( "underlying Qt SVG library. In particular, there are problems "
-                              "with layers not being clipped to the map "
-                              "bounding box.</p>" )
+                            "problems due to bugs and deficiencies in the "
+                            "underlying Qt SVG library. In particular, there are problems "
+                            "with layers not being clipped to the map bounding box.</p>" )
                         + tr( "If you require a vector-based output file from "
                               "QGIS it is suggested that you try exporting "
                               "to PDF if the SVG output is not "
@@ -3701,11 +3958,11 @@ bool QgsLayoutDesignerDialog::showFileSizeWarning()
   // Image size
   double oneInchInLayoutUnits = mLayout->convertToLayoutUnits( QgsLayoutMeasurement( 1, QgsUnitTypes::LayoutInches ) );
   QSizeF maxPageSize = mLayout->pageCollection()->maximumPageSize();
-  int width = ( int )( mLayout->renderContext().dpi() * maxPageSize.width() / oneInchInLayoutUnits );
-  int height = ( int )( mLayout->renderContext().dpi() * maxPageSize.height() / oneInchInLayoutUnits );
+  int width = static_cast< int >( mLayout->renderContext().dpi() * maxPageSize.width() / oneInchInLayoutUnits );
+  int height = static_cast< int >( mLayout->renderContext().dpi() * maxPageSize.height() / oneInchInLayoutUnits );
   int memuse = width * height * 3 / 1000000;  // pixmap + image
-  QgsDebugMsg( QString( "Image %1x%2" ).arg( width ).arg( height ) );
-  QgsDebugMsg( QString( "memuse = %1" ).arg( memuse ) );
+  QgsDebugMsg( QStringLiteral( "Image %1x%2" ).arg( width ).arg( height ) );
+  QgsDebugMsg( QStringLiteral( "memuse = %1" ).arg( memuse ) );
 
   if ( memuse > 400 )   // about 4500x4500
   {
@@ -3736,6 +3993,8 @@ bool QgsLayoutDesignerDialog::getRasterExportSettings( QgsLayoutExporter::ImageE
   // Image size
   if ( mLayout )
   {
+    settings.flags = mLayout->renderContext().flags();
+
     maxPageSize = mLayout->pageCollection()->maximumPageSize();
     hasUniformPageSizes = mLayout->pageCollection()->hasUniformPageSizes();
     dpi = mLayout->renderContext().dpi();
@@ -3782,52 +4041,78 @@ bool QgsLayoutDesignerDialog::getRasterExportSettings( QgsLayoutExporter::ImageE
     settings.imageSize = imageSize;
   }
   settings.generateWorldFile = imageDlg.generateWorldFile();
-  settings.flags = QgsLayoutRenderContext::FlagUseAdvancedEffects;
+  settings.flags |= QgsLayoutRenderContext::FlagUseAdvancedEffects;
   if ( imageDlg.antialiasing() )
     settings.flags |= QgsLayoutRenderContext::FlagAntialiasing;
+  else
+    settings.flags &= ~QgsLayoutRenderContext::FlagAntialiasing;
 
   return true;
 }
 
-bool QgsLayoutDesignerDialog::getSvgExportSettings( QgsLayoutExporter::SvgExportSettings &settings, bool &exportAsText )
+bool QgsLayoutDesignerDialog::getSvgExportSettings( QgsLayoutExporter::SvgExportSettings &settings )
 {
   bool groupLayers = false;
-  bool prevSettingLabelsAsOutlines = mMasterLayout->layoutProject()->readBoolEntry( QStringLiteral( "PAL" ), QStringLiteral( "/DrawOutlineLabels" ), true );
+  QgsRenderContext::TextRenderFormat prevTextRenderFormat = mMasterLayout->layoutProject()->labelingEngineSettings().defaultTextRenderFormat();
   bool clipToContent = false;
   double marginTop = 0.0;
   double marginRight = 0.0;
   double marginBottom = 0.0;
   double marginLeft = 0.0;
-  bool previousForceVector = false;
+  bool forceVector = false;
   bool layersAsGroup = false;
   bool cropToContents = false;
   double topMargin = 0.0;
   double rightMargin = 0.0;
   double bottomMargin = 0.0;
   double leftMargin = 0.0;
+  bool includeMetadata = true;
+  bool disableRasterTiles = false;
   if ( mLayout )
   {
-    mLayout->customProperty( QStringLiteral( "forceVector" ), false ).toBool();
+    settings.flags = mLayout->renderContext().flags();
+
+    forceVector = mLayout->customProperty( QStringLiteral( "forceVector" ), false ).toBool();
     layersAsGroup = mLayout->customProperty( QStringLiteral( "svgGroupLayers" ), false ).toBool();
     cropToContents = mLayout->customProperty( QStringLiteral( "svgCropToContents" ), false ).toBool();
     topMargin = mLayout->customProperty( QStringLiteral( "svgCropMarginTop" ), 0 ).toInt();
     rightMargin = mLayout->customProperty( QStringLiteral( "svgCropMarginRight" ), 0 ).toInt();
     bottomMargin = mLayout->customProperty( QStringLiteral( "svgCropMarginBottom" ), 0 ).toInt();
     leftMargin = mLayout->customProperty( QStringLiteral( "svgCropMarginLeft" ), 0 ).toInt();
+    includeMetadata = mLayout->customProperty( QStringLiteral( "svgIncludeMetadata" ), 1 ).toBool();
+    disableRasterTiles = mLayout->customProperty( QStringLiteral( "svgDisableRasterTiles" ), 0 ).toBool();
+    const int prevLayoutSettingLabelsAsOutlines = mLayout->customProperty( QStringLiteral( "svgTextFormat" ), -1 ).toInt();
+    if ( prevLayoutSettingLabelsAsOutlines >= 0 )
+    {
+      // previous layout setting takes default over project setting
+      prevTextRenderFormat = static_cast< QgsRenderContext::TextRenderFormat >( prevLayoutSettingLabelsAsOutlines );
+    }
   }
 
   // open options dialog
-  QDialog dialog;
+  QDialog dialog( this );
   Ui::QgsSvgExportOptionsDialog options;
   options.setupUi( &dialog );
-  options.chkTextAsOutline->setChecked( prevSettingLabelsAsOutlines );
+
+  connect( options.buttonBox, &QDialogButtonBox::helpRequested, this, [ & ]
+  {
+    QgsHelp::openHelp( QStringLiteral( "print_composer/create_output.html" ) );
+  }
+         );
+
+  options.mTextRenderFormatComboBox->addItem( tr( "Always Export Text as Paths (Recommended)" ), QgsRenderContext::TextFormatAlwaysOutlines );
+  options.mTextRenderFormatComboBox->addItem( tr( "Always Export Text as Text Objects" ), QgsRenderContext::TextFormatAlwaysText );
+
+  options.mTextRenderFormatComboBox->setCurrentIndex( options.mTextRenderFormatComboBox->findData( prevTextRenderFormat ) );
   options.chkMapLayersAsGroup->setChecked( layersAsGroup );
   options.mClipToContentGroupBox->setChecked( cropToContents );
-  options.mForceVectorCheckBox->setChecked( previousForceVector );
+  options.mForceVectorCheckBox->setChecked( forceVector );
   options.mTopMarginSpinBox->setValue( topMargin );
   options.mRightMarginSpinBox->setValue( rightMargin );
   options.mBottomMarginSpinBox->setValue( bottomMargin );
   options.mLeftMarginSpinBox->setValue( leftMargin );
+  options.mIncludeMetadataCheckbox->setChecked( includeMetadata );
+  options.mDisableRasterTilingCheckBox->setChecked( disableRasterTiles );
 
   if ( dialog.exec() != QDialog::Accepted )
     return false;
@@ -3838,6 +4123,10 @@ bool QgsLayoutDesignerDialog::getSvgExportSettings( QgsLayoutExporter::SvgExport
   marginRight = options.mRightMarginSpinBox->value();
   marginBottom = options.mBottomMarginSpinBox->value();
   marginLeft = options.mLeftMarginSpinBox->value();
+  includeMetadata = options.mIncludeMetadataCheckbox->isChecked();
+  forceVector = options.mForceVectorCheckBox->isChecked();
+  disableRasterTiles = options.mDisableRasterTilingCheckBox->isChecked();
+  QgsRenderContext::TextRenderFormat textRenderFormat = static_cast< QgsRenderContext::TextRenderFormat >( options.mTextRenderFormatComboBox->currentData().toInt() );
 
   if ( mLayout )
   {
@@ -3848,14 +4137,91 @@ bool QgsLayoutDesignerDialog::getSvgExportSettings( QgsLayoutExporter::SvgExport
     mLayout->setCustomProperty( QStringLiteral( "svgCropMarginRight" ), marginRight );
     mLayout->setCustomProperty( QStringLiteral( "svgCropMarginBottom" ), marginBottom );
     mLayout->setCustomProperty( QStringLiteral( "svgCropMarginLeft" ), marginLeft );
+    mLayout->setCustomProperty( QStringLiteral( "svgIncludeMetadata" ), includeMetadata ? 1 : 0 );
+    mLayout->setCustomProperty( QStringLiteral( "forceVector" ), forceVector ? 1 : 0 );
+    mLayout->setCustomProperty( QStringLiteral( "svgTextFormat" ), static_cast< int >( textRenderFormat ) );
+    mLayout->setCustomProperty( QStringLiteral( "svgDisableRasterTiles" ), disableRasterTiles ? 1 : 0 );
   }
 
   settings.cropToContents = clipToContent;
   settings.cropMargins = QgsMargins( marginLeft, marginTop, marginRight, marginBottom );
-  settings.forceVectorOutput = options.mForceVectorCheckBox->isChecked();
+  settings.forceVectorOutput = forceVector;
   settings.exportAsLayers = groupLayers;
+  settings.exportMetadata = includeMetadata;
+  settings.textRenderFormat = textRenderFormat;
 
-  exportAsText = options.chkTextAsOutline->isChecked();
+  if ( disableRasterTiles )
+    settings.flags = settings.flags | QgsLayoutRenderContext::FlagDisableTiledRasterLayerRenders;
+  else
+    settings.flags = settings.flags & ~QgsLayoutRenderContext::FlagDisableTiledRasterLayerRenders;
+
+  return true;
+}
+
+bool QgsLayoutDesignerDialog::getPdfExportSettings( QgsLayoutExporter::PdfExportSettings &settings )
+{
+  QgsRenderContext::TextRenderFormat prevTextRenderFormat = mMasterLayout->layoutProject()->labelingEngineSettings().defaultTextRenderFormat();
+  bool forceVector = false;
+  bool includeMetadata = true;
+  bool disableRasterTiles = false;
+  if ( mLayout )
+  {
+    settings.flags = mLayout->renderContext().flags();
+    forceVector = mLayout->customProperty( QStringLiteral( "forceVector" ), 0 ).toBool();
+    includeMetadata = mLayout->customProperty( QStringLiteral( "pdfIncludeMetadata" ), 1 ).toBool();
+    disableRasterTiles = mLayout->customProperty( QStringLiteral( "pdfDisableRasterTiles" ), 0 ).toBool();
+    const int prevLayoutSettingLabelsAsOutlines = mLayout->customProperty( QStringLiteral( "pdfTextFormat" ), -1 ).toInt();
+    if ( prevLayoutSettingLabelsAsOutlines >= 0 )
+    {
+      // previous layout setting takes default over project setting
+      prevTextRenderFormat = static_cast< QgsRenderContext::TextRenderFormat >( prevLayoutSettingLabelsAsOutlines );
+    }
+  }
+
+  // open options dialog
+  QDialog dialog( this );
+  Ui::QgsPdfExportOptionsDialog options;
+  options.setupUi( &dialog );
+
+  connect( options.buttonBox, &QDialogButtonBox::helpRequested, this, [ & ]
+  {
+    QgsHelp::openHelp( QStringLiteral( "print_composer/create_output.html" ) );
+  }
+         );
+
+  options.mTextRenderFormatComboBox->addItem( tr( "Always Export Text as Paths (Recommended)" ), QgsRenderContext::TextFormatAlwaysOutlines );
+  options.mTextRenderFormatComboBox->addItem( tr( "Always Export Text as Text Objects" ), QgsRenderContext::TextFormatAlwaysText );
+
+  options.mTextRenderFormatComboBox->setCurrentIndex( options.mTextRenderFormatComboBox->findData( prevTextRenderFormat ) );
+  options.mForceVectorCheckBox->setChecked( forceVector );
+  options.mIncludeMetadataCheckbox->setChecked( includeMetadata );
+  options.mDisableRasterTilingCheckBox->setChecked( disableRasterTiles );
+
+  if ( dialog.exec() != QDialog::Accepted )
+    return false;
+
+  includeMetadata = options.mIncludeMetadataCheckbox->isChecked();
+  forceVector = options.mForceVectorCheckBox->isChecked();
+  disableRasterTiles = options.mDisableRasterTilingCheckBox->isChecked();
+  QgsRenderContext::TextRenderFormat textRenderFormat = static_cast< QgsRenderContext::TextRenderFormat >( options.mTextRenderFormatComboBox->currentData().toInt() );
+
+  if ( mLayout )
+  {
+    //save dialog settings
+    mLayout->setCustomProperty( QStringLiteral( "forceVector" ), forceVector ? 1 : 0 );
+    mLayout->setCustomProperty( QStringLiteral( "pdfIncludeMetadata" ), includeMetadata ? 1 : 0 );
+    mLayout->setCustomProperty( QStringLiteral( "pdfDisableRasterTiles" ), disableRasterTiles ? 1 : 0 );
+    mLayout->setCustomProperty( QStringLiteral( "pdfTextFormat" ), static_cast< int >( textRenderFormat ) );
+  }
+
+  settings.forceVectorOutput = forceVector;
+  settings.exportMetadata = includeMetadata;
+  settings.textRenderFormat = textRenderFormat;
+  if ( disableRasterTiles )
+    settings.flags = settings.flags | QgsLayoutRenderContext::FlagDisableTiledRasterLayerRenders;
+  else
+    settings.flags = settings.flags & ~QgsLayoutRenderContext::FlagDisableTiledRasterLayerRenders;
+
   return true;
 }
 
@@ -3886,7 +4252,7 @@ void QgsLayoutDesignerDialog::updateAtlasPageComboBox( int pageCount )
   QgsLayoutAtlas *atlas = printLayout->atlas();
   mAtlasPageComboBox->blockSignals( true );
   mAtlasPageComboBox->clear();
-  for ( int i = 1; i <= pageCount && i < 500; ++i )
+  for ( int i = 1; i <= pageCount && i < 100000; ++i )
   {
     QString name = atlas->nameForPage( i - 1 );
     QString fullName = ( !name.isEmpty() ? QStringLiteral( "%1: %2" ).arg( i ).arg( name ) : QString::number( i ) );
@@ -4006,9 +4372,11 @@ void QgsLayoutDesignerDialog::toggleActions( bool layoutAvailable )
   mActionAlignBottom->setEnabled( layoutAvailable );
   mActionDistributeLeft->setEnabled( layoutAvailable );
   mActionDistributeHCenter->setEnabled( layoutAvailable );
+  mActionDistributeHSpace->setEnabled( layoutAvailable );
   mActionDistributeRight->setEnabled( layoutAvailable );
   mActionDistributeTop->setEnabled( layoutAvailable );
   mActionDistributeVCenter->setEnabled( layoutAvailable );
+  mActionDistributeVSpace->setEnabled( layoutAvailable );
   mActionDistributeBottom->setEnabled( layoutAvailable );
   mActionResizeNarrowest->setEnabled( layoutAvailable );
   mActionResizeWidest->setEnabled( layoutAvailable );
@@ -4093,29 +4461,91 @@ void QgsLayoutDesignerDialog::updateActionNames( QgsMasterLayoutInterface::Type 
   {
     case QgsMasterLayoutInterface::PrintLayout:
       mActionDuplicateLayout->setText( tr( "&Duplicate Layout…" ) );
+      mActionDuplicateLayout->setToolTip( tr( "Duplicate layout" ) );
+      mActionDuplicateLayout->setIcon( QgsApplication::getThemeIcon( QStringLiteral( "mActionDuplicateLayout.svg" ) ) );
       mActionRemoveLayout->setText( tr( "Delete Layout…" ) );
+      mActionRemoveLayout->setToolTip( tr( "Delete layout" ) );
       mActionRenameLayout->setText( tr( "Rename Layout…" ) );
+      mActionRenameLayout->setToolTip( tr( "Rename layout" ) );
       mActionNewLayout->setText( tr( "New Layout…" ) );
+      mActionNewLayout->setToolTip( tr( "New layout" ) );
+      mActionNewLayout->setIcon( QgsApplication::getThemeIcon( QStringLiteral( "mActionNewLayout.svg" ) ) );
       break;
 
     case QgsMasterLayoutInterface::Report:
       mActionDuplicateLayout->setText( tr( "&Duplicate Report…" ) );
+      mActionDuplicateLayout->setToolTip( tr( "Duplicate report" ) );
+      mActionDuplicateLayout->setIcon( QgsApplication::getThemeIcon( QStringLiteral( "mActionDuplicateLayout.svg" ) ) );
       mActionRemoveLayout->setText( tr( "Delete Report…" ) );
+      mActionRemoveLayout->setToolTip( tr( "Delete report" ) );
       mActionRenameLayout->setText( tr( "Rename Report…" ) );
+      mActionRenameLayout->setToolTip( tr( "Rename report" ) );
       mActionNewLayout->setText( tr( "New Report…" ) );
+      mActionNewLayout->setToolTip( tr( "New report" ) );
+      mActionNewLayout->setIcon( QgsApplication::getThemeIcon( QStringLiteral( "mActionNewReport.svg" ) ) );
       break;
+  }
+}
+
+QString QgsLayoutDesignerDialog::defaultExportPath() const
+{
+  // first priority - last export folder saved in project
+  const QString projectLastExportPath = QgsFileUtils::findClosestExistingPath( QgsProject::instance()->readEntry( QStringLiteral( "Layouts" ), QStringLiteral( "/lastLayoutExportDir" ), QString() ) );
+  if ( !projectLastExportPath.isEmpty() )
+    return projectLastExportPath;
+
+  // second priority - project home path
+  const QString projectHome = QgsFileUtils::findClosestExistingPath( QgsProject::instance()->homePath() );
+  if ( !projectHome.isEmpty() )
+    return projectHome;
+
+  // last priority - app setting last export folder, with homepath as backup
+  QgsSettings s;
+  return QgsFileUtils::findClosestExistingPath( s.value( QStringLiteral( "lastLayoutExportDir" ), QDir::homePath(), QgsSettings::App ).toString() );
+}
+
+void QgsLayoutDesignerDialog::setLastExportPath( const QString &path ) const
+{
+  QFileInfo fi( path );
+  QString savePath;
+  if ( fi.isFile() )
+    savePath = fi.path();
+  else
+    savePath = path;
+
+  QgsProject::instance()->writeEntry( QStringLiteral( "Layouts" ), QStringLiteral( "/lastLayoutExportDir" ), savePath );
+  QgsSettings().setValue( QStringLiteral( "lastLayoutExportDir" ), savePath, QgsSettings::App );
+}
+
+bool QgsLayoutDesignerDialog::checkBeforeExport()
+{
+  if ( mLayout )
+  {
+    QgsLayoutValidityCheckContext context( mLayout );
+    return QgsValidityCheckResultsWidget::runChecks( QgsAbstractValidityCheck::TypeLayoutCheck, &context, tr( "Checking Layout" ),
+           tr( "The layout generated the following warnings. Please review and address these before proceeding with the layout export." ), this );
+  }
+  else
+  {
+    return true;
   }
 }
 
 void QgsLayoutDesignerDialog::updateWindowTitle()
 {
+  QString title;
   if ( mSectionTitle.isEmpty() )
-    setWindowTitle( mTitle );
+    title = mTitle;
   else
-    setWindowTitle( QStringLiteral( "%1 - %2" ).arg( mTitle, mSectionTitle ) );
+    title = QStringLiteral( "%1 - %2" ).arg( mTitle, mSectionTitle );
+
+  if ( QgsProject::instance()->isDirty() )
+    title.prepend( '*' );
+
+  setWindowTitle( title );
 }
 
-void QgsLayoutDesignerDialog::selectItems( const QList<QgsLayoutItem *> items )
+void QgsLayoutDesignerDialog::selectItems( const QList<QgsLayoutItem *> &items )
 {
   for ( QGraphicsItem *item : items )
   {
@@ -4140,6 +4570,17 @@ void QgsLayoutDesignerDialog::selectItems( const QList<QgsLayoutItem *> items )
 QgsMessageBar *QgsLayoutDesignerDialog::messageBar()
 {
   return mMessageBar;
+}
+
+void QgsLayoutDesignerDialog::setAtlasPreviewEnabled( bool enabled )
+{
+  whileBlocking( mActionAtlasPreview )->setChecked( enabled );
+  atlasPreviewTriggered( enabled );
+}
+
+bool QgsLayoutDesignerDialog::atlasPreviewEnabled() const
+{
+  return mActionAtlasPreview->isChecked();
 }
 
 void QgsLayoutDesignerDialog::setAtlasFeature( QgsMapLayer *layer, const QgsFeature &feat )

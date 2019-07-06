@@ -17,7 +17,7 @@
 #define QGSRELATIONWIDGETWRAPPER_H
 
 #include "qgswidgetwrapper.h"
-#include "qgis.h"
+#include "qgis_sip.h"
 #include "qgis_gui.h"
 
 class QgsRelationEditorWidget;
@@ -25,7 +25,6 @@ class QgsRelationEditorWidget;
 /**
  * \ingroup gui
  * \class QgsRelationWidgetWrapper
- * \note not available in Python bindings
  */
 
 class GUI_EXPORT QgsRelationWidgetWrapper : public QgsWidgetWrapper
@@ -38,7 +37,7 @@ class GUI_EXPORT QgsRelationWidgetWrapper : public QgsWidgetWrapper
     explicit QgsRelationWidgetWrapper( QgsVectorLayer *vl, const QgsRelation &relation, QWidget *editor = nullptr, QWidget *parent SIP_TRANSFERTHIS = nullptr );
 
     /**
-     * Defines if a title lable should be shown for this widget.
+     * Defines if a title label should be shown for this widget.
      * Only has an effect after widget() has been called at least once.
      *
      * \since QGIS 2.18
@@ -46,7 +45,7 @@ class GUI_EXPORT QgsRelationWidgetWrapper : public QgsWidgetWrapper
     bool showLabel() const;
 
     /**
-     * Defines if a title lable should be shown for this widget.
+     * Defines if a title label should be shown for this widget.
      * Only has an effect after widget() has been called at least once.
      *
      * \since QGIS 2.18
@@ -98,13 +97,15 @@ class GUI_EXPORT QgsRelationWidgetWrapper : public QgsWidgetWrapper
 
     /**
      * Sets the visibility of the wrapper's widget.
-     * \param visible set to true to show widget, false to hide widget
+     * \param visible set to TRUE to show widget, FALSE to hide widget
      * \since QGIS 2.16
      */
     void setVisible( bool visible );
 
   private:
+    void aboutToSave() override;
     QgsRelation mRelation;
+    QgsRelation mNmRelation;
     QgsRelationEditorWidget *mWidget = nullptr;
 };
 

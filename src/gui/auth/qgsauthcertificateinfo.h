@@ -19,7 +19,7 @@
 #define QGSAUTHCERTIFICATEINFO_H
 
 #include <QFile>
-#include "qgis.h"
+#include "qgis_sip.h"
 
 #ifndef QT_NO_SSL
 #include <QtCrypto>
@@ -160,7 +160,7 @@ class GUI_EXPORT QgsAuthCertInfoDialog : public QDialog
                                     QWidget *parent SIP_TRANSFERTHIS = nullptr,
                                     const QList<QSslCertificate> &connectionCAs = QList<QSslCertificate>() );
 
-    //! Get access to embedded info widget
+    //! Gets access to embedded info widget
     QgsAuthCertInfo *certInfoWidget() { return mCertInfoWdgt; }
 
     /**

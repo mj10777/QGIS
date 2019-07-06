@@ -31,7 +31,6 @@ extern "C"
 #include "qgsrasterdataprovider.h"
 #include "qgsrasterprojector.h"
 
-#include <QLibrary>
 #include <QProcess>
 #include <QString>
 #include <QMap>
@@ -110,13 +109,13 @@ class GRASS_LIB_EXPORT QgsGrassGisLib
 
     int G_get_ellipsoid_parameters( double *a, double *e2 );
 
-    //! Get QGIS raster type for GRASS raster type
+    //! Gets QGIS raster type for GRASS raster type
     Qgis::DataType qgisRasterType( RASTER_MAP_TYPE grassType );
 
-    //! Get GRASS raster type for QGIS raster type
+    //! Gets GRASS raster type for QGIS raster type
     RASTER_MAP_TYPE grassRasterType( Qgis::DataType qgisType );
 
-    //! Get no data value for GRASS data type
+    //! Gets no data value for GRASS data type
     double noDataValueForGrassType( RASTER_MAP_TYPE grassType );
 
     /**
@@ -124,7 +123,7 @@ class GRASS_LIB_EXPORT QgsGrassGisLib
      * initialization is done in G__read_Cell_head_array */
     void initCellHead( struct Cell_head *cellhd );
 
-    //! Get raster from map of opened rasters, open it if it is not yet open
+    //! Gets raster from map of opened rasters, open it if it is not yet open
     Raster raster( QString name );
 
     void *resolve( const char *symbol );
@@ -139,9 +138,6 @@ class GRASS_LIB_EXPORT QgsGrassGisLib
   private:
     //! Pointer to canonical Singleton object
     static QgsGrassGisLib *_instance;
-
-    //! Original GRASS library handle
-    QLibrary mLibrary;
 
     //! Raster maps, key is fake file descriptor
     QMap<int, Raster> mRasters;

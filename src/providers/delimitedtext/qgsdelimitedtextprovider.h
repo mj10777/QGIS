@@ -18,12 +18,14 @@
 #ifndef QGSDELIMITEDTEXTPROVIDER_H
 #define QGSDELIMITEDTEXTPROVIDER_H
 
+#include <QStringList>
+
 #include "qgsvectordataprovider.h"
 #include "qgscoordinatereferencesystem.h"
 #include "qgsdelimitedtextfile.h"
 #include "qgsfields.h"
 
-#include <QStringList>
+#include "qgsprovidermetadata.h"
 
 class QgsFeature;
 class QgsField;
@@ -61,6 +63,9 @@ class QgsDelimitedTextProvider : public QgsVectorDataProvider
 
   public:
 
+    static const QString TEXT_PROVIDER_KEY;
+    static const QString TEXT_PROVIDER_DESCRIPTION;
+
     /**
      * Regular expression defining possible prefixes to WKT string,
      * (EWKT srid, Informix SRID)
@@ -75,8 +80,7 @@ class QgsDelimitedTextProvider : public QgsVectorDataProvider
       GeomAsWkt
     };
 
-    explicit QgsDelimitedTextProvider( const QString &uri = QString() );
-
+    explicit QgsDelimitedTextProvider( const QString &uri, const QgsDataProvider::ProviderOptions &providerOptions );
     ~QgsDelimitedTextProvider() override;
 
     /* Implementation of functions from QgsVectorDataProvider */
@@ -113,7 +117,7 @@ class QgsDelimitedTextProvider : public QgsVectorDataProvider
     /* Implementation of functions from QgsDataProvider */
 
     /**
-     * Return a provider name
+     * Returns a provider name
      *
      *  Essentially just returns the provider key.  Should be used to build file
      *  dialogs so that providers can be shown with their supported types. Thus
@@ -129,7 +133,7 @@ class QgsDelimitedTextProvider : public QgsVectorDataProvider
     QString name() const override;
 
     /**
-     * Return description
+     * Returns description
      *
      *  Return a terse string describing what the provider is.
      *
@@ -228,6 +232,7 @@ class QgsDelimitedTextProvider : public QgsVectorDataProvider
     QString mWktFieldName;
     QString mXFieldName;
     QString mYFieldName;
+    bool mDetectTypes = true;
 
     mutable int mXFieldIndex = -1;
     mutable int mYFieldIndex = -1;
@@ -279,6 +284,14 @@ class QgsDelimitedTextProvider : public QgsVectorDataProvider
 
     friend class QgsDelimitedTextFeatureIterator;
     friend class QgsDelimitedTextFeatureSource;
+};
+
+class QgsDelimitedTextProviderMetadata: public QgsProviderMetadata
+{
+  public:
+    QgsDelimitedTextProviderMetadata();
+    QgsDataProvider *createProvider( const QString &uri, const QgsDataProvider::ProviderOptions &options ) override;
+    QVariantMap decodeUri( const QString &uri ) override;
 };
 
 #endif

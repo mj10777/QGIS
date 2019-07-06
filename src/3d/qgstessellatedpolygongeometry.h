@@ -16,6 +16,7 @@
 #ifndef QGSTESSELLATEDPOLYGONGEOMETRY_H
 #define QGSTESSELLATEDPOLYGONGEOMETRY_H
 
+#include "qgsfeatureid.h"
 #include "qgspolygon.h"
 
 #include <Qt3DRender/QGeometry>
@@ -36,18 +37,33 @@ namespace Qt3DRender
  */
 class QgsTessellatedPolygonGeometry : public Qt3DRender::QGeometry
 {
+    Q_OBJECT
   public:
     //! Constructor
     QgsTessellatedPolygonGeometry( QNode *parent = nullptr );
-    ~QgsTessellatedPolygonGeometry() override;
 
     //! Returns whether the normals of triangles will be inverted (useful for fixing clockwise / counter-clockwise face vertex orders)
     bool invertNormals() const { return mInvertNormals; }
     //! Sets whether the normals of triangles will be inverted (useful for fixing clockwise / counter-clockwise face vertex orders)
     void setInvertNormals( bool invert ) { mInvertNormals = invert; }
 
+    /**
+     * Returns whether also triangles facing the other side will be created. Useful if input data have inconsistent order of vertices
+     * \since QGIS 3.2
+     */
+    bool addBackFaces() const { return mAddBackFaces; }
+
+    /**
+     * Sets whether also triangles facing the other side will be created. Useful if input data have inconsistent order of vertices
+     * \since QGIS 3.2
+     */
+    void setAddBackFaces( bool add ) { mAddBackFaces = add; }
+
     //! Initializes vertex buffer from given polygons. Takes ownership of passed polygon geometries
-    void setPolygons( const QList<QgsPolygon *> &polygons, const QgsPointXY &origin, float extrusionHeight, const QList<float> &extrusionHeightPerPolygon = QList<float>() );
+    void setPolygons( const QList<QgsPolygon *> &polygons, const QList<QgsFeatureId> &featureIds, const QgsPointXY &origin, float extrusionHeight, const QList<float> &extrusionHeightPerPolygon = QList<float>() );
+
+    //! Returns ID of the feature to which given triangle index belongs (used for picking)
+    QgsFeatureId triangleIndexToFeatureId( uint triangleIndex ) const;
 
   private:
 
@@ -55,8 +71,12 @@ class QgsTessellatedPolygonGeometry : public Qt3DRender::QGeometry
     Qt3DRender::QAttribute *mNormalAttribute = nullptr;
     Qt3DRender::QBuffer *mVertexBuffer = nullptr;
 
+    QVector<QgsFeatureId> mTriangleIndexFids;
+    QVector<uint> mTriangleIndexStartingIndices;
+
     bool mWithNormals = true;
     bool mInvertNormals = false;
+    bool mAddBackFaces = false;
 };
 
 #endif // QGSTESSELLATEDPOLYGONGEOMETRY_H

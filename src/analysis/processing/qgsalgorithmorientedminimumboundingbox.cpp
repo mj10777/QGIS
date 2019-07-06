@@ -16,6 +16,7 @@
  ***************************************************************************/
 
 #include "qgsalgorithmorientedminimumboundingbox.h"
+#include "qgsvectorlayer.h"
 
 ///@cond PRIVATE
 
@@ -66,6 +67,18 @@ QgsOrientedMinimumBoundingBoxAlgorithm *QgsOrientedMinimumBoundingBoxAlgorithm::
   return new QgsOrientedMinimumBoundingBoxAlgorithm();
 }
 
+bool QgsOrientedMinimumBoundingBoxAlgorithm::supportInPlaceEdit( const QgsMapLayer *l ) const
+{
+  const QgsVectorLayer *layer = qobject_cast< const QgsVectorLayer * >( l );
+  if ( !layer )
+    return false;
+
+  if ( ! QgsProcessingFeatureBasedAlgorithm::supportInPlaceEdit( layer ) )
+    return false;
+  // Polygons only
+  return layer->wkbType() == QgsWkbTypes::Type::Polygon || layer->wkbType() == QgsWkbTypes::Type::MultiPolygon;
+}
+
 QgsFields QgsOrientedMinimumBoundingBoxAlgorithm::outputFields( const QgsFields &inputFields ) const
 {
   QgsFields fields = inputFields;
@@ -77,7 +90,7 @@ QgsFields QgsOrientedMinimumBoundingBoxAlgorithm::outputFields( const QgsFields 
   return fields;
 }
 
-QgsFeature QgsOrientedMinimumBoundingBoxAlgorithm::processFeature( const QgsFeature &feature, QgsProcessingContext &, QgsProcessingFeedback * )
+QgsFeatureList QgsOrientedMinimumBoundingBoxAlgorithm::processFeature( const QgsFeature &feature, QgsProcessingContext &, QgsProcessingFeedback * )
 {
   QgsFeature f = feature;
   if ( f.hasGeometry() )
@@ -106,7 +119,7 @@ QgsFeature QgsOrientedMinimumBoundingBoxAlgorithm::processFeature( const QgsFeat
           << QVariant();
     f.setAttributes( attrs );
   }
-  return f;
+  return QgsFeatureList() << f;
 }
 
 ///@endcond

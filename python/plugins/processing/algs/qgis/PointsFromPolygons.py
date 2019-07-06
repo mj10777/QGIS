@@ -21,10 +21,6 @@ __author__ = 'Alexander Bruy'
 __date__ = 'August 2013'
 __copyright__ = '(C) 2013, Alexander Bruy'
 
-# This will get replaced with a git SHA1 when you do a git archive
-
-__revision__ = '$Format:%H$'
-
 from osgeo import gdal
 from qgis.core import (QgsFeatureRequest,
                        QgsFields,
@@ -33,9 +29,9 @@ from qgis.core import (QgsFeatureRequest,
                        QgsFeatureSink,
                        QgsGeometry,
                        QgsWkbTypes,
-                       QgsProcessingParameterBand,
                        QgsPoint,
                        QgsProcessing,
+                       QgsProcessingException,
                        QgsProcessingParameterRasterLayer,
                        QgsProcessingParameterFeatureSource,
                        QgsProcessingParameterFeatureSink)
@@ -64,7 +60,7 @@ class PointsFromPolygons(QgisAlgorithm):
                                                             self.tr('Raster layer')))
         self.addParameter(QgsProcessingParameterFeatureSource(self.INPUT_VECTOR,
                                                               self.tr('Vector layer'), [QgsProcessing.TypeVectorPolygon]))
-        self.addParameter(QgsProcessingParameterFeatureSink(self.OUTPUT, self.tr('Points from polygons'), QgsProcessing.TypeVectorPoint))
+        self.addParameter(QgsProcessingParameterFeatureSink(self.OUTPUT, self.tr('Points inside polygons'), QgsProcessing.TypeVectorPoint))
 
     def name(self):
         return 'generatepointspixelcentroidsinsidepolygons'
@@ -74,6 +70,8 @@ class PointsFromPolygons(QgisAlgorithm):
 
     def processAlgorithm(self, parameters, context, feedback):
         source = self.parameterAsSource(parameters, self.INPUT_VECTOR, context)
+        if source is None:
+            raise QgsProcessingException(self.invalidSourceError(parameters, self.INPUT_VECTOR))
 
         raster_layer = self.parameterAsRasterLayer(parameters, self.INPUT_RASTER, context)
         rasterPath = raster_layer.source()
@@ -88,6 +86,8 @@ class PointsFromPolygons(QgisAlgorithm):
 
         (sink, dest_id) = self.parameterAsSink(parameters, self.OUTPUT, context,
                                                fields, QgsWkbTypes.Point, raster_layer.crs())
+        if sink is None:
+            raise QgsProcessingException(self.invalidSinkError(parameters, self.OUTPUT))
 
         outFeature = QgsFeature()
         outFeature.setFields(fields)

@@ -25,6 +25,7 @@
 #define QGIS_DATA_SUBDIR "${QGIS_DATA_SUBDIR}"
 #define QGIS_LIBEXEC_SUBDIR "${QGIS_LIBEXEC_SUBDIR}"
 #define QGIS_LIB_SUBDIR "${QGIS_LIB_SUBDIR}"
+#define QGIS_QML_SUBDIR "${QGIS_QML_SUBDIR}"
 #define CMAKE_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}"
 #define CMAKE_SOURCE_DIR "${CMAKE_SOURCE_DIR}"
 
@@ -56,6 +57,8 @@
 
 #cmakedefine HAVE_SERVER_PYTHON_PLUGINS
 
+#cmakedefine HAVE_OPENCL
+
 #cmakedefine ENABLE_MODELTEST
 
 #cmakedefine HAVE_3D
@@ -63,6 +66,10 @@
 #cmakedefine USE_THREAD_LOCAL
 
 #cmakedefine QGISDEBUG
+
+#cmakedefine HAVE_QUICK
+
+#cmakedefine HAVE_QT5SERIALPORT
 
 #endif
 

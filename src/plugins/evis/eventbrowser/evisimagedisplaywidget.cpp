@@ -36,8 +36,8 @@
 
 /**
 * Constructor
-* @param parent - Pointer the to parent QWidget for modality
-* @param fl - Windown flags
+* \param parent - Pointer the to parent QWidget for modality
+* \param fl - Windown flags
 */
 eVisImageDisplayWidget::eVisImageDisplayWidget( QWidget *parent, Qt::WindowFlags fl )
   : QWidget( parent, fl )
@@ -124,7 +124,7 @@ void eVisImageDisplayWidget::resizeEvent( QResizeEvent *event )
 
 /**
 * Public method called to display an image loaded locally from disk
-* @param path - The path and filename of the image to load from disk
+* \param path - The path and filename of the image to load from disk
 */
 void eVisImageDisplayWidget::displayImage( const QString &path )
 {
@@ -160,12 +160,12 @@ void eVisImageDisplayWidget::displayImage()
     if ( mScaleByWidth )
     {
       mySize.setWidth( static_cast<int>( mImage->width() * ( mScaleToFit + ( mScaleFactor * mCurrentZoomStep ) ) ) );
-      mySize.setHeight( static_cast<int>( ( double )mySize.width() * mImageSizeRatio ) );
+      mySize.setHeight( static_cast<int>( static_cast<double>( mySize.width() ) * mImageSizeRatio ) );
     }
     else
     {
       mySize.setHeight( static_cast<int>( mImage->height() * ( mScaleToFit + ( mScaleFactor * mCurrentZoomStep ) ) ) );
-      mySize.setWidth( static_cast<int>( ( double )mySize.height() * mImageSizeRatio ) );
+      mySize.setWidth( static_cast<int>( static_cast<double>( mySize.height() ) * mImageSizeRatio ) );
     }
   }
   else
@@ -181,11 +181,11 @@ void eVisImageDisplayWidget::displayImage()
 
 /**
 * Public method called to display an image loaded from a url
-* @param url - The url from which to load an image
+* \param url - The url from which to load an image
 */
 void eVisImageDisplayWidget::displayUrlImage( const QString &url )
 {
-  Q_UNUSED( url );
+  Q_UNUSED( url )
 }
 
 /**
@@ -195,23 +195,23 @@ void eVisImageDisplayWidget::setScalers()
 {
   if ( mImageLoaded )
   {
-    double xRatio = ( double )mDisplayArea->size().width() / ( double )mImage->width();
-    double yRatio = ( double )mDisplayArea->size().height() / ( double )mImage->height();
+    double xRatio = static_cast<double>( mDisplayArea->size().width() ) / static_cast<double>( mImage->width() );
+    double yRatio = static_cast<double>( mDisplayArea->size().height() ) / static_cast<double>( mImage->height() );
     if ( xRatio < yRatio )
     {
       mScaleByWidth = true;
       mScaleByHeight = false;
-      mImageSizeRatio = ( double )mImage->height() / ( double )mImage->width();
-      mScaleToFit = ( double )mDisplayArea->size().width() / ( double )mImage->width();
-      mScaleFactor = ( 1.0 - mScaleToFit ) / ( double )ZOOM_STEPS;
+      mImageSizeRatio = static_cast<double>( mImage->height() ) / static_cast<double>( mImage->width() );
+      mScaleToFit = static_cast<double>( mDisplayArea->size().width() ) / static_cast<double>( mImage->width() );
+      mScaleFactor = ( 1.0 - mScaleToFit ) / static_cast<double>( ZOOM_STEPS );
     }
     else
     {
       mScaleByWidth = false;
       mScaleByHeight = true;
-      mImageSizeRatio = ( double )mImage->width() / ( double )mImage->height();
-      mScaleToFit = ( double )mDisplayArea->size().height() / ( double )mImage->height();
-      mScaleFactor = ( 1.0 - mScaleToFit ) / ( double )ZOOM_STEPS;
+      mImageSizeRatio = static_cast<double>( mImage->width() ) / static_cast<double>( mImage->height() );
+      mScaleToFit = static_cast<double>( mDisplayArea->size().height() ) / static_cast<double>( mImage->height() );
+      mScaleFactor = ( 1.0 - mScaleToFit ) / static_cast<double>( ZOOM_STEPS );
     }
   }
 }
@@ -224,8 +224,8 @@ void eVisImageDisplayWidget::setScalers()
 
 /**
 * Slot called when a http request is complete
-* @param requestId - The id of the http request
-* @param error - Boolean denoting success of http request
+* \param requestId - The id of the http request
+* \param error - Boolean denoting success of http request
 */
 void eVisImageDisplayWidget::displayUrlImage( int requestId, bool error )
 {

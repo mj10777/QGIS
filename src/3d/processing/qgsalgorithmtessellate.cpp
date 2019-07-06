@@ -41,6 +41,11 @@ QString QgsTessellateAlgorithm::group() const
   return QObject::tr( "Vector geometry" );
 }
 
+QString QgsTessellateAlgorithm::groupId() const
+{
+  return QStringLiteral( "vectorgeometry" );
+}
+
 QString QgsTessellateAlgorithm::outputName() const
 {
   return QObject::tr( "Tessellated" );
@@ -53,7 +58,7 @@ QgsProcessing::SourceType QgsTessellateAlgorithm::outputLayerType() const
 
 QgsWkbTypes::Type QgsTessellateAlgorithm::outputWkbType( QgsWkbTypes::Type inputWkbType ) const
 {
-  Q_UNUSED( inputWkbType );
+  Q_UNUSED( inputWkbType )
   return QgsWkbTypes::MultiPolygonZ;
 }
 
@@ -74,7 +79,7 @@ QgsTessellateAlgorithm *QgsTessellateAlgorithm::createInstance() const
   return new QgsTessellateAlgorithm();
 }
 
-QgsFeature QgsTessellateAlgorithm::processFeature( const QgsFeature &feature, QgsProcessingContext &, QgsProcessingFeedback * )
+QgsFeatureList QgsTessellateAlgorithm::processFeature( const QgsFeature &feature, QgsProcessingContext &, QgsProcessingFeedback *feedback )
 {
   QgsFeature f = feature;
   if ( f.hasGeometry() )
@@ -101,11 +106,18 @@ QgsFeature QgsTessellateAlgorithm::processFeature( const QgsFeature &feature, Qg
         t.addPolygon( *p, 0 );
       }
       QgsGeometry g( t.asMultiPolygon() );
-      g.translate( bounds.xMinimum(), bounds.yMinimum() );
+      if ( !g.isEmpty() )
+      {
+        g.translate( bounds.xMinimum(), bounds.yMinimum() );
+      }
+      else
+      {
+        feedback->reportError( QObject::tr( "Feature ID %1 could not be divided into triangular components." ).arg( f.id() ) );
+      }
       f.setGeometry( g );
     }
   }
-  return f;
+  return QgsFeatureList() << f;
 }
 
 ///@endcond

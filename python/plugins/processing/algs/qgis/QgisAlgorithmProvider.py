@@ -21,20 +21,23 @@ __author__ = 'Victor Olaya'
 __date__ = 'December 2012'
 __copyright__ = '(C) 2012, Victor Olaya'
 
-# This will get replaced with a git SHA1 when you do a git archive
-
-__revision__ = '$Format:%H$'
-
 import os
+import warnings
 
 try:
-    import plotly  # NOQA
-    hasPlotly = True
+    # importing plotly throws Python warnings from within the library - filter these out
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=ResourceWarning)
+        warnings.filterwarnings("ignore", category=ImportWarning)
+        import plotly  # NOQA
+        hasPlotly = True
 except:
     hasPlotly = False
 
 from qgis.core import (QgsApplication,
                        QgsProcessingProvider)
+
+from PyQt5.QtCore import QCoreApplication
 
 from processing.script import ScriptUtils
 
@@ -45,6 +48,7 @@ from .Aggregate import Aggregate
 from .Aspect import Aspect
 from .BasicStatistics import BasicStatisticsForField
 from .CheckValidity import CheckValidity
+from .Climb import Climb
 from .ConcaveHull import ConcaveHull
 from .CreateAttributeIndex import CreateAttributeIndex
 from .CreateConstantRaster import CreateConstantRaster
@@ -53,15 +57,10 @@ from .DefineProjection import DefineProjection
 from .Delaunay import Delaunay
 from .DeleteColumn import DeleteColumn
 from .DeleteDuplicateGeometries import DeleteDuplicateGeometries
-from .DeleteHoles import DeleteHoles
 from .DensifyGeometries import DensifyGeometries
-from .DensifyGeometriesInterval import DensifyGeometriesInterval
-from .Difference import Difference
 from .EliminateSelection import EliminateSelection
 from .ExecuteSQL import ExecuteSQL
-from .Explode import Explode
 from .ExportGeometryInfo import ExportGeometryInfo
-from .ExtendLines import ExtendLines
 from .ExtentFromLayer import ExtentFromLayer
 from .ExtractSpecificVertices import ExtractSpecificVertices
 from .FieldPyculator import FieldsPyculator
@@ -79,16 +78,13 @@ from .HypsometricCurves import HypsometricCurves
 from .IdwInterpolation import IdwInterpolation
 from .ImportIntoPostGIS import ImportIntoPostGIS
 from .ImportIntoSpatialite import ImportIntoSpatialite
-from .Intersection import Intersection
 from .KeepNBiggestParts import KeepNBiggestParts
+from .KNearestConcaveHull import KNearestConcaveHull
 from .LinesToPolygons import LinesToPolygons
 from .MinimumBoundingGeometry import MinimumBoundingGeometry
 from .NearestNeighbourAnalysis import NearestNeighbourAnalysis
-from .OffsetLine import OffsetLine
 from .Orthogonalize import Orthogonalize
 from .PointDistance import PointDistance
-from .PointOnSurface import PointOnSurface
-from .PointsAlongGeometry import PointsAlongGeometry
 from .PointsDisplacement import PointsDisplacement
 from .PointsFromLines import PointsFromLines
 from .PointsFromPolygons import PointsFromPolygons
@@ -97,8 +93,8 @@ from .PointsLayerFromTable import PointsLayerFromTable
 from .PointsToPaths import PointsToPaths
 from .PoleOfInaccessibility import PoleOfInaccessibility
 from .Polygonize import Polygonize
-from .PolygonsToLines import PolygonsToLines
 from .PostGISExecuteSQL import PostGISExecuteSQL
+from .PostGISExecuteAndLoadSQL import PostGISExecuteAndLoadSQL
 from .RandomExtract import RandomExtract
 from .RandomExtractWithinSubsets import RandomExtractWithinSubsets
 from .RandomPointsAlongLines import RandomPointsAlongLines
@@ -110,11 +106,11 @@ from .RandomSelectionWithinSubsets import RandomSelectionWithinSubsets
 from .Rasterize import RasterizeAlgorithm
 from .RasterCalculator import RasterCalculator
 from .RasterLayerStatistics import RasterLayerStatistics
+from .RasterSampling import RasterSampling
 from .RectanglesOvalsDiamondsFixed import RectanglesOvalsDiamondsFixed
 from .RectanglesOvalsDiamondsVariable import RectanglesOvalsDiamondsVariable
 from .RegularPoints import RegularPoints
 from .Relief import Relief
-from .ReverseLineDirection import ReverseLineDirection
 from .Ruggedness import Ruggedness
 from .SelectByAttribute import SelectByAttribute
 from .SelectByExpression import SelectByExpression
@@ -124,9 +120,6 @@ from .SetMValue import SetMValue
 from .SetRasterStyle import SetRasterStyle
 from .SetVectorStyle import SetVectorStyle
 from .SetZValue import SetZValue
-from .ShortestPathLayerToPoint import ShortestPathLayerToPoint
-from .ShortestPathPointToLayer import ShortestPathPointToLayer
-from .ShortestPathPointToPoint import ShortestPathPointToPoint
 from .SingleSidedBuffer import SingleSidedBuffer
 from .Slope import Slope
 from .SnapGeometries import SnapGeometriesToLayer
@@ -136,12 +129,11 @@ from .SpatialJoin import SpatialJoin
 from .SpatialJoinSummary import SpatialJoinSummary
 from .StatisticsByCategories import StatisticsByCategories
 from .SumLines import SumLines
-from .SymmetricalDifference import SymmetricalDifference
 from .TextToFloat import TextToFloat
+from .TilesXYZ import TilesXYZAlgorithmDirectory, TilesXYZAlgorithmMBTiles
 from .TinInterpolation import TinInterpolation
 from .TopoColors import TopoColor
 from .TruncateTable import TruncateTable
-from .Union import Union
 from .UniqueValues import UniqueValues
 from .VariableDistanceBuffer import VariableDistanceBuffer
 from .VectorSplit import VectorSplit
@@ -154,6 +146,7 @@ pluginPath = os.path.normpath(os.path.join(
 
 
 class QgisAlgorithmProvider(QgsProcessingProvider):
+    fieldMappingParameterName = QCoreApplication.translate('Processing', 'Fields Mapper')
 
     def __init__(self):
         super().__init__()
@@ -166,6 +159,7 @@ class QgisAlgorithmProvider(QgsProcessingProvider):
                 Aspect(),
                 BasicStatisticsForField(),
                 CheckValidity(),
+                Climb(),
                 ConcaveHull(),
                 CreateAttributeIndex(),
                 CreateConstantRaster(),
@@ -174,15 +168,10 @@ class QgisAlgorithmProvider(QgsProcessingProvider):
                 Delaunay(),
                 DeleteColumn(),
                 DeleteDuplicateGeometries(),
-                DeleteHoles(),
                 DensifyGeometries(),
-                DensifyGeometriesInterval(),
-                Difference(),
                 EliminateSelection(),
                 ExecuteSQL(),
-                Explode(),
                 ExportGeometryInfo(),
-                ExtendLines(),
                 ExtentFromLayer(),
                 ExtractSpecificVertices(),
                 FieldsCalculator(),
@@ -200,16 +189,13 @@ class QgisAlgorithmProvider(QgsProcessingProvider):
                 IdwInterpolation(),
                 ImportIntoPostGIS(),
                 ImportIntoSpatialite(),
-                Intersection(),
                 KeepNBiggestParts(),
+                KNearestConcaveHull(),
                 LinesToPolygons(),
                 MinimumBoundingGeometry(),
                 NearestNeighbourAnalysis(),
-                OffsetLine(),
                 Orthogonalize(),
                 PointDistance(),
-                PointOnSurface(),
-                PointsAlongGeometry(),
                 PointsDisplacement(),
                 PointsFromLines(),
                 PointsFromPolygons(),
@@ -218,8 +204,8 @@ class QgisAlgorithmProvider(QgsProcessingProvider):
                 PointsToPaths(),
                 PoleOfInaccessibility(),
                 Polygonize(),
-                PolygonsToLines(),
                 PostGISExecuteSQL(),
+                PostGISExecuteAndLoadSQL(),
                 RandomExtract(),
                 RandomExtractWithinSubsets(),
                 RandomPointsAlongLines(),
@@ -231,11 +217,11 @@ class QgisAlgorithmProvider(QgsProcessingProvider):
                 RasterCalculator(),
                 RasterizeAlgorithm(),
                 RasterLayerStatistics(),
+                RasterSampling(),
                 RectanglesOvalsDiamondsFixed(),
                 RectanglesOvalsDiamondsVariable(),
                 RegularPoints(),
                 Relief(),
-                ReverseLineDirection(),
                 Ruggedness(),
                 SelectByAttribute(),
                 SelectByExpression(),
@@ -245,9 +231,6 @@ class QgisAlgorithmProvider(QgsProcessingProvider):
                 SetRasterStyle(),
                 SetVectorStyle(),
                 SetZValue(),
-                ShortestPathLayerToPoint(),
-                ShortestPathPointToLayer(),
-                ShortestPathPointToPoint(),
                 SingleSidedBuffer(),
                 Slope(),
                 SnapGeometriesToLayer(),
@@ -257,12 +240,12 @@ class QgisAlgorithmProvider(QgsProcessingProvider):
                 SpatialJoinSummary(),
                 StatisticsByCategories(),
                 SumLines(),
-                SymmetricalDifference(),
                 TextToFloat(),
+                TilesXYZAlgorithmDirectory(),
+                TilesXYZAlgorithmMBTiles(),
                 TinInterpolation(),
                 TopoColor(),
                 TruncateTable(),
-                Union(),
                 UniqueValues(),
                 VariableDistanceBuffer(),
                 VectorSplit(),
@@ -301,6 +284,9 @@ class QgisAlgorithmProvider(QgsProcessingProvider):
     def id(self):
         return 'qgis'
 
+    def helpId(self):
+        return 'qgis'
+
     def name(self):
         return 'QGIS'
 
@@ -316,6 +302,20 @@ class QgisAlgorithmProvider(QgsProcessingProvider):
             self.addAlgorithm(a)
         for a in self.externalAlgs:
             self.addAlgorithm(a)
+
+    def load(self):
+        success = super().load()
+
+        if success:
+            self.parameterTypeFieldsMapping = FieldsMapper.ParameterFieldsMappingType()
+            QgsApplication.instance().processingRegistry().addParameterType(self.parameterTypeFieldsMapping)
+
+        return success
+
+    def unload(self):
+        super().unload()
+
+        QgsApplication.instance().processingRegistry().removeParameterType(self.parameterTypeFieldsMapping)
 
     def supportsNonFileBasedOutput(self):
         return True

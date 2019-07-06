@@ -20,7 +20,6 @@
 
 #include <QDialog>
 
-#include "qgsvectorlayer.h"
 
 #include "ui_rulesDialog.h"
 #include "topolTest.h"
@@ -100,11 +99,12 @@ class rulesDialog : public QDialog, private Ui::rulesDialog
      */
     void projectRead();
     /*
-     * Updates Rule combobox to mach first layer
+     * Updates Rule combobox to match first layer
      * \param layerId layer ID
      */
     void updateRuleItems( const QString &layerName );
-
+    //! Open the associated help
+    void showHelp();
 
 
 

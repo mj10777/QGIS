@@ -25,7 +25,6 @@
 #include <QVBoxLayout>
 
 #include "qgis.h"
-#include "qgsfeature.h"
 #include "qgsfields.h"
 #include "qgscoordinatereferencesystem.h"
 
@@ -118,7 +117,7 @@ class QgsGrassModuleParam
     QStringList errors() { return mErrors; }
 
     /**
-     * Get gisprompt attribute
+     * Gets gisprompt attribute
      * @paream name gisprompt tag attribute name (age, element, prompt)
      */
     static QString getDescPrompt( QDomElement descDomElement, const QString &name );
@@ -542,7 +541,7 @@ class QgsGrassModuleSelection : public QgsGrassModuleGroupBoxItem
 
     void onModeChanged();
 
-    //! Set selection list to currently selected features
+    //! Sets selection list to currently selected features
     void onLayerSelectionChanged();
 
 

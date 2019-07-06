@@ -13,11 +13,11 @@ email                : marco.hugentobler at sourcepole dot com
  *                                                                         *
  ***************************************************************************/
 
-#ifndef QGSMULTIPOINTV2_H
-#define QGSMULTIPOINTV2_H
+#ifndef QGSMULTIPOINT_H
+#define QGSMULTIPOINT_H
 
 #include "qgis_core.h"
-#include "qgis.h"
+#include "qgis_sip.h"
 #include "qgsgeometrycollection.h"
 
 /**
@@ -36,17 +36,19 @@ class CORE_EXPORT QgsMultiPoint: public QgsGeometryCollection
     QgsMultiPoint *toCurveType() const override SIP_FACTORY;
     bool fromWkt( const QString &wkt ) override;
     void clear() override;
-    QDomElement asGml2( QDomDocument &doc, int precision = 17, const QString &ns = "gml" ) const override;
-    QDomElement asGml3( QDomDocument &doc, int precision = 17, const QString &ns = "gml" ) const override;
-    QString asJson( int precision = 17 ) const override;
+    QDomElement asGml2( QDomDocument &doc, int precision = 17, const QString &ns = "gml", QgsAbstractGeometry::AxisOrder axisOrder = QgsAbstractGeometry::AxisOrder::XY ) const override;
+    QDomElement asGml3( QDomDocument &doc, int precision = 17, const QString &ns = "gml", QgsAbstractGeometry::AxisOrder axisOrder = QgsAbstractGeometry::AxisOrder::XY ) const override;
+    json asJsonObject( int precision = 17 ) const override SIP_SKIP;
     int nCoordinates() const override;
     bool addGeometry( QgsAbstractGeometry *g SIP_TRANSFER ) override;
     bool insertGeometry( QgsAbstractGeometry *g SIP_TRANSFER, int index ) override;
     QgsAbstractGeometry *boundary() const override SIP_FACTORY;
     int vertexNumberFromVertexId( QgsVertexId id ) const override;
     double segmentLength( QgsVertexId startVertex ) const override;
+    bool isValid( QString &error SIP_OUT, int flags = 0 ) const override;
 
 #ifndef SIP_RUN
+    void filterVertices( const std::function< bool( const QgsPoint & ) > &filter ) override;
 
     /**
      * Cast the \a geom to a QgsLineString.
@@ -65,6 +67,17 @@ class CORE_EXPORT QgsMultiPoint: public QgsGeometryCollection
 
     QgsMultiPoint *createEmptyWithSameType() const override SIP_FACTORY;
 
+#ifdef SIP_RUN
+    SIP_PYOBJECT __repr__();
+    % MethodCode
+    QString wkt = sipCpp->asWkt();
+    if ( wkt.length() > 1000 )
+      wkt = wkt.left( 1000 ) + QStringLiteral( "..." );
+    QString str = QStringLiteral( "<QgsMultiPoint: %1>" ).arg( wkt );
+    sipRes = PyUnicode_FromString( str.toUtf8().constData() );
+    % End
+#endif
+
   protected:
 
     bool wktOmitChildType() const override;
@@ -73,4 +86,4 @@ class CORE_EXPORT QgsMultiPoint: public QgsGeometryCollection
 
 // clazy:excludeall=qstring-allocations
 
-#endif // QGSMULTIPOINTV2_H
+#endif // QGSMULTIPOINT_H

@@ -20,7 +20,7 @@
 
 #include <QToolButton>
 #include "qgis_gui.h"
-#include "qgis.h"
+#include "qgis_sip.h"
 
 #include <QPointer>
 class QDoubleSpinBox;
@@ -49,11 +49,11 @@ class GUI_EXPORT QgsRatioLockButton : public QToolButton
      * \param locked locked state
      * \see locked
      */
-    void setLocked( const bool locked );
+    void setLocked( bool locked );
 
     /**
      * Returns whether the button state is locked.
-     * \returns true if the button state is locked.
+     * \returns TRUE if the button state is locked.
      * \see setLocked
      */
     bool locked() const { return mLocked; }
@@ -93,7 +93,7 @@ class GUI_EXPORT QgsRatioLockButton : public QToolButton
     /**
      * Emitted whenever the lock state changes.
      */
-    void lockChanged( const bool locked );
+    void lockChanged( bool locked );
 
   protected:
 

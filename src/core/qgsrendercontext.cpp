@@ -43,6 +43,7 @@ QgsRenderContext::QgsRenderContext( const QgsRenderContext &rh )
   , mCoordTransform( rh.mCoordTransform )
   , mDistanceArea( rh.mDistanceArea )
   , mExtent( rh.mExtent )
+  , mOriginalMapExtent( rh.mOriginalMapExtent )
   , mMapToPixel( rh.mMapToPixel )
   , mRenderingStopped( rh.mRenderingStopped )
   , mScaleFactor( rh.mScaleFactor )
@@ -57,6 +58,7 @@ QgsRenderContext::QgsRenderContext( const QgsRenderContext &rh )
   , mSegmentationToleranceType( rh.mSegmentationToleranceType )
   , mTransformContext( rh.mTransformContext )
   , mPathResolver( rh.mPathResolver )
+  , mTextRenderFormat( rh.mTextRenderFormat )
 #ifdef QGISDEBUG
   , mHasTransformContext( rh.mHasTransformContext )
 #endif
@@ -69,6 +71,7 @@ QgsRenderContext &QgsRenderContext::operator=( const QgsRenderContext &rh )
   mPainter = rh.mPainter;
   mCoordTransform = rh.mCoordTransform;
   mExtent = rh.mExtent;
+  mOriginalMapExtent = rh.mOriginalMapExtent;
   mMapToPixel = rh.mMapToPixel;
   mRenderingStopped = rh.mRenderingStopped;
   mScaleFactor = rh.mScaleFactor;
@@ -84,6 +87,7 @@ QgsRenderContext &QgsRenderContext::operator=( const QgsRenderContext &rh )
   mDistanceArea = rh.mDistanceArea;
   mTransformContext = rh.mTransformContext;
   mPathResolver = rh.mPathResolver;
+  mTextRenderFormat = rh.mTextRenderFormat;
 #ifdef QGISDEBUG
   mHasTransformContext = rh.mHasTransformContext;
 #endif
@@ -103,6 +107,10 @@ QgsRenderContext QgsRenderContext::fromQPainter( QPainter *painter )
   {
     context.setScaleFactor( 3.465 ); //assume 88 dpi as standard value
   }
+  if ( painter && painter->renderHints() & QPainter::Antialiasing )
+  {
+    context.setFlag( QgsRenderContext::Antialiasing, true );
+  }
   return context;
 }
 
@@ -110,7 +118,7 @@ QgsCoordinateTransformContext QgsRenderContext::transformContext() const
 {
 #ifdef QGISDEBUG
   if ( !mHasTransformContext )
-    qWarning( "No QgsCoordinateTransformContext context set for transform" );
+    QgsDebugMsgLevel( QStringLiteral( "No QgsCoordinateTransformContext context set for transform" ), 4 );
 #endif
   return mTransformContext;
 }
@@ -149,8 +157,11 @@ bool QgsRenderContext::testFlag( QgsRenderContext::Flag flag ) const
 QgsRenderContext QgsRenderContext::fromMapSettings( const QgsMapSettings &mapSettings )
 {
   QgsRenderContext ctx;
+  QgsRectangle extent = mapSettings.visibleExtent();
+  extent.grow( mapSettings.extentBuffer() );
   ctx.setMapToPixel( mapSettings.mapToPixel() );
-  ctx.setExtent( mapSettings.visibleExtent() );
+  ctx.setExtent( extent );
+  ctx.setMapExtent( mapSettings.visibleExtent() );
   ctx.setFlag( DrawEditingInfo, mapSettings.testFlag( QgsMapSettings::DrawEditingInfo ) );
   ctx.setFlag( ForceVectorOutput, mapSettings.testFlag( QgsMapSettings::ForceVectorOutput ) );
   ctx.setFlag( UseAdvancedEffects, mapSettings.testFlag( QgsMapSettings::UseAdvancedEffects ) );
@@ -172,6 +183,7 @@ QgsRenderContext QgsRenderContext::fromMapSettings( const QgsMapSettings &mapSet
   ctx.mDistanceArea.setEllipsoid( mapSettings.ellipsoid() );
   ctx.setTransformContext( mapSettings.transformContext() );
   ctx.setPathResolver( mapSettings.pathResolver() );
+  ctx.setTextRenderFormat( mapSettings.textRenderFormat() );
   //this flag is only for stopping during the current rendering progress,
   //so must be false at every new render operation
   ctx.setRenderingStopped( false );
@@ -273,7 +285,7 @@ double QgsRenderContext::convertToPainterUnits( double size, QgsUnitTypes::Rende
       size = convertMetersToMapUnits( size );
       unit = QgsUnitTypes::RenderMapUnits;
       // Fall through to RenderMapUnits with size in meters converted to size in MapUnits
-      FALLTHROUGH;
+      FALLTHROUGH
     }
     case QgsUnitTypes::RenderMapUnits:
     {
@@ -323,12 +335,12 @@ double QgsRenderContext::convertToMapUnits( double size, QgsUnitTypes::RenderUni
     {
       size = convertMetersToMapUnits( size );
       // Fall through to RenderMapUnits with values of meters converted to MapUnits
-      FALLTHROUGH;
+      FALLTHROUGH
     }
     case QgsUnitTypes::RenderMapUnits:
     {
       // check scale
-      double minSizeMU = -DBL_MAX;
+      double minSizeMU = std::numeric_limits<double>::lowest();
       if ( scale.minSizeMMEnabled )
       {
         minSizeMU = scale.minSizeMM * mScaleFactor * mup;
@@ -339,7 +351,7 @@ double QgsRenderContext::convertToMapUnits( double size, QgsUnitTypes::RenderUni
       }
       size = std::max( size, minSizeMU );
 
-      double maxSizeMU = DBL_MAX;
+      double maxSizeMU = std::numeric_limits<double>::max();
       if ( scale.maxSizeMMEnabled )
       {
         maxSizeMU = scale.maxSizeMM * mScaleFactor * mup;
@@ -446,3 +458,5 @@ double QgsRenderContext::convertMetersToMapUnits( double meters ) const
   }
   return meters;
 }
+
+

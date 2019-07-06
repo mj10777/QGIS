@@ -15,14 +15,14 @@
 #ifndef QGSQUERYBUILDER_H
 #define QGSQUERYBUILDER_H
 #include <map>
-#include "qgis.h"
+#include "qgis_sip.h"
 #include <vector>
 #include <QStandardItemModel>
+#include <QSortFilterProxyModel>
 #include <QStandardItem>
 #include <QModelIndex>
 #include "ui_qgsquerybuilderbase.h"
 #include "qgsguiutils.h"
-#include "qgshelp.h"
 #include "qgis_gui.h"
 
 class QgsVectorLayer;
@@ -53,8 +53,6 @@ class GUI_EXPORT QgsQueryBuilder : public QDialog, private Ui::QgsQueryBuilderBa
      */
     QgsQueryBuilder( QgsVectorLayer *layer, QWidget *parent SIP_TRANSFERTHIS = nullptr,
                      Qt::WindowFlags fl = QgsGuiUtils::ModalDialogFlags );
-
-    ~QgsQueryBuilder() override;
 
     void showEvent( QShowEvent *event ) override;
 
@@ -94,15 +92,16 @@ class GUI_EXPORT QgsQueryBuilder : public QDialog, private Ui::QgsQueryBuilderBa
     void btnAnd_clicked();
     void btnNot_clicked();
     void btnOr_clicked();
+    void onTextChanged( const QString &text );
 
     /**
-     * Get all distinct values for the field. Values are inserted
+     * Gets all distinct values for the field. Values are inserted
      * into the value list box
      */
     void btnGetAllValues_clicked();
 
     /**
-     * Get sample distinct values for the selected field. The sample size is
+     * Gets sample distinct values for the selected field. The sample size is
      * limited to an arbitrary value (currently set to 25). The values
      * are inserted into the values list box.
      */
@@ -129,6 +128,8 @@ class GUI_EXPORT QgsQueryBuilder : public QDialog, private Ui::QgsQueryBuilderBa
     QStandardItemModel *mModelFields = nullptr;
     //! Model for values ListView
     QStandardItemModel *mModelValues = nullptr;
+    //! Filter proxy Model for values ListView
+    QSortFilterProxyModel *mProxyValues = nullptr;
     //! Previous field row to delete model
     int mPreviousFieldRow;
 

@@ -17,7 +17,7 @@
 #define QGSRELATIONREFERENCEWIDGET_H
 
 #include "qgsattributeeditorcontext.h"
-#include "qgis.h"
+#include "qgis_sip.h"
 #include "qgsfeature.h"
 
 #include <QComboBox>
@@ -99,15 +99,15 @@ class GUI_EXPORT QgsRelationReferenceWidget : public QWidget
     bool readOnlySelector() { return mReadOnlySelector; }
     void setReadOnlySelector( bool readOnly );
 
-    //! determines if the widge offers the possibility to select the related feature on the map (using a dedicated map tool)
+    //! determines if the widget offers the possibility to select the related feature on the map (using a dedicated map tool)
     bool allowMapIdentification() { return mAllowMapIdentification; }
     void setAllowMapIdentification( bool allowMapIdentification );
 
     //! If the widget will order the combobox entries by value
     bool orderByValue() { return mOrderByValue; }
-    //! Set if the widget will order the combobox entries by value
+    //! Sets if the widget will order the combobox entries by value
     void setOrderByValue( bool orderByValue );
-    //! Set the fields for which filter comboboxes will be created
+    //! Sets the fields for which filter comboboxes will be created
     void setFilterFields( const QStringList &filterFields );
 
     //! determines the open form button is visible in the widget
@@ -117,7 +117,7 @@ class GUI_EXPORT QgsRelationReferenceWidget : public QWidget
     /**
      * Determines if the filters are chained
      *
-     * \returns True if filters are chained
+     * \returns TRUE if filters are chained
      */
     bool chainFilters() const { return mChainFilters; }
 
@@ -130,7 +130,7 @@ class GUI_EXPORT QgsRelationReferenceWidget : public QWidget
     void setChainFilters( bool chainFilters );
 
     /**
-     * return the related feature (from the referenced layer)
+     * Returns the related feature (from the referenced layer)
      * if no feature is related, it returns an invalid feature
      */
     QgsFeature referencedFeature() const;
@@ -184,10 +184,17 @@ class GUI_EXPORT QgsRelationReferenceWidget : public QWidget
     void addEntry();
     void updateAddEntryButton();
 
+    /**
+     * Updates the FK index as soon as the underlying model is updated when
+     * the chainFilter option is activated.
+     */
+    void updateIndex();
+
   private:
     void highlightFeature( QgsFeature f = QgsFeature(), CanvasExtent canvasExtent = Fixed );
     void updateAttributeEditorFrame( const QgsFeature &feature );
     void disableChainedComboBoxes( const QComboBox *cb );
+    void emitForeignKeyChanged( const QVariant &foreignKey );
 
     // initialized
     QgsAttributeEditorContext mEditorContext;
@@ -215,6 +222,7 @@ class GUI_EXPORT QgsRelationReferenceWidget : public QWidget
     bool mIsEditable = true;
     QStringList mFilterFields;
     QMap<QString, QMap<QString, QSet<QString> > > mFilterCache;
+    bool mInitialized = false;
 
     // Q_PROPERTY
     bool mEmbedForm = false;

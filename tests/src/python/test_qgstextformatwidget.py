@@ -9,8 +9,6 @@ the Free Software Foundation; either version 2 of the License, or
 __author__ = 'Nyall Dawson'
 __date__ = '2016-09'
 __copyright__ = 'Copyright 2016, The QGIS Project'
-# This will get replaced with a git SHA1 when you do a git archive
-__revision__ = '$Format:%H$'
 
 import qgis  # NOQA
 
@@ -20,7 +18,8 @@ from qgis.core import (QgsTextBufferSettings,
                        QgsTextFormat,
                        QgsUnitTypes,
                        QgsMapUnitScale,
-                       QgsBlurEffect)
+                       QgsBlurEffect,
+                       QgsMarkerSymbol)
 from qgis.gui import (QgsTextFormatWidget, QgsTextFormatDialog)
 from qgis.PyQt.QtGui import (QColor, QPainter)
 from qgis.PyQt.QtCore import (Qt, QSizeF, QPointF)
@@ -43,7 +42,7 @@ class PyQgsTextFormatWidget(unittest.TestCase):
         s.setOpacity(0.5)
         s.setJoinStyle(Qt.RoundJoin)
         s.setBlendMode(QPainter.CompositionMode_Difference)
-        s.setPaintEffect(QgsBlurEffect.create({'blur_level': '10', 'enabled': '1'}))
+        s.setPaintEffect(QgsBlurEffect.create({'blur_level': '2.0', 'blur_unit': QgsUnitTypes.encodeUnit(QgsUnitTypes.RenderMillimeters), 'enabled': '1'}))
         return s
 
     def checkBufferSettings(self, s):
@@ -58,7 +57,7 @@ class PyQgsTextFormatWidget(unittest.TestCase):
         self.assertEqual(s.joinStyle(), Qt.RoundJoin)
         self.assertEqual(s.blendMode(), QPainter.CompositionMode_Difference)
         self.assertTrue(s.paintEffect())
-        self.assertEqual(s.paintEffect().blurLevel(), 10)
+        self.assertEqual(s.paintEffect().blurLevel(), 2.0)
 
     def createBackgroundSettings(self):
         s = QgsTextBackgroundSettings()
@@ -85,7 +84,12 @@ class PyQgsTextFormatWidget(unittest.TestCase):
         s.setStrokeWidth(7)
         s.setStrokeWidthUnit(QgsUnitTypes.RenderMapUnits)
         s.setStrokeWidthMapUnitScale(QgsMapUnitScale(QgsMapUnitScale(25, 26)))
-        s.setPaintEffect(QgsBlurEffect.create({'blur_level': '6', 'enabled': '1'}))
+        s.setPaintEffect(QgsBlurEffect.create({'blur_level': '6.0', 'blur_unit': QgsUnitTypes.encodeUnit(QgsUnitTypes.RenderMillimeters), 'enabled': '1'}))
+
+        marker = QgsMarkerSymbol()
+        marker.setColor(QColor(100, 112, 134))
+        s.setMarkerSymbol(marker)
+
         return s
 
     def checkBackgroundSettings(self, s):
@@ -114,7 +118,7 @@ class PyQgsTextFormatWidget(unittest.TestCase):
         self.assertEqual(s.strokeWidthUnit(), QgsUnitTypes.RenderMapUnits)
         self.assertEqual(s.strokeWidthMapUnitScale(), QgsMapUnitScale(25, 26))
         self.assertTrue(s.paintEffect())
-        self.assertEqual(s.paintEffect().blurLevel(), 6)
+        self.assertEqual(s.paintEffect().blurLevel(), 6.0)
 
     def createShadowSettings(self):
         s = QgsTextShadowSettings()
@@ -167,6 +171,7 @@ class PyQgsTextFormatWidget(unittest.TestCase):
         s.setOpacity(0.5)
         s.setBlendMode(QPainter.CompositionMode_Difference)
         s.setLineHeight(5)
+        s.setPreviewBackgroundColor(QColor(100, 150, 200))
         return s
 
     def checkTextFormat(self, s):
@@ -183,6 +188,7 @@ class PyQgsTextFormatWidget(unittest.TestCase):
         self.assertEqual(s.opacity(), 0.5)
         self.assertEqual(s.blendMode(), QPainter.CompositionMode_Difference)
         self.assertEqual(s.lineHeight(), 5)
+        self.assertEqual(s.previewBackgroundColor().name(), '#6496c8')
 
     def testSettings(self):
         # test that widget correctly sets and returns matching settings

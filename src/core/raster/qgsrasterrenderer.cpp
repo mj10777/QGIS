@@ -49,7 +49,7 @@ int QgsRasterRenderer::bandCount() const
 
 Qgis::DataType QgsRasterRenderer::dataType( int bandNo ) const
 {
-  QgsDebugMsgLevel( "Entered", 4 );
+  QgsDebugMsgLevel( QStringLiteral( "Entered" ), 4 );
 
   if ( mOn ) return Qgis::ARGB32_Premultiplied;
 
@@ -153,4 +153,23 @@ void QgsRasterRenderer::copyCommonProperties( const QgsRasterRenderer *other, bo
   setRasterTransparency( other->rasterTransparency() ? new QgsRasterTransparency( *other->rasterTransparency() ) : nullptr );
   if ( copyMinMaxOrigin )
     setMinMaxOrigin( other->minMaxOrigin() );
+}
+
+void QgsRasterRenderer::toSld( QDomDocument &doc, QDomElement &element, const QgsStringMap & ) const
+{
+  QDomElement rasterSymbolizerElem = doc.createElement( QStringLiteral( "sld:RasterSymbolizer" ) );
+  element.appendChild( rasterSymbolizerElem );
+
+  // add opacity only is different from default
+  if ( !qgsDoubleNear( opacity(), 1.0 ) )
+  {
+    QDomElement opacityElem = doc.createElement( QStringLiteral( "sld:Opacity" ) );
+    opacityElem.appendChild( doc.createTextNode( QString::number( opacity() ) ) );
+    rasterSymbolizerElem.appendChild( opacityElem );
+  }
+}
+
+bool QgsRasterRenderer::accept( QgsStyleEntityVisitorInterface * ) const
+{
+  return true;
 }

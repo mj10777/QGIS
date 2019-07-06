@@ -21,10 +21,6 @@ __author__ = 'Victor Olaya'
 __date__ = 'August 2012'
 __copyright__ = '(C) 2012, Victor Olaya'
 
-# This will get replaced with a git SHA1 when you do a git archive
-
-__revision__ = '$Format:%H$'
-
 import os
 
 from qgis.PyQt.QtXml import QDomDocument
@@ -39,6 +35,7 @@ from qgis.core import (Qgis,
 
 from processing.core.ProcessingConfig import ProcessingConfig, Setting
 
+from processing.gui.ContextAction import ContextAction
 from processing.gui.ProviderActions import (ProviderActions,
                                             ProviderContextMenuActions)
 
@@ -46,7 +43,9 @@ from processing.modeler.AddModelFromFileAction import AddModelFromFileAction
 from processing.modeler.CreateNewModelAction import CreateNewModelAction
 from processing.modeler.DeleteModelAction import DeleteModelAction
 from processing.modeler.EditModelAction import EditModelAction
-from processing.modeler.WrongModelException import WrongModelException
+from processing.modeler.ExportModelAsPythonScriptAction import ExportModelAsPythonScriptAction
+from processing.modeler.OpenModelFromFileAction import OpenModelFromFileAction
+from processing.modeler.exceptions import WrongModelException
 from processing.modeler.ModelerUtils import ModelerUtils
 
 pluginPath = os.path.split(os.path.dirname(__file__))[0]
@@ -56,13 +55,19 @@ class ModelerAlgorithmProvider(QgsProcessingProvider):
 
     def __init__(self):
         super().__init__()
-        self.actions = [CreateNewModelAction(), AddModelFromFileAction()]
-        self.contextMenuActions = [EditModelAction(), DeleteModelAction()]
+        self.actions = [CreateNewModelAction(), OpenModelFromFileAction(), AddModelFromFileAction()]
+        sep_action = ContextAction()
+        sep_action.is_separator = True
+        self.contextMenuActions = [EditModelAction(), DeleteModelAction(), sep_action, ExportModelAsPythonScriptAction()]
         self.algs = []
+        self.isLoading = False
 
         # must reload models if providers list is changed - previously unavailable algorithms
         # which models depend on may now be available
-        QgsApplication.processingRegistry().providerAdded.connect(self.refreshAlgorithms)
+        QgsApplication.processingRegistry().providerAdded.connect(self.onProviderAdded)
+
+    def onProviderAdded(self, provider_id):
+        self.refreshAlgorithms()
 
     def load(self):
         ProcessingConfig.settingIcons[self.name()] = self.icon()
@@ -98,12 +103,16 @@ class ModelerAlgorithmProvider(QgsProcessingProvider):
         return True
 
     def loadAlgorithms(self):
+        if self.isLoading:
+            return
+        self.isLoading = True
         self.algs = []
         folders = ModelerUtils.modelsFolders()
         for f in folders:
             self.loadFromFolder(f)
         for a in self.algs:
             self.addAlgorithm(a)
+        self.isLoading = False
 
     def loadFromFolder(self, folder):
         if not os.path.exists(folder):
@@ -123,5 +132,5 @@ class ModelerAlgorithmProvider(QgsProcessingProvider):
                             QgsMessageLog.logMessage(self.tr('Could not load model {0}', 'ModelerAlgorithmProvider').format(descriptionFile),
                                                      self.tr('Processing'), Qgis.Critical)
                     except WrongModelException as e:
-                        QgsMessageLog.logMessage(self.tr('Could not load model {0}\n{1}', 'ModelerAlgorithmProvider').format(descriptionFile, e.msg),
+                        QgsMessageLog.logMessage(self.tr('Could not load model {0}\n{1}', 'ModelerAlgorithmProvider').format(descriptionFile, str(e)),
                                                  self.tr('Processing'), Qgis.Critical)

@@ -61,7 +61,8 @@ const QVector<QgsPalLayerSettings::Property> palHiddenProperties
 //
 
 QgsAuxiliaryLayer::QgsAuxiliaryLayer( const QString &pkField, const QString &filename, const QString &table, QgsVectorLayer *vlayer )
-  : QgsVectorLayer( QString( "%1|layername=%2" ).arg( filename, table ), QString( "%1_auxiliarystorage" ).arg( table ), "ogr" )
+  : QgsVectorLayer( QStringLiteral( "%1|layername=%2" ).arg( filename, table ),
+                    QStringLiteral( "%1_auxiliarystorage" ).arg( table ), QStringLiteral( "ogr" ) )
   , mFileName( filename )
   , mTable( table )
   , mLayer( vlayer )
@@ -308,7 +309,7 @@ int QgsAuxiliaryLayer::propertyFromIndex( int index ) const
   int p = -1;
   QgsPropertyDefinition aDef = propertyDefinitionFromIndex( index );
 
-  if ( aDef.origin().compare( QStringLiteral( "labeling" ) ) == 0 )
+  if ( aDef.origin().compare( QLatin1String( "labeling" ) ) == 0 )
   {
     const QgsPropertiesDefinition defs = QgsPalLayerSettings::propertyDefinitions();
     QgsPropertiesDefinition::const_iterator it = defs.constBegin();
@@ -321,7 +322,7 @@ int QgsAuxiliaryLayer::propertyFromIndex( int index ) const
       }
     }
   }
-  else if ( aDef.origin().compare( QStringLiteral( "symbol" ) ) == 0 )
+  else if ( aDef.origin().compare( QLatin1String( "symbol" ) ) == 0 )
   {
     const QgsPropertiesDefinition defs = QgsSymbolLayer::propertyDefinitions();
     QgsPropertiesDefinition::const_iterator it = defs.constBegin();
@@ -334,7 +335,7 @@ int QgsAuxiliaryLayer::propertyFromIndex( int index ) const
       }
     }
   }
-  else if ( aDef.origin().compare( QStringLiteral( "diagram" ) ) == 0 )
+  else if ( aDef.origin().compare( QLatin1String( "diagram" ) ) == 0 )
   {
     const QgsPropertiesDefinition defs = QgsDiagramLayerSettings::propertyDefinitions();
     QgsPropertiesDefinition::const_iterator it = defs.constBegin();
@@ -503,12 +504,9 @@ QgsAuxiliaryStorage::QgsAuxiliaryStorage( const QgsProject &project, bool copy )
 {
   initTmpFileName();
 
-  if ( !project.fileInfo().fileName().isEmpty() )
+  if ( !project.absoluteFilePath().isEmpty() )
   {
-    const QFileInfo info = project.fileInfo();
-    const QString path = info.path() + QDir::separator() + info.baseName();
-    const QString asFileName = path + "." + QgsAuxiliaryStorage::extension();
-    mFileName = asFileName;
+    mFileName = filenameForProject( project );
   }
 
   open( mFileName );
@@ -629,15 +627,33 @@ bool QgsAuxiliaryStorage::duplicateTable( const QgsDataSourceUri &ogrUri, const 
   return rc;
 }
 
-bool QgsAuxiliaryStorage::saveAs( const QString &filename ) const
+QString QgsAuxiliaryStorage::errorString() const
 {
-  if ( QFile::exists( filename ) )
-    QFile::remove( filename );
-
-  return  QFile::copy( currentFileName(), filename );
+  return mErrorString;
 }
 
-bool QgsAuxiliaryStorage::saveAs( const QgsProject &project ) const
+bool QgsAuxiliaryStorage::saveAs( const QString &filename )
+{
+  mErrorString.clear();
+
+  QFile dest( filename );
+  if ( dest.exists() && !dest.remove() )
+  {
+    mErrorString = dest.errorString();
+    return false;
+  }
+
+  QFile origin( currentFileName() );
+  if ( !origin.copy( filename ) )
+  {
+    mErrorString = origin.errorString();
+    return false;
+  }
+
+  return true;
+}
+
+bool QgsAuxiliaryStorage::saveAs( const QgsProject &project )
 {
   return saveAs( filenameForProject( project ) );
 }
@@ -645,6 +661,12 @@ bool QgsAuxiliaryStorage::saveAs( const QgsProject &project ) const
 QString QgsAuxiliaryStorage::extension()
 {
   return AS_EXTENSION;
+}
+
+bool QgsAuxiliaryStorage::exists( const QgsProject &project )
+{
+  const QFileInfo fileinfo( filenameForProject( project ) );
+  return fileinfo.exists() && fileinfo.isFile();
 }
 
 bool QgsAuxiliaryStorage::exec( const QString &sql, sqlite3 *handler )
@@ -672,8 +694,8 @@ void QgsAuxiliaryStorage::debugMsg( const QString &sql, sqlite3 *handler )
   const QString errMsg = QObject::tr( "%1 '%2': %3" ).arg( msg, sql, err );
   QgsDebugMsg( errMsg );
 #else
-  Q_UNUSED( sql );
-  Q_UNUSED( handler );
+  Q_UNUSED( sql )
+  Q_UNUSED( handler )
 #endif
 }
 
@@ -770,7 +792,7 @@ spatialite_database_unique_ptr QgsAuxiliaryStorage::open( const QgsProject &proj
 
 QString QgsAuxiliaryStorage::filenameForProject( const QgsProject &project )
 {
-  const QFileInfo info = project.fileInfo();
+  const QFileInfo info( project.absoluteFilePath() );
   const QString path = info.path() + QDir::separator() + info.baseName();
   return path + '.' + QgsAuxiliaryStorage::extension();
 }
@@ -809,7 +831,7 @@ QgsDataSourceUri QgsAuxiliaryStorage::parseOgrUri( const QgsDataSourceUri &uri )
   if ( tableParts.count() < 1 )
     return newUri;
 
-  const QString tableName = tableParts[0].replace( QStringLiteral( "layername=" ), QStringLiteral( "" ) );
+  const QString tableName = tableParts[0].replace( QStringLiteral( "layername=" ), QString() );
 
   newUri.setDataSource( QString(), tableName, QString() );
   newUri.setDatabase( databasePath );

@@ -23,6 +23,7 @@
  **********************************************************************/
 
 #include "effectivearea.h"
+#include "qgspoint.h"
 
 static MINHEAP initiate_minheap( int npoints )
 {
@@ -134,7 +135,7 @@ static void up( MINHEAP *tree, areanode *arealist, int c )
   //LWDEBUG( 2, "Entered  up" );
   areanode *tmp = nullptr;
 
-  Q_UNUSED( arealist );
+  Q_UNUSED( arealist )
 
   areanode **treearray = tree->key_array;
   int parent = ( c - 1 ) / 2;
@@ -155,7 +156,7 @@ static void up( MINHEAP *tree, areanode *arealist, int c )
 }
 
 /**
- * Get a reference to the point with the smallest effective area from the root of the min heap
+ * Gets a reference to the point with the smallest effective area from the root of the min heap
  */
 static areanode *minheap_pop( MINHEAP *tree, areanode *arealist )
 {

@@ -18,9 +18,11 @@
 #include "qgslogger.h"
 #include "qgsgeometry.h"
 #include "qgsfields.h"
+#include "qgslinestring.h"
 #include <QTextCodec>
 #include <QUuid>
 #include <cpl_error.h>
+#include <QJsonDocument>
 
 // Starting with GDAL 2.2, there are 2 concepts: unset fields and null fields
 // whereas previously there was only unset fields. For QGIS purposes, both
@@ -31,28 +33,28 @@
 
 
 
-void gdal::OGRDataSourceDeleter::operator()( void *source )
+void gdal::OGRDataSourceDeleter::operator()( OGRDataSourceH source )
 {
   OGR_DS_Destroy( source );
 }
 
 
-void gdal::OGRGeometryDeleter::operator()( void *geometry )
+void gdal::OGRGeometryDeleter::operator()( OGRGeometryH geometry )
 {
   OGR_G_DestroyGeometry( geometry );
 }
 
-void gdal::OGRFldDeleter::operator()( void *definition )
+void gdal::OGRFldDeleter::operator()( OGRFieldDefnH definition )
 {
   OGR_Fld_Destroy( definition );
 }
 
-void gdal::OGRFeatureDeleter::operator()( void *feature )
+void gdal::OGRFeatureDeleter::operator()( OGRFeatureH feature )
 {
   OGR_F_Destroy( feature );
 }
 
-void gdal::GDALDatasetCloser::operator()( void *dataset )
+void gdal::GDALDatasetCloser::operator()( GDALDatasetH dataset )
 {
   GDALClose( dataset );
 }
@@ -150,6 +152,13 @@ QgsFields QgsOgrUtils::readOgrFields( OGRFeatureH ogrFet, QTextCodec *encoding )
         varType = QVariant::DateTime;
         break;
       case OFTString:
+#if GDAL_VERSION_NUM >= GDAL_COMPUTE_VERSION(2,4,0)
+        if ( OGR_Fld_GetSubType( fldDef ) == OFSTJSON )
+          varType = QVariant::Map;
+        else
+          varType = QVariant::String;
+        break;
+#endif
       default:
         varType = QVariant::String; // other unsupported, leave it as a string
     }
@@ -174,7 +183,7 @@ QVariant QgsOgrUtils::getOgrFeatureAttribute( OGRFeatureH ogrFet, const QgsField
     if ( ok )
       *ok = false;
 
-    QgsDebugMsg( "ogrFet->GetFieldDefnRef(attindex) returns NULL" );
+    QgsDebugMsg( QStringLiteral( "ogrFet->GetFieldDefnRef(attindex) returns NULL" ) );
     return QVariant();
   }
 
@@ -196,8 +205,10 @@ QVariant QgsOgrUtils::getOgrFeatureAttribute( OGRFeatureH ogrFet, const QgsField
         break;
       }
       case QVariant::Int:
-      case QVariant::Bool:
         value = QVariant( OGR_F_GetFieldAsInteger( ogrFet, attIndex ) );
+        break;
+      case QVariant::Bool:
+        value = QVariant( bool( OGR_F_GetFieldAsInteger( ogrFet, attIndex ) ) );
         break;
       case QVariant::LongLong:
         value = QVariant( OGR_F_GetFieldAsInteger64( ogrFet, attIndex ) );
@@ -220,6 +231,59 @@ QVariant QgsOgrUtils::getOgrFeatureAttribute( OGRFeatureH ogrFet, const QgsField
           value = QDateTime( QDate( year, month, day ), QTime( hour, minute, second ) );
       }
       break;
+
+      case QVariant::ByteArray:
+      {
+        int size = 0;
+        const GByte *b = OGR_F_GetFieldAsBinary( ogrFet, attIndex, &size );
+
+        // QByteArray::fromRawData is funny. It doesn't take ownership of the data, so we have to explicitly call
+        // detach on it to force a copy which owns the data
+        QByteArray ba = QByteArray::fromRawData( reinterpret_cast<const char *>( b ), size );
+        ba.detach();
+
+        value = ba;
+        break;
+      }
+
+      case QVariant::List:
+      {
+        if ( fields.at( attIndex ).subType() == QVariant::String )
+        {
+          QStringList list;
+          char **lst = OGR_F_GetFieldAsStringList( ogrFet, attIndex );
+          const int count = CSLCount( lst );
+          if ( count > 0 )
+          {
+            for ( int i = 0; i < count; i++ )
+            {
+              if ( encoding )
+                list << encoding->toUnicode( lst[i] );
+              else
+                list << QString::fromUtf8( lst[i] );
+            }
+          }
+          value = list;
+        }
+        else
+        {
+          Q_ASSERT_X( false, "QgsOgrUtils::getOgrFeatureAttribute", "unsupported field type" );
+          if ( ok )
+            *ok = false;
+        }
+        break;
+      }
+
+      case QVariant::Map:
+      {
+        //it has to be JSON
+        //it's null if no json format
+        if ( encoding )
+          value = QJsonDocument::fromJson( encoding->toUnicode( OGR_F_GetFieldAsString( ogrFet, attIndex ) ).toUtf8() ).toVariant();
+        else
+          value = QJsonDocument::fromJson( QString::fromUtf8( OGR_F_GetFieldAsString( ogrFet, attIndex ) ).toUtf8() ).toVariant();
+        break;
+      }
       default:
         Q_ASSERT_X( false, "QgsOgrUtils::getOgrFeatureAttribute", "unsupported field type" );
         if ( ok )
@@ -269,10 +333,168 @@ bool QgsOgrUtils::readOgrFeatureGeometry( OGRFeatureH ogrFet, QgsFeature &featur
   return true;
 }
 
+std::unique_ptr< QgsPoint > ogrGeometryToQgsPoint( OGRGeometryH geom )
+{
+  QgsWkbTypes::Type wkbType = static_cast<QgsWkbTypes::Type>( OGR_G_GetGeometryType( geom ) );
+
+  double x, y, z, m;
+  OGR_G_GetPointZM( geom, 0, &x, &y, &z, &m );
+  return qgis::make_unique< QgsPoint >( wkbType, x, y, z, m );
+}
+
+std::unique_ptr< QgsLineString > ogrGeometryToQgsLineString( OGRGeometryH geom )
+{
+  QgsWkbTypes::Type wkbType = static_cast<QgsWkbTypes::Type>( OGR_G_GetGeometryType( geom ) );
+
+  int count = OGR_G_GetPointCount( geom );
+  QVector< double > x( count );
+  QVector< double > y( count );
+  QVector< double > z;
+  double *pz = nullptr;
+  if ( QgsWkbTypes::hasZ( wkbType ) )
+  {
+    z.resize( count );
+    pz = z.data();
+  }
+  double *pm = nullptr;
+  QVector< double > m;
+  if ( QgsWkbTypes::hasM( wkbType ) )
+  {
+    m.resize( count );
+    pm = m.data();
+  }
+  OGR_G_GetPointsZM( geom, x.data(), sizeof( double ), y.data(), sizeof( double ), pz, sizeof( double ), pm, sizeof( double ) );
+
+  return qgis::make_unique< QgsLineString>( x, y, z, m, wkbType == QgsWkbTypes::LineString25D );
+}
+
+QgsWkbTypes::Type QgsOgrUtils::ogrGeometryTypeToQgsWkbType( OGRwkbGeometryType ogrGeomType )
+{
+  switch ( ogrGeomType )
+  {
+    case wkbUnknown: return QgsWkbTypes::Type::Unknown;
+    case wkbPoint: return QgsWkbTypes::Type::Point;
+    case wkbLineString: return QgsWkbTypes::Type::LineString;
+    case wkbPolygon: return QgsWkbTypes::Type::Polygon;
+    case wkbMultiPoint: return QgsWkbTypes::Type::MultiPoint;
+    case wkbMultiLineString: return QgsWkbTypes::Type::MultiLineString;
+    case wkbMultiPolygon: return QgsWkbTypes::Type::MultiPolygon;
+    case wkbGeometryCollection: return QgsWkbTypes::Type::GeometryCollection;
+    case wkbCircularString: return QgsWkbTypes::Type::CircularString;
+    case wkbCompoundCurve: return QgsWkbTypes::Type::CompoundCurve;
+    case wkbCurvePolygon: return QgsWkbTypes::Type::CurvePolygon;
+    case wkbMultiCurve: return QgsWkbTypes::Type::MultiCurve;
+    case wkbMultiSurface: return QgsWkbTypes::Type::MultiSurface;
+    case wkbCurve: return QgsWkbTypes::Type::Unknown; // not an actual concrete type
+    case wkbSurface: return QgsWkbTypes::Type::Unknown; // not an actual concrete type
+    case wkbPolyhedralSurface: return QgsWkbTypes::Type::Unknown; // no actual matching
+    case wkbTIN: return QgsWkbTypes::Type::Unknown; // no actual matching
+    case wkbTriangle: return QgsWkbTypes::Type::Triangle;
+
+    case wkbNone: return QgsWkbTypes::Type::NoGeometry;
+    case wkbLinearRing: return QgsWkbTypes::Type::LineString; // approximate match
+
+    case wkbCircularStringZ: return QgsWkbTypes::Type::CircularStringZ;
+    case wkbCompoundCurveZ: return QgsWkbTypes::Type::CompoundCurveZ;
+    case wkbCurvePolygonZ: return QgsWkbTypes::Type::CurvePolygonZ;
+    case wkbMultiCurveZ: return QgsWkbTypes::Type::MultiCurveZ;
+    case wkbMultiSurfaceZ: return QgsWkbTypes::Type::MultiSurfaceZ;
+    case wkbCurveZ: return QgsWkbTypes::Type::Unknown; // not an actual concrete type
+    case wkbSurfaceZ: return QgsWkbTypes::Type::Unknown; // not an actual concrete type
+    case wkbPolyhedralSurfaceZ: return QgsWkbTypes::Type::Unknown; // no actual matching
+    case wkbTINZ: return QgsWkbTypes::Type::Unknown; // no actual matching
+    case wkbTriangleZ: return QgsWkbTypes::Type::TriangleZ;
+
+    case wkbPointM: return QgsWkbTypes::Type::PointM;
+    case wkbLineStringM: return QgsWkbTypes::Type::LineStringM;
+    case wkbPolygonM: return QgsWkbTypes::Type::PolygonM;
+    case wkbMultiPointM: return QgsWkbTypes::Type::MultiPointM;
+    case wkbMultiLineStringM: return QgsWkbTypes::Type::MultiLineStringM;
+    case wkbMultiPolygonM: return QgsWkbTypes::Type::MultiPolygonM;
+    case wkbGeometryCollectionM: return QgsWkbTypes::Type::GeometryCollectionM;
+    case wkbCircularStringM: return QgsWkbTypes::Type::CircularStringM;
+    case wkbCompoundCurveM: return QgsWkbTypes::Type::CompoundCurveM;
+    case wkbCurvePolygonM: return QgsWkbTypes::Type::CurvePolygonM;
+    case wkbMultiCurveM: return QgsWkbTypes::Type::MultiCurveM;
+    case wkbMultiSurfaceM: return QgsWkbTypes::Type::MultiSurfaceM;
+    case wkbCurveM: return QgsWkbTypes::Type::Unknown; // not an actual concrete type
+    case wkbSurfaceM: return QgsWkbTypes::Type::Unknown; // not an actual concrete type
+    case wkbPolyhedralSurfaceM: return QgsWkbTypes::Type::Unknown; // no actual matching
+    case wkbTINM: return QgsWkbTypes::Type::Unknown; // no actual matching
+    case wkbTriangleM: return QgsWkbTypes::Type::TriangleM;
+
+    case wkbPointZM: return QgsWkbTypes::Type::PointZM;
+    case wkbLineStringZM: return QgsWkbTypes::Type::LineStringZM;
+    case wkbPolygonZM: return QgsWkbTypes::Type::PolygonZM;
+    case wkbMultiPointZM: return QgsWkbTypes::Type::MultiPointZM;
+    case wkbMultiLineStringZM: return QgsWkbTypes::Type::MultiLineStringZM;
+    case wkbMultiPolygonZM: return QgsWkbTypes::Type::MultiPolygonZM;
+    case wkbGeometryCollectionZM: return QgsWkbTypes::Type::GeometryCollectionZM;
+    case wkbCircularStringZM: return QgsWkbTypes::Type::CircularStringZM;
+    case wkbCompoundCurveZM: return QgsWkbTypes::Type::CompoundCurveZM;
+    case wkbCurvePolygonZM: return QgsWkbTypes::Type::CurvePolygonZM;
+    case wkbMultiCurveZM: return QgsWkbTypes::Type::MultiCurveZM;
+    case wkbMultiSurfaceZM: return QgsWkbTypes::Type::MultiSurfaceZM;
+    case wkbCurveZM: return QgsWkbTypes::Type::Unknown; // not an actual concrete type
+    case wkbSurfaceZM: return QgsWkbTypes::Type::Unknown; // not an actual concrete type
+    case wkbPolyhedralSurfaceZM: return QgsWkbTypes::Type::Unknown; // no actual matching
+    case wkbTINZM: return QgsWkbTypes::Type::Unknown; // no actual matching
+    case wkbTriangleZM: return QgsWkbTypes::Type::TriangleZM;
+
+    case wkbPoint25D: return QgsWkbTypes::Type::PointZ;
+    case wkbLineString25D: return QgsWkbTypes::Type::LineStringZ;
+    case wkbPolygon25D: return QgsWkbTypes::Type::PolygonZ;
+    case wkbMultiPoint25D: return QgsWkbTypes::Type::MultiPointZ;
+    case wkbMultiLineString25D: return QgsWkbTypes::Type::MultiLineStringZ;
+    case wkbMultiPolygon25D: return QgsWkbTypes::Type::MultiPolygonZ;
+    case wkbGeometryCollection25D: return QgsWkbTypes::Type::GeometryCollectionZ;
+  }
+
+  // should not reach that point normally
+  return QgsWkbTypes::Type::Unknown;
+}
+
 QgsGeometry QgsOgrUtils::ogrGeometryToQgsGeometry( OGRGeometryH geom )
 {
   if ( !geom )
     return QgsGeometry();
+
+  const auto ogrGeomType = OGR_G_GetGeometryType( geom );
+  QgsWkbTypes::Type wkbType = ogrGeometryTypeToQgsWkbType( ogrGeomType );
+
+  // optimised case for some geometry classes, avoiding wkb conversion on OGR/QGIS sides
+  // TODO - extend to other classes!
+  switch ( QgsWkbTypes::flatType( wkbType ) )
+  {
+    case QgsWkbTypes::Point:
+    {
+      return QgsGeometry( ogrGeometryToQgsPoint( geom ) );
+    }
+
+    case QgsWkbTypes::LineString:
+    {
+      // optimised case for line -- avoid wkb conversion
+      return QgsGeometry( ogrGeometryToQgsLineString( geom ) );
+    }
+
+    default:
+      break;
+  };
+
+  // Fallback to inefficient WKB conversions
+
+  if ( wkbFlatten( wkbType ) == wkbGeometryCollection )
+  {
+    // Shapefile MultiPatch can be reported as GeometryCollectionZ of TINZ
+    if ( OGR_G_GetGeometryCount( geom ) >= 1 &&
+         wkbFlatten( OGR_G_GetGeometryType( OGR_G_GetGeometryRef( geom, 0 ) ) ) == wkbTIN )
+    {
+      auto newGeom = OGR_G_ForceToMultiPolygon( OGR_G_Clone( geom ) );
+      auto ret = ogrGeometryToQgsGeometry( newGeom );
+      OGR_G_DestroyGeometry( newGeom );
+      return ret;
+    }
+  }
 
   // get the wkb representation
   int memorySize = OGR_G_WkbSize( geom );
@@ -422,5 +644,18 @@ QgsFields QgsOgrUtils::stringToFields( const QString &string, QTextCodec *encodi
   hDS.reset();
   VSIUnlink( randomFileName.toUtf8().constData() );
   return fields;
+}
+
+QStringList QgsOgrUtils::cStringListToQStringList( char **stringList )
+{
+  QStringList strings;
+
+  // presume null terminated string list
+  for ( qgssize i = 0; stringList[i]; ++i )
+  {
+    strings.append( QString::fromUtf8( stringList[i] ) );
+  }
+
+  return strings;
 }
 

@@ -13,11 +13,11 @@ email                : marco.hugentobler at sourcepole dot com
  *                                                                         *
  ***************************************************************************/
 
-#ifndef QGSMULTIPOLYGONV2_H
-#define QGSMULTIPOLYGONV2_H
+#ifndef QGSMULTIPOLYGON_H
+#define QGSMULTIPOLYGON_H
 
 #include "qgis_core.h"
-#include "qgis.h"
+#include "qgis_sip.h"
 #include "qgsmultisurface.h"
 
 /**
@@ -34,9 +34,9 @@ class CORE_EXPORT QgsMultiPolygon: public QgsMultiSurface
     void clear() override;
     QgsMultiPolygon *clone() const override SIP_FACTORY;
     bool fromWkt( const QString &wkt ) override;
-    QDomElement asGml2( QDomDocument &doc, int precision = 17, const QString &ns = "gml" ) const override;
-    QDomElement asGml3( QDomDocument &doc, int precision = 17, const QString &ns = "gml" ) const override;
-    QString asJson( int precision = 17 ) const override;
+    QDomElement asGml2( QDomDocument &doc, int precision = 17, const QString &ns = "gml", QgsAbstractGeometry::AxisOrder axisOrder = QgsAbstractGeometry::AxisOrder::XY ) const override;
+    QDomElement asGml3( QDomDocument &doc, int precision = 17, const QString &ns = "gml", QgsAbstractGeometry::AxisOrder axisOrder = QgsAbstractGeometry::AxisOrder::XY ) const override;
+    json asJsonObject( int precision  = 17 ) const override SIP_SKIP;
     bool addGeometry( QgsAbstractGeometry *g SIP_TRANSFER ) override;
     bool insertGeometry( QgsAbstractGeometry *g SIP_TRANSFER, int index ) override;
 
@@ -65,6 +65,17 @@ class CORE_EXPORT QgsMultiPolygon: public QgsMultiSurface
 
     QgsMultiPolygon *createEmptyWithSameType() const override SIP_FACTORY;
 
+#ifdef SIP_RUN
+    SIP_PYOBJECT __repr__();
+    % MethodCode
+    QString wkt = sipCpp->asWkt();
+    if ( wkt.length() > 1000 )
+      wkt = wkt.left( 1000 ) + QStringLiteral( "..." );
+    QString str = QStringLiteral( "<QgsMultiPolygon: %1>" ).arg( wkt );
+    sipRes = PyUnicode_FromString( str.toUtf8().constData() );
+    % End
+#endif
+
   protected:
 
     bool wktOmitChildType() const override;
@@ -72,4 +83,4 @@ class CORE_EXPORT QgsMultiPolygon: public QgsMultiSurface
 
 // clazy:excludeall=qstring-allocations
 
-#endif // QGSMULTIPOLYGONV2_H
+#endif // QGSMULTIPOLYGON_H

@@ -28,18 +28,24 @@
  * \class  QgsMapServiceException
  * \brief Exception class for WMS service exceptions (for compatibility only).
  *
- * \deprecated Use QsgServerException
  *
  * The most important codes are:
  *  * "InvalidFormat"
  *  * "Invalid CRS"
  *  * "LayerNotDefined" / "StyleNotDefined"
  *  * "OperationNotSupported"
+ * \deprecated Use QsgServerException
  */
 
 class SERVER_EXPORT QgsMapServiceException : public QgsOgcServiceException
 {
   public:
+
+    /**
+     * Constructor for QgsMapServiceException.
+     * \param code HTTP error code
+     * \param message Exception message to return to the client
+     */
     QgsMapServiceException( const QString &code, const QString &message )
       : QgsOgcServiceException( code, message )
     {}

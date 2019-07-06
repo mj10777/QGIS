@@ -30,6 +30,7 @@
 #include "qgsproject.h"
 #include "qgsapplication.h"
 #include "qgsfileutils.h"
+#include "qgsmimedatautils.h"
 
 QgsFileWidget::QgsFileWidget( QWidget *parent )
   : QWidget( parent )
@@ -53,11 +54,14 @@ QgsFileWidget::QgsFileWidget( QWidget *parent )
 
   // otherwise, use the traditional QLineEdit subclass
   mLineEdit = new QgsFileDropEdit( this );
+  mLineEdit->setDragEnabled( true );
+  mLineEdit->setToolTip( tr( "Full path to the file(s), including name and extension" ) );
   connect( mLineEdit, &QLineEdit::textChanged, this, &QgsFileWidget::textEdited );
   mLayout->addWidget( mLineEdit );
 
   mFileWidgetButton = new QToolButton( this );
   mFileWidgetButton->setText( QChar( 0x2026 ) );
+  mFileWidgetButton->setToolTip( tr( "Browse" ) );
   connect( mFileWidgetButton, &QAbstractButton::clicked, this, &QgsFileWidget::openFileDialog );
   mLayout->addWidget( mFileWidgetButton );
 
@@ -221,22 +225,24 @@ void QgsFileWidget::openFileDialog()
   QgsSettings settings;
   QString oldPath;
 
-  // If we use fixed default path
-  if ( !mDefaultRoot.isEmpty() )
-  {
-    oldPath = QDir::cleanPath( mDefaultRoot );
-  }
   // if we use a relative path option, we need to obtain the full path
-  else if ( !mFilePath.isEmpty() )
+  // first choice is the current file path, if one is entered
+  if ( !mFilePath.isEmpty() )
   {
     oldPath = relativePath( mFilePath, false );
+  }
+  // If we use fixed default path
+  // second choice is the default root
+  else if ( !mDefaultRoot.isEmpty() )
+  {
+    oldPath = QDir::cleanPath( mDefaultRoot );
   }
 
   // If there is no valid value, find a default path to use
   QUrl url = QUrl::fromUserInput( oldPath );
   if ( !url.isValid() )
   {
-    QString defPath = QDir::cleanPath( QgsProject::instance()->fileInfo().absolutePath() );
+    QString defPath = QDir::cleanPath( QFileInfo( QgsProject::instance()->absoluteFilePath() ).path() );
     if ( defPath.isEmpty() )
     {
       defPath = QDir::homePath();
@@ -341,7 +347,7 @@ QString QgsFileWidget::relativePath( const QString &filePath, bool removeRelativ
   QString RelativePath;
   if ( mRelativeStorage == RelativeProject )
   {
-    RelativePath = QDir::toNativeSeparators( QDir::cleanPath( QgsProject::instance()->fileInfo().absolutePath() ) );
+    RelativePath = QDir::toNativeSeparators( QDir::cleanPath( QFileInfo( QgsProject::instance()->absoluteFilePath() ).path() ) );
   }
   else if ( mRelativeStorage == RelativeDefaultPath && !mDefaultRoot.isEmpty() )
   {
@@ -376,7 +382,7 @@ QString QgsFileWidget::toUrl( const QString &path ) const
   QUrl url = QUrl::fromUserInput( urlStr );
   if ( !url.isValid() || !url.isLocalFile() )
   {
-    QgsDebugMsg( QString( "URL: %1 is not valid or not a local file!" ).arg( path ) );
+    QgsDebugMsg( QStringLiteral( "URL: %1 is not valid or not a local file!" ).arg( path ) );
     rep = path;
   }
 
@@ -427,18 +433,61 @@ void QgsFileDropEdit::setFilters( const QString &filters )
 
 QString QgsFileDropEdit::acceptableFilePath( QDropEvent *event ) const
 {
+  QStringList rawPaths;
   QStringList paths;
   if ( event->mimeData()->hasUrls() )
   {
-    Q_FOREACH ( const QUrl &url, event->mimeData()->urls() )
+    const QList< QUrl > urls = event->mimeData()->urls();
+    rawPaths.reserve( urls.count() );
+    for ( const QUrl &url : urls )
     {
-      QFileInfo file( url.toLocalFile() );
-      if ( ( mStorageMode != QgsFileWidget::GetDirectory && file.isFile() &&
-             ( mAcceptableExtensions.isEmpty() || mAcceptableExtensions.contains( file.suffix(), Qt::CaseInsensitive ) ) )
-           || ( mStorageMode == QgsFileWidget::GetDirectory && file.isDir() ) )
-        paths.append( file.filePath() );
+      const QString local =  url.toLocalFile();
+      if ( !rawPaths.contains( local ) )
+        rawPaths.append( local );
     }
   }
+
+  QgsMimeDataUtils::UriList lst = QgsMimeDataUtils::decodeUriList( event->mimeData() );
+  for ( const QgsMimeDataUtils::Uri &u : lst )
+  {
+    if ( !rawPaths.contains( u.uri ) )
+      rawPaths.append( u.uri );
+  }
+
+  if ( !event->mimeData()->text().isEmpty() && !rawPaths.contains( event->mimeData()->text() ) )
+    rawPaths.append( event->mimeData()->text() );
+
+  paths.reserve( rawPaths.count() );
+  for ( const QString &path : qgis::as_const( rawPaths ) )
+  {
+    QFileInfo file( path );
+    switch ( mStorageMode )
+    {
+      case QgsFileWidget::GetFile:
+      case QgsFileWidget::GetMultipleFiles:
+      case QgsFileWidget::SaveFile:
+      {
+        if ( file.isFile() && ( mAcceptableExtensions.isEmpty() || mAcceptableExtensions.contains( file.suffix(), Qt::CaseInsensitive ) ) )
+          paths.append( file.filePath() );
+
+        break;
+      }
+
+      case QgsFileWidget::GetDirectory:
+      {
+        if ( file.isDir() )
+          paths.append( file.filePath() );
+        else if ( file.isFile() )
+        {
+          // folder mode, but a file dropped. So get folder name from file
+          paths.append( file.absolutePath() );
+        }
+
+        break;
+      }
+    }
+  }
+
   if ( paths.size() > 1 )
   {
     return QStringLiteral( "\"%1\"" ).arg( paths.join( QStringLiteral( "\" \"" ) ) );

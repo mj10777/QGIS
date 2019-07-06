@@ -21,11 +21,8 @@ __author__ = 'Alexander Bruy'
 __date__ = 'February 2016'
 __copyright__ = '(C) 2016, Alexander Bruy'
 
-# This will get replaced with a git SHA1 when you do a git archive
-
-__revision__ = '$Format:%H$'
-
 import os
+import warnings
 
 from qgis.core import (QgsProject,
                        QgsReferencedPointXY,
@@ -37,8 +34,11 @@ from qgis.utils import iface
 from processing.gui.PointMapTool import PointMapTool
 
 pluginPath = os.path.split(os.path.dirname(__file__))[0]
-WIDGET, BASE = uic.loadUiType(
-    os.path.join(pluginPath, 'ui', 'widgetBaseSelector.ui'))
+
+with warnings.catch_warnings():
+    warnings.filterwarnings("ignore", category=DeprecationWarning)
+    WIDGET, BASE = uic.loadUiType(
+        os.path.join(pluginPath, 'ui', 'widgetBaseSelector.ui'))
 
 
 class PointSelectionPanel(BASE, WIDGET):

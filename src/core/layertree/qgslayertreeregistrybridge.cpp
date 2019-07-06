@@ -49,7 +49,8 @@ void QgsLayerTreeRegistryBridge::layersAdded( const QList<QgsMapLayer *> &layers
     return;
 
   QList<QgsLayerTreeNode *> nodes;
-  Q_FOREACH ( QgsMapLayer *layer, layers )
+  const auto constLayers = layers;
+  for ( QgsMapLayer *layer : constLayers )
   {
     QgsLayerTreeLayer *nodeLayer = new QgsLayerTreeLayer( layer );
     nodeLayer->setItemVisibilityChecked( mNewLayersVisible );
@@ -74,7 +75,7 @@ void QgsLayerTreeRegistryBridge::layersAdded( const QList<QgsMapLayer *> &layers
 
 void QgsLayerTreeRegistryBridge::layersWillBeRemoved( const QStringList &layerIds )
 {
-  QgsDebugMsgLevel( QString( "%1 layers will be removed, enabled:%2" ).arg( layerIds.count() ).arg( mEnabled ), 4 );
+  QgsDebugMsgLevel( QStringLiteral( "%1 layers will be removed, enabled:%2" ).arg( layerIds.count() ).arg( mEnabled ), 4 );
 
   if ( !mEnabled )
     return;
@@ -83,7 +84,8 @@ void QgsLayerTreeRegistryBridge::layersWillBeRemoved( const QStringList &layerId
   // the registry _again_ in groupRemovedChildren() - this prevents it
   mRegistryRemovingLayers = true;
 
-  Q_FOREACH ( const QString &layerId, layerIds )
+  const auto constLayerIds = layerIds;
+  for ( const QString &layerId : constLayerIds )
   {
     QgsLayerTreeLayer *nodeLayer = mRoot->findLayer( layerId );
     if ( nodeLayer )
@@ -131,12 +133,13 @@ void QgsLayerTreeRegistryBridge::groupRemovedChildren()
   // remove only those that really do not exist in the tree
   // (ignores layers that were dragged'n'dropped: 1. drop new 2. remove old)
   QStringList toRemove;
-  Q_FOREACH ( const QString &layerId, mLayerIdsForRemoval )
+  const auto constMLayerIdsForRemoval = mLayerIdsForRemoval;
+  for ( const QString &layerId : constMLayerIdsForRemoval )
     if ( !mRoot->findLayer( layerId ) )
       toRemove << layerId;
   mLayerIdsForRemoval.clear();
 
-  QgsDebugMsgLevel( QString( "%1 layers will be removed" ).arg( toRemove.count() ), 4 );
+  QgsDebugMsgLevel( QStringLiteral( "%1 layers will be removed" ).arg( toRemove.count() ), 4 );
 
   // delay the removal of layers from the registry. There may be other slots connected to map layer registry's signals
   // that might disrupt the execution flow - e.g. a processEvents() call may force update of layer tree view with

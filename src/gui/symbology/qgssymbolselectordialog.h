@@ -18,7 +18,6 @@
 
 #include <QDialog>
 #include "qgis_sip.h"
-#include "qgis.h"
 
 #include "ui_qgssymbolselectordialogbase.h"
 
@@ -93,6 +92,8 @@ class GUI_EXPORT QgsSymbolSelectorWidget: public QgsPanelWidget, private Ui::Qgs
 
   public:
 
+    // TODO QGIS 4.0 - transfer ownership of symbol to widget!
+
     /**
        * Symbol selector widget that can be used to select and build a symbol
        * \param symbol The symbol to load into the widget as a start point.
@@ -102,7 +103,7 @@ class GUI_EXPORT QgsSymbolSelectorWidget: public QgsPanelWidget, private Ui::Qgs
        */
     QgsSymbolSelectorWidget( QgsSymbol *symbol, QgsStyle *style, QgsVectorLayer *vl, QWidget *parent SIP_TRANSFERTHIS = nullptr );
 
-    //! return menu for "advanced" button - create it if doesn't exist and show the advanced button
+    //! Returns menu for "advanced" button - create it if doesn't exist and show the advanced button
     QMenu *advancedMenu();
 
     /**
@@ -121,7 +122,7 @@ class GUI_EXPORT QgsSymbolSelectorWidget: public QgsPanelWidget, private Ui::Qgs
     QgsSymbolWidgetContext context() const;
 
     /**
-     * \brief Return the symbol that is currently active in the widget. Can be null.
+     * Returns the symbol that is currently active in the widget. Can be NULLPTR.
      * \returns The active symbol.
      */
     QgsSymbol *symbol() { return mSymbol; }
@@ -252,6 +253,7 @@ class GUI_EXPORT QgsSymbolSelectorWidget: public QgsPanelWidget, private Ui::Qgs
     QgsSymbolWidgetContext mContext;
     QgsFeature mPreviewFeature;
     QgsExpressionContext mPreviewExpressionContext;
+    bool mBlockModified = false;
 
 };
 
@@ -272,12 +274,11 @@ class GUI_EXPORT QgsSymbolSelectorDialog : public QDialog
      * \param style The style
      * \param vl Associated vector layer
      * \param parent Parent widget
-     * \param embedded True to embed in renderer properties dialog, false otherwise
+     * \param embedded TRUE to embed in renderer properties dialog, FALSE otherwise
      */
     QgsSymbolSelectorDialog( QgsSymbol *symbol, QgsStyle *style, QgsVectorLayer *vl, QWidget *parent SIP_TRANSFERTHIS = nullptr, bool embedded = false );
-    ~QgsSymbolSelectorDialog() override;
 
-    //! return menu for "advanced" button - create it if doesn't exist and show the advanced button
+    //! Returns menu for "advanced" button - create it if doesn't exist and show the advanced button
     QMenu *advancedMenu();
 
     /**
@@ -296,7 +297,7 @@ class GUI_EXPORT QgsSymbolSelectorDialog : public QDialog
     QgsSymbolWidgetContext context() const;
 
     /**
-     * \brief Return the symbol that is currently active in the widget. Can be null.
+     * Returns the symbol that is currently active in the widget. Can be NULLPTR.
      * \returns The active symbol.
      */
     QgsSymbol *symbol();

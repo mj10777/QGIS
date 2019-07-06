@@ -26,8 +26,11 @@ namespace Qt3DExtras
 
 class Qgs3DMapSettings;
 class Qgs3DMapScene;
+class Qgs3DMapTool;
+class QgsWindow3DEngine;
 class QgsCameraController;
 class QgsPointXY;
+class Qgs3DNavigationWidget;
 
 
 class Qgs3DMapCanvas : public QWidget
@@ -46,7 +49,7 @@ class Qgs3DMapCanvas : public QWidget
     //! Returns access to the 3D scene (root 3D entity)
     Qgs3DMapScene *scene() { return mScene; }
 
-    //! Returns access to the view's camera controller. Returns null pointer if the scene has not been initialized yet with setMap()
+    //! Returns access to the view's camera controller. Returns NULLPTR if the scene has not been initialized yet with setMap()
     QgsCameraController *cameraController();
 
     //! Resets camera position to the default: looking down at the origin of world coordinates
@@ -56,20 +59,38 @@ class Qgs3DMapCanvas : public QWidget
     void setViewFromTop( const QgsPointXY &center, float distance, float rotation = 0 );
 
     //! Saves the current scene as an image
-    void saveAsImage( const QString fileName, const QString fileFormat );
+    void saveAsImage( QString fileName, QString fileFormat );
+
+    /**
+     * Sets the active map tool that will receive events from the 3D canvas. Does not transfer ownership.
+     * If the tool is NULLPTR, events will be used for camera manipulation.
+     */
+    void setMapTool( Qgs3DMapTool *tool );
+
+    /**
+     * Returns the active map tool that will receive events from the 3D canvas.
+     * If the tool is NULLPTR, events will be used for camera manipulation.
+     */
+    Qgs3DMapTool *mapTool() const { return mMapTool; }
+
+    /**
+     * Set the visibility of on-screen navigation widget.
+     */
+    void setOnScreenNavigationVisibility( bool visibility );
 
   signals:
     //! Emitted when the 3D map canvas was successfully saved as image
-    void savedAsImage( const QString fileName );
+    void savedAsImage( QString fileName );
 
   protected:
     void resizeEvent( QResizeEvent *ev ) override;
+    bool eventFilter( QObject *watched, QEvent *event ) override;
 
   private:
-    //! 3D window with all the 3D magic inside
-    Qt3DExtras::Qt3DWindow *mWindow3D = nullptr;
-    //! Frame graph node for render capture
-    Qt3DRender::QRenderCapture *mCapture = nullptr;
+    QgsWindow3DEngine *mEngine = nullptr;
+
+    QString mCaptureFileName;
+    QString mCaptureFileFormat;
 
     //! Container QWidget that encapsulates mWindow3D so we can use it embedded in ordinary widgets app
     QWidget *mContainer = nullptr;
@@ -77,6 +98,12 @@ class Qgs3DMapCanvas : public QWidget
     Qgs3DMapSettings *mMap = nullptr;
     //! Root entity of the 3D scene
     Qgs3DMapScene *mScene = nullptr;
+
+    //! Active map tool that receives events (if NULLPTR then mouse/keyboard events are used for camera manipulation)
+    Qgs3DMapTool *mMapTool = nullptr;
+
+    //! On-Screen Navigation widget.
+    Qgs3DNavigationWidget *mNavigationWidget = nullptr;
 };
 
 #endif // QGS3DMAPCANVAS_H

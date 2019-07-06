@@ -18,16 +18,16 @@
 #define QGSATTRIBUTEDIALOG_H
 
 #include "qgsattributeeditorcontext.h"
-#include "qgis.h"
+#include "qgis_sip.h"
 #include "qgsattributeform.h"
 #include "qgstrackedvectorlayertools.h"
+#include "qgsactionmenu.h"
 
 #include <QDialog>
 #include <QMenuBar>
 #include <QGridLayout>
 #include "qgis_gui.h"
 
-class QgsDistanceArea;
 class QgsHighlight;
 
 /**
@@ -45,9 +45,9 @@ class GUI_EXPORT QgsAttributeDialog : public QDialog
      *
      * \param vl                The layer for which the dialog will be generated
      * \param thepFeature       A feature for which the dialog will be generated
-     * \param featureOwner      Set to true, if the dialog should take ownership of the feature
+     * \param featureOwner      Set to TRUE, if the dialog should take ownership of the feature
      * \param parent            A parent widget for the dialog
-     * \param showDialogButtons True: Show the dialog buttons accept/cancel
+     * \param showDialogButtons TRUE: Show the dialog buttons accept/cancel
      * \param context           The context in which this dialog is created
      *
      */
@@ -68,16 +68,16 @@ class GUI_EXPORT QgsAttributeDialog : public QDialog
     /**
      * Is this dialog editable?
      *
-     * \returns returns true, if this dialog was created in an editable manner.
+     * \returns returns TRUE, if this dialog was created in an editable manner.
      */
     bool editable() { return mAttributeForm->editable(); }
 
     /**
      * Toggles the form mode.
-     * \param mode form mode. For example, if set to QgsAttributeForm::AddFeatureMode, the dialog will be editable even with an invalid feature and
+     * \param mode form mode. For example, if set to QgsAttributeEditorContext::AddFeatureMode, the dialog will be editable even with an invalid feature and
      * will add a new feature when the form is accepted.
      */
-    void setMode( QgsAttributeForm::Mode mode ) { mAttributeForm->setMode( mode ); }
+    void setMode( QgsAttributeEditorContext::Mode mode );
 
     /**
      * Sets the edit command message (Undo) that will be used when the dialog is accepted
@@ -87,7 +87,7 @@ class GUI_EXPORT QgsAttributeDialog : public QDialog
     void setEditCommandMessage( const QString &message ) { mAttributeForm->setEditCommandMessage( message ); }
 
     /**
-     * Intercept window activate/deactive events to show/hide the highlighted feature.
+     * Intercept window activate/deactivate events to show/hide the highlighted feature.
      *
      * \param e The event
      *
@@ -119,9 +119,13 @@ class GUI_EXPORT QgsAttributeDialog : public QDialog
     // true if this dialog is editable
     bool mEditable;
 
+    QgsActionMenu *mMenu;
+
     static int sFormCounter;
     static QString sSettingsPath;
 
+    void saveGeometry();
+    void restoreGeometry();
 };
 
 #endif

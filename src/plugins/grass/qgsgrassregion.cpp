@@ -24,13 +24,14 @@
 #include "qgsmapcanvas.h"
 #include "qgsmaptool.h"
 #include "qgsexception.h"
+#include "qgsmapmouseevent.h"
 
 #include <QButtonGroup>
 #include <QColorDialog>
 #include <QMessageBox>
-#include <QMouseEvent>
 #include <QRubberBand>
 #include <QSettings>
+#include <QDoubleValidator>
 
 
 //! Map tool which uses rubber band for changing grass region
@@ -141,7 +142,7 @@ void QgsGrassRegionEdit::transform( QgsMapCanvas *, QVector<QgsPointXY> &points,
   }
   catch ( QgsCsException &cse )
   {
-    Q_UNUSED( cse );
+    Q_UNUSED( cse )
     QgsDebugMsg( QString( "transformation failed: %1" ).arg( cse.what() ) );
   }
 }

@@ -21,13 +21,11 @@ __author__ = 'Victor Olaya'
 __date__ = 'August 2012'
 __copyright__ = '(C) 2012, Victor Olaya'
 
-# This will get replaced with a git SHA1 when you do a git archive
-
-__revision__ = '$Format:%H$'
-
 import os
 
-from qgis.core import (QgsApplication,
+from qgis.core import (Qgis,
+                       QgsMessageLog,
+                       QgsApplication,
                        QgsProcessingProvider)
 
 from processing.core.ProcessingConfig import ProcessingConfig, Setting
@@ -37,9 +35,12 @@ from processing.gui.ProviderActions import (ProviderActions,
 
 from processing.script.AddScriptFromFileAction import AddScriptFromFileAction
 from processing.script.CreateNewScriptAction import CreateNewScriptAction
+from processing.script.AddScriptFromTemplateAction import AddScriptFromTemplateAction
 from processing.script.DeleteScriptAction import DeleteScriptAction
 from processing.script.EditScriptAction import EditScriptAction
+from processing.script.OpenScriptFromFileAction import OpenScriptFromFileAction
 from processing.script import ScriptUtils
+from processing.tools.system import userFolder
 
 
 class ScriptAlgorithmProvider(QgsProcessingProvider):
@@ -49,7 +50,9 @@ class ScriptAlgorithmProvider(QgsProcessingProvider):
         self.algs = []
         self.folder_algorithms = []
         self.actions = [CreateNewScriptAction(),
-                        AddScriptFromFileAction(),
+                        AddScriptFromTemplateAction(),
+                        OpenScriptFromFileAction(),
+                        AddScriptFromFileAction()
                         ]
         self.contextMenuActions = [EditScriptAction(),
                                    DeleteScriptAction()]
@@ -98,12 +101,21 @@ class ScriptAlgorithmProvider(QgsProcessingProvider):
     def loadAlgorithms(self):
         self.algs = []
         folders = ScriptUtils.scriptsFolders()
+        # always add default script folder to the list
+        defaultScriptFolder = ScriptUtils.defaultScriptsFolder()
+        if defaultScriptFolder not in folders:
+            folders.append(defaultScriptFolder)
+        # load all scripts
         for folder in folders:
-            items = os.scandir(folder)
+            folder = ScriptUtils.resetScriptFolder(folder)
+            if not folder:
+                continue
+
+            items = [f for f in os.listdir(folder) if os.path.isfile(os.path.join(folder, f))]
             for entry in items:
-                if entry.name.lower().endswith(".py") and entry.is_file():
-                    moduleName = os.path.splitext(entry.name)[0]
-                    filePath = os.path.abspath(os.path.join(folder, entry.name))
+                if entry.lower().endswith(".py"):
+                    moduleName = os.path.splitext(os.path.basename(entry))[0]
+                    filePath = os.path.abspath(os.path.join(folder, entry))
                     alg = ScriptUtils.loadAlgorithm(moduleName, filePath)
                     if alg is not None:
                         self.algs.append(alg)

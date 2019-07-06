@@ -23,6 +23,11 @@ email                : marco.hugentobler at sourcepole dot com
 #include "qgsgeometry.h"
 #include <geos_c.h>
 
+#if defined(GEOS_VERSION_MAJOR) && (GEOS_VERSION_MAJOR<3)
+#define GEOSGeometry struct GEOSGeom_t
+#define GEOSCoordSequence struct GEOSCoordSeq_t
+#endif
+
 class QgsLineString;
 class QgsPolygon;
 class QgsGeometry;
@@ -30,8 +35,8 @@ class QgsGeometryCollection;
 
 /**
  * Contains geos related utilities and functions.
- * \since QGIS 3.0
  * \note not available in Python bindings.
+ * \since QGIS 3.0
  */
 namespace geos
 {
@@ -106,6 +111,25 @@ class CORE_EXPORT QgsGeos: public QgsGeometryEngine
      */
     QgsGeos( const QgsAbstractGeometry *geometry, double precision = 0 );
 
+    /**
+     * Creates a new QgsGeometry object, feeding in a geometry in GEOS format.
+     * This class will take ownership of the buffer.
+     */
+    static QgsGeometry geometryFromGeos( GEOSGeometry *geos );
+
+    /**
+     * Creates a new QgsGeometry object, feeding in a geometry in GEOS format.
+     */
+    static QgsGeometry geometryFromGeos( const geos::unique_ptr &geos );
+
+    /**
+     * Adds a new island polygon to a multipolygon feature
+     * \param geometry geometry to add part to
+     * \param newPart part to add. Ownership is NOT transferred.
+     * \returns OperationResult a result code: success or reason of failure
+     */
+    static QgsGeometry::OperationResult addPart( QgsGeometry &geometry, GEOSGeometry *newPart );
+
     void geometryChanged() override;
     void prepareGeometry() override;
 
@@ -160,8 +184,8 @@ class CORE_EXPORT QgsGeos: public QgsGeometryEngine
      *
      * If the default approximate provided by this method is insufficient, use hausdorffDistanceDensify() instead.
      *
-     * \since QGIS 3.0
      * \see hausdorffDistanceDensify()
+     * \since QGIS 3.0
      */
     double hausdorffDistance( const QgsAbstractGeometry *geom, QString *errorMsg = nullptr ) const;
 
@@ -178,8 +202,8 @@ class CORE_EXPORT QgsGeos: public QgsGeometryEngine
      * is not sufficient. Decreasing the \a densifyFraction parameter will make the
      * distance returned approach the true Hausdorff distance for the geometries.
      *
-     * \since QGIS 3.0
      * \see hausdorffDistance()
+     * \since QGIS 3.0
      */
     double hausdorffDistanceDensify( const QgsAbstractGeometry *geom, double densifyFraction, QString *errorMsg = nullptr ) const;
 
@@ -194,7 +218,7 @@ class CORE_EXPORT QgsGeos: public QgsGeometryEngine
     bool relatePattern( const QgsAbstractGeometry *geom, const QString &pattern, QString *errorMsg = nullptr ) const override;
     double area( QString *errorMsg = nullptr ) const override;
     double length( QString *errorMsg = nullptr ) const override;
-    bool isValid( QString *errorMsg = nullptr ) const override;
+    bool isValid( QString *errorMsg = nullptr, bool allowSelfTouchingHoles = false, QgsGeometry *errorLoc = nullptr ) const override;
     bool isEqual( const QgsAbstractGeometry *geom, QString *errorMsg = nullptr ) const override;
     bool isEmpty( QString *errorMsg = nullptr ) const override;
     bool isSimple( QString *errorMsg = nullptr ) const override;
@@ -216,7 +240,7 @@ class CORE_EXPORT QgsGeos: public QgsGeometryEngine
      * \param joinStyle join style for corners ( Round (1) / Miter (2) / Bevel (3) )
      * \param miterLimit limit on the miter ratio used for very sharp corners
      * \param errorMsg error messages emitted, if any
-     * \returns buffered geometry, or an nullptr if buffer could not be
+     * \returns buffered geometry, or an NULLPTR if buffer could not be
      * calculated
      * \since QGIS 3.0
      */
@@ -229,7 +253,7 @@ class CORE_EXPORT QgsGeos: public QgsGeometryEngine
      * \param reshapeWithLine the line used to reshape lines or polygons
      * \param errorCode if specified, provides result of operation (success or reason of failure)
      * \param errorMsg if specified, provides more details about failure
-     * @return the reshaped geometry
+     * \return the reshaped geometry
      */
     std::unique_ptr< QgsAbstractGeometry > reshapeGeometry( const QgsLineString &reshapeWithLine, EngineOperationResult *errorCode, QString *errorMsg = nullptr ) const;
 
@@ -246,15 +270,15 @@ class CORE_EXPORT QgsGeos: public QgsGeometryEngine
 
     /**
      * Returns the closest point on the geometry to the other geometry.
-     * \since QGIS 2.14
      * \see shortestLine()
+     * \since QGIS 2.14
      */
     QgsGeometry closestPoint( const QgsGeometry &other, QString *errorMsg = nullptr ) const;
 
     /**
      * Returns the shortest line joining this geometry to the other geometry.
-     * \since QGIS 2.14
      * \see closestPoint()
+     * \since QGIS 2.14
      */
     QgsGeometry shortestLine( const QgsGeometry &other, QString *errorMsg = nullptr ) const;
 
@@ -291,7 +315,7 @@ class CORE_EXPORT QgsGeos: public QgsGeometryEngine
      * OR the envelope surrounding all input nodes.
      * The \a tolerance parameter specifies an optional snapping tolerance which can
      * be used to improve the robustness of the diagram calculation.
-     * If \a edgesOnly is true than line string boundary geometries will be returned
+     * If \a edgesOnly is TRUE than line string boundary geometries will be returned
      * instead of polygons.
      * An empty geometry will be returned if the diagram could not be calculated.
      * \since QGIS 3.0
@@ -302,7 +326,7 @@ class CORE_EXPORT QgsGeos: public QgsGeometryEngine
      * Returns the Delaunay triangulation for the vertices of the geometry.
      * The \a tolerance parameter specifies an optional snapping tolerance which can
      * be used to improve the robustness of the triangulation.
-     * If \a edgesOnly is true than line string boundary geometries will be returned
+     * If \a edgesOnly is TRUE than line string boundary geometries will be returned
      * instead of polygons.
      * An empty geometry will be returned if the diagram could not be calculated.
      * \since QGIS 3.0
@@ -315,7 +339,21 @@ class CORE_EXPORT QgsGeos: public QgsGeometryEngine
      */
     static std::unique_ptr< QgsAbstractGeometry > fromGeos( const GEOSGeometry *geos );
     static std::unique_ptr< QgsPolygon > fromGeosPolygon( const GEOSGeometry *geos );
-    static geos::unique_ptr asGeos( const QgsAbstractGeometry *geom, double precision = 0 );
+
+
+    /**
+     * Returns a geos geometry - caller takes ownership of the object (should be deleted with GEOSGeom_destroy_r)
+     * \param geometry geometry to convert to GEOS representation
+     * \param precision The precision of the grid to which to snap the geometry vertices. If 0, no snapping is performed.
+     */
+    static geos::unique_ptr asGeos( const QgsGeometry &geometry, double precision = 0 );
+
+    /**
+     * Returns a geos geometry - caller takes ownership of the object (should be deleted with GEOSGeom_destroy_r)
+     * \param geometry geometry to convert to GEOS representation
+     * \param precision The precision of the grid to which to snap the geometry vertices. If 0, no snapping is performed.
+     */
+    static geos::unique_ptr asGeos( const QgsAbstractGeometry *geometry, double precision = 0 );
     static QgsPoint coordSeqPoint( const GEOSCoordSequence *cs, int i, bool hasZ, bool hasM );
 
     static GEOSContextHandle_t getGEOSHandler();

@@ -76,6 +76,7 @@ class TestQgsMapToPixelGeometrySimplifier : public QObject
     void testWkbDimensionMismatch();
     void testCircularString();
     void testVisvalingam();
+    void testRingValidity();
 
 };
 
@@ -167,7 +168,7 @@ TestQgsMapToPixelGeometrySimplifier::testIsGeneralizableByMapBoundingBox()
 void TestQgsMapToPixelGeometrySimplifier::testWkbDimensionMismatch()
 {
   // 2D multilinestring containing 2 3DZ linestrings
-  // See https://issues.qgis.org/issues/12416
+  // See https://github.com/qgis/QGIS/issues/20588
   // NOTE: the first line needs to be 5 vertices or more, or
   // simplification won't even be attempted
   const char *hexwkb = "010500000002000000010200008005000000000000000000000000000000000000000000000000000000000000000000F03F000000000000F03F00000000000000000000000000000040000000000000000000000000000000000000000000000840000000000000F03F0000000000000000000000000000244000000000000000008DEDB5A0F7C6B0BE010200008002000000000000000000000000000000000000000000000000000000000000000000000000000000000000008DEDB5A0F7C6B03E";
@@ -203,6 +204,17 @@ void TestQgsMapToPixelGeometrySimplifier::testVisvalingam()
   QString expectedWkt( QStringLiteral( "LineString (0 0, 40 0, 41 100, 42 0, 50 0)" ) );
 
   QCOMPARE( simplifier.simplify( g ).asWkt(), expectedWkt );
+}
+
+void TestQgsMapToPixelGeometrySimplifier::testRingValidity()
+{
+  QgsGeometry poly = QgsGeometry::fromWkt( QStringLiteral( "Polygon ((0 0, 30 0, 30 30, 0 30, 0 0),(10.0001 10.00002, 10.0005 10.00002, 10.0005 10.00004, 10.00001 10.00004, 10.0001 10.00002 ))" ) );
+
+  int fl = QgsMapToPixelSimplifier::SimplifyGeometry | QgsMapToPixelSimplifier::SimplifyEnvelope;
+  QgsMapToPixelSimplifier simplifier( fl, 5 );
+  QgsGeometry ret = simplifier.simplify( poly );
+  QVERIFY( ret.isGeosValid() );
+
 }
 
 QGSTEST_MAIN( TestQgsMapToPixelGeometrySimplifier )

@@ -23,7 +23,6 @@ class QString;
 
 #include "qgis_core.h"
 #include "qgis_sip.h"
-#include "qgis.h"
 #include <list>
 #include <QVector>
 
@@ -31,6 +30,7 @@ class QgsExpression;
 class QgsGeometry;
 class QgsPointXY;
 class QgsRectangle;
+class QgsVectorLayer;
 
 #include "qgsgeometry.h"
 #include "qgsexpression.h"
@@ -140,7 +140,7 @@ class CORE_EXPORT QgsOgcUtils
     static QColor colorFromOgcFill( const QDomElement &fillElement );
 
     //! Parse XML with OGC filter into QGIS expression
-    static QgsExpression *expressionFromOgcFilter( const QDomElement &element ) SIP_FACTORY;
+    static QgsExpression *expressionFromOgcFilter( const QDomElement &element, QgsVectorLayer *layer = nullptr ) SIP_FACTORY;
 
     /**
      * Creates OGC filter XML element. Supports minimum standard filter
@@ -161,12 +161,21 @@ class CORE_EXPORT QgsOgcUtils
     };
 
     /**
+     * Returns an expression from a WFS filter embedded in a document.
+     * \param element The WFS Filter
+     * \param version The WFS version
+     * \param layer Layer to use to retrieve field values from literal filters
+     * \since QGIS 3.4
+     */
+    static QgsExpression *expressionFromOgcFilter( const QDomElement &element, FilterVersion version, QgsVectorLayer *layer = nullptr ) SIP_FACTORY;
+
+    /**
      * Creates OGC filter XML element. Supports minimum standard filter
      * according to the OGC filter specs (=,!=,<,>,<=,>=,AND,OR,NOT)
      * \returns valid \verbatim <Filter> \endverbatim QDomElement on success,
      * otherwise null QDomElement
-     * \since QGIS 2.16
      * \note not available in Python bindings
+     * \since QGIS 2.16
      */
     static QDomElement expressionToOgcFilter( const QgsExpression &exp,
         QDomDocument &doc,
@@ -205,8 +214,8 @@ class CORE_EXPORT QgsOgcUtils
     /**
      * \ingroup core
      * Layer properties. Used by SQLStatementToOgcFilter().
-     * \since QGIS 2.16
      * \note not available in Python bindings
+     * \since QGIS 2.16
      */
     class LayerProperties
     {
@@ -238,8 +247,8 @@ class CORE_EXPORT QgsOgcUtils
      *          custom functions
      * \returns valid \verbatim <Filter> \endverbatim QDomElement on success,
      * otherwise null QDomElement
-     * \since QGIS 2.16
      * \note not available in Python bindings
+     * \since QGIS 2.16
      */
     static QDomElement SQLStatementToOgcFilter( const QgsSQLStatement &statement,
         QDomDocument &doc,
@@ -298,9 +307,9 @@ class CORE_EXPORT QgsOgcUtils
     static QDomElement createGMLPositions( const QgsPolylineXY &points, QDomDocument &doc );
 
     //! handle a generic sub-expression
-    static QgsExpressionNode *nodeFromOgcFilter( QDomElement &element, QString &errorMessage );
+    static QgsExpressionNode *nodeFromOgcFilter( QDomElement &element, QString &errorMessage, QgsVectorLayer *layer = nullptr );
     //! handle a generic binary operator
-    static QgsExpressionNodeBinaryOperator *nodeBinaryOperatorFromOgcFilter( QDomElement &element, QString &errorMessage );
+    static QgsExpressionNodeBinaryOperator *nodeBinaryOperatorFromOgcFilter( QDomElement &element, QString &errorMessage, QgsVectorLayer *layer = nullptr );
     //! handles various spatial operation tags (\verbatim <Intersects> \endverbatim, \verbatim <Touches> \endverbatim etc.)
     static QgsExpressionNodeFunction *nodeSpatialOperatorFromOgcFilter( QDomElement &element, QString &errorMessage );
     //! handle \verbatim <Not> \endverbatim tag
@@ -308,7 +317,7 @@ class CORE_EXPORT QgsOgcUtils
     //! handles \verbatim <Function> \endverbatim tag
     static QgsExpressionNodeFunction *nodeFunctionFromOgcFilter( QDomElement &element, QString &errorMessage );
     //! handles \verbatim <Literal> \endverbatim tag
-    static QgsExpressionNode *nodeLiteralFromOgcFilter( QDomElement &element, QString &errorMessage );
+    static QgsExpressionNode *nodeLiteralFromOgcFilter( QDomElement &element, QString &errorMessage, QgsVectorLayer *layer = nullptr );
     //! handles \verbatim <PropertyName> \endverbatim tag
     static QgsExpressionNodeColumnRef *nodeColumnRefFromOgcFilter( QDomElement &element, QString &errorMessage );
     //! handles \verbatim <PropertyIsBetween> \endverbatim tag
@@ -337,12 +346,12 @@ class QgsOgcUtilsExprToFilter
                              bool invertAxisOrientation );
 
     //! Convert an expression to a OGC filter
-    QDomElement expressionNodeToOgcFilter( const QgsExpressionNode *node );
+    QDomElement expressionNodeToOgcFilter( const QgsExpressionNode *node, QgsExpression *expression, const QgsExpressionContext *context );
 
-    //! Return whether the gml: namespace is used
+    //! Returns whether the gml: namespace is used
     bool GMLNamespaceUsed() const { return mGMLUsed; }
 
-    //! Return the error message.
+    //! Returns the error message.
     QString errorMessage() const { return mErrorMessage; }
 
   private:
@@ -358,12 +367,99 @@ class QgsOgcUtilsExprToFilter
     QString mPropertyName;
     int mGeomId;
 
-    QDomElement expressionUnaryOperatorToOgcFilter( const QgsExpressionNodeUnaryOperator *node );
-    QDomElement expressionBinaryOperatorToOgcFilter( const QgsExpressionNodeBinaryOperator *node );
-    QDomElement expressionLiteralToOgcFilter( const QgsExpressionNodeLiteral *node );
-    QDomElement expressionColumnRefToOgcFilter( const QgsExpressionNodeColumnRef *node );
-    QDomElement expressionInOperatorToOgcFilter( const QgsExpressionNodeInOperator *node );
-    QDomElement expressionFunctionToOgcFilter( const QgsExpressionNodeFunction *node );
+    QDomElement expressionUnaryOperatorToOgcFilter( const QgsExpressionNodeUnaryOperator *node, QgsExpression *expression, const QgsExpressionContext *context );
+    QDomElement expressionBinaryOperatorToOgcFilter( const QgsExpressionNodeBinaryOperator *node, QgsExpression *expression, const QgsExpressionContext *context );
+    QDomElement expressionLiteralToOgcFilter( const QgsExpressionNodeLiteral *node, QgsExpression *expression, const QgsExpressionContext *context );
+    QDomElement expressionColumnRefToOgcFilter( const QgsExpressionNodeColumnRef *node, QgsExpression *expression, const QgsExpressionContext *context );
+    QDomElement expressionInOperatorToOgcFilter( const QgsExpressionNodeInOperator *node, QgsExpression *expression, const QgsExpressionContext *context );
+    QDomElement expressionFunctionToOgcFilter( const QgsExpressionNodeFunction *node, QgsExpression *expression, const QgsExpressionContext *context );
+};
+
+/**
+ * \ingroup core
+ * \brief Internal use by QgsOgcUtils
+ * \note not available in Python bindings
+ * \since QGIS 3.4
+ */
+class QgsOgcUtilsExpressionFromFilter
+{
+  public:
+
+    /**
+     * Constructor for QgsOgcUtilsExpressionFromFilter.
+     * \param version WFS Version
+     * \param layer Layer to use to retrieve field values from literal filters
+     */
+    QgsOgcUtilsExpressionFromFilter( QgsOgcUtils::FilterVersion version = QgsOgcUtils::FILTER_OGC_1_0,
+                                     const QgsVectorLayer *layer = nullptr );
+
+    /**
+     * Returns an expression node from a WFS filter embedded in a document
+     * element. NULLPTR is returned when an error happened.
+     * \param element The WFS filter
+     */
+    QgsExpressionNode *nodeFromOgcFilter( const QDomElement &element );
+
+    /**
+     * Returns the underlying error message, or an empty string in case of no
+     * error.
+     */
+    QString errorMessage() const;
+
+    /**
+     * Returns an expression node from a WFS filter embedded in a document with
+     * binary operators.
+     *
+     */
+    QgsExpressionNodeBinaryOperator *nodeBinaryOperatorFromOgcFilter( const QDomElement &element );
+
+    /**
+     * Returns an expression node from a WFS filter embedded in a document with
+     * spatial operators.
+     */
+    QgsExpressionNodeFunction *nodeSpatialOperatorFromOgcFilter( const QDomElement &element );
+
+    /**
+     * Returns an expression node from a WFS filter embedded in a document with
+     * column references.
+     */
+    QgsExpressionNodeColumnRef *nodeColumnRefFromOgcFilter( const QDomElement &element );
+
+    /**
+     * Returns an expression node from a WFS filter embedded in a document with
+     * literal tag.
+     */
+    QgsExpressionNode *nodeLiteralFromOgcFilter( const QDomElement &element );
+
+    /**
+     * Returns an expression node from a WFS filter embedded in a document with
+     * Not operator.
+     */
+    QgsExpressionNodeUnaryOperator *nodeNotFromOgcFilter( const QDomElement &element );
+
+    /**
+     * Returns an expression node from a WFS filter embedded in a document with
+     * IsNull operator.
+     */
+    QgsExpressionNodeBinaryOperator *nodePropertyIsNullFromOgcFilter( const QDomElement &element );
+
+    /**
+     * Returns an expression node from a WFS filter embedded in a document with
+     * functions.
+     */
+    QgsExpressionNodeFunction *nodeFunctionFromOgcFilter( const QDomElement &element );
+
+    /**
+     * Returns an expression node from a WFS filter embedded in a document with
+     * boudnaries operator.
+     */
+    QgsExpressionNode *nodeIsBetweenFromOgcFilter( const QDomElement &element );
+
+  private:
+    const QgsVectorLayer *mLayer = nullptr;
+    QString mErrorMessage;
+    QString mPropertyName;
+    QString mPrefix;
 };
 
 /**
@@ -386,10 +482,10 @@ class QgsOgcUtilsSQLStatementToFilter
     //! Convert a SQL statement to a OGC filter
     QDomElement toOgcFilter( const QgsSQLStatement::Node *node );
 
-    //! Return whether the gml: namespace is used
+    //! Returns whether the gml: namespace is used
     bool GMLNamespaceUsed() const { return mGMLUsed; }
 
-    //! Return the error message.
+    //! Returns the error message.
     QString errorMessage() const { return mErrorMessage; }
 
   private:

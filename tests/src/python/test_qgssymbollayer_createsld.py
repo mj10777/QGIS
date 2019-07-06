@@ -18,8 +18,6 @@
 __author__ = 'Andrea Aime'
 __date__ = 'July 2016'
 __copyright__ = '(C) 2012, Andrea Aime'
-# This will get replaced with a git SHA1 when you do a git archive
-__revision__ = '$Format:%H$'
 
 import qgis  # NOQA
 
@@ -32,7 +30,7 @@ from qgis.core import (
     QgsFontMarkerSymbolLayer, QgsEllipseSymbolLayer, QgsSimpleLineSymbolLayer,
     QgsMarkerLineSymbolLayer, QgsMarkerSymbol, QgsSimpleFillSymbolLayer, QgsSVGFillSymbolLayer,
     QgsLinePatternFillSymbolLayer, QgsPointPatternFillSymbolLayer, QgsVectorLayer, QgsVectorLayerSimpleLabeling,
-    QgsTextBufferSettings, QgsPalLayerSettings, QgsTextBackgroundSettings)
+    QgsTextBufferSettings, QgsPalLayerSettings, QgsTextBackgroundSettings, QgsRuleBasedLabeling)
 from qgis.testing import start_app, unittest
 from utilities import unitTestDataPath
 
@@ -1053,6 +1051,13 @@ class TestQgsSymbolLayerCreateSld(unittest.TestCase):
         ltValue = gt.childNodes().item(1)
         self.assertEqual("1000000", gtValue.toElement().text())
 
+        # check that adding a rule without settings does not segfault
+        xml1 = dom.toString()
+        layer.labeling().rootRule().appendChild(QgsRuleBasedLabeling.Rule(None))
+        dom, root = self.layerToSld(layer)
+        xml2 = dom.toString()
+        self.assertEqual(xml1, xml2)
+
     def updateLinePlacementProperties(self, layer, linePlacement, distance, repeat, maxAngleInternal=25, maxAngleExternal=-25):
         settings = layer.labeling().settings()
         settings.placement = linePlacement
@@ -1194,6 +1199,23 @@ class TestQgsSymbolLayerCreateSld(unittest.TestCase):
             return None
         else:
             self.fail('Could not find a se:VendorOption named ' + expectedName + ' in ' + container.nodeName())
+
+    def testRuleBaseEmptyFilter(self):
+        layer = QgsVectorLayer("Point", "addfeat", "memory")
+
+        mFilePath = QDir.toNativeSeparators('%s/symbol_layer/%s.qml' % (unitTestDataPath(), "categorizedEmptyValue"))
+        status = layer.loadNamedStyle(mFilePath)  # NOQA
+
+        dom, root = self.layerToSld(layer)
+        # print("Rule based, with last rule checking against empty value:" + dom.toString())
+
+        # get the third rule
+        rule = root.elementsByTagName('se:Rule').item(2).toElement()
+        filter = rule.elementsByTagName('Filter').item(0).toElement()
+        filter = filter.firstChild().toElement()
+        self.assertEqual("ogc:Or", filter.nodeName())
+        self.assertEqual(1, filter.elementsByTagName('ogc:PropertyIsEqualTo').size())
+        self.assertEqual(1, filter.elementsByTagName('ogc:PropertyIsNull').size())
 
     def assertScaleDenominator(self, root, expectedMinScale, expectedMaxScale, index=0):
         rule = root.elementsByTagName('se:Rule').item(index).toElement()

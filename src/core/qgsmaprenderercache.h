@@ -70,9 +70,9 @@ class CORE_EXPORT QgsMapRendererCache : public QObject
     void setCacheImage( const QString &cacheKey, const QImage &image, const QList< QgsMapLayer * > &dependentLayers = QList< QgsMapLayer * >() );
 
     /**
-     * Returns true if the cache contains an image with the specified \a cacheKey.
-     * \since QGIS 3.0
+     * Returns TRUE if the cache contains an image with the specified \a cacheKey.
      * \see cacheImage()
+     * \since QGIS 3.0
      */
     bool hasCacheImage( const QString &cacheKey ) const;
 

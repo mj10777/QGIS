@@ -19,7 +19,7 @@
 class QgsGenericFeatureSelectionManager;
 
 #include "ui_qgsfeatureselectiondlg.h"
-#include "qgis.h"
+#include "qgis_sip.h"
 #include "qgis_gui.h"
 
 #ifdef SIP_RUN
@@ -54,7 +54,7 @@ class GUI_EXPORT QgsFeatureSelectionDlg : public QDialog, private Ui::QgsFeature
     explicit QgsFeatureSelectionDlg( QgsVectorLayer *vl, QgsAttributeEditorContext &context, QWidget *parent SIP_TRANSFERTHIS = nullptr );
 
     /**
-     * Get the selected features
+     * Gets the selected features
      *
      * \returns The selected feature ids
      */
@@ -69,6 +69,12 @@ class GUI_EXPORT QgsFeatureSelectionDlg : public QDialog, private Ui::QgsFeature
   private:
     QgsGenericFeatureSelectionManager *mFeatureSelection = nullptr;
     QgsVectorLayer *mVectorLayer = nullptr;
+
+    // QWidget interface
+  protected:
+
+    //! Make sure the dialog does not grow too much
+    void showEvent( QShowEvent *event ) override;
 };
 
 #endif // QGSFEATURESELECTIONDLG_H

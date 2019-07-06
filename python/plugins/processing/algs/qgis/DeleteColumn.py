@@ -21,18 +21,21 @@ __author__ = 'Michael Minn'
 __date__ = 'May 2010'
 __copyright__ = '(C) 2010, Michael Minn'
 
-# This will get replaced with a git SHA1 when you do a git archive
-
-__revision__ = '$Format:%H$'
+from qgis.PyQt.QtCore import QCoreApplication
 
 from qgis.core import (QgsProcessingParameterField,
-                       QgsProcessing)
+                       QgsProcessing,
+                       QgsProcessingAlgorithm,
+                       QgsProcessingFeatureSource)
 from processing.algs.qgis.QgisAlgorithm import QgisFeatureBasedAlgorithm
 
 
 class DeleteColumn(QgisFeatureBasedAlgorithm):
 
     COLUMNS = 'COLUMN'
+
+    def flags(self):
+        return super().flags() & ~QgsProcessingAlgorithm.FlagSupportsInPlaceEdits
 
     def tags(self):
         return self.tr('drop,delete,remove,fields,columns,attributes').split(',')
@@ -63,17 +66,26 @@ class DeleteColumn(QgisFeatureBasedAlgorithm):
         return self.tr('Drop field(s)')
 
     def outputName(self):
-        return self.tr('Fields dropped')
+        return self.tr('Remaining fields')
 
     def prepareAlgorithm(self, parameters, context, feedback):
         self.fields_to_delete = self.parameterAsFields(parameters, self.COLUMNS, context)
-        return True
+
+        source = self.parameterAsSource(parameters, 'INPUT', context)
+        if source is not None:
+            for f in self.fields_to_delete:
+                index = source.fields().lookupField(f)
+                if index < 0:
+                    feedback.pushInfo(QCoreApplication.translate('DeleteColumn', 'Field “{}” does not exist in input layer').format(f))
+
+        return super().prepareAlgorithm(parameters, context, feedback)
 
     def outputFields(self, input_fields):
         # loop through twice - first we need to build up a list of original attribute indices
         for f in self.fields_to_delete:
             index = input_fields.lookupField(f)
-            self.field_indices.append(index)
+            if index >= 0:
+                self.field_indices.append(index)
 
         # important - make sure we remove from the end so we aren't changing used indices as we go
         self.field_indices.sort(reverse=True)
@@ -83,9 +95,12 @@ class DeleteColumn(QgisFeatureBasedAlgorithm):
             input_fields.remove(index)
         return input_fields
 
+    def sourceFlags(self):
+        return QgsProcessingFeatureSource.FlagSkipGeometryValidityChecks
+
     def processFeature(self, feature, context, feedback):
         attributes = feature.attributes()
         for index in self.field_indices:
             del attributes[index]
         feature.setAttributes(attributes)
-        return feature
+        return [feature]

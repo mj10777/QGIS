@@ -16,7 +16,7 @@
 #define QGSEDITORWIDGETAUTOCONF_H
 
 #include <QList>
-#include "qgis.h"
+#include "qgis_sip.h"
 #include "qgis_gui.h"
 #include <memory>
 
@@ -32,6 +32,8 @@ class QgsEditorWidgetSetup;
 class GUI_EXPORT QgsEditorWidgetAutoConfPlugin
 {
   public:
+
+    virtual ~QgsEditorWidgetAutoConfPlugin() = default;
 
     /**
      * Typical scores are:
@@ -58,8 +60,8 @@ class GUI_EXPORT QgsEditorWidgetAutoConfPlugin
  * This class has only one instance, owned by the QgsEditorWidgetRegistry singleton
  *
  * The plugins are instances of QgsEditorWidgetAutoConfPlugin.
- * \since QGIS 3.0
  * \note not available in Python bindings
+ * \since QGIS 3.0
  */
 class GUI_EXPORT QgsEditorWidgetAutoConf SIP_SKIP
 {
@@ -88,7 +90,7 @@ class GUI_EXPORT QgsEditorWidgetAutoConf SIP_SKIP
     void registerPlugin( QgsEditorWidgetAutoConfPlugin *plugin );
 
   private:
-    QList<std::shared_ptr<QgsEditorWidgetAutoConfPlugin> > plugins;
+    QList<std::shared_ptr<QgsEditorWidgetAutoConfPlugin> > mPlugins;
 };
 ///@endcond
 

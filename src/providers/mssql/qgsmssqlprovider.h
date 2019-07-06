@@ -29,6 +29,8 @@
 #include <QtSql/QSqlQuery>
 #include <QtSql/QSqlError>
 
+#include "qgsprovidermetadata.h"
+
 class QgsFeature;
 class QgsField;
 class QFile;
@@ -50,23 +52,27 @@ class QgsMssqlProvider : public QgsVectorDataProvider
     Q_OBJECT
 
   public:
-    explicit QgsMssqlProvider( const QString &uri = QString() );
+
+    static const QString MSSQL_PROVIDER_KEY;
+    static const QString MSSQL_PROVIDER_DESCRIPTION;
+
+    explicit QgsMssqlProvider( const QString &uri, const QgsDataProvider::ProviderOptions &providerOptions );
 
     ~QgsMssqlProvider() override;
 
-    static QSqlDatabase GetDatabase( const QString &service, const QString &host, const QString &database, const QString &username, const QString &password );
-
     QgsAbstractFeatureSource *featureSource() const override;
-
-    static bool OpenDatabase( QSqlDatabase db );
 
     /* Implementation of functions from QgsVectorDataProvider */
 
+    void updateExtents() override;
     QString storageType() const override;
     QStringList subLayers() const override;
     QVariant minimumValue( int index ) const override;
     QVariant maximumValue( int index ) const override;
     QSet<QVariant> uniqueValues( int index, int limit = -1 ) const override;
+    QStringList uniqueStringsMatching( int index, const QString &substring, int limit = -1,
+                                       QgsFeedback *feedback = nullptr ) const override;
+
     QgsFeatureIterator getFeatures( const QgsFeatureRequest &request ) const override;
 
     QgsWkbTypes::Type wkbType() const override;
@@ -134,7 +140,7 @@ class QgsMssqlProvider : public QgsVectorDataProvider
       bool overwrite,
       QMap<int, int> *oldToNewAttrIdxMap,
       QString *errorMessage = nullptr,
-      const QMap<QString, QVariant> *options = nullptr
+      const QMap<QString, QVariant> *coordinateTransformContext = nullptr
     );
 
     QgsCoordinateReferenceSystem crs() const override;
@@ -179,7 +185,7 @@ class QgsMssqlProvider : public QgsVectorDataProvider
     mutable QgsWkbTypes::Type mWkbType = QgsWkbTypes::Unknown;
 
     // The database object
-    QSqlDatabase mDatabase;
+    mutable QSqlDatabase mDatabase;
 
     // The current sql query
     QSqlQuery mQuery;
@@ -206,8 +212,12 @@ class QgsMssqlProvider : public QgsVectorDataProvider
     // SQL statement used to limit the features retrieved
     QString mSqlWhereClause;
 
+    bool mDisableInvalidGeometryHandling = false;
+
     // Sets the error messages
     void setLastError( const QString &error );
+
+    QSqlQuery createQuery() const;
 
     static void mssqlWkbTypeAndDimension( QgsWkbTypes::Type wkbType, QString &geometryType, int &dim );
     static QgsWkbTypes::Type getWkbType( const QString &wkbType );
@@ -215,6 +225,30 @@ class QgsMssqlProvider : public QgsVectorDataProvider
     friend class QgsMssqlFeatureSource;
 
     static int sConnectionId;
+};
+
+class QgsMssqlProviderMetadata: public QgsProviderMetadata
+{
+  public:
+    QgsMssqlProviderMetadata();
+    QString getStyleById( const QString &uri, QString styleId, QString &errCause ) override;
+    int listStyles( const QString &uri, QStringList &ids, QStringList &names, QStringList &descriptions, QString &errCause ) override;
+    QString loadStyle( const QString &uri, QString &errCause ) override;
+    bool saveStyle( const QString &uri, const QString &qmlStyle, const QString &sldStyle,
+                    const QString &styleName, const QString &styleDescription,
+                    const QString &uiFileContent, bool useAsDefault, QString &errCause ) override;
+
+    QgsVectorLayerExporter::ExportError createEmptyLayer(
+      const QString &uri,
+      const QgsFields &fields,
+      QgsWkbTypes::Type wkbType,
+      const QgsCoordinateReferenceSystem &srs,
+      bool overwrite,
+      QMap<int, int> &oldToNewAttrIdxMap,
+      QString &errorMessage,
+      const QMap<QString, QVariant> *options ) override;
+    QgsMssqlProvider *createProvider( const QString &uri, const QgsDataProvider::ProviderOptions &options ) override;
+    virtual QList< QgsDataItemProvider * > dataItemProviders() const override;
 };
 
 #endif // QGSMSSQLPROVIDER_H

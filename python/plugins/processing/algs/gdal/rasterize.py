@@ -21,10 +21,6 @@ __author__ = 'Alexander Bruy'
 __date__ = 'September 2013'
 __copyright__ = '(C) 2013, Alexander Bruy'
 
-# This will get replaced with a git SHA1 when you do a git archive
-
-__revision__ = '$Format:%H$'
-
 import os
 
 from qgis.PyQt.QtGui import QIcon
@@ -107,7 +103,7 @@ class rasterize(GdalAlgorithm):
                                                        optional=True))
 
         options_param = QgsProcessingParameterString(self.OPTIONS,
-                                                     self.tr('Additional creation parameters'),
+                                                     self.tr('Additional creation options'),
                                                      defaultValue='',
                                                      optional=True)
         options_param.setFlags(options_param.flags() | QgsProcessingParameterDefinition.FlagAdvanced)
@@ -127,7 +123,6 @@ class rasterize(GdalAlgorithm):
         init_param = QgsProcessingParameterNumber(self.INIT,
                                                   self.tr('Pre-initialize the output image with value'),
                                                   type=QgsProcessingParameterNumber.Double,
-                                                  defaultValue=0.0,
                                                   optional=True)
         init_param.setFlags(init_param.flags() | QgsProcessingParameterDefinition.FlagAdvanced)
         self.addParameter(init_param)
@@ -181,19 +176,19 @@ class rasterize(GdalAlgorithm):
         arguments.append(self.parameterAsDouble(parameters, self.WIDTH, context))
         arguments.append(self.parameterAsDouble(parameters, self.HEIGHT, context))
 
-        initValue = self.parameterAsDouble(parameters, self.INIT, context)
-        if initValue:
+        if self.INIT in parameters and parameters[self.INIT] is not None:
+            initValue = self.parameterAsDouble(parameters, self.INIT, context)
             arguments.append('-init')
             arguments.append(initValue)
 
-        if self.parameterAsBool(parameters, self.INVERT, context):
+        if self.parameterAsBoolean(parameters, self.INVERT, context):
             arguments.append('-i')
 
-        if self.parameterAsBool(parameters, self.ALL_TOUCH, context):
+        if self.parameterAsBoolean(parameters, self.ALL_TOUCH, context):
             arguments.append('-at')
 
-        nodata = self.parameterAsDouble(parameters, self.NODATA, context)
-        if nodata:
+        if self.NODATA in parameters and parameters[self.NODATA] is not None:
+            nodata = self.parameterAsDouble(parameters, self.NODATA, context)
             arguments.append('-a_nodata')
             arguments.append(nodata)
 
@@ -209,15 +204,15 @@ class rasterize(GdalAlgorithm):
         arguments.append(self.TYPES[self.parameterAsEnum(parameters, self.DATA_TYPE, context)])
 
         out = self.parameterAsOutputLayer(parameters, self.OUTPUT, context)
+        self.setOutputValue(self.OUTPUT, out)
         arguments.append('-of')
         arguments.append(QgsRasterFileWriter.driverForExtension(os.path.splitext(out)[1]))
         options = self.parameterAsString(parameters, self.OPTIONS, context)
 
         if options:
-            arguments.append('-co')
-            arguments.append(options)
+            arguments.extend(GdalUtils.parseCreationOptions(options))
 
         arguments.append(ogrLayer)
         arguments.append(out)
 
-        return ['gdal_rasterize', GdalUtils.escapeAndJoin(arguments)]
+        return [self.commandName(), GdalUtils.escapeAndJoin(arguments)]

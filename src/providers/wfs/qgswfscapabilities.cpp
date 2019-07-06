@@ -27,15 +27,20 @@
 #include <QDomDocument>
 #include <QStringList>
 
-QgsWfsCapabilities::QgsWfsCapabilities( const QString &uri )
-  : QgsWfsRequest( uri )
+QgsWfsCapabilities::QgsWfsCapabilities( const QString &uri, const QgsDataProvider::ProviderOptions &options )
+  : QgsWfsRequest( QgsWFSDataSourceURI( uri ) ),
+    mOptions( options )
 {
-  connect( this, &QgsWfsRequest::downloadFinished, this, &QgsWfsCapabilities::capabilitiesReplyFinished );
+  // Using Qt::DirectConnection since the download might be running on a different thread.
+  // In this case, the request was sent from the main thread and is executed with the main
+  // thread being blocked in future.waitForFinished() so we can run code on this object which
+  // lives in the main thread without risking havoc.
+  connect( this, &QgsWfsRequest::downloadFinished, this, &QgsWfsCapabilities::capabilitiesReplyFinished, Qt::DirectConnection );
 }
 
 bool QgsWfsCapabilities::requestCapabilities( bool synchronous, bool forceRefresh )
 {
-  QUrl url( baseURL() );
+  QUrl url( mUri.baseURL( ) );
   url.addQueryItem( QStringLiteral( "REQUEST" ), QStringLiteral( "GetCapabilities" ) );
 
   const QString &version = mUri.version();
@@ -79,8 +84,34 @@ QString QgsWfsCapabilities::Capabilities::addPrefixIfNeeded( const QString &name
   if ( name.contains( ':' ) )
     return name;
   if ( setAmbiguousUnprefixedTypename.contains( name ) )
-    return QLatin1String( "" );
+    return QString();
   return mapUnprefixedTypenameToPrefixedTypename[name];
+}
+
+QString QgsWfsCapabilities::Capabilities::getNamespaceForTypename( const QString &name ) const
+{
+  Q_FOREACH ( const QgsWfsCapabilities::FeatureType &f, featureTypes )
+  {
+    if ( f.name == name )
+    {
+      return f.nameSpace;
+    }
+  }
+  return "";
+}
+
+QString QgsWfsCapabilities::Capabilities::getNamespaceParameterValue( const QString &WFSVersion, const QString &typeName ) const
+{
+  QString namespaces = getNamespaceForTypename( typeName );
+  bool tryNameSpacing = ( !namespaces.isEmpty() && typeName.contains( ':' ) );
+  if ( tryNameSpacing )
+  {
+    QString prefixOfTypename = typeName.section( ':', 0, 0 );
+    return "xmlns(" + prefixOfTypename +
+           ( WFSVersion.startsWith( QLatin1String( "2.0" ) ) ? "," : "=" ) +
+           namespaces + ")";
+  }
+  return QString();
 }
 
 class CPLXMLTreeUniquePointer
@@ -98,13 +129,13 @@ class CPLXMLTreeUniquePointer
     /**
      * Returns the node pointer/
      * Modifying the contents pointed to by the return is allowed.
-     * @return the node pointer */
+     * \return the node pointer */
     CPLXMLNode *get() const { return the_data_; }
 
     /**
      * Returns the node pointer/
      * Modifying the contents pointed to by the return is allowed.
-     * @return the node pointer */
+     * \return the node pointer */
     CPLXMLNode *operator->() const { return get(); }
 
   private:
@@ -116,7 +147,7 @@ void QgsWfsCapabilities::capabilitiesReplyFinished()
 {
   const QByteArray &buffer = mResponse;
 
-  QgsDebugMsg( "parsing capabilities: " + buffer );
+  QgsDebugMsgLevel( QStringLiteral( "parsing capabilities: " ) + buffer, 4 );
 
   // parse XML
   QString capabilitiesDocError;
@@ -210,7 +241,7 @@ void QgsWfsCapabilities::capabilitiesReplyFinished()
         if ( !value.isNull() )
         {
           mCaps.maxFeatures = value.text().toInt();
-          QgsDebugMsg( QString( "maxFeatures: %1" ).arg( mCaps.maxFeatures ) );
+          QgsDebugMsg( QStringLiteral( "maxFeatures: %1" ).arg( mCaps.maxFeatures ) );
         }
       }
       else if ( contraint.attribute( QStringLiteral( "name" ) ) == QLatin1String( "CountDefault" ) /* WFS 2.0 (e.g. MapServer) */ )
@@ -219,7 +250,7 @@ void QgsWfsCapabilities::capabilitiesReplyFinished()
         if ( !value.isNull() )
         {
           mCaps.maxFeatures = value.text().toInt();
-          QgsDebugMsg( QString( "maxFeatures: %1" ).arg( mCaps.maxFeatures ) );
+          QgsDebugMsg( QStringLiteral( "maxFeatures: %1" ).arg( mCaps.maxFeatures ) );
         }
       }
       else if ( contraint.attribute( QStringLiteral( "name" ) ) == QLatin1String( "ImplementsResultPaging" ) /* WFS 2.0 */ )
@@ -228,7 +259,7 @@ void QgsWfsCapabilities::capabilitiesReplyFinished()
         if ( !value.isNull() && value.text() == QLatin1String( "TRUE" ) )
         {
           mCaps.supportsPaging = true;
-          QgsDebugMsg( "Supports paging" );
+          QgsDebugMsg( QStringLiteral( "Supports paging" ) );
         }
       }
       else if ( contraint.attribute( QStringLiteral( "name" ) ) == QLatin1String( "ImplementsStandardJoins" ) ||
@@ -238,7 +269,7 @@ void QgsWfsCapabilities::capabilitiesReplyFinished()
         if ( !value.isNull() && value.text() == QLatin1String( "TRUE" ) )
         {
           mCaps.supportsJoins = true;
-          QgsDebugMsg( "Supports joins" );
+          QgsDebugMsg( QStringLiteral( "Supports joins" ) );
         }
       }
     }
@@ -249,7 +280,28 @@ void QgsWfsCapabilities::capabilitiesReplyFinished()
     for ( int i = 0; i < operationList.size(); ++i )
     {
       QDomElement operation = operationList.at( i ).toElement();
-      if ( operation.attribute( QStringLiteral( "name" ) ) == QLatin1String( "GetFeature" ) )
+      QString name = operation.attribute( QStringLiteral( "name" ) );
+
+      // Search for DCP/HTTP
+      QDomNodeList operationHttpList = operation.elementsByTagName( QStringLiteral( "HTTP" ) );
+      for ( int j = 0; j < operationHttpList.size(); ++j )
+      {
+        QDomElement value = operationHttpList.at( j ).toElement();
+        QDomNodeList httpGetMethodList = value.elementsByTagName( QStringLiteral( "Get" ) );
+        QDomNodeList httpPostMethodList = value.elementsByTagName( QStringLiteral( "Post" ) );
+        if ( httpGetMethodList.size() > 0 )
+        {
+          mCaps.operationGetEndpoints[name] = httpGetMethodList.at( 0 ).toElement().attribute( QStringLiteral( "href" ) );
+          QgsDebugMsgLevel( QStringLiteral( "Adding DCP Get %1 %2" ).arg( name, mCaps.operationGetEndpoints[name] ), 3 );
+        }
+        if ( httpPostMethodList.size() > 0 )
+        {
+          mCaps.operationPostEndpoints[name] = httpPostMethodList.at( 0 ).toElement().attribute( QStringLiteral( "href" ) );
+          QgsDebugMsgLevel( QStringLiteral( "Adding DCP Post %1 %2" ).arg( name, mCaps.operationPostEndpoints[name] ), 3 );
+        }
+      }
+
+      if ( name == QLatin1String( "GetFeature" ) )
       {
         QDomNodeList operationContraintList = operation.elementsByTagName( QStringLiteral( "Constraint" ) );
         for ( int j = 0; j < operationContraintList.size(); ++j )
@@ -261,7 +313,7 @@ void QgsWfsCapabilities::capabilitiesReplyFinished()
             if ( !value.isNull() )
             {
               mCaps.maxFeatures = value.text().toInt();
-              QgsDebugMsg( QString( "maxFeatures: %1" ).arg( mCaps.maxFeatures ) );
+              QgsDebugMsg( QStringLiteral( "maxFeatures: %1" ).arg( mCaps.maxFeatures ) );
             }
             break;
           }
@@ -280,7 +332,7 @@ void QgsWfsCapabilities::capabilitiesReplyFinished()
               if ( value.text() == QLatin1String( "hits" ) )
               {
                 mCaps.supportsHits = true;
-                QgsDebugMsg( "Support hits" );
+                QgsDebugMsg( QStringLiteral( "Support hits" ) );
                 break;
               }
             }
@@ -370,7 +422,7 @@ void QgsWfsCapabilities::capabilitiesReplyFinished()
     {
       featureType.name = nameList.at( 0 ).toElement().text();
 
-      QgsDebugMsg( QString( "featureType.name = %1" ) . arg( featureType.name ) );
+      QgsDebugMsgLevel( QStringLiteral( "featureType.name = %1" ) . arg( featureType.name ), 4 );
       if ( featureType.name.contains( ':' ) )
       {
         QString prefixOfTypename = featureType.name.section( ':', 0, 0 );
@@ -379,6 +431,14 @@ void QgsWfsCapabilities::capabilitiesReplyFinished()
         if ( psFeatureTypeIter )
         {
           featureType.nameSpace = CPLGetXMLValue( psFeatureTypeIter, ( "xmlns:" + prefixOfTypename ).toUtf8().constData(), "" );
+          if ( featureType.nameSpace.isEmpty() )
+          {
+            //Try to look for namespace in Name tag (Seen in GO Publisher)
+            //<wfs:FeatureType>
+            // <wfs:Name xmlns:dagi="http://data.gov.dk/schemas/dagi/2/gml3sfp">dagi:Menighedsraadsafstemningsomraade</wfs:Name>
+            // <wfs:Title>Menighedsraadsafstemningsomraade</wfs:Title>
+            featureType.nameSpace = CPLGetXMLValue( psFeatureTypeIter, ( "wfs:Name.xmlns:" + prefixOfTypename ).toUtf8().constData(), "" );
+          }
         }
       }
     }
@@ -459,9 +519,7 @@ void QgsWfsCapabilities::capabilitiesReplyFinished()
           // into the CRS, and then back to WGS84, works (check that we are in the validity area)
           QgsCoordinateReferenceSystem crsWGS84 = QgsCoordinateReferenceSystem::fromOgcWmsCrs( QStringLiteral( "CRS:84" ) );
 
-          Q_NOWARN_DEPRECATED_PUSH
-          QgsCoordinateTransform ct( crsWGS84, crs );
-          Q_NOWARN_DEPRECATED_POP
+          QgsCoordinateTransform ct( crsWGS84, crs, mOptions.transformContext );
 
           QgsPointXY ptMin( featureType.bbox.xMinimum(), featureType.bbox.yMinimum() );
           QgsPointXY ptMinBack( ct.transform( ct.transform( ptMin, QgsCoordinateTransform::ForwardTransform ), QgsCoordinateTransform::ReverseTransform ) );
@@ -477,7 +535,7 @@ void QgsWfsCapabilities::capabilitiesReplyFinished()
                std::fabs( featureType.bbox.xMaximum() - ptMaxBack.x() ) < 1e-5 &&
                std::fabs( featureType.bbox.yMaximum() - ptMaxBack.y() ) < 1e-5 )
           {
-            QgsDebugMsg( "Values of LatLongBoundingBox are consistent with WGS84 long/lat bounds, so as the CRS is projected, assume they are indeed in WGS84 and not in the CRS units" );
+            QgsDebugMsg( QStringLiteral( "Values of LatLongBoundingBox are consistent with WGS84 long/lat bounds, so as the CRS is projected, assume they are indeed in WGS84 and not in the CRS units" ) );
             featureType.bboxSRSIsWGS84 = true;
           }
         }
@@ -785,3 +843,4 @@ QString QgsWfsCapabilities::errorMessageWithReason( const QString &reason )
 {
   return tr( "Download of capabilities failed: %1" ).arg( reason );
 }
+

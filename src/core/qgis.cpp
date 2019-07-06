@@ -29,6 +29,7 @@
 #include "qgslogger.h"
 #include "qgswkbtypes.h"
 
+#include <gdal.h>
 #include <ogr_api.h>
 
 // Version constants
@@ -53,14 +54,14 @@ const QString GEOWKT =
   "GEOGCS[\"WGS 84\", "
   "  DATUM[\"WGS_1984\", "
   "    SPHEROID[\"WGS 84\",6378137,298.257223563, "
-  "      AUTHORITY[\"EPSG\",7030]], "
+  "      AUTHORITY[\"EPSG\",\"7030\"]], "
   "    TOWGS84[0,0,0,0,0,0,0], "
-  "    AUTHORITY[\"EPSG\",6326]], "
-  "  PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",8901]], "
-  "  UNIT[\"DMSH\",0.0174532925199433,AUTHORITY[\"EPSG\",9108]], "
+  "    AUTHORITY[\"EPSG\",\"6326\"]], "
+  "  PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]], "
+  "  UNIT[\"DMSH\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9108\"]], "
   "  AXIS[\"Lat\",NORTH], "
   "  AXIS[\"Long\",EAST], "
-  "  AUTHORITY[\"EPSG\",4326]]";
+  "  AUTHORITY[\"EPSG\",\"4326\"]]";
 
 const QString PROJECT_SCALES =
   "1:1000000,1:500000,1:250000,1:100000,1:50000,1:25000,"
@@ -97,28 +98,35 @@ const double Qgis::UI_SCALE_FACTOR = 1;
 double qgsPermissiveToDouble( QString string, bool &ok )
 {
   //remove any thousands separators
-  string.remove( QLocale::system().groupSeparator() );
-  return QLocale::system().toDouble( string, &ok );
+  string.remove( QLocale().groupSeparator() );
+  return QLocale().toDouble( string, &ok );
 }
 
 int qgsPermissiveToInt( QString string, bool &ok )
 {
   //remove any thousands separators
-  string.remove( QLocale::system().groupSeparator() );
-  return QLocale::system().toInt( string, &ok );
+  string.remove( QLocale().groupSeparator() );
+  return QLocale().toInt( string, &ok );
+}
+
+qlonglong qgsPermissiveToLongLong( QString string, bool &ok )
+{
+  //remove any thousands separators
+  string.remove( QLocale().groupSeparator() );
+  return QLocale().toLongLong( string, &ok );
 }
 
 void *qgsMalloc( size_t size )
 {
   if ( size == 0 || long( size ) < 0 )
   {
-    QgsDebugMsg( QString( "Negative or zero size %1." ).arg( size ) );
+    QgsDebugMsg( QStringLiteral( "Negative or zero size %1." ).arg( size ) );
     return nullptr;
   }
   void *p = malloc( size );
   if ( !p )
   {
-    QgsDebugMsg( QString( "Allocation of %1 bytes failed." ).arg( size ) );
+    QgsDebugMsg( QStringLiteral( "Allocation of %1 bytes failed." ).arg( size ) );
   }
   return p;
 }
@@ -127,7 +135,7 @@ void *qgsCalloc( size_t nmemb, size_t size )
 {
   if ( nmemb == 0 || long( nmemb ) < 0 || size == 0 || long( size ) < 0 )
   {
-    QgsDebugMsg( QString( "Negative or zero nmemb %1 or size %2." ).arg( nmemb ).arg( size ) );
+    QgsDebugMsg( QStringLiteral( "Negative or zero nmemb %1 or size %2." ).arg( nmemb ).arg( size ) );
     return nullptr;
   }
   void *p = qgsMalloc( nmemb * size );
@@ -182,7 +190,7 @@ bool qgsVariantLessThan( const QVariant &lhs, const QVariant &rhs )
       const QList<QVariant> &rhsl = rhs.toList();
 
       int i, n = std::min( lhsl.size(), rhsl.size() );
-      for ( i = 0; i < n && lhsl[i].type() == rhsl[i].type() && lhsl[i].isNull() == rhsl[i].isNull() && lhsl[i] == rhsl[i]; i++ )
+      for ( i = 0; i < n && lhsl[i].type() == rhsl[i].type() && qgsVariantEqual( lhsl[i], rhsl[i] ); i++ )
         ;
 
       if ( i == n )
@@ -218,8 +226,16 @@ bool qgsVariantGreaterThan( const QVariant &lhs, const QVariant &rhs )
 
 QString qgsVsiPrefix( const QString &path )
 {
-  if ( path.startsWith( QLatin1String( "/vsizip/" ), Qt::CaseInsensitive ) ||
-       path.endsWith( QLatin1String( ".zip" ), Qt::CaseInsensitive ) )
+  if ( path.startsWith( QLatin1String( "/vsizip/" ), Qt::CaseInsensitive ) )
+    return QStringLiteral( "/vsizip/" );
+  else if ( path.endsWith( QLatin1String( ".shp.zip" ), Qt::CaseInsensitive ) )
+  {
+    // GDAL 3.1 Shapefile driver directly handles .shp.zip files
+    if ( GDALIdentifyDriver( path.toUtf8().constData(), nullptr ) )
+      return QString();
+    return QStringLiteral( "/vsizip/" );
+  }
+  else if ( path.endsWith( QLatin1String( ".zip" ), Qt::CaseInsensitive ) )
     return QStringLiteral( "/vsizip/" );
   else if ( path.startsWith( QLatin1String( "/vsitar/" ), Qt::CaseInsensitive ) ||
             path.endsWith( QLatin1String( ".tar" ), Qt::CaseInsensitive ) ||
@@ -230,7 +246,7 @@ QString qgsVsiPrefix( const QString &path )
             path.endsWith( QLatin1String( ".gz" ), Qt::CaseInsensitive ) )
     return QStringLiteral( "/vsigzip/" );
   else
-    return QLatin1String( "" );
+    return QString();
 }
 
 uint qHash( const QVariant &variant )
@@ -257,30 +273,9 @@ uint qHash( const QVariant &variant )
     case QVariant::Char:
       return qHash( variant.toChar() );
     case QVariant::List:
-
-#if QT_VERSION >= 0x050600
       return qHash( variant.toList() );
-#else
-      {
-        QVariantList list = variant.toList();
-        if ( list.isEmpty() )
-          return -1;
-        else
-          return qHash( list.at( 0 ) );
-      }
-#endif
     case QVariant::StringList:
-#if QT_VERSION >= 0x050600
       return qHash( variant.toStringList() );
-#else
-      {
-        QStringList list = variant.toStringList();
-        if ( list.isEmpty() )
-          return -1;
-        else
-          return qHash( list.at( 0 ) );
-      }
-#endif
     case QVariant::ByteArray:
       return qHash( variant.toByteArray() );
     case QVariant::Date:
@@ -298,4 +293,9 @@ uint qHash( const QVariant &variant )
   }
 
   return std::numeric_limits<uint>::max();
+}
+
+bool qgsVariantEqual( const QVariant &lhs, const QVariant &rhs )
+{
+  return lhs.isNull() == rhs.isNull() && lhs == rhs;
 }

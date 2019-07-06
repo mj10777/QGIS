@@ -144,7 +144,7 @@ class CORE_EXPORT QgsGradientColorRamp : public QgsColorRamp
      * Constructor for QgsGradientColorRamp
      * \param color1 start color, corresponding to a position of 0.0
      * \param color2 end color, corresponding to a position of 1.0
-     * \param discrete set to true for discrete interpolation instead of smoothly
+     * \param discrete set to TRUE for discrete interpolation instead of smoothly
      * interpolating between colors
      * \param stops optional list of additional color stops
      */
@@ -195,7 +195,7 @@ class CORE_EXPORT QgsGradientColorRamp : public QgsColorRamp
     void setColor2( const QColor &color ) { mColor2 = color; }
 
     /**
-     * Returns true if the gradient is using discrete interpolation, rather than
+     * Returns TRUE if the gradient is using discrete interpolation, rather than
      * smoothly interpolating between colors.
      * \see setDiscrete()
      */
@@ -204,7 +204,7 @@ class CORE_EXPORT QgsGradientColorRamp : public QgsColorRamp
     /**
      * Sets whether the gradient should use discrete interpolation, rather than
      * smoothly interpolating between colors.
-     * \param discrete set to true to use discrete interpolation
+     * \param discrete set to TRUE to use discrete interpolation
      * \see convertToDiscrete()
      * \see isDiscrete()
      */
@@ -213,8 +213,8 @@ class CORE_EXPORT QgsGradientColorRamp : public QgsColorRamp
     /**
      * Converts a gradient with existing color stops to or from discrete
      * interpolation.
-     * \param discrete set to true to convert the gradient stops to discrete,
-     * or false to convert them to smooth interpolation
+     * \param discrete set to TRUE to convert the gradient stops to discrete,
+     * or FALSE to convert them to smooth interpolation
      * \see isDiscrete()
      */
     void convertToDiscrete( bool discrete );
@@ -315,7 +315,7 @@ class CORE_EXPORT QgsLimitedRandomColorRamp : public QgsColorRamp
     int count() const override { return mCount; }
 
     /**
-     * Get a list of random colors
+     * Gets a list of random colors
      * \since QGIS 2.4
      */
     static QList<QColor> randomColors( int count,
@@ -446,7 +446,7 @@ class CORE_EXPORT QgsRandomColorRamp: public QgsColorRamp
      * \param colorCount number of unique colors
      * \since QGIS 2.5
      */
-    virtual void setTotalColorCount( const int colorCount );
+    virtual void setTotalColorCount( int colorCount );
 
     QString type() const override;
 
@@ -481,7 +481,6 @@ class CORE_EXPORT QgsPresetSchemeColorRamp : public QgsColorRamp, public QgsColo
     /**
      * Constructor for QgsPresetColorRamp.
      * \param colors list of named colors in ramp
-     * \note not available in Python bindings - use setColors instead
      */
     QgsPresetSchemeColorRamp( const QgsNamedColorList &colors );
 

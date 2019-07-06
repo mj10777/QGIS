@@ -26,6 +26,8 @@
 #include "qgsproviderregistry.h"
 #include "qgsmessagebar.h"
 #include "qgssettings.h"
+#include "qgslayertreeregistrybridge.h"
+#include "qgsapplication.h"
 
 #include <QDomDocument>
 #include <QDomElement>
@@ -33,6 +35,7 @@
 #include <QPushButton>
 #include <QToolButton>
 #include <QMessageBox>
+#include <QDialogButtonBox>
 #include <QUrl>
 
 void QgsHandleBadLayersHandler::handleBadLayers( const QList<QDomNode> &layers )
@@ -40,16 +43,27 @@ void QgsHandleBadLayersHandler::handleBadLayers( const QList<QDomNode> &layers )
   QApplication::setOverrideCursor( Qt::ArrowCursor );
   QgsHandleBadLayers *dialog = new QgsHandleBadLayers( layers );
 
+  dialog->buttonBox->button( QDialogButtonBox::Ignore )->setToolTip( tr( "Import all unavailable layers unmodified (you can fix them later)." ) );
+  dialog->buttonBox->button( QDialogButtonBox::Ignore )->setText( tr( "Keep Unavailable Layers" ) );
+  dialog->buttonBox->button( QDialogButtonBox::Discard )->setToolTip( tr( "Remove all unavailable layers from the project" ) );
+  dialog->buttonBox->button( QDialogButtonBox::Discard )->setText( tr( "Remove Unavailable Layers" ) );
+  dialog->buttonBox->button( QDialogButtonBox::Discard )->setIcon( QgsApplication::getThemeIcon( QStringLiteral( "/mActionDeleteSelected.svg" ) ) );
+
   if ( dialog->layerCount() < layers.size() )
     QgisApp::instance()->messageBar()->pushMessage(
-      tr( "Handle bad layers" ),
-      tr( "%1 of %2 bad layers were not fixable." )
+      tr( "Handle unavailable layers" ),
+      tr( "%1 of %2 unavailable layers were not fixable." )
       .arg( layers.size() - dialog->layerCount() )
       .arg( layers.size() ),
       Qgis::Warning, QgisApp::instance()->messageTimeout() );
 
   if ( dialog->layerCount() > 0 )
-    dialog->exec();
+  {
+    if ( dialog->exec() == dialog->Accepted )
+    {
+      emit layersChanged();
+    }
+  }
 
   delete dialog;
   QApplication::restoreOverrideCursor();
@@ -68,10 +82,15 @@ QgsHandleBadLayers::QgsHandleBadLayers( const QList<QDomNode> &layers )
   mBrowseButton = new QPushButton( tr( "Browse" ) );
   buttonBox->addButton( mBrowseButton, QDialogButtonBox::ActionRole );
   mBrowseButton->setDisabled( true );
+  mApplyButton = new QPushButton( tr( "Apply Changes" ) );
+  mApplyButton->setToolTip( tr( "Apply fixes to unavailable layers (remaining unavailable layers will be removed from the project)." ) );
+  buttonBox->addButton( mApplyButton, QDialogButtonBox::ActionRole );
 
   connect( mLayerList, &QTableWidget::itemSelectionChanged, this, &QgsHandleBadLayers::selectionChanged );
   connect( mBrowseButton, &QAbstractButton::clicked, this, &QgsHandleBadLayers::browseClicked );
-  connect( buttonBox->button( QDialogButtonBox::Apply ), &QAbstractButton::clicked, this, &QgsHandleBadLayers::apply );
+  connect( mApplyButton, &QAbstractButton::clicked, this, &QgsHandleBadLayers::apply );
+  connect( buttonBox->button( QDialogButtonBox::Ignore ), &QPushButton::clicked, this, &QgsHandleBadLayers::reject );
+  connect( buttonBox->button( QDialogButtonBox::Discard ), &QPushButton::clicked, this, &QgsHandleBadLayers::accept );
 
   mLayerList->clear();
   mLayerList->setSortingEnabled( true );
@@ -97,9 +116,11 @@ QgsHandleBadLayers::QgsHandleBadLayers( const QList<QDomNode> &layers )
     QString datasource = node.namedItem( QStringLiteral( "datasource" ) ).toElement().text();
     QString provider = node.namedItem( QStringLiteral( "provider" ) ).toElement().text();
     QString vectorProvider = type == QLatin1String( "vector" ) ? provider : tr( "none" );
-    bool providerFileBased = ( QgsProviderRegistry::instance()->providerCapabilities( provider ) & QgsDataProvider::File ) != 0;
+    bool providerFileBased = ( provider == QStringLiteral( "gdal" ) || provider == QStringLiteral( "ogr" ) || provider == QStringLiteral( "mdal" ) );
+    const QString basepath = datasource.left( datasource.lastIndexOf( '/' ) );
+    mFileBase[name].append( basepath );
 
-    QgsDebugMsg( QString( "name=%1 type=%2 provider=%3 datasource='%4'" )
+    QgsDebugMsg( QStringLiteral( "name=%1 type=%2 provider=%3 datasource='%4'" )
                  .arg( name,
                        type,
                        vectorProvider,
@@ -135,7 +156,7 @@ QgsHandleBadLayers::QgsHandleBadLayers( const QList<QDomNode> &layers )
     }
     else
     {
-      item = new QTableWidgetItem( QLatin1String( "" ) );
+      item = new QTableWidgetItem( QString() );
       mLayerList->setItem( j, 3, item );
     }
 
@@ -153,7 +174,8 @@ void QgsHandleBadLayers::selectionChanged()
 
   mRows.clear();
 
-  Q_FOREACH ( QTableWidgetItem *item, mLayerList->selectedItems() )
+  const auto constSelectedItems = mLayerList->selectedItems();
+  for ( QTableWidgetItem *item : constSelectedItems )
   {
     if ( item->column() != 0 )
       continue;
@@ -176,27 +198,14 @@ QString QgsHandleBadLayers::filename( int row )
 
   if ( type == QLatin1String( "vector" ) )
   {
-    if ( provider == QLatin1String( "spatialite" ) )
-    {
-      QgsDataSourceUri uri( datasource );
-      return uri.database();
-    }
-    else if ( provider == QLatin1String( "ogr" ) )
-    {
-      QStringList theURIParts = datasource.split( '|' );
-      return theURIParts[0];
-    }
-    else if ( provider == QLatin1String( "delimitedtext" ) )
-    {
-      return QUrl::fromEncoded( datasource.toLatin1() ).toLocalFile();
-    }
+    const QVariantMap parts = QgsProviderRegistry::instance()->decodeUri( provider, datasource );
+    // if parts is empty then provider doesn't handle this method!
+    return parts.empty() ? datasource : parts.value( QStringLiteral( "path" ) ).toString();
   }
   else
   {
     return datasource;
   }
-
-  return QString();
 }
 
 void QgsHandleBadLayers::setFilename( int row, const QString &filename )
@@ -295,7 +304,8 @@ void QgsHandleBadLayers::browseClicked()
       return;
     }
 
-    Q_FOREACH ( int row, mRows )
+    const auto constMRows = mRows;
+    for ( int row : constMRows )
     {
       bool providerFileBased = mLayerList->item( row, 1 )->data( Qt::UserRole + 0 ).toBool();
       if ( !providerFileBased )
@@ -353,34 +363,127 @@ void QgsHandleBadLayers::editAuthCfg()
 
 void QgsHandleBadLayers::apply()
 {
+  QgsProject::instance()->layerTreeRegistryBridge()->setEnabled( true );
+  QHash<QString, QString> baseChange;
+
+
   for ( int i = 0; i < mLayerList->rowCount(); i++ )
   {
     int idx = mLayerList->item( i, 0 )->data( Qt::UserRole ).toInt();
     QDomNode &node = const_cast<QDomNode &>( mLayers[ idx ] );
 
+    const QString name = mLayerList->item( i, 0 )->text();
     QTableWidgetItem *item = mLayerList->item( i, 4 );
     QString datasource = item->text();
+    const QString basepath = datasource.left( datasource.lastIndexOf( '/' ) );
+    bool changed = false;
 
-    node.namedItem( QStringLiteral( "datasource" ) ).toElement().firstChild().toText().setData( datasource );
-    if ( QgsProject::instance()->readLayer( node ) )
+    if ( mFileBase[ name ].size() == 1 )
+    {
+      if ( mFileBase[ name ][0] != basepath && !baseChange.contains( mFileBase[ name ][0] ) )
+      {
+        baseChange[ mFileBase[ name ][0] ] = basepath;
+        changed = true;
+      }
+    }
+    else if ( mFileBase[ name ].size() > 1 )
+    {
+      if ( mFileBase[ name ].indexOf( basepath ) == -1 )
+      {
+        const QList<QString> fileBases = mFileBase[ name ];
+        for ( QString fileBase : fileBases )
+        {
+          if ( !baseChange.contains( fileBase ) )
+          {
+            baseChange[ fileBase ] = basepath;
+            changed = true;
+          }
+        }
+      }
+    }
+    if ( !changed && baseChange.contains( basepath ) )
+      datasource = datasource.replace( basepath, baseChange[basepath] );
+
+
+    bool dataSourceFixed { false };
+    const QString layerId { node.namedItem( QStringLiteral( "id" ) ).toElement().text() };
+    const QString provider { node.namedItem( QStringLiteral( "provider" ) ).toElement().text() };
+
+    // Try first to change the datasource of the existing layers, this will
+    // maintain the current status (checked/unchecked) and group
+    if ( QgsProject::instance()->mapLayer( layerId ) )
+    {
+      QgsMapLayer *mapLayer = QgsProject::instance()->mapLayer( layerId );
+      QgsDataProvider::ProviderOptions options;
+      const auto absolutePath { QgsProject::instance()->pathResolver().readPath( datasource ) };
+      mapLayer->setDataSource( absolutePath, name, provider, options );
+      dataSourceFixed  = mapLayer->isValid();
+      if ( dataSourceFixed )
+      {
+        QString errorMsg;
+        QgsReadWriteContext context;
+        context.setPathResolver( QgsProject::instance()->pathResolver() );
+        context.setProjectTranslator( QgsProject::instance() );
+        if ( ! mapLayer->readSymbology( node, errorMsg, context ) )
+        {
+          QgsDebugMsg( QStringLiteral( "Failed to restore original layer style from node XML for layer %1: %2" )
+                       .arg( mapLayer->name( ) )
+                       .arg( errorMsg ) );
+        }
+      }
+    }
+
+    // If the data source was changed successfully, remove the bad layer from the dialog
+    // otherwise, try to set the new datasource in the XML node and reload the layer,
+    // finally marks with red all remaining bad layers.
+    if ( dataSourceFixed )
     {
       mLayerList->removeRow( i-- );
     }
     else
     {
-      item->setForeground( QBrush( Qt::red ) );
+      node.namedItem( QStringLiteral( "datasource" ) ).toElement().firstChild().toText().setData( datasource );
+      if ( QgsProject::instance()->readLayer( node ) )
+      {
+        mLayerList->removeRow( i-- );
+      }
+      else
+      {
+        item->setForeground( QBrush( Qt::red ) );
+        if ( mFileBase[ name ].size() == 1 )
+          mFileBase[ name ][0] = basepath ;
+        else if ( mFileBase[ name ].size() > 1 )
+          mFileBase[ name ].append( basepath );
+      }
     }
   }
+
+  // Final cleanup: remove any remaining bad layer
+  // (there should not be any at this point)
+  if ( mLayerList->rowCount() == 0 )
+  {
+    QList<QgsMapLayer *> toRemove;
+    const auto mapLayers = QgsProject::instance()->mapLayers();
+    for ( const auto &l : mapLayers )
+    {
+      if ( ! l->isValid() )
+        toRemove << l;
+    }
+    QgsProject::instance()->removeMapLayers( toRemove );
+    accept();
+  }
+
+  QgsProject::instance()->layerTreeRegistryBridge()->setEnabled( false );
+
 }
 
 void QgsHandleBadLayers::accept()
 {
-  apply();
 
   if ( mLayerList->rowCount() > 0  &&
        QMessageBox::warning( this,
                              tr( "Unhandled layer will be lost." ),
-                             tr( "There are still %n unhandled layer(s), that will be lost if you closed now.",
+                             tr( "There are still %n unhandled layer(s). If they are not fixed, they will be disabled/deactivated until the project is opened again.",
                                  "unhandled layers",
                                  mLayerList->rowCount() ),
                              QMessageBox::Ok | QMessageBox::Cancel,
@@ -388,26 +491,18 @@ void QgsHandleBadLayers::accept()
   {
     return;
   }
+  QList<QgsMapLayer *> toRemove;
+  for ( const auto &l : QgsProject::instance()->mapLayers( ) )
+  {
+    if ( ! l->isValid() )
+      toRemove << l;
+  }
+  QgsProject::instance()->layerTreeRegistryBridge()->setEnabled( true );
+  QgsProject::instance()->removeMapLayers( toRemove );
+  QgsProject::instance()->layerTreeRegistryBridge()->setEnabled( false );
+  mLayerList->clear();
 
   QDialog::accept();
-}
-
-void QgsHandleBadLayers::reject()
-{
-
-  if ( mLayerList->rowCount() > 0  &&
-       QMessageBox::warning( this,
-                             tr( "Unhandled layer will be lost." ),
-                             tr( "There are still %n unhandled layer(s), that will be lost if you closed now.",
-                                 "unhandled layers",
-                                 mLayerList->rowCount() ),
-                             QMessageBox::Ok | QMessageBox::Cancel,
-                             QMessageBox::Cancel ) == QMessageBox::Cancel )
-  {
-    return;
-  }
-
-  QDialog::reject();
 }
 
 int QgsHandleBadLayers::layerCount()

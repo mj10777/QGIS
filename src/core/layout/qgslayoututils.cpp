@@ -130,6 +130,7 @@ QgsRenderContext QgsLayoutUtils::createRenderContextForMap( QgsLayoutItemMap *ma
       context.setPainter( painter );
 
     context.setFlags( map->layout()->renderContext().renderContextFlags() );
+    context.setTextRenderFormat( map->layout()->renderContext().textRenderFormat() );
     return context;
   }
 }
@@ -139,7 +140,11 @@ QgsRenderContext QgsLayoutUtils::createRenderContextForLayout( QgsLayout *layout
   QgsLayoutItemMap *referenceMap = layout ? layout->referenceMap() : nullptr;
   QgsRenderContext context = createRenderContextForMap( referenceMap, painter, dpi );
   if ( layout )
+  {
     context.setFlags( layout->renderContext().renderContextFlags() );
+    context.setTextRenderFormat( layout->renderContext().textRenderFormat() );
+  }
+
   return context;
 }
 
@@ -393,6 +398,27 @@ double QgsLayoutUtils::scaleFactorFromItemStyle( const QStyleOptionGraphicsItem 
 
   // TODO - ifdef this out if Qt fixes upstream
   return !qgsDoubleNear( style->matrix.m11(), 0.0 ) ? style->matrix.m11() : style->matrix.m12();
+}
+
+QgsMapLayer *QgsLayoutUtils::mapLayerFromString( const QString &string, QgsProject *project )
+{
+  // Maybe it's a layer id?
+  if ( QgsMapLayer *ml = project->mapLayer( string ) )
+    return ml;
+
+  // Still nothing? Check for layer name
+  if ( QgsMapLayer *ml = project->mapLayersByName( string ).value( 0 ) )
+    return ml;
+
+  // Still nothing? Check for layer name, case-insensitive
+  const auto layers = project->mapLayers();
+  for ( auto it = layers.constBegin(); it != layers.constEnd(); ++it )
+  {
+    if ( it.value()->name().compare( string, Qt::CaseInsensitive ) == 0 )
+      return it.value();
+  }
+
+  return nullptr;
 }
 
 double QgsLayoutUtils::pointsToMM( const double pointSize )

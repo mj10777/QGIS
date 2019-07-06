@@ -20,8 +20,9 @@
 
 #define SIP_NO_FILE
 
-#include "qgis.h"
+#include "qgis_sip.h"
 #include "qgsprocessingalgorithm.h"
+#include "qgsapplication.h"
 
 ///@cond PRIVATE
 
@@ -46,6 +47,8 @@ class QgsDissolveAlgorithm : public QgsCollectorAlgorithm
 
     QgsDissolveAlgorithm() = default;
     void initAlgorithm( const QVariantMap &configuration = QVariantMap() ) override;
+    QIcon icon() const override { return QgsApplication::getThemeIcon( QStringLiteral( "/algorithms/mAlgorithmDissolve.svg" ) ); }
+    QString svgIconPath() const override { return QgsApplication::iconPath( QStringLiteral( "/algorithms/mAlgorithmDissolve.svg" ) ); }
     QString name() const override;
     QString displayName() const override;
     QStringList tags() const override;
@@ -70,6 +73,8 @@ class QgsCollectAlgorithm : public QgsCollectorAlgorithm
   public:
 
     QgsCollectAlgorithm() = default;
+    QIcon icon() const override { return QgsApplication::getThemeIcon( QStringLiteral( "/algorithms/mAlgorithmCollect.svg" ) ); }
+    QString svgIconPath() const override { return QgsApplication::iconPath( QStringLiteral( "/algorithms/mAlgorithmCollect.svg" ) ); }
     void initAlgorithm( const QVariantMap &configuration = QVariantMap() ) override;
     QString name() const override;
     QString displayName() const override;

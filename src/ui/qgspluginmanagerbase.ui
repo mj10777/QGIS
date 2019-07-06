@@ -268,34 +268,14 @@
             <number>0</number>
            </property>
            <item>
-            <layout class="QHBoxLayout" name="horizontalLayout_4">
-             <item>
-              <widget class="QLabel" name="lblFilter">
-               <property name="sizePolicy">
-                <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                 <horstretch>0</horstretch>
-                 <verstretch>0</verstretch>
-                </sizepolicy>
-               </property>
-               <property name="text">
-                <string>Search</string>
-               </property>
-               <property name="buddy">
-                <cstring>leFilter</cstring>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QgsFilterLineEdit" name="leFilter">
-               <property name="sizePolicy">
-                <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-                 <horstretch>0</horstretch>
-                 <verstretch>0</verstretch>
-                </sizepolicy>
-               </property>
-              </widget>
-             </item>
-            </layout>
+            <widget class="QgsFilterLineEdit" name="leFilter">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+            </widget>
            </item>
            <item>
             <widget class="QSplitter" name="mPluginsDetailsSplitter">
@@ -388,7 +368,7 @@
                     </property>
                     <property name="url" stdset="0">
                      <url>
-                      <string>about:blank</string>
+                      <string notr="true">about:blank</string>
                      </url>
                     </property>
                    </widget>
@@ -472,7 +452,7 @@
                     <string>Upgrade all upgradeable plugins</string>
                    </property>
                    <property name="text">
-                    <string>Upgrade all</string>
+                    <string>Upgrade All</string>
                    </property>
                   </widget>
                  </item>
@@ -501,7 +481,7 @@
                     <string>Uninstall the selected plugin</string>
                    </property>
                    <property name="text">
-                    <string>Uninstall plugin</string>
+                    <string>Uninstall Plugin</string>
                    </property>
                   </widget>
                  </item>
@@ -520,7 +500,7 @@
                     <string>Install, reinstall or upgrade the selected plugin</string>
                    </property>
                    <property name="text">
-                    <string>Reinstall plugin</string>
+                    <string>Reinstall Plugin</string>
                    </property>
                   </widget>
                  </item>
@@ -696,7 +676,7 @@
                 </size>
                </property>
                <property name="text">
-                <string>Install plugin</string>
+                <string>Install Plugin</string>
                </property>
               </widget>
              </item>
@@ -803,8 +783,8 @@
                   <rect>
                    <x>0</x>
                    <y>0</y>
-                   <width>646</width>
-                   <height>638</height>
+                   <width>460</width>
+                   <height>613</height>
                   </rect>
                  </property>
                  <layout class="QVBoxLayout" name="verticalLayout_10">
@@ -1074,7 +1054,7 @@ p, li { white-space: pre-wrap; }
 (useful when you uploaded a plugin there)</string>
                          </property>
                          <property name="text">
-                          <string>Reload repository</string>
+                          <string>Reload Repository</string>
                          </property>
                         </widget>
                        </item>
@@ -1100,7 +1080,7 @@ p, li { white-space: pre-wrap; }
                           <string>Add a new plugin repository</string>
                          </property>
                          <property name="text">
-                          <string>Add...</string>
+                          <string>Add…</string>
                          </property>
                         </widget>
                        </item>
@@ -1119,7 +1099,7 @@ p, li { white-space: pre-wrap; }
                           <string>Edit the selected repository</string>
                          </property>
                          <property name="text">
-                          <string>Edit...</string>
+                          <string>Edit…</string>
                          </property>
                         </widget>
                        </item>

@@ -322,7 +322,7 @@ bool GeomFunction::containsCandidate( const GEOSPreparedGeometry *geom, double x
   if ( !geom )
     return false;
 
-  GEOSContextHandle_t geosctxt = geosContext();
+  GEOSContextHandle_t geosctxt = QgsGeos::getGEOSHandler();
   GEOSCoordSequence *coord = GEOSCoordSeq_create_r( geosctxt, 5, 2 );
 
   GEOSCoordSeq_setX_r( geosctxt, coord, 0, x );
@@ -381,7 +381,7 @@ void GeomFunction::findLineCircleIntersection( double cx, double cy, double radi
   double C = ( x1 - cx ) * ( x1 - cx ) + ( y1 - cy ) * ( y1 - cy ) - radius * radius;
 
   double det = B * B - 4 * A * C;
-  if ( A <= 0.0000001 || det < 0 )
+  if ( A <= 0.000000000001 || det < 0 )
     // Should never happen, No real solutions.
     return;
 

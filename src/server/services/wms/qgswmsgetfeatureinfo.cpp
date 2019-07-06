@@ -24,24 +24,44 @@
 
 namespace QgsWms
 {
-
   void writeGetFeatureInfo( QgsServerInterface *serverIface, const QgsProject *project,
                             const QString &version, const QgsServerRequest &request,
                             QgsServerResponse &response )
   {
-    Q_UNUSED( version );
-    QgsServerRequest::Parameters params = request.parameters();
-    QgsRenderer renderer( serverIface, project, params );
+    // get wms parameters from query
+    QgsWmsParameters parameters( QUrlQuery( request.url() ) );
 
-    QString infoFormat = params.value( QStringLiteral( "INFO_FORMAT" ), QStringLiteral( "text/plain" ) );
+    // WIDTH and HEIGHT are not mandatory, but we need to set a default size
+    if ( ( parameters.widthAsInt() <= 0
+           || parameters.heightAsInt() <= 0 )
+         && ! parameters.infoFormatIsImage() )
+    {
+      QSize size( 10, 10 );
 
+      if ( ! parameters.filterGeom().isEmpty() )
+      {
+        const QgsRectangle bbox = QgsGeometry::fromWkt( parameters.filterGeom() ).boundingBox();
+        const int defaultWidth = 800;
+        size.setWidth( defaultWidth );
+        size.setHeight( defaultWidth * bbox.height() / bbox.width() );
+      }
+
+      parameters.set( QgsWmsParameter::WIDTH, size.width() );
+      parameters.set( QgsWmsParameter::HEIGHT, size.height() );
+    }
+
+    // prepare render context
+    QgsWmsRenderContext context( project, serverIface );
+    context.setFlag( QgsWmsRenderContext::AddQueryLayers );
+    context.setFlag( QgsWmsRenderContext::UseFilter );
+    context.setFlag( QgsWmsRenderContext::UseScaleDenominator );
+    context.setFlag( QgsWmsRenderContext::SetAccessControl );
+    context.setParameters( parameters );
+
+    const QString infoFormat = request.parameters().value( QStringLiteral( "INFO_FORMAT" ), QStringLiteral( "text/plain" ) );
     response.setHeader( QStringLiteral( "Content-Type" ), infoFormat + QStringLiteral( "; charset=utf-8" ) );
+
+    QgsRenderer renderer( context );
     response.write( renderer.getFeatureInfo( version ) );
   }
-
-
-} // samespace QgsWms
-
-
-
-
+} // namespace QgsWms

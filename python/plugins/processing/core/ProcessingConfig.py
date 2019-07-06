@@ -21,10 +21,6 @@ __author__ = 'Victor Olaya'
 __date__ = 'August 2012'
 __copyright__ = '(C) 2012, Victor Olaya'
 
-# This will get replaced with a git SHA1 when you do a git archive
-
-__revision__ = '$Format:%H$'
-
 import os
 
 from qgis.PyQt.QtCore import QCoreApplication, QObject, pyqtSignal
@@ -51,21 +47,15 @@ class ProcessingConfig:
     VECTOR_POINT_STYLE = 'VECTOR_POINT_STYLE'
     VECTOR_LINE_STYLE = 'VECTOR_LINE_STYLE'
     VECTOR_POLYGON_STYLE = 'VECTOR_POLYGON_STYLE'
-    SHOW_RECENT_ALGORITHMS = 'SHOW_RECENT_ALGORITHMS'
     FILTER_INVALID_GEOMETRIES = 'FILTER_INVALID_GEOMETRIES'
     USE_FILENAME_AS_LAYER_NAME = 'USE_FILENAME_AS_LAYER_NAME'
     KEEP_DIALOG_OPEN = 'KEEP_DIALOG_OPEN'
-    SHOW_DEBUG_IN_DIALOG = 'SHOW_DEBUG_IN_DIALOG'
-    RECENT_ALGORITHMS = 'RECENT_ALGORITHMS'
     PRE_EXECUTION_SCRIPT = 'PRE_EXECUTION_SCRIPT'
     POST_EXECUTION_SCRIPT = 'POST_EXECUTION_SCRIPT'
     SHOW_CRS_DEF = 'SHOW_CRS_DEF'
     WARN_UNMATCHING_CRS = 'WARN_UNMATCHING_CRS'
-    WARN_UNMATCHING_EXTENT_CRS = 'WARN_UNMATCHING_EXTENT_CRS'
-    DEFAULT_OUTPUT_RASTER_LAYER_EXT = 'DEFAULT_OUTPUT_RASTER_LAYER_EXT'
-    DEFAULT_OUTPUT_VECTOR_LAYER_EXT = 'DEFAULT_OUTPUT_VECTOR_LAYER_EXT'
     SHOW_PROVIDERS_TOOLTIP = 'SHOW_PROVIDERS_TOOLTIP'
-    MODELS_SCRIPTS_REPO = 'MODELS_SCRIPTS_REPO'
+    SHOW_ALGORITHMS_KNOWN_ISSUES = 'SHOW_ALGORITHMS_KNOWN_ISSUES'
 
     settings = {}
     settingIcons = {}
@@ -76,20 +66,12 @@ class ProcessingConfig:
         ProcessingConfig.settingIcons['General'] = icon
         ProcessingConfig.addSetting(Setting(
             ProcessingConfig.tr('General'),
-            ProcessingConfig.SHOW_DEBUG_IN_DIALOG,
-            ProcessingConfig.tr('Show extra info in Log panel'), True))
-        ProcessingConfig.addSetting(Setting(
-            ProcessingConfig.tr('General'),
             ProcessingConfig.KEEP_DIALOG_OPEN,
             ProcessingConfig.tr('Keep dialog open after running an algorithm'), True))
         ProcessingConfig.addSetting(Setting(
             ProcessingConfig.tr('General'),
             ProcessingConfig.USE_FILENAME_AS_LAYER_NAME,
             ProcessingConfig.tr('Use filename as layer name'), False))
-        ProcessingConfig.addSetting(Setting(
-            ProcessingConfig.tr('General'),
-            ProcessingConfig.SHOW_RECENT_ALGORITHMS,
-            ProcessingConfig.tr('Show recently executed algorithms'), True))
         ProcessingConfig.addSetting(Setting(
             ProcessingConfig.tr('General'),
             ProcessingConfig.SHOW_PROVIDERS_TOOLTIP,
@@ -106,11 +88,11 @@ class ProcessingConfig:
         ProcessingConfig.addSetting(Setting(
             ProcessingConfig.tr('General'),
             ProcessingConfig.WARN_UNMATCHING_CRS,
-            ProcessingConfig.tr("Warn before executing if layer CRS's do not match"), True))
+            ProcessingConfig.tr("Warn before executing if parameter CRS's do not match"), True))
         ProcessingConfig.addSetting(Setting(
             ProcessingConfig.tr('General'),
-            ProcessingConfig.WARN_UNMATCHING_EXTENT_CRS,
-            ProcessingConfig.tr("Warn before executing if extent CRS might not match layers CRS"), True))
+            ProcessingConfig.SHOW_ALGORITHMS_KNOWN_ISSUES,
+            ProcessingConfig.tr("Show algorithms with known issues"), False))
         ProcessingConfig.addSetting(Setting(
             ProcessingConfig.tr('General'),
             ProcessingConfig.RASTER_STYLE,
@@ -141,18 +123,9 @@ class ProcessingConfig:
             ProcessingConfig.POST_EXECUTION_SCRIPT,
             ProcessingConfig.tr('Post-execution script'), '',
             valuetype=Setting.FILE))
-        ProcessingConfig.addSetting(Setting(
-            ProcessingConfig.tr('General'),
-            ProcessingConfig.RECENT_ALGORITHMS,
-            ProcessingConfig.tr('Recent algorithms'), '', hidden=True))
-        ProcessingConfig.addSetting(Setting(
-            ProcessingConfig.tr('General'),
-            ProcessingConfig.MODELS_SCRIPTS_REPO,
-            ProcessingConfig.tr('Scripts and models repository'),
-            'https://raw.githubusercontent.com/qgis/QGIS-Processing/master'))
 
         invalidFeaturesOptions = [ProcessingConfig.tr('Do not filter (better performance)'),
-                                  ProcessingConfig.tr('Ignore features with invalid geometries'),
+                                  ProcessingConfig.tr('Skip (ignore) features with invalid geometries'),
                                   ProcessingConfig.tr('Stop algorithm execution when a geometry is invalid')]
         ProcessingConfig.addSetting(Setting(
             ProcessingConfig.tr('General'),
@@ -161,24 +134,6 @@ class ProcessingConfig:
             invalidFeaturesOptions[2],
             valuetype=Setting.SELECTION,
             options=invalidFeaturesOptions))
-
-        extensions = QgsVectorFileWriter.supportedFormatExtensions()
-        ProcessingConfig.addSetting(Setting(
-            ProcessingConfig.tr('General'),
-            ProcessingConfig.DEFAULT_OUTPUT_VECTOR_LAYER_EXT,
-            ProcessingConfig.tr('Default output vector layer extension'),
-            extensions[0],
-            valuetype=Setting.SELECTION,
-            options=extensions))
-
-        extensions = QgsRasterFileWriter.supportedFormatExtensions()
-        ProcessingConfig.addSetting(Setting(
-            ProcessingConfig.tr('General'),
-            ProcessingConfig.DEFAULT_OUTPUT_RASTER_LAYER_EXT,
-            ProcessingConfig.tr('Default output raster layer extension'),
-            extensions[0],
-            valuetype=Setting.SELECTION,
-            options=extensions))
 
     @staticmethod
     def setGroupIcon(group, icon):
@@ -319,7 +274,9 @@ class Setting:
         self.validator(value)
         self.value = value
 
-    def read(self, qsettings=QgsSettings()):
+    def read(self, qsettings=None):
+        if not qsettings:
+            qsettings = QgsSettings()
         value = qsettings.value(self.qname, None)
         if value is not None:
             if isinstance(self.value, bool):
@@ -333,7 +290,9 @@ class Setting:
             else:
                 self.value = value
 
-    def save(self, qsettings=QgsSettings()):
+    def save(self, qsettings=None):
+        if not qsettings:
+            qsettings = QgsSettings()
         if self.valuetype == self.SELECTION:
             qsettings.setValue(self.qname, self.options.index(self.value))
         else:

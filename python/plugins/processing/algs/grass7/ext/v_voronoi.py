@@ -21,26 +21,22 @@ __author__ = 'Médéric Ribreux'
 __date__ = 'February 2016'
 __copyright__ = '(C) 2016, Médéric Ribreux'
 
-# This will get replaced with a git SHA1 when you do a git archive
 
-__revision__ = '$Format:%H$'
-
-
-def processInputs(alg, parameters, context):
+def processInputs(alg, parameters, context, feedback):
     if 'input' in alg.exportedLayers:
         return
 
     # We need to use v.in.ogr instead of v.external
-    alg.loadVectorLayerFromParameter('input', parameters, context, False)
-    alg.processInputs(parameters, context)
+    alg.loadVectorLayerFromParameter('input', parameters, context, feedback, False)
+    alg.processInputs(parameters, context, feedback)
 
 
-def processOutputs(alg, parameters, context):
+def processOutputs(alg, parameters, context, feedback):
     fileName = alg.parameterAsOutputLayer(parameters, 'output', context)
     grassName = '{}{}'.format('output', alg.uniqueSuffix)
     dataType = 'auto'
     # if we export a graph, output type will be a line
-    if alg.parameterAsBool(parameters, '-l', context):
+    if alg.parameterAsBoolean(parameters, '-l', context):
         dataType = 'line'
 
-    alg.exportVectorLayer(grassName, fileName, dataType)
+    alg.exportVectorLayer(grassName, fileName, dataType=dataType)

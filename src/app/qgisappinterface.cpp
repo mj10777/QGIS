@@ -53,7 +53,7 @@ QgisAppInterface::QgisAppInterface( QgisApp *_qgis )
   , pluginManagerIface( _qgis->pluginManager() )
 {
   // connect signals
-  connect( qgis->layerTreeView(), &QgsLayerTreeView::currentLayerChanged,
+  connect( qgis, &QgisApp::activeLayerChanged,
            this, &QgisInterface::currentLayerChanged );
   connect( qgis, &QgisApp::currentThemeChanged,
            this, &QgisAppInterface::currentThemeChanged );
@@ -83,7 +83,7 @@ QgsLayerTreeView *QgisAppInterface::layerTreeView()
 }
 
 void QgisAppInterface::addCustomActionForLayerType( QAction *action,
-    QString menu, QgsMapLayer::LayerType type, bool allLayers )
+    QString menu, QgsMapLayerType type, bool allLayers )
 {
   QgsAppLayerTreeViewMenuProvider *menuProvider = dynamic_cast<QgsAppLayerTreeViewMenuProvider *>( qgis->layerTreeView()->menuProvider() );
   if ( !menuProvider )
@@ -155,6 +155,11 @@ QgsRasterLayer *QgisAppInterface::addRasterLayer( const QString &rasterLayerPath
 QgsRasterLayer *QgisAppInterface::addRasterLayer( const QString &url, const QString &baseName, const QString &providerKey )
 {
   return qgis->addRasterLayer( url, baseName, providerKey );
+}
+
+QgsMeshLayer *QgisAppInterface::addMeshLayer( const QString &url, const QString &baseName, const QString &providerKey )
+{
+  return qgis->addMeshLayer( url, baseName, providerKey );
 }
 
 bool QgisAppInterface::addProject( const QString &projectName )
@@ -569,9 +574,11 @@ QMenu *QgisAppInterface::helpMenu() { return qgis->helpMenu(); }
 
 QToolBar *QgisAppInterface::fileToolBar() { return qgis->fileToolBar(); }
 QToolBar *QgisAppInterface::layerToolBar() { return qgis->layerToolBar(); }
+QToolBar *QgisAppInterface::dataSourceManagerToolBar() { return qgis->dataSourceManagerToolBar(); }
 QToolBar *QgisAppInterface::mapNavToolToolBar() { return qgis->mapNavToolToolBar(); }
 QToolBar *QgisAppInterface::digitizeToolBar() { return qgis->digitizeToolBar(); }
 QToolBar *QgisAppInterface::advancedDigitizeToolBar() { return qgis->advancedDigitizeToolBar(); }
+QToolBar *QgisAppInterface::shapeDigitizeToolBar() { return qgis->shapeDigitizeToolBar(); }
 QToolBar *QgisAppInterface::attributesToolBar() { return qgis->attributesToolBar(); }
 QToolBar *QgisAppInterface::pluginToolBar() { return qgis->pluginToolBar(); }
 QToolBar *QgisAppInterface::helpToolBar() { return qgis->helpToolBar(); }
@@ -604,6 +611,7 @@ QAction *QgisAppInterface::actionSimplifyFeature() { return qgis->actionSimplify
 QAction *QgisAppInterface::actionDeleteRing() { return qgis->actionDeleteRing(); }
 QAction *QgisAppInterface::actionDeletePart() { return qgis->actionDeletePart(); }
 QAction *QgisAppInterface::actionVertexTool() { return qgis->actionVertexTool(); }
+QAction *QgisAppInterface::actionVertexToolActiveLayer() { return qgis->actionVertexToolActiveLayer(); }
 
 QAction *QgisAppInterface::actionPan() { return qgis->actionPan(); }
 QAction *QgisAppInterface::actionPanToSelected() { return qgis->actionPanToSelected(); }
@@ -678,7 +686,7 @@ QAction *QgisAppInterface::actionAbout() { return qgis->actionAbout(); }
 
 bool QgisAppInterface::openFeatureForm( QgsVectorLayer *vlayer, QgsFeature &f, bool updateFeatureOnly, bool showModal )
 {
-  Q_UNUSED( updateFeatureOnly );
+  Q_UNUSED( updateFeatureOnly )
   if ( !vlayer )
     return false;
 
@@ -734,10 +742,11 @@ QgsAttributeDialog *QgisAppInterface::getFeatureForm( QgsVectorLayer *l, QgsFeat
   QgsAttributeEditorContext context;
   context.setDistanceArea( myDa );
   context.setVectorLayerTools( qgis->vectorLayerTools() );
+  context.setMapCanvas( qgis->mapCanvas() );
   QgsAttributeDialog *dialog = new QgsAttributeDialog( l, &feature, false, qgis, true, context );
   if ( !feature.isValid() )
   {
-    dialog->setMode( QgsAttributeForm::AddFeatureMode );
+    dialog->setMode( QgsAttributeEditorContext::AddFeatureMode );
   }
   return dialog;
 }
@@ -772,7 +781,22 @@ void QgisAppInterface::deregisterLocatorFilter( QgsLocatorFilter *filter )
   qgis->mLocatorWidget->locator()->deregisterFilter( filter );
 }
 
+void QgisAppInterface::invalidateLocatorResults()
+{
+  qgis->mLocatorWidget->invalidateResults();
+}
+
 bool QgisAppInterface::askForDatumTransform( QgsCoordinateReferenceSystem sourceCrs, QgsCoordinateReferenceSystem destinationCrs )
 {
   return qgis->askUserForDatumTransform( sourceCrs, destinationCrs );
+}
+
+void QgisAppInterface::takeAppScreenShots( const QString &saveDirectory, const int categories )
+{
+  qgis->takeAppScreenShots( saveDirectory, categories );
+}
+
+QgsBrowserGuiModel *QgisAppInterface::browserModel()
+{
+  return qgis->mBrowserModel;
 }

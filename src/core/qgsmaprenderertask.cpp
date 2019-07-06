@@ -45,7 +45,8 @@ void QgsMapRendererTask::addAnnotations( QList< QgsAnnotation * > annotations )
   qDeleteAll( mAnnotations );
   mAnnotations.clear();
 
-  Q_FOREACH ( const QgsAnnotation *a, annotations )
+  const auto constAnnotations = annotations;
+  for ( const QgsAnnotation *a : constAnnotations )
   {
     mAnnotations << a->clone();
   }
@@ -72,10 +73,14 @@ bool QgsMapRendererTask::run()
   QImage img;
   std::unique_ptr< QPainter > tempPainter;
   QPainter *destPainter = mPainter;
+
+#ifndef QT_NO_PRINTER
   std::unique_ptr< QPrinter > printer;
+#endif // ! QT_NO_PRINTER
 
   if ( mFileFormat == QStringLiteral( "PDF" ) )
   {
+#ifndef QT_NO_PRINTER
     printer.reset( new QPrinter() );
     printer->setOutputFileName( mFileName );
     printer->setOutputFormat( QPrinter::PdfFormat );
@@ -90,6 +95,10 @@ bool QgsMapRendererTask::run()
       tempPainter.reset( new QPainter( printer.get() ) );
       destPainter = tempPainter.get();
     }
+#else
+    mError = ImageUnsupportedFormat;
+    return false;
+#endif // ! QT_NO_PRINTER
   }
 
   if ( !destPainter )
@@ -127,12 +136,14 @@ bool QgsMapRendererTask::run()
   QgsRenderContext context = QgsRenderContext::fromMapSettings( mMapSettings );
   context.setPainter( destPainter );
 
-  Q_FOREACH ( QgsMapDecoration *decoration, mDecorations )
+  const auto constMDecorations = mDecorations;
+  for ( QgsMapDecoration *decoration : constMDecorations )
   {
     decoration->render( mMapSettings, context );
   }
 
-  Q_FOREACH ( QgsAnnotation *annotation, mAnnotations )
+  const auto constMAnnotations = mAnnotations;
+  for ( QgsAnnotation *annotation : constMAnnotations )
   {
     if ( isCanceled() )
       return false;
@@ -173,11 +184,16 @@ bool QgsMapRendererTask::run()
 
     if ( mForceRaster && mFileFormat == QStringLiteral( "PDF" ) )
     {
+#ifndef QT_NO_PRINTER
       QPainter pp;
       pp.begin( printer.get() );
       QRectF rect( 0, 0, img.width(), img.height() );
       pp.drawImage( rect, img, rect );
       pp.end();
+#else
+      mError = ImageUnsupportedFormat;
+      return false;
+#endif // !QT_NO_PRINTER
     }
     else if ( mFileFormat != QStringLiteral( "PDF" ) )
     {

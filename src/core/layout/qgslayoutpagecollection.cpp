@@ -33,7 +33,8 @@ QgsLayoutPageCollection::QgsLayoutPageCollection( QgsLayout *layout )
 
 QgsLayoutPageCollection::~QgsLayoutPageCollection()
 {
-  Q_FOREACH ( QgsLayoutItemPage *page, mPages )
+  const auto constMPages = mPages;
+  for ( QgsLayoutItemPage *page : constMPages )
   {
     mLayout->removeItem( page );
     page->deleteLater();
@@ -89,7 +90,8 @@ void QgsLayoutPageCollection::reflow()
 {
   double currentY = 0;
   QgsLayoutPoint p( 0, 0, mLayout->units() );
-  Q_FOREACH ( QgsLayoutItemPage *page, mPages )
+  const auto constMPages = mPages;
+  for ( QgsLayoutItemPage *page : constMPages )
   {
     page->attemptMove( p );
     currentY += mLayout->convertToLayoutUnits( page->pageSize() ).height() + spaceBetweenPages();
@@ -149,7 +151,8 @@ int QgsLayoutPageCollection::pageNumberForPoint( QPointF point ) const
 {
   int pageNumber = 0;
   double startNextPageY = 0;
-  Q_FOREACH ( QgsLayoutItemPage *page, mPages )
+  const auto constMPages = mPages;
+  for ( QgsLayoutItemPage *page : constMPages )
   {
     startNextPageY += page->rect().height() + spaceBetweenPages();
     if ( startNextPageY > point.y() )
@@ -164,9 +167,13 @@ int QgsLayoutPageCollection::pageNumberForPoint( QPointF point ) const
 
 int QgsLayoutPageCollection::predictPageNumberForPoint( QPointF point ) const
 {
+  if ( mPages.empty() )
+    return 0;
+
   int pageNumber = 0;
   double startNextPageY = 0;
-  Q_FOREACH ( QgsLayoutItemPage *page, mPages )
+  const auto constMPages = mPages;
+  for ( QgsLayoutItemPage *page : constMPages )
   {
     startNextPageY += page->rect().height() + spaceBetweenPages();
     if ( startNextPageY >= point.y() )
@@ -233,7 +240,8 @@ QPointF QgsLayoutPageCollection::positionOnPage( QPointF position ) const
   double startCurrentPageY = 0;
   double startNextPageY = 0;
   int pageNumber = 0;
-  Q_FOREACH ( QgsLayoutItemPage *page, mPages )
+  const auto constMPages = mPages;
+  for ( QgsLayoutItemPage *page : constMPages )
   {
     startCurrentPageY = startNextPageY;
     startNextPageY += page->rect().height() + spaceBetweenPages();
@@ -418,7 +426,8 @@ const QgsLayoutGuideCollection &QgsLayoutPageCollection::guides() const
 
 void QgsLayoutPageCollection::redraw()
 {
-  Q_FOREACH ( QgsLayoutItemPage *page, mPages )
+  const auto constMPages = mPages;
+  for ( QgsLayoutItemPage *page : constMPages )
   {
     page->redraw();
   }
@@ -454,10 +463,11 @@ int QgsLayoutPageCollection::pageNumber( QgsLayoutItemPage *page ) const
   return mPages.indexOf( page );
 }
 
-QList<QgsLayoutItemPage *> QgsLayoutPageCollection::visiblePages( QRectF region ) const
+QList<QgsLayoutItemPage *> QgsLayoutPageCollection::visiblePages( const QRectF &region ) const
 {
   QList<QgsLayoutItemPage *> pages;
-  Q_FOREACH ( QgsLayoutItemPage *page, mPages )
+  const auto constMPages = mPages;
+  for ( QgsLayoutItemPage *page : constMPages )
   {
     if ( page->mapToScene( page->rect() ).boundingRect().intersects( region ) )
       pages << page;
@@ -465,11 +475,12 @@ QList<QgsLayoutItemPage *> QgsLayoutPageCollection::visiblePages( QRectF region 
   return pages;
 }
 
-QList<int> QgsLayoutPageCollection::visiblePageNumbers( QRectF region ) const
+QList<int> QgsLayoutPageCollection::visiblePageNumbers( const QRectF &region ) const
 {
   QList< int > pages;
   int p = 0;
-  Q_FOREACH ( QgsLayoutItemPage *page, mPages )
+  const auto constMPages = mPages;
+  for ( QgsLayoutItemPage *page : constMPages )
   {
     if ( page->mapToScene( page->rect() ).boundingRect().intersects( region ) )
       pages << p;
@@ -501,6 +512,7 @@ QList<QgsLayoutItem *> QgsLayoutPageCollection::itemsOnPage( int page ) const
 {
   QList<QgsLayoutItem *> itemList;
   const QList<QGraphicsItem *> graphicsItemList = mLayout->items();
+  itemList.reserve( graphicsItemList.size() );
   for ( QGraphicsItem *graphicsItem : graphicsItemList )
   {
     QgsLayoutItem *item = dynamic_cast<QgsLayoutItem *>( graphicsItem );
@@ -585,7 +597,7 @@ void QgsLayoutPageCollection::insertPage( QgsLayoutItemPage *page, int beforePag
   reflow();
 
   // bump up stored page numbers to account
-  for ( auto it = mPreviousItemPositions.begin(); it != mPreviousItemPositions.end(); ++it )
+  for ( auto it = mPreviousItemPositions.begin(); it != mPreviousItemPositions.end(); ++it ) // clazy:exclude=detaching-member
   {
     if ( it.value().first < beforePage )
       continue;
@@ -619,7 +631,7 @@ void QgsLayoutPageCollection::deletePage( int pageNumber )
   reflow();
 
   // bump stored page numbers to account
-  for ( auto it = mPreviousItemPositions.begin(); it != mPreviousItemPositions.end(); ++it )
+  for ( auto it = mPreviousItemPositions.begin(); it != mPreviousItemPositions.end(); ++it ) // clazy:exclude=detaching-member
   {
     if ( it.value().first <= pageNumber )
       continue;
@@ -653,7 +665,7 @@ void QgsLayoutPageCollection::deletePage( QgsLayoutItemPage *page )
   reflow();
 
   // bump stored page numbers to account
-  for ( auto it = mPreviousItemPositions.begin(); it != mPreviousItemPositions.end(); ++it )
+  for ( auto it = mPreviousItemPositions.begin(); it != mPreviousItemPositions.end(); ++it ) // clazy:exclude=detaching-member
   {
     if ( it.value().first <= pageIndex )
       continue;

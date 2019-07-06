@@ -16,6 +16,8 @@
 #include "qgslogger.h"
 #include "qgsgpsdetector.h"
 #include "qgssettings.h"
+#include "qgsvectorlayer.h"
+#include "qgsgui.h"
 
 //qt includes
 #include <QFileDialog>
@@ -34,6 +36,7 @@ QgsGpsPluginGui::QgsGpsPluginGui( const BabelMap &importers,
   , mDevices( devices )
 {
   setupUi( this );
+  QgsGui::instance()->enableAutoGeometryRestore( this );
   connect( pbnIMPInput, &QPushButton::clicked, this, &QgsGpsPluginGui::pbnIMPInput_clicked );
   connect( pbnIMPOutput, &QPushButton::clicked, this, &QgsGpsPluginGui::pbnIMPOutput_clicked );
   connect( pbnCONVInput, &QPushButton::clicked, this, &QgsGpsPluginGui::pbnCONVInput_clicked );
@@ -89,7 +92,6 @@ QgsGpsPluginGui::QgsGpsPluginGui( const BabelMap &importers,
 QgsGpsPluginGui::~QgsGpsPluginGui()
 {
   QgsSettings settings;
-  settings.setValue( QStringLiteral( "Plugin-GPS/geometry" ), saveGeometry() );
   settings.setValue( QStringLiteral( "Plugin-GPS/lastTab" ), tabWidget->currentIndex() );
 }
 
@@ -188,26 +190,14 @@ void QgsGpsPluginGui::enableRelevantControls()
   // load GPX
   if ( tabWidget->currentIndex() == 0 )
   {
-    if ( !mFileWidget->filePath().isEmpty() )
-    {
-      pbnOK->setEnabled( false );
-      cbGPXWaypoints->setEnabled( false );
-      cbGPXRoutes->setEnabled( false );
-      cbGPXTracks->setEnabled( false );
-      cbGPXWaypoints->setChecked( false );
-      cbGPXRoutes->setChecked( false );
-      cbGPXTracks->setChecked( false );
-    }
-    else
-    {
-      pbnOK->setEnabled( true );
-      cbGPXWaypoints->setEnabled( true );
-      cbGPXWaypoints->setChecked( true );
-      cbGPXRoutes->setEnabled( true );
-      cbGPXTracks->setEnabled( true );
-      cbGPXRoutes->setChecked( true );
-      cbGPXTracks->setChecked( true );
-    }
+    bool enabled = !mFileWidget->filePath().isEmpty();
+    pbnOK->setEnabled( enabled );
+    cbGPXWaypoints->setEnabled( enabled );
+    cbGPXRoutes->setEnabled( enabled );
+    cbGPXTracks->setEnabled( enabled );
+    cbGPXWaypoints->setChecked( enabled );
+    cbGPXRoutes->setChecked( enabled );
+    cbGPXTracks->setChecked( enabled );
   }
 
   // import other file
@@ -455,7 +445,6 @@ void QgsGpsPluginGui::devicesUpdated()
 void QgsGpsPluginGui::restoreState()
 {
   QgsSettings settings;
-  restoreGeometry( settings.value( QStringLiteral( "Plugin-GPS/geometry" ) ).toByteArray() );
   tabWidget->setCurrentIndex( settings.value( QStringLiteral( "Plugin-GPS/lastTab" ), 4 ).toInt() );
 }
 

@@ -21,10 +21,6 @@ __author__ = 'Médéric Ribreux'
 __date__ = 'March 2016'
 __copyright__ = '(C) 2016, Médéric Ribreux'
 
-# This will get replaced with a git SHA1 when you do a git archive
-
-__revision__ = '$Format:%H$'
-
 from .i import verifyRasterNum, orderedInput
 
 
@@ -32,10 +28,10 @@ def checkParameterValuesBeforeExecuting(alg, parameters, context):
     return verifyRasterNum(alg, parameters, context, 'rasters', 5, 12)
 
 
-def processInputs(alg, parameters, context):
+def processInputs(alg, parameters, context, feedback):
     orderedInput(alg, parameters, context, 'rasters', 'input',
                  [1, 2, 3, 4, 5, 61, 62, 7, 8])
 
 
-def processCommand(alg, parameters, context):
-    alg.processCommand(parameters, context)
+def processCommand(alg, parameters, context, feedback):
+    alg.processCommand(parameters, context, feedback)

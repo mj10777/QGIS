@@ -9,11 +9,10 @@ the Free Software Foundation; either version 2 of the License, or
 __author__ = 'Nyall Dawson'
 __date__ = '12/11/2016'
 __copyright__ = 'Copyright 2016, The QGIS Project'
-# This will get replaced with a git SHA1 when you do a git archive
-__revision__ = '$Format:%H$'
 
 import qgis  # NOQA
 
+from qgis.PyQt.QtTest import QSignalSpy
 from qgis.gui import (QgsProjectionSelectionWidget,
                       QgsProjectionSelectionTreeWidget,
                       QgsProjectionSelectionDialog)
@@ -114,6 +113,17 @@ class TestQgsProjectionSelectionWidgets(unittest.TestCase):
         # both current and not set options should be shown
         self.assertTrue(w.optionVisible(QgsProjectionSelectionWidget.CurrentCrs))
         self.assertTrue(w.optionVisible(QgsProjectionSelectionWidget.CrsNotSet))
+
+    def testSignal(self):
+        w = QgsProjectionSelectionWidget()
+        w.show()
+        spy = QSignalSpy(w.crsChanged)
+        w.setCrs(QgsCoordinateReferenceSystem('EPSG:3111'))
+        self.assertEqual(w.crs().authid(), 'EPSG:3111')
+        self.assertEqual(len(spy), 1)
+        # setting the same crs doesn't emit the signal
+        w.setCrs(QgsCoordinateReferenceSystem('EPSG:3111'))
+        self.assertEqual(len(spy), 1)
 
     def testTreeWidgetGettersSetters(self):
         """ basic tests for QgsProjectionSelectionTreeWidget """

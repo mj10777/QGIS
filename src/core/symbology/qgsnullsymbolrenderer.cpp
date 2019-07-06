@@ -25,17 +25,17 @@ QgsNullSymbolRenderer::QgsNullSymbolRenderer()
 {
 }
 
-QgsSymbol *QgsNullSymbolRenderer::symbolForFeature( QgsFeature &, QgsRenderContext & )
+QgsSymbol *QgsNullSymbolRenderer::symbolForFeature( const QgsFeature &, QgsRenderContext & ) const
 {
   return nullptr;
 }
 
-QgsSymbol *QgsNullSymbolRenderer::originalSymbolForFeature( QgsFeature &, QgsRenderContext & )
+QgsSymbol *QgsNullSymbolRenderer::originalSymbolForFeature( const QgsFeature &, QgsRenderContext & ) const
 {
   return nullptr;
 }
 
-bool QgsNullSymbolRenderer::renderFeature( QgsFeature &feature, QgsRenderContext &context, int layer, bool selected, bool drawVertexMarker )
+bool QgsNullSymbolRenderer::renderFeature( const QgsFeature &feature, QgsRenderContext &context, int layer, bool selected, bool drawVertexMarker )
 {
   //render selected features or features being edited only
   if ( !selected && !drawVertexMarker )
@@ -70,7 +70,7 @@ void QgsNullSymbolRenderer::stopRender( QgsRenderContext &context )
   }
 }
 
-bool QgsNullSymbolRenderer::willRenderFeature( QgsFeature &, QgsRenderContext & )
+bool QgsNullSymbolRenderer::willRenderFeature( const QgsFeature &, QgsRenderContext & ) const
 {
   //return true for every feature - so they are still selectable
   return true;
@@ -92,22 +92,22 @@ QgsFeatureRenderer *QgsNullSymbolRenderer::clone() const
   return r;
 }
 
-QgsSymbolList QgsNullSymbolRenderer::symbols( QgsRenderContext & )
+QgsSymbolList QgsNullSymbolRenderer::symbols( QgsRenderContext & ) const
 {
   return QgsSymbolList();
 }
 
 QgsFeatureRenderer *QgsNullSymbolRenderer::create( QDomElement &element, const QgsReadWriteContext &context )
 {
-  Q_UNUSED( element );
-  Q_UNUSED( context );
+  Q_UNUSED( element )
+  Q_UNUSED( context )
   QgsNullSymbolRenderer *r = new QgsNullSymbolRenderer();
   return r;
 }
 
 QDomElement QgsNullSymbolRenderer::save( QDomDocument &doc, const QgsReadWriteContext &context )
 {
-  Q_UNUSED( context );
+  Q_UNUSED( context )
   QDomElement rendererElem = doc.createElement( RENDERER_TAG_NAME );
   rendererElem.setAttribute( QStringLiteral( "type" ), QStringLiteral( "nullSymbol" ) );
   return rendererElem;
@@ -115,6 +115,6 @@ QDomElement QgsNullSymbolRenderer::save( QDomDocument &doc, const QgsReadWriteCo
 
 QgsNullSymbolRenderer *QgsNullSymbolRenderer::convertFromRenderer( const QgsFeatureRenderer *renderer )
 {
-  Q_UNUSED( renderer );
+  Q_UNUSED( renderer )
   return new QgsNullSymbolRenderer();
 }

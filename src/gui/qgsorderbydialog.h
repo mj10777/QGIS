@@ -18,7 +18,7 @@
 #define QGSORDERBYDIALOG_H
 
 #include <QDialog>
-#include "qgis.h"
+#include "qgis_sip.h"
 
 #include "ui_qgsorderbydialogbase.h"
 #include "qgsfeaturerequest.h"
@@ -54,7 +54,7 @@ class GUI_EXPORT QgsOrderByDialog : public QDialog, private Ui::OrderByDialogBas
     void setOrderBy( const QgsFeatureRequest::OrderBy &orderBy );
 
     /**
-     * Get the order by defined in the dialog
+     * Gets the order by defined in the dialog
      */
     QgsFeatureRequest::OrderBy orderBy();
 

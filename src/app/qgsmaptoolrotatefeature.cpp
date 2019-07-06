@@ -13,7 +13,6 @@
  *                                                                         *
  ***************************************************************************/
 
-#include <QMouseEvent>
 #include <QSettings>
 #include <QEvent>
 #include <QHBoxLayout>
@@ -34,6 +33,7 @@
 #include "qgisapp.h"
 #include "qgsspinbox.h"
 #include "qgsdoublespinbox.h"
+#include "qgsmapmouseevent.h"
 
 
 QgsAngleMagnetWidget::QgsAngleMagnetWidget( const QString &label, QWidget *parent )
@@ -54,7 +54,7 @@ QgsAngleMagnetWidget::QgsAngleMagnetWidget( const QString &label, QWidget *paren
   mAngleSpinBox = new QgsDoubleSpinBox( this );
   mAngleSpinBox->setMinimum( -360 );
   mAngleSpinBox->setMaximum( 360 );
-  mAngleSpinBox->setSuffix( trUtf8( "°" ) );
+  mAngleSpinBox->setSuffix( tr( "°" ) );
   mAngleSpinBox->setSingleStep( 1 );
   mAngleSpinBox->setValue( 0 );
   mAngleSpinBox->setShowClearButton( false );
@@ -65,7 +65,7 @@ QgsAngleMagnetWidget::QgsAngleMagnetWidget( const QString &label, QWidget *paren
   mMagnetSpinBox->setMinimum( 0 );
   mMagnetSpinBox->setMaximum( 180 );
   mMagnetSpinBox->setPrefix( tr( "Snap to " ) );
-  mMagnetSpinBox->setSuffix( trUtf8( "°" ) );
+  mMagnetSpinBox->setSuffix( tr( "°" ) );
   mMagnetSpinBox->setSingleStep( 15 );
   mMagnetSpinBox->setValue( 0 );
   mMagnetSpinBox->setClearValue( 0, tr( "No snapping" ) );
@@ -235,7 +235,7 @@ void QgsMapToolRotateFeature::canvasReleaseEvent( QgsMapMouseEvent *e )
 
     if ( vlayer->selectedFeatureCount() == 0 )
     {
-      QgsFeatureIterator fit = vlayer->getFeatures( QgsFeatureRequest().setFilterRect( selectRect ).setSubsetOfAttributes( QgsAttributeList() ) );
+      QgsFeatureIterator fit = vlayer->getFeatures( QgsFeatureRequest().setFilterRect( selectRect ).setNoAttributes() );
 
       //find the closest feature
       QgsGeometry pointGeometry = QgsGeometry::fromPointXY( layerCoords );
@@ -299,8 +299,6 @@ void QgsMapToolRotateFeature::canvasReleaseEvent( QgsMapMouseEvent *e )
       }
     }
 
-    mRubberBand->setColor( QColor( 255, 0, 0, 65 ) );
-    mRubberBand->setWidth( 2 );
     mRubberBand->show();
 
     double XDistance = mInitialPos.x() - mAnchorPoint->x();
@@ -387,7 +385,8 @@ void QgsMapToolRotateFeature::applyRotation( double rotation )
   }
 
   int i = 0;
-  Q_FOREACH ( QgsFeatureId id, mRotatedFeatures )
+  const auto constMRotatedFeatures = mRotatedFeatures;
+  for ( QgsFeatureId id : constMRotatedFeatures )
   {
     QgsFeature feat;
     vlayer->getFeatures( QgsFeatureRequest().setFilterFid( id ) ).nextFeature( feat );

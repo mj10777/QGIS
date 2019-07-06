@@ -41,6 +41,7 @@
 #include "qgssettings.h"
 #include "qgsnewauxiliarylayerdialog.h"
 #include "qgsauxiliarystorage.h"
+#include "qgsexpressioncontextutils.h"
 
 #include <QList>
 #include <QMessageBox>
@@ -102,12 +103,12 @@ QgsDiagramProperties::QgsDiagramProperties( QgsVectorLayer *layer, QWidget *pare
   mBackgroundColorButton->setAllowOpacity( true );
   mBackgroundColorButton->setContext( QStringLiteral( "symbology" ) );
   mBackgroundColorButton->setShowNoColor( true );
-  mBackgroundColorButton->setNoColorString( tr( "Transparent background" ) );
+  mBackgroundColorButton->setNoColorString( tr( "Transparent Background" ) );
   mDiagramPenColorButton->setColorDialogTitle( tr( "Select Pen Color" ) );
   mDiagramPenColorButton->setAllowOpacity( true );
   mDiagramPenColorButton->setContext( QStringLiteral( "symbology" ) );
   mDiagramPenColorButton->setShowNoColor( true );
-  mDiagramPenColorButton->setNoColorString( tr( "Transparent stroke" ) );
+  mDiagramPenColorButton->setNoColorString( tr( "Transparent Stroke" ) );
 
   mMaxValueSpinBox->setShowClearButton( false );
 
@@ -258,7 +259,7 @@ QgsDiagramProperties::QgsDiagramProperties( QgsVectorLayer *layer, QWidget *pare
         break;
 
       case QgsWkbTypes::PolygonGeometry:
-        radAroundCentroid->setChecked( true );
+        radOverCentroid->setChecked( true );
         break;
 
       case QgsWkbTypes::UnknownGeometry:
@@ -607,7 +608,8 @@ void QgsDiagramProperties::addAttribute( QTreeWidgetItem *item )
 
 void QgsDiagramProperties::mAddCategoryPushButton_clicked()
 {
-  Q_FOREACH ( QTreeWidgetItem *attributeItem, mAttributesTreeWidget->selectedItems() )
+  const auto constSelectedItems = mAttributesTreeWidget->selectedItems();
+  for ( QTreeWidgetItem *attributeItem : constSelectedItems )
   {
     addAttribute( attributeItem );
   }
@@ -615,13 +617,14 @@ void QgsDiagramProperties::mAddCategoryPushButton_clicked()
 
 void QgsDiagramProperties::mAttributesTreeWidget_itemDoubleClicked( QTreeWidgetItem *item, int column )
 {
-  Q_UNUSED( column );
+  Q_UNUSED( column )
   addAttribute( item );
 }
 
 void QgsDiagramProperties::mRemoveCategoryPushButton_clicked()
 {
-  Q_FOREACH ( QTreeWidgetItem *attributeItem, mDiagramAttributesTreeWidget->selectedItems() )
+  const auto constSelectedItems = mDiagramAttributesTreeWidget->selectedItems();
+  for ( QTreeWidgetItem *attributeItem : constSelectedItems )
   {
     delete attributeItem;
   }
@@ -722,55 +725,6 @@ void QgsDiagramProperties::apply()
       tr( "You did not add any attributes to this diagram layer. Please specify the attributes to visualize on the diagrams or disable diagrams." ),
       Qgis::Warning );
   }
-
-#if 0
-  bool scaleAttributeValueOk = false;
-  // Check if a (usable) scale attribute value is inserted
-  mValueLineEdit->text().toDouble( &scaleAttributeValueOk );
-
-  if ( !mFixedSizeRadio->isChecked() && !scaleAttributeValueOk )
-  {
-    double maxVal = DBL_MIN;
-    QgsVectorDataProvider *provider = mLayer->dataProvider();
-
-    if ( provider )
-    {
-      if ( diagramType == DIAGRAM_NAME_HISTOGRAM )
-      {
-        // Find maximum value
-        for ( int i = 0; i < mDiagramAttributesTreeWidget->topLevelItemCount(); ++i )
-        {
-          QString fldName = mDiagramAttributesTreeWidget->topLevelItem( i )->data( 0, Qt::UserRole ).toString();
-          if ( fldName.count() >= 2 && fldName.at( 0 ) == '"' && fldName.at( fldName.count() - 1 ) == '"' )
-            fldName = fldName.mid( 1, fldName.count() - 2 ); // remove enclosing double quotes
-          int fld = provider->fieldNameIndex( fldName );
-          if ( fld != -1 )
-          {
-            bool ok = false;
-            double val = provider->maximumValue( fld ).toDouble( &ok );
-            if ( ok )
-              maxVal = std::max( maxVal, val );
-          }
-        }
-      }
-      else
-      {
-        maxVal = provider->maximumValue( mSizeAttributeComboBox->currentData().toInt() ).toDouble();
-      }
-    }
-
-    if ( diagramsEnabled && maxVal != DBL_MIN )
-    {
-      QgisApp::instance()->messageBar()->pushMessage(
-        tr( "Interpolation value" ),
-        tr( "You did not specify an interpolation value. A default value of %1 has been set." ).arg( QString::number( maxVal ) ),
-        Qgis::Info,
-        5 );
-
-      mMaxValueSpinBox->setValue( maxVal );
-    }
-  }
-#endif
 
   if ( mDiagramType == DIAGRAM_NAME_TEXT )
   {

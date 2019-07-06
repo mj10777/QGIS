@@ -21,10 +21,6 @@ __author__ = 'Victor Olaya'
 __date__ = 'August 2012'
 __copyright__ = '(C) 2012, Victor Olaya'
 
-# This will get replaced with a git SHA1 when you do a git archive
-
-__revision__ = '$Format:%H$'
-
 import random
 
 from qgis.core import (QgsFeatureSink,
@@ -33,7 +29,9 @@ from qgis.core import (QgsFeatureSink,
                        QgsProcessingParameterEnum,
                        QgsProcessingParameterField,
                        QgsProcessingParameterNumber,
-                       QgsProcessingParameterFeatureSink)
+                       QgsProcessingParameterFeatureSink,
+                       QgsProcessingFeatureSource,
+                       QgsFeatureRequest)
 from collections import defaultdict
 from processing.algs.qgis.QgisAlgorithm import QgisAlgorithm
 
@@ -70,7 +68,7 @@ class RandomExtractWithinSubsets(QgisAlgorithm):
 
         self.addParameter(QgsProcessingParameterNumber(self.NUMBER,
                                                        self.tr('Number/percentage of selected features'), QgsProcessingParameterNumber.Integer,
-                                                       10, False, 0.0, 999999999999.0))
+                                                       10, False, 0.0))
 
         self.addParameter(QgsProcessingParameterFeatureSink(self.OUTPUT, self.tr('Extracted (random stratified)')))
 
@@ -82,13 +80,16 @@ class RandomExtractWithinSubsets(QgisAlgorithm):
 
     def processAlgorithm(self, parameters, context, feedback):
         source = self.parameterAsSource(parameters, self.INPUT, context)
+        if source is None:
+            raise QgsProcessingException(self.invalidSourceError(parameters, self.INPUT))
+
         method = self.parameterAsEnum(parameters, self.METHOD, context)
 
         field = self.parameterAsString(parameters, self.FIELD, context)
 
         index = source.fields().lookupField(field)
 
-        features = source.getFeatures()
+        features = source.getFeatures(QgsFeatureRequest(), QgsProcessingFeatureSource.FlagSkipGeometryValidityChecks)
         featureCount = source.featureCount()
         unique = source.uniqueValues(index)
         value = self.parameterAsInt(parameters, self.NUMBER, context)
@@ -106,6 +107,8 @@ class RandomExtractWithinSubsets(QgisAlgorithm):
 
         (sink, dest_id) = self.parameterAsSink(parameters, self.OUTPUT, context,
                                                source.fields(), source.wkbType(), source.sourceCrs())
+        if sink is None:
+            raise QgsProcessingException(self.invalidSinkError(parameters, self.OUTPUT))
 
         selran = []
         total = 100.0 / (featureCount * len(unique)) if featureCount else 1
@@ -118,8 +121,11 @@ class RandomExtractWithinSubsets(QgisAlgorithm):
             classes[attrs[index]].append(feature)
             feedback.setProgress(int(i * total))
 
-        for subset in classes.values():
+        for k, subset in classes.items():
             selValue = value if method != 1 else int(round(value * len(subset), 0))
+            if selValue > len(subset):
+                selValue = len(subset)
+                feedback.reportError(self.tr('Subset "{}" is smaller than requested number of features.'.format(k)))
             selran.extend(random.sample(subset, selValue))
 
         total = 100.0 / featureCount if featureCount else 1

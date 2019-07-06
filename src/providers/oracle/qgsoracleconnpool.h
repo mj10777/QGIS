@@ -37,12 +37,12 @@ inline void qgsConnectionPool_ConnectionDestroy( QgsOracleConn *c )
 
 inline void qgsConnectionPool_InvalidateConnection( QgsOracleConn *c )
 {
-  Q_UNUSED( c );
+  Q_UNUSED( c )
 }
 
 inline bool qgsConnectionPool_ConnectionIsValid( QgsOracleConn *c )
 {
-  Q_UNUSED( c );
+  Q_UNUSED( c )
   return true;
 }
 
@@ -77,7 +77,7 @@ class QgsOracleConnPool : public QgsConnectionPool<QgsOracleConn *, QgsOracleCon
 
   private:
     QgsOracleConnPool();
-    ~QgsOracleConnPool();
+    ~QgsOracleConnPool() override;
 
     static QgsOracleConnPool *sInstance;
 };

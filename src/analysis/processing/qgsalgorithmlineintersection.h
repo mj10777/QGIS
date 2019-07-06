@@ -20,8 +20,9 @@
 
 #define SIP_NO_FILE
 
-#include "qgis.h"
+#include "qgis_sip.h"
 #include "qgsprocessingalgorithm.h"
+#include "qgsapplication.h"
 
 ///@cond PRIVATE
 
@@ -35,6 +36,8 @@ class QgsLineIntersectionAlgorithm : public QgsProcessingAlgorithm
 
     QgsLineIntersectionAlgorithm() = default;
     void initAlgorithm( const QVariantMap &configuration = QVariantMap() ) override;
+    QIcon icon() const override { return QgsApplication::getThemeIcon( QStringLiteral( "/algorithms/mAlgorithmLineIntersections.svg" ) ); }
+    QString svgIconPath() const override { return QgsApplication::iconPath( QStringLiteral( "/algorithms/mAlgorithmLineIntersections.svg" ) ); }
     QString name() const override;
     QString displayName() const override;
     QStringList tags() const override;

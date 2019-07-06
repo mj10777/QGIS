@@ -17,7 +17,7 @@
 
 #include "qgis_core.h"
 #include <expat.h>
-#include "qgis.h"
+#include "qgis_sip.h"
 #include "qgsfields.h"
 #include "qgsrectangle.h"
 #include "qgswkbptr.h"
@@ -99,12 +99,12 @@ class CORE_EXPORT QgsGmlStreamingParser
     QgsGmlStreamingParser &operator=( const QgsGmlStreamingParser &other ) = delete;
 
     /**
-     * Process a new chunk of data. atEnd must be set to true when this is
+     * Process a new chunk of data. atEnd must be set to TRUE when this is
         the last chunk of data. */
     bool processData( const QByteArray &data, bool atEnd, QString &errorMsg );
 
     /**
-     * Process a new chunk of data. atEnd must be set to true when this is
+     * Process a new chunk of data. atEnd must be set to TRUE when this is
         the last chunk of data. */
     bool processData( const QByteArray &data, bool atEnd );
 
@@ -115,31 +115,31 @@ class CORE_EXPORT QgsGmlStreamingParser
         by later calls. */
     QVector<QgsGmlFeaturePtrGmlIdPair> getAndStealReadyFeatures();
 
-    //! Return the EPSG code, or 0 if unknown
+    //! Returns the EPSG code, or 0 if unknown
     int getEPSGCode() const { return mEpsg; }
 
-    //! Return the value of the srsName attribute
+    //! Returns the value of the srsName attribute
     QString srsName() const { return mSrsName; }
 
-    //! Return layer bounding box
+    //! Returns layer bounding box
     const QgsRectangle &layerExtent() const { return mLayerExtent; }
 
-    //! Return the geometry type
+    //! Returns the geometry type
     QgsWkbTypes::Type wkbType() const { return mWkbType; }
 
-    //! Return WFS 2.0 "numberMatched" attribute, or -1 if invalid/not found
+    //! Returns WFS 2.0 "numberMatched" attribute, or -1 if invalid/not found
     int numberMatched() const { return mNumberMatched; }
 
-    //! Return WFS 2.0 "numberReturned" or WFS 1.1 "numberOfFeatures" attribute, or -1 if invalid/not found
+    //! Returns WFS 2.0 "numberReturned" or WFS 1.1 "numberOfFeatures" attribute, or -1 if invalid/not found
     int numberReturned() const { return mNumberReturned; }
 
-    //! Return whether the document parser is a OGC exception
+    //! Returns whether the document parser is a OGC exception
     bool isException() const { return mIsException; }
 
-    //! Return the exception text.
+    //! Returns the exception text.
     QString exceptionText() const { return mExceptionText; }
 
-    //! Return whether a "truncatedResponse" element is found
+    //! Returns whether a "truncatedResponse" element is found
     bool isTruncatedResponse() const { return mTruncatedResponse; }
 
   private:
@@ -242,7 +242,7 @@ class CORE_EXPORT QgsGmlStreamingParser
     //! Adds all the integers contained in mCurrentWKBFragmentSizes
     int totalWKBFragmentSize() const;
 
-    //! Get safely (if empty) top from mode stack
+    //! Gets safely (if empty) top from mode stack
     ParseMode modeStackTop() { return mParseModeStack.isEmpty() ? None : mParseModeStack.top(); }
 
     //! Safely (if empty) pop from mode stack
@@ -283,7 +283,7 @@ class CORE_EXPORT QgsGmlStreamingParser
     //! Parsing depth
     int mParseDepth;
     int mFeatureTupleDepth;
-    QString mCurrentTypename; //! Used to track the current (unprefixed) typename for wfs:Member in join layer
+    QString mCurrentTypename; //!< Used to track the current (unprefixed) typename for wfs:Member in join layer
     //! Keep track about the most important nested elements
     QStack<ParseMode> mParseModeStack;
     //! This contains the character data if an important element has been encountered
@@ -347,7 +347,8 @@ class CORE_EXPORT QgsGmlStreamingParser
  * This class reads data from a WFS server or alternatively from a GML file. It
  * uses the expat XML parser and an event based model to keep performance high.
  * The parsing starts when the first data arrives, it does not wait until the
- * request is finished */
+ * request is finished
+*/
 class CORE_EXPORT QgsGml : public QObject
 {
     Q_OBJECT
@@ -382,10 +383,10 @@ class CORE_EXPORT QgsGml : public QObject
      */
     int getFeatures( const QByteArray &data, QgsWkbTypes::Type *wkbType, QgsRectangle *extent = nullptr );
 
-    //! Get parsed features for given type name
+    //! Gets parsed features for given type name
     QMap<QgsFeatureId, QgsFeature * > featuresMap() const { return mFeatures; }
 
-    //! Get feature ids map
+    //! Gets feature ids map
     QMap<QgsFeatureId, QString > idsMap() const { return mIdMap; }
 
     /**

@@ -21,23 +21,19 @@ __author__ = 'Médéric Ribreux'
 __date__ = 'December 2015'
 __copyright__ = '(C) 2015, Médéric Ribreux'
 
-# This will get replaced with a git SHA1 when you do a git archive
-
-__revision__ = '$Format:%H$'
-
 from .v_net import incorporatePoints, variableOutput
 from qgis.core import QgsProcessingParameterDefinition
 
 
-def processCommand(alg, parameters, context):
+def processCommand(alg, parameters, context, feedback):
     # We need to disable only output_point parameter
     outPoint = alg.parameterDefinition('output_point')
     outPoint.setFlags(outPoint.flags() | QgsProcessingParameterDefinition.FlagHidden)
-    incorporatePoints(alg, parameters, context)
+    incorporatePoints(alg, parameters, context, feedback)
     outPoint.setFlags(outPoint.flags() | QgsProcessingParameterDefinition.FlagHidden)
 
 
-def processOutputs(alg, parameters, context):
+def processOutputs(alg, parameters, context, feedback):
     outputParameter = {'output': ['output', 'line', 1, True],
                        'output_point': ['output', 'point', 2, True]}
     variableOutput(alg, outputParameter, parameters, context)

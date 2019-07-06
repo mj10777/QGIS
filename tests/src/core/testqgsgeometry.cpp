@@ -41,6 +41,7 @@
 #include "qgsgeometryengine.h"
 #include "qgscircle.h"
 #include "qgsellipse.h"
+#include "qgsquadrilateral.h"
 #include "qgsregularpolygon.h"
 #include "qgsmultipoint.h"
 #include "qgsmultilinestring.h"
@@ -50,6 +51,7 @@
 #include "qgsgeometryfactory.h"
 #include "qgscurvepolygon.h"
 #include "qgsproject.h"
+#include "qgslinesegment.h"
 
 //qgs unit test utility class
 #include "qgsrenderchecker.h"
@@ -79,9 +81,9 @@ class TestQgsGeometry : public QObject
     void assignment();
     void asVariant(); //test conversion to and from a QVariant
     void isEmpty();
-    void operatorBool();
     void equality();
     void vertexIterator();
+    void partIterator();
 
 
     // geometry types
@@ -93,6 +95,7 @@ class TestQgsGeometry : public QObject
     void triangle();
     void circle();
     void ellipse();
+    void quadrilateral();
     void regularPolygon();
     void compoundCurve(); //test QgsCompoundCurve
     void multiPoint();
@@ -152,6 +155,10 @@ class TestQgsGeometry : public QObject
     void minimalEnclosingCircle( );
     void splitGeometry();
     void snappedToGrid();
+
+    void convertGeometryCollectionToSubclass();
+
+    void emptyJson();
 
   private:
     //! A helper method to do a render check to see if the geometry op is as expected
@@ -414,23 +421,11 @@ void TestQgsGeometry::isEmpty()
   geom.set( new QgsPoint( 1.0, 2.0 ) );
   QVERIFY( !geom.isNull() );
 
-  geom.set( 0 );
+  geom.set( nullptr );
   QVERIFY( geom.isNull() );
 
   QgsGeometryCollection collection;
   QVERIFY( collection.isEmpty() );
-}
-
-void TestQgsGeometry::operatorBool()
-{
-  QgsGeometry geom;
-  QVERIFY( !geom );
-
-  geom.set( new QgsPoint( 1.0, 2.0 ) );
-  QVERIFY( geom );
-
-  geom.set( 0 );
-  QVERIFY( !geom );
 }
 
 void TestQgsGeometry::equality()
@@ -485,6 +480,33 @@ void TestQgsGeometry::vertexIterator()
   QVERIFY( it2.hasNext() );
   QCOMPARE( it2.next(), QgsPoint( 3, 4 ) );
   QVERIFY( !it2.hasNext() );
+}
+
+void TestQgsGeometry::partIterator()
+{
+  QgsGeometry geom;
+  QgsGeometryPartIterator it = geom.parts();
+  QVERIFY( !it.hasNext() );
+
+  geom = QgsGeometry::fromWkt( QStringLiteral( "Point( 1 2 )" ) );
+  QgsGeometryConstPartIterator it2 = geom.constParts();
+  QVERIFY( it2.hasNext() );
+  QCOMPARE( it2.next()->asWkt(), QStringLiteral( "Point (1 2)" ) );
+  QVERIFY( !it2.hasNext() );
+
+  // test that non-const iterator detaches
+  QgsGeometry geom2 = geom;
+  it = geom2.parts();
+  QVERIFY( it.hasNext() );
+  QgsAbstractGeometry *part = it.next();
+  QCOMPARE( part->asWkt(), QStringLiteral( "Point (1 2)" ) );
+  static_cast< QgsPoint * >( part )->setX( 100 );
+  QCOMPARE( geom2.asWkt(), QStringLiteral( "Point (100 2)" ) );
+  QVERIFY( !it.hasNext() );
+  // geom2 should hve adetached, geom should be unaffected by change
+  QCOMPARE( geom.asWkt(), QStringLiteral( "Point (1 2)" ) );
+
+  // See test_qgsgeometry.py for geometry-type specific checks!
 }
 
 void TestQgsGeometry::point()
@@ -678,8 +700,8 @@ void TestQgsGeometry::point()
   //toQPointF
   QgsPoint p11a( 5.0, 9.0 );
   QPointF result = p11a.toQPointF();
-  QGSCOMPARENEAR( result.x(), 5.0, 4 * DBL_EPSILON );
-  QGSCOMPARENEAR( result.y(), 9.0, 4 * DBL_EPSILON );
+  QGSCOMPARENEAR( result.x(), 5.0, 4 * std::numeric_limits<double>::epsilon() );
+  QGSCOMPARENEAR( result.y(), 9.0, 4 * std::numeric_limits<double>::epsilon() );
 
   //to/from WKB
   QgsPoint p12( QgsWkbTypes::PointZM, 1.0, 2.0, 3.0, -4.0 );
@@ -728,13 +750,32 @@ void TestQgsGeometry::point()
   QString expectedGML3prec3( QStringLiteral( "<Point xmlns=\"gml\"><pos xmlns=\"gml\" srsDimension=\"2\">0.333 0.667</pos></Point>" ) );
   QCOMPARE( elemToString( exportPointFloat.asGml3( doc, 3 ) ), expectedGML3prec3 );
   QgsPoint exportPointZ( 1, 2, 3 );
-  QString expectedGML2Z( QStringLiteral( "<Point xmlns=\"gml\"><pos xmlns=\"gml\" srsDimension=\"3\">1 2 3</pos></Point>" ) );
-  QGSCOMPAREGML( elemToString( exportPointZ.asGml3( doc, 3 ) ), expectedGML2Z );
+  QString expectedGML3Z( QStringLiteral( "<Point xmlns=\"gml\"><pos xmlns=\"gml\" srsDimension=\"3\">1 2 3</pos></Point>" ) );
+  QGSCOMPAREGML( elemToString( exportPointZ.asGml3( doc, 3 ) ), expectedGML3Z );
+
+  //asGML2 inverted axis
+  QgsPoint exportPointInvertedAxis( 1, 2 );
+  QgsPoint exportPointFloatInvertedAxis( 1 / 3.0, 2 / 3.0 );
+  QDomDocument docInvertedAxis( QStringLiteral( "gml" ) );
+  QString expectedGML2InvertedAxis( QStringLiteral( "<Point xmlns=\"gml\"><coordinates xmlns=\"gml\" cs=\",\" ts=\" \">2,1</coordinates></Point>" ) );
+  QGSCOMPAREGML( elemToString( exportPointInvertedAxis.asGml2( docInvertedAxis, 17, QStringLiteral( "gml" ), QgsAbstractGeometry::AxisOrder::YX ) ), expectedGML2InvertedAxis );
+  QString expectedGML2prec3InvertedAxis( QStringLiteral( "<Point xmlns=\"gml\"><coordinates xmlns=\"gml\" cs=\",\" ts=\" \">0.667,0.333</coordinates></Point>" ) );
+  QGSCOMPAREGML( elemToString( exportPointFloatInvertedAxis.asGml2( docInvertedAxis, 3, QStringLiteral( "gml" ), QgsAbstractGeometry::AxisOrder::YX ) ), expectedGML2prec3InvertedAxis );
+
+  //asGML3 inverted axis
+  QString expectedGML3InvertedAxis( QStringLiteral( "<Point xmlns=\"gml\"><pos xmlns=\"gml\" srsDimension=\"2\">2 1</pos></Point>" ) );
+  QCOMPARE( elemToString( exportPointInvertedAxis.asGml3( docInvertedAxis, 17, QStringLiteral( "gml" ), QgsAbstractGeometry::AxisOrder::YX ) ), expectedGML3InvertedAxis );
+  QString expectedGML3prec3InvertedAxis( QStringLiteral( "<Point xmlns=\"gml\"><pos xmlns=\"gml\" srsDimension=\"2\">0.667 0.333</pos></Point>" ) );
+  QCOMPARE( elemToString( exportPointFloatInvertedAxis.asGml3( docInvertedAxis, 3, QStringLiteral( "gml" ), QgsAbstractGeometry::AxisOrder::YX ) ), expectedGML3prec3InvertedAxis );
+  QgsPoint exportPointZInvertedAxis( 1, 2, 3 );
+  QString expectedGML3ZInvertedAxis( QStringLiteral( "<Point xmlns=\"gml\"><pos xmlns=\"gml\" srsDimension=\"3\">2 1 3</pos></Point>" ) );
+  QGSCOMPAREGML( elemToString( exportPointZInvertedAxis.asGml3( docInvertedAxis, 3, QStringLiteral( "gml" ), QgsAbstractGeometry::AxisOrder::YX ) ), expectedGML3ZInvertedAxis );
+
 
   //asJSON
-  QString expectedJson( QStringLiteral( "{\"type\": \"Point\", \"coordinates\": [1, 2]}" ) );
+  QString expectedJson( QStringLiteral( "{\"coordinates\":[1.0,2.0],\"type\":\"Point\"}" ) );
   QCOMPARE( exportPoint.asJson(), expectedJson );
-  QString expectedJsonPrec3( QStringLiteral( "{\"type\": \"Point\", \"coordinates\": [0.333, 0.667]}" ) );
+  QString expectedJsonPrec3( QStringLiteral( "{\"coordinates\":[0.333,0.667],\"type\":\"Point\"}" ) );
   QCOMPARE( exportPointFloat.asJson( 3 ), expectedJsonPrec3 );
 
   //bounding box
@@ -1103,6 +1144,57 @@ void TestQgsGeometry::point()
   QVERIFY( !p.removeDuplicateNodes() );
   QCOMPARE( p.x(), 1.0 );
   QCOMPARE( p.y(), 2.0 );
+
+  // swap xy
+  p = QgsPoint( 1.1, 2.2, 3.3, 4.4, QgsWkbTypes::PointZM );
+  p.swapXy();
+  QCOMPARE( p.x(), 2.2 );
+  QCOMPARE( p.y(), 1.1 );
+  QCOMPARE( p.z(), 3.3 );
+  QCOMPARE( p.m(), 4.4 );
+  QCOMPARE( p.wkbType(), QgsWkbTypes::PointZM );
+
+  // filter vertex
+  p = QgsPoint( 1.1, 2.2, 3.3, 4.4, QgsWkbTypes::PointZM );
+  p.filterVertices( []( const QgsPoint & )-> bool { return false; } );
+  QCOMPARE( p.x(), 1.1 );
+  QCOMPARE( p.y(), 2.2 );
+  QCOMPARE( p.z(), 3.3 );
+  QCOMPARE( p.m(), 4.4 );
+  QCOMPARE( p.wkbType(), QgsWkbTypes::PointZM );
+
+  // transform vertex
+  p = QgsPoint( 1.1, 2.2, 3.3, 4.4, QgsWkbTypes::PointZM );
+  p.transformVertices( []( const QgsPoint & p )-> QgsPoint
+  {
+    return QgsPoint( p.x() + 2, p.y() + 3, p.z() + 1, p.m() + 8 );
+  } );
+  QCOMPARE( p.x(), 3.1 );
+  QCOMPARE( p.y(), 5.2 );
+  QCOMPARE( p.z(), 4.3 );
+  QCOMPARE( p.m(), 12.4 );
+  QCOMPARE( p.wkbType(), QgsWkbTypes::PointZM );
+  // no dimensionality change allowed
+  p.transformVertices( []( const QgsPoint & p )-> QgsPoint
+  {
+    return QgsPoint( p.x() + 2, p.y() + 3 );
+  } );
+  QCOMPARE( p.x(), 5.1 );
+  QCOMPARE( p.y(), 8.2 );
+  QVERIFY( std::isnan( p.z() ) );
+  QVERIFY( std::isnan( p.m() ) );
+  QCOMPARE( p.wkbType(), QgsWkbTypes::PointZM );
+  p = QgsPoint( 2, 3 );
+  p.transformVertices( []( const QgsPoint & p )-> QgsPoint
+  {
+    return QgsPoint( p.x() + 2, p.y() + 3, 7, 8 );
+  } );
+  QCOMPARE( p.x(), 4.0 );
+  QCOMPARE( p.y(), 6.0 );
+  QVERIFY( std::isnan( p.z() ) );
+  QVERIFY( std::isnan( p.m() ) );
+  QCOMPARE( p.wkbType(), QgsWkbTypes::Point );
+
 }
 
 void TestQgsGeometry::circularString()
@@ -1127,6 +1219,121 @@ void TestQgsGeometry::circularString()
   QgsPointSequence pts;
   l1.points( pts );
   QVERIFY( pts.empty() );
+
+  // from 3 points
+  QgsCircularString from3Pts( QgsPoint( 1, 2 ), QgsPoint( 21, 22 ), QgsPoint( 31, 2 ) );
+  QCOMPARE( from3Pts.wkbType(), QgsWkbTypes::CircularString );
+  QCOMPARE( from3Pts.numPoints(), 3 );
+  QCOMPARE( from3Pts.xAt( 0 ), 1.0 );
+  QCOMPARE( from3Pts.yAt( 0 ), 2.0 );
+  QCOMPARE( from3Pts.xAt( 1 ), 21.0 );
+  QCOMPARE( from3Pts.yAt( 1 ), 22.0 );
+  QCOMPARE( from3Pts.xAt( 2 ), 31.0 );
+  QCOMPARE( from3Pts.yAt( 2 ), 2.0 );
+  from3Pts = QgsCircularString( QgsPoint( QgsWkbTypes::PointZ, 1, 2, 3 ), QgsPoint( QgsWkbTypes::PointZ, 21, 22, 23 ),
+                                QgsPoint( QgsWkbTypes::PointZ, 31, 2, 33 ) );
+  QCOMPARE( from3Pts.wkbType(), QgsWkbTypes::CircularStringZ );
+  QCOMPARE( from3Pts.numPoints(), 3 );
+  QCOMPARE( from3Pts.xAt( 0 ), 1.0 );
+  QCOMPARE( from3Pts.yAt( 0 ), 2.0 );
+  QCOMPARE( from3Pts.pointN( 0 ).z(), 3.0 );
+  QCOMPARE( from3Pts.xAt( 1 ), 21.0 );
+  QCOMPARE( from3Pts.yAt( 1 ), 22.0 );
+  QCOMPARE( from3Pts.pointN( 1 ).z(), 23.0 );
+  QCOMPARE( from3Pts.xAt( 2 ), 31.0 );
+  QCOMPARE( from3Pts.yAt( 2 ), 2.0 );
+  QCOMPARE( from3Pts.pointN( 2 ).z(), 33.0 );
+  from3Pts = QgsCircularString( QgsPoint( QgsWkbTypes::PointM, 1, 2, 0, 3 ), QgsPoint( QgsWkbTypes::PointM, 21, 22, 0, 23 ),
+                                QgsPoint( QgsWkbTypes::PointM, 31, 2, 0, 33 ) );
+  QCOMPARE( from3Pts.wkbType(), QgsWkbTypes::CircularStringM );
+  QCOMPARE( from3Pts.numPoints(), 3 );
+  QCOMPARE( from3Pts.xAt( 0 ), 1.0 );
+  QCOMPARE( from3Pts.yAt( 0 ), 2.0 );
+  QCOMPARE( from3Pts.pointN( 0 ).m(), 3.0 );
+  QCOMPARE( from3Pts.xAt( 1 ), 21.0 );
+  QCOMPARE( from3Pts.yAt( 1 ), 22.0 );
+  QCOMPARE( from3Pts.pointN( 1 ).m(), 23.0 );
+  QCOMPARE( from3Pts.xAt( 2 ), 31.0 );
+  QCOMPARE( from3Pts.yAt( 2 ), 2.0 );
+  QCOMPARE( from3Pts.pointN( 2 ).m(), 33.0 );
+  from3Pts = QgsCircularString( QgsPoint( QgsWkbTypes::PointZM, 1, 2, 3, 4 ), QgsPoint( QgsWkbTypes::PointZM, 21, 22, 23, 24 ),
+                                QgsPoint( QgsWkbTypes::PointZM, 31, 2, 33, 34 ) );
+  QCOMPARE( from3Pts.wkbType(), QgsWkbTypes::CircularStringZM );
+  QCOMPARE( from3Pts.numPoints(), 3 );
+  QCOMPARE( from3Pts.xAt( 0 ), 1.0 );
+  QCOMPARE( from3Pts.yAt( 0 ), 2.0 );
+  QCOMPARE( from3Pts.pointN( 0 ).z(), 3.0 );
+  QCOMPARE( from3Pts.pointN( 0 ).m(), 4.0 );
+  QCOMPARE( from3Pts.xAt( 1 ), 21.0 );
+  QCOMPARE( from3Pts.yAt( 1 ), 22.0 );
+  QCOMPARE( from3Pts.pointN( 1 ).z(), 23.0 );
+  QCOMPARE( from3Pts.pointN( 1 ).m(), 24.0 );
+  QCOMPARE( from3Pts.xAt( 2 ), 31.0 );
+  QCOMPARE( from3Pts.yAt( 2 ), 2.0 );
+  QCOMPARE( from3Pts.pointN( 2 ).z(), 33.0 );
+  QCOMPARE( from3Pts.pointN( 2 ).m(), 34.0 );
+
+  // from 2 points and center
+  from3Pts = QgsCircularString::fromTwoPointsAndCenter( QgsPoint( 1, 2 ), QgsPoint( 31, 2 ), QgsPoint( 21, 2 ) );
+  QCOMPARE( from3Pts.wkbType(), QgsWkbTypes::CircularString );
+  QCOMPARE( from3Pts.numPoints(), 3 );
+  QCOMPARE( from3Pts.xAt( 0 ), 1.0 );
+  QCOMPARE( from3Pts.yAt( 0 ), 2.0 );
+  QCOMPARE( from3Pts.xAt( 1 ), 21.0 );
+  QCOMPARE( from3Pts.yAt( 1 ), 22.0 );
+  QCOMPARE( from3Pts.xAt( 2 ), 31.0 );
+  QCOMPARE( from3Pts.yAt( 2 ), 2.0 );
+  from3Pts = QgsCircularString::fromTwoPointsAndCenter( QgsPoint( 1, 2 ), QgsPoint( 31, 2 ), QgsPoint( 21, 2 ), false );
+  QCOMPARE( from3Pts.wkbType(), QgsWkbTypes::CircularString );
+  QCOMPARE( from3Pts.numPoints(), 3 );
+  QCOMPARE( from3Pts.xAt( 0 ), 1.0 );
+  QCOMPARE( from3Pts.yAt( 0 ), 2.0 );
+  QCOMPARE( from3Pts.xAt( 1 ), 21.0 );
+  QCOMPARE( from3Pts.yAt( 1 ), -18.0 );
+  QCOMPARE( from3Pts.xAt( 2 ), 31.0 );
+  QCOMPARE( from3Pts.yAt( 2 ), 2.0 );
+  from3Pts = QgsCircularString::fromTwoPointsAndCenter( QgsPoint( QgsWkbTypes::PointZ, 1, 2, 3 ), QgsPoint( QgsWkbTypes::PointZ, 32, 2, 33 ),
+             QgsPoint( QgsWkbTypes::PointZ, 21, 2, 23 ) );
+  QCOMPARE( from3Pts.wkbType(), QgsWkbTypes::CircularStringZ );
+  QCOMPARE( from3Pts.numPoints(), 3 );
+  QCOMPARE( from3Pts.xAt( 0 ), 1.0 );
+  QCOMPARE( from3Pts.yAt( 0 ), 2.0 );
+  QCOMPARE( from3Pts.pointN( 0 ).z(), 3.0 );
+  QCOMPARE( from3Pts.xAt( 1 ), 21.0 );
+  QCOMPARE( from3Pts.yAt( 1 ), 22.0 );
+  QCOMPARE( from3Pts.pointN( 1 ).z(), 23.0 );
+  QCOMPARE( from3Pts.xAt( 2 ), 32.0 );
+  QCOMPARE( from3Pts.yAt( 2 ), 2.0 );
+  QCOMPARE( from3Pts.pointN( 2 ).z(), 33.0 );
+  from3Pts = QgsCircularString::fromTwoPointsAndCenter( QgsPoint( QgsWkbTypes::PointM, 1, 2, 0, 3 ), QgsPoint( QgsWkbTypes::PointM, 31, 2, 0, 33 ),
+             QgsPoint( QgsWkbTypes::PointM, 21, 2, 0, 23 ) );
+  QCOMPARE( from3Pts.wkbType(), QgsWkbTypes::CircularStringM );
+  QCOMPARE( from3Pts.numPoints(), 3 );
+  QCOMPARE( from3Pts.xAt( 0 ), 1.0 );
+  QCOMPARE( from3Pts.yAt( 0 ), 2.0 );
+  QCOMPARE( from3Pts.pointN( 0 ).m(), 3.0 );
+  QCOMPARE( from3Pts.xAt( 1 ), 21.0 );
+  QCOMPARE( from3Pts.yAt( 1 ), 22.0 );
+  QCOMPARE( from3Pts.pointN( 1 ).m(), 23.0 );
+  QCOMPARE( from3Pts.xAt( 2 ), 31.0 );
+  QCOMPARE( from3Pts.yAt( 2 ), 2.0 );
+  QCOMPARE( from3Pts.pointN( 2 ).m(), 33.0 );
+  from3Pts = QgsCircularString::fromTwoPointsAndCenter( QgsPoint( QgsWkbTypes::PointZM, 1, 2, 3, 4 ), QgsPoint( QgsWkbTypes::PointZM, 31, 2, 33, 34 ),
+             QgsPoint( QgsWkbTypes::PointZM, 21, 2, 23, 24 ) );
+  QCOMPARE( from3Pts.wkbType(), QgsWkbTypes::CircularStringZM );
+  QCOMPARE( from3Pts.numPoints(), 3 );
+  QCOMPARE( from3Pts.xAt( 0 ), 1.0 );
+  QCOMPARE( from3Pts.yAt( 0 ), 2.0 );
+  QCOMPARE( from3Pts.pointN( 0 ).z(), 3.0 );
+  QCOMPARE( from3Pts.pointN( 0 ).m(), 4.0 );
+  QCOMPARE( from3Pts.xAt( 1 ), 21.0 );
+  QCOMPARE( from3Pts.yAt( 1 ), 22.0 );
+  QCOMPARE( from3Pts.pointN( 1 ).z(), 23.0 );
+  QCOMPARE( from3Pts.pointN( 1 ).m(), 24.0 );
+  QCOMPARE( from3Pts.xAt( 2 ), 31.0 );
+  QCOMPARE( from3Pts.yAt( 2 ), 2.0 );
+  QCOMPARE( from3Pts.pointN( 2 ).z(), 33.0 );
+  QCOMPARE( from3Pts.pointN( 2 ).m(), 34.0 );
 
   //setPoints
   QgsCircularString l2;
@@ -1582,9 +1789,9 @@ void TestQgsGeometry::circularString()
   QGSCOMPAREGML( elemToString( QgsCircularString().asGml3( doc ) ), expectedGML3empty );
 
   //asJSON
-  QString expectedJson( QStringLiteral( "{\"type\": \"LineString\", \"coordinates\": [ [31, 32], [41, 42], [51, 52]]}" ) );
+  QString expectedJson( QStringLiteral( "{\"coordinates\":[[31.0,32.0],[41.0,42.0],[51.0,52.0]],\"type\":\"LineString\"}" ) );
   QCOMPARE( exportLine.asJson(), expectedJson );
-  QString expectedJsonPrec3( QStringLiteral( "{\"type\": \"LineString\", \"coordinates\": [ [0.333, 0.667], [1.333, 1.667], [2.333, 2.667]]}" ) );
+  QString expectedJsonPrec3( QStringLiteral( "{\"coordinates\":[[0.333,0.667],[1.333,1.667],[2.333,2.667]],\"type\":\"LineString\"}" ) );
   QCOMPARE( exportLineFloat.asJson( 3 ), expectedJsonPrec3 );
 
   //length
@@ -2456,6 +2663,142 @@ void TestQgsGeometry::circularString()
   QVERIFY( !nodeLine.removeDuplicateNodes( 0.02, true ) );
   QCOMPARE( nodeLine.asWkt( 2 ), QStringLiteral( "CircularStringZ (11 2 1, 11.01 1.99 2, 11.02 2.01 3, 11 12 4, 111 12 5)" ) );
 
+  //swap xy
+  QgsCircularString swapLine;
+  swapLine.swapXy(); // no crash
+  swapLine.setPoints( QgsPointSequence() << QgsPoint( 11, 2, 3, 4, QgsWkbTypes::PointZM ) << QgsPoint( 11, 12, 13, 14, QgsWkbTypes::PointZM ) << QgsPoint( 111, 12, 23, 24, QgsWkbTypes::PointZM ) );
+  swapLine.swapXy();
+  QCOMPARE( swapLine.asWkt(), QStringLiteral( "CircularStringZM (2 11 3 4, 12 11 13 14, 12 111 23 24)" ) );
+
+  // filter vertex
+  QgsCircularString filterLine;
+  auto filter = []( const QgsPoint & point )-> bool
+  {
+    return point.x() < 5;
+  };
+  filterLine.filterVertices( filter ); // no crash
+  filterLine.setPoints( QgsPointSequence() << QgsPoint( 1, 2, 3, 4, QgsWkbTypes::PointZM ) << QgsPoint( 4, 12, 13, 14, QgsWkbTypes::PointZM ) << QgsPoint( 111, 12, 23, 24, QgsWkbTypes::PointZM ) );
+  filterLine.filterVertices( filter );
+  QCOMPARE( filterLine.asWkt( 2 ), QStringLiteral( "CircularStringZM (1 2 3 4, 4 12 13 14)" ) );
+
+  // transform vertex
+  QgsCircularString transformLine;
+  auto transform = []( const QgsPoint & point )-> QgsPoint
+  {
+    return QgsPoint( point.x() + 2, point.y() + 3, point.z() + 4, point.m() + 7 );
+  };
+  transformLine.transformVertices( transform ); // no crash
+  transformLine.setPoints( QgsPointSequence() << QgsPoint( 1, 2, 3, 4, QgsWkbTypes::PointZM ) << QgsPoint( 4, 12, 13, 14, QgsWkbTypes::PointZM ) << QgsPoint( 111, 12, 23, 24, QgsWkbTypes::PointZM ) );
+  transformLine.transformVertices( transform );
+  QCOMPARE( transformLine.asWkt( 2 ), QStringLiteral( "CircularStringZM (3 5 7 11, 6 15 17 21, 113 15 27 31)" ) );
+
+
+  // substring
+  QgsCircularString substring;
+  std::unique_ptr< QgsCircularString > substringResult( substring.curveSubstring( 1, 2 ) ); // no crash
+  QVERIFY( substringResult.get() );
+  QVERIFY( substringResult->isEmpty() );
+  // CircularStringZM (10 0 1 2, 11 1 3 4, 12 0 13 14)
+  substring.setPoints( QgsPointSequence() << QgsPoint( 10, 0, 1, 2 ) <<  QgsPoint( 11, 1, 3, 4 ) <<  QgsPoint( 12, 0, 13, 14 ) );
+  substringResult.reset( substring.curveSubstring( 0, 0 ) );
+  QCOMPARE( substringResult->asWkt( 2 ), QStringLiteral( "CircularStringZM (10 0 1 2, 10 0 1 2, 10 0 1 2)" ) );
+  substringResult.reset( substring.curveSubstring( -1, -0.1 ) );
+  QVERIFY( substringResult->isEmpty() );
+  substringResult.reset( substring.curveSubstring( 100000, 10000 ) );
+  QVERIFY( substringResult->isEmpty() );
+  substringResult.reset( substring.curveSubstring( -1, 1 ) );
+  QCOMPARE( substringResult->asWkt( 2 ), QStringLiteral( "CircularStringZM (10 0 1 2, 10.12 0.48 1.64 2.64, 10.46 0.84 2.27 3.27)" ) );
+  substringResult.reset( substring.curveSubstring( 1, -1 ) );
+  QCOMPARE( substringResult->asWkt( 2 ), QStringLiteral( "CircularStringZM (10.46 0.84 2.27 3.27, 10.46 0.84 2.27 3.27, 10.46 0.84 2.27 3.27)" ) );
+  substringResult.reset( substring.curveSubstring( -1, 10000 ) );
+  QCOMPARE( substringResult->asWkt( 2 ), QStringLiteral( "CircularStringZM (10 0 1 2, 11 1 3 4, 12 0 13 14)" ) );
+  substringResult.reset( substring.curveSubstring( 1, 10000 ) );
+  QCOMPARE( substringResult->asWkt( 2 ), QStringLiteral( "CircularStringZM (10.46 0.84 2.27 3.27, 11.48 0.88 6.18 7.18, 12 0 13 14)" ) );
+  substringResult.reset( substring.curveSubstring( 1, 20 ) );
+  QCOMPARE( substringResult->asWkt( 2 ), QStringLiteral( "CircularStringZM (10.46 0.84 2.27 3.27, 11.48 0.88 6.18 7.18, 12 0 13 14)" ) );
+  substringResult.reset( substring.curveSubstring( 1, 1.5 ) );
+  QCOMPARE( substringResult->asWkt( 2 ), QStringLiteral( "CircularStringZM (10.46 0.84 2.27 3.27, 10.68 0.95 2.59 3.59, 10.93 1 2.91 3.91)" ) );
+  // CircularStringZM (10 0 1 2, 11 1 3 4, 12 0 13 14, 14 -1 13 14, 16 1 23 24 )
+  substring.setPoints( QgsPointSequence() << QgsPoint( 10, 0, 1, 2 ) <<  QgsPoint( 11, 1, 3, 4 ) <<  QgsPoint( 12, 0, 13, 14 )
+                       <<  QgsPoint( 14, -1, 13, 14 ) <<  QgsPoint( 16, 1, 23, 24 ) );
+  substringResult.reset( substring.curveSubstring( 1, 1.5 ) );
+  QCOMPARE( substringResult->asWkt( 2 ), QStringLiteral( "CircularStringZM (10.46 0.84 2.27 3.27, 10.68 0.95 2.59 3.59, 10.93 1 2.91 3.91)" ) );
+  substringResult.reset( substring.curveSubstring( 1, 10 ) );
+  QCOMPARE( substringResult->asWkt( 2 ), QStringLiteral( "CircularStringZM (10.46 0.84 2.27 3.27, 11.48 0.88 6.18 7.18, 12 0 13 14, 14 -1 13 14, 16 1 23 24)" ) );
+  substringResult.reset( substring.curveSubstring( 1, 6 ) );
+  QCOMPARE( substringResult->asWkt( 2 ), QStringLiteral( "CircularStringZM (10.46 0.84 2.27 3.27, 11.48 0.88 6.18 7.18, 12 0 13 14, 13.1 -0.88 13 14, 14.5 -0.9 14.65 15.65)" ) );
+  substringResult.reset( substring.curveSubstring( 0, 6 ) );
+  QCOMPARE( substringResult->asWkt( 2 ), QStringLiteral( "CircularStringZM (10 0 1 2, 11 1 3 4, 12 0 13 14, 13.1 -0.88 13 14, 14.5 -0.9 14.65 15.65)" ) );
+  substringResult.reset( substring.curveSubstring( 5, 6 ) );
+  QCOMPARE( substringResult->asWkt( 2 ), QStringLiteral( "CircularStringZM (13.51 -0.98 13 14, 14.01 -1 13.03 14.03, 14.5 -0.9 14.65 15.65)" ) );
+  substringResult.reset( substring.curveSubstring( 5, 1000 ) );
+  QCOMPARE( substringResult->asWkt( 2 ), QStringLiteral( "CircularStringZM (13.51 -0.98 13 14, 15.19 -0.53 17.2 18.2, 16 1 23 24)" ) );
+
+  substring.setPoints( QgsPointSequence() << QgsPoint( 10, 0, 1 ) <<  QgsPoint( 11, 1, 3 ) <<  QgsPoint( 12, 0, 13 )
+                       <<  QgsPoint( 14, -1, 13 ) <<  QgsPoint( 16, 1, 23 ) );
+  substringResult.reset( substring.curveSubstring( 1, 20 ) );
+  QCOMPARE( substringResult->asWkt( 2 ), QStringLiteral( "CircularStringZ (10.46 0.84 2.27, 11.48 0.88 6.18, 12 0 13, 14 -1 13, 16 1 23)" ) );
+  substring.setPoints( QgsPointSequence() << QgsPoint( QgsWkbTypes::PointM, 10, 0, 0, 1 ) <<  QgsPoint( QgsWkbTypes::PointM, 11, 1, 0, 3 ) <<  QgsPoint( QgsWkbTypes::PointM, 12, 0, 0, 13 )
+                       <<  QgsPoint( QgsWkbTypes::PointM, 14, -1, 0, 13 ) <<  QgsPoint( QgsWkbTypes::PointM, 16, 1, 0, 23 ) );
+  substringResult.reset( substring.curveSubstring( 1, 20 ) );
+  QCOMPARE( substringResult->asWkt( 2 ), QStringLiteral( "CircularStringM (10.46 0.84 2.27, 11.48 0.88 6.18, 12 0 13, 14 -1 13, 16 1 23)" ) );
+  substring.setPoints( QgsPointSequence() << QgsPoint( 10, 0 ) <<  QgsPoint( 11, 1 ) <<  QgsPoint( 12, 0 )
+                       <<  QgsPoint( 14, -1 ) <<  QgsPoint( 16, 1 ) );
+  substringResult.reset( substring.curveSubstring( 1, 20 ) );
+  QCOMPARE( substringResult->asWkt( 2 ), QStringLiteral( "CircularString (10.46 0.84, 11.48 0.88, 12 0, 14 -1, 16 1)" ) );
+
+  // interpolate
+  QgsCircularString interpolate;
+  std::unique_ptr< QgsPoint > interpolateResult( interpolate.interpolatePoint( 1 ) ); // no crash
+  QVERIFY( !interpolateResult.get() );
+  // CircularStringZM (10 0 1 2, 11 1 3 4, 12 0 13 14)
+  interpolate.setPoints( QgsPointSequence() << QgsPoint( 10, 0, 1, 2 ) <<  QgsPoint( 11, 1, 3, 4 ) <<  QgsPoint( 12, 0, 13, 14 ) );
+  interpolateResult.reset( interpolate.interpolatePoint( 0 ) );
+  QCOMPARE( interpolateResult->asWkt( 2 ), QStringLiteral( "PointZM (10 0 1 2)" ) );
+  interpolateResult.reset( interpolate.interpolatePoint( -1 ) );
+  QVERIFY( !interpolateResult.get() );
+  interpolateResult.reset( interpolate.interpolatePoint( 100000 ) );
+  QVERIFY( !interpolateResult.get() );
+  interpolateResult.reset( interpolate.interpolatePoint( 1 ) );
+  QCOMPARE( interpolateResult->asWkt( 2 ), QStringLiteral( "PointZM (10.46 0.84 2.27 3.27)" ) );
+  interpolateResult.reset( interpolate.interpolatePoint( 1.5 ) );
+  QCOMPARE( interpolateResult->asWkt( 2 ), QStringLiteral( "PointZM (10.93 1 2.91 3.91)" ) );
+  interpolateResult.reset( interpolate.interpolatePoint( interpolate.length() ) );
+  QCOMPARE( interpolateResult->asWkt( 2 ), QStringLiteral( "PointZM (12 0 13 14)" ) );
+  // CircularStringZM (10 0 1 2, 11 1 3 4, 12 0 13 14, 14 -1 13 14, 16 1 23 24 )
+  interpolate.setPoints( QgsPointSequence() << QgsPoint( 10, 0, 1, 2 ) <<  QgsPoint( 11, 1, 3, 4 ) <<  QgsPoint( 12, 0, 13, 14 )
+                         <<  QgsPoint( 14, -1, 13, 14 ) <<  QgsPoint( 16, 1, 23, 24 ) );
+  interpolateResult.reset( interpolate.interpolatePoint( 1 ) );
+  QCOMPARE( interpolateResult->asWkt( 2 ), QStringLiteral( "PointZM (10.46 0.84 2.27 3.27)" ) );
+  interpolateResult.reset( interpolate.interpolatePoint( 1.5 ) );
+  QCOMPARE( interpolateResult->asWkt( 2 ), QStringLiteral( "PointZM (10.93 1 2.91 3.91)" ) );
+  interpolateResult.reset( interpolate.interpolatePoint( 10 ) );
+  QVERIFY( !interpolateResult.get() );
+  interpolateResult.reset( interpolate.interpolatePoint( 6 ) );
+  QCOMPARE( interpolateResult->asWkt( 2 ), QStringLiteral( "PointZM (14.5 -0.9 14.65 15.65)" ) );
+  interpolateResult.reset( interpolate.interpolatePoint( 5 ) );
+  QCOMPARE( interpolateResult->asWkt( 2 ), QStringLiteral( "PointZM (13.51 -0.98 13 14)" ) );
+
+  interpolate.setPoints( QgsPointSequence() << QgsPoint( 10, 0, 1 ) <<  QgsPoint( 11, 1, 3 ) <<  QgsPoint( 12, 0, 13 )
+                         <<  QgsPoint( 14, -1, 13 ) <<  QgsPoint( 16, 1, 23 ) );
+  interpolateResult.reset( interpolate.interpolatePoint( 1 ) );
+  QCOMPARE( interpolateResult->asWkt( 2 ), QStringLiteral( "PointZ (10.46 0.84 2.27)" ) );
+  interpolate.setPoints( QgsPointSequence() << QgsPoint( QgsWkbTypes::PointM, 10, 0, 0, 1 ) <<  QgsPoint( QgsWkbTypes::PointM, 11, 1, 0, 3 ) <<  QgsPoint( QgsWkbTypes::PointM, 12, 0, 0, 13 )
+                         <<  QgsPoint( QgsWkbTypes::PointM, 14, -1, 0, 13 ) <<  QgsPoint( QgsWkbTypes::PointM, 16, 1, 0, 23 ) );
+  interpolateResult.reset( interpolate.interpolatePoint( 1 ) );
+  QCOMPARE( interpolateResult->asWkt( 2 ), QStringLiteral( "PointM (10.46 0.84 2.27)" ) );
+  interpolate.setPoints( QgsPointSequence() << QgsPoint( 10, 0 ) <<  QgsPoint( 11, 1 ) <<  QgsPoint( 12, 0 )
+                         <<  QgsPoint( 14, -1 ) <<  QgsPoint( 16, 1 ) );
+  interpolateResult.reset( interpolate.interpolatePoint( 1 ) );
+  QCOMPARE( interpolateResult->asWkt( 2 ), QStringLiteral( "Point (10.46 0.84)" ) );
+
+  // orientation
+  QgsCircularString orientation;
+  ( void )orientation.orientation(); // no crash
+  orientation.setPoints( QgsPointSequence() << QgsPoint( 0, 0 ) << QgsPoint( 0, 1 ) << QgsPoint( 1, 1 ) << QgsPoint( 1, 0 ) << QgsPoint( 0, 0 ) );
+  QCOMPARE( orientation.orientation(), QgsCurve::Clockwise );
+  orientation.setPoints( QgsPointSequence() << QgsPoint( 0, 0 ) << QgsPoint( 1, 0 ) << QgsPoint( 1, 1 ) << QgsPoint( 0, 1 ) << QgsPoint( 0, 0 ) );
+  QCOMPARE( orientation.orientation(), QgsCurve::CounterClockwise );
 }
 
 
@@ -2493,6 +2836,13 @@ void TestQgsGeometry::lineString()
   QCOMPARE( fromArray.yAt( 1 ), 12.0 );
   QCOMPARE( fromArray.xAt( 2 ), 3.0 );
   QCOMPARE( fromArray.yAt( 2 ), 13.0 );
+  QCOMPARE( *fromArray.xData(), 1.0 );
+  QCOMPARE( *( fromArray.xData() + 1 ), 2.0 );
+  QCOMPARE( *( fromArray.xData() + 2 ), 3.0 );
+  QCOMPARE( *fromArray.yData(), 11.0 );
+  QCOMPARE( *( fromArray.yData() + 1 ), 12.0 );
+  QCOMPARE( *( fromArray.yData() + 2 ), 13.0 );
+
   // unbalanced
   xx = QVector< double >() << 1 << 2;
   yy = QVector< double >() << 11 << 12 << 13;
@@ -2529,6 +2879,19 @@ void TestQgsGeometry::lineString()
   QCOMPARE( fromArray4.xAt( 2 ), 3.0 );
   QCOMPARE( fromArray4.yAt( 2 ), 13.0 );
   QCOMPARE( fromArray4.zAt( 2 ), 23.0 );
+  fromArray4 = QgsLineString( xx, yy, zz, QVector< double >(), true );  // LineString25D
+  QCOMPARE( fromArray4.wkbType(), QgsWkbTypes::LineString25D );
+  QCOMPARE( fromArray4.numPoints(), 3 );
+  QCOMPARE( fromArray4.xAt( 0 ), 1.0 );
+  QCOMPARE( fromArray4.yAt( 0 ), 11.0 );
+  QCOMPARE( fromArray4.zAt( 0 ), 21.0 );
+  QCOMPARE( fromArray4.xAt( 1 ), 2.0 );
+  QCOMPARE( fromArray4.yAt( 1 ), 12.0 );
+  QCOMPARE( fromArray4.zAt( 1 ), 22.0 );
+  QCOMPARE( fromArray4.xAt( 2 ), 3.0 );
+  QCOMPARE( fromArray4.yAt( 2 ), 13.0 );
+  QCOMPARE( fromArray4.zAt( 2 ), 23.0 );
+
   // unbalanced -> z ignored
   zz = QVector< double >() << 21 << 22;
   QgsLineString fromArray5( xx, yy, zz );
@@ -2617,6 +2980,19 @@ void TestQgsGeometry::lineString()
   QCOMPARE( fromArray8.zAt( 2 ), 23.0 );
   QCOMPARE( fromArray8.mAt( 2 ), 33.0 );
 
+  QCOMPARE( *fromArray8.xData(), 1.0 );
+  QCOMPARE( *( fromArray8.xData() + 1 ), 2.0 );
+  QCOMPARE( *( fromArray8.xData() + 2 ), 3.0 );
+  QCOMPARE( *fromArray8.yData(), 11.0 );
+  QCOMPARE( *( fromArray8.yData() + 1 ), 12.0 );
+  QCOMPARE( *( fromArray8.yData() + 2 ), 13.0 );
+  QCOMPARE( *fromArray8.zData(), 21.0 );
+  QCOMPARE( *( fromArray8.zData() + 1 ), 22.0 );
+  QCOMPARE( *( fromArray8.zData() + 2 ), 23.0 );
+  QCOMPARE( *fromArray8.mData(), 31.0 );
+  QCOMPARE( *( fromArray8.mData() + 1 ), 32.0 );
+  QCOMPARE( *( fromArray8.mData() + 2 ), 33.0 );
+
   // from QList<QgsPointXY>
   QgsLineString fromPtsA = QgsLineString( QVector< QgsPoint >() );
   QVERIFY( fromPtsA.isEmpty() );
@@ -2659,6 +3035,53 @@ void TestQgsGeometry::lineString()
   QCOMPARE( fromVector3D.xAt( 1 ), 30.0 );
   QCOMPARE( fromVector3D.yAt( 1 ), 40.0 );
   QCOMPARE( fromVector3D.zAt( 1 ), 200.0 );
+
+  // from 2 points
+  QgsLineString from2Pts( QgsPoint( 1, 2 ), QgsPoint( 21, 22 ) );
+  QCOMPARE( from2Pts.wkbType(), QgsWkbTypes::LineString );
+  QCOMPARE( from2Pts.numPoints(), 2 );
+  QCOMPARE( from2Pts.xAt( 0 ), 1.0 );
+  QCOMPARE( from2Pts.yAt( 0 ), 2.0 );
+  QCOMPARE( from2Pts.xAt( 1 ), 21.0 );
+  QCOMPARE( from2Pts.yAt( 1 ), 22.0 );
+  from2Pts = QgsLineString( QgsPoint( QgsWkbTypes::PointZ, 1, 2, 3 ), QgsPoint( QgsWkbTypes::PointZ, 21, 22, 23 ) );
+  QCOMPARE( from2Pts.wkbType(), QgsWkbTypes::LineStringZ );
+  QCOMPARE( from2Pts.numPoints(), 2 );
+  QCOMPARE( from2Pts.xAt( 0 ), 1.0 );
+  QCOMPARE( from2Pts.yAt( 0 ), 2.0 );
+  QCOMPARE( from2Pts.zAt( 0 ), 3.0 );
+  QCOMPARE( from2Pts.xAt( 1 ), 21.0 );
+  QCOMPARE( from2Pts.yAt( 1 ), 22.0 );
+  QCOMPARE( from2Pts.zAt( 1 ), 23.0 );
+  from2Pts = QgsLineString( QgsPoint( QgsWkbTypes::PointM, 1, 2, 0, 3 ), QgsPoint( QgsWkbTypes::PointM, 21, 22, 0, 23 ) );
+  QCOMPARE( from2Pts.wkbType(), QgsWkbTypes::LineStringM );
+  QCOMPARE( from2Pts.numPoints(), 2 );
+  QCOMPARE( from2Pts.xAt( 0 ), 1.0 );
+  QCOMPARE( from2Pts.yAt( 0 ), 2.0 );
+  QCOMPARE( from2Pts.mAt( 0 ), 3.0 );
+  QCOMPARE( from2Pts.xAt( 1 ), 21.0 );
+  QCOMPARE( from2Pts.yAt( 1 ), 22.0 );
+  QCOMPARE( from2Pts.mAt( 1 ), 23.0 );
+  from2Pts = QgsLineString( QgsPoint( QgsWkbTypes::PointZM, 1, 2, 3, 4 ), QgsPoint( QgsWkbTypes::PointZM, 21, 22, 23, 24 ) );
+  QCOMPARE( from2Pts.wkbType(), QgsWkbTypes::LineStringZM );
+  QCOMPARE( from2Pts.numPoints(), 2 );
+  QCOMPARE( from2Pts.xAt( 0 ), 1.0 );
+  QCOMPARE( from2Pts.yAt( 0 ), 2.0 );
+  QCOMPARE( from2Pts.zAt( 0 ), 3.0 );
+  QCOMPARE( from2Pts.mAt( 0 ), 4.0 );
+  QCOMPARE( from2Pts.xAt( 1 ), 21.0 );
+  QCOMPARE( from2Pts.yAt( 1 ), 22.0 );
+  QCOMPARE( from2Pts.zAt( 1 ), 23.0 );
+  QCOMPARE( from2Pts.mAt( 1 ), 24.0 );
+
+  // from lineSegment
+  QgsLineString fromSegment( QgsLineSegment2D( QgsPointXY( 1, 2 ), QgsPointXY( 3, 4 ) ) );
+  QCOMPARE( fromSegment.wkbType(), QgsWkbTypes::LineString );
+  QCOMPARE( fromSegment.numPoints(), 2 );
+  QCOMPARE( fromSegment.xAt( 0 ), 1.0 );
+  QCOMPARE( fromSegment.yAt( 0 ), 2.0 );
+  QCOMPARE( fromSegment.xAt( 1 ), 3.0 );
+  QCOMPARE( fromSegment.yAt( 1 ), 4.0 );
 
   //addVertex
   QgsLineString l2;
@@ -2765,6 +3188,12 @@ void TestQgsGeometry::lineString()
   QgsPointSequence pts;
   l8.points( pts );
   QCOMPARE( pts, QgsPointSequence() << QgsPoint( 1, 2 ) << QgsPoint( 2, 3 ) << QgsPoint( 3, 4 ) );
+  QCOMPARE( *l8.xData(), 1.0 );
+  QCOMPARE( *( l8.xData() + 1 ), 2.0 );
+  QCOMPARE( *( l8.xData() + 2 ), 3.0 );
+  QCOMPARE( *l8.yData(), 2.0 );
+  QCOMPARE( *( l8.yData() + 1 ), 3.0 );
+  QCOMPARE( *( l8.yData() + 2 ), 4.0 );
 
   //setPoints with empty list, should clear linestring
   l8.setPoints( QgsPointSequence() );
@@ -2915,7 +3344,7 @@ void TestQgsGeometry::lineString()
 
   //append to empty
   QgsLineString l10;
-  l10.append( 0 );
+  l10.append( nullptr );
   QVERIFY( l10.isEmpty() );
   QCOMPARE( l10.numPoints(), 0 );
 
@@ -3309,9 +3738,9 @@ void TestQgsGeometry::lineString()
   QGSCOMPAREGML( elemToString( QgsLineString().asGml3( doc ) ), expectedGML3empty );
 
   //asJSON
-  QString expectedJson( QStringLiteral( "{\"type\": \"LineString\", \"coordinates\": [ [31, 32], [41, 42], [51, 52]]}" ) );
+  QString expectedJson( "{\"coordinates\":[[31.0,32.0],[41.0,42.0],[51.0,52.0]],\"type\":\"LineString\"}" );
   QCOMPARE( exportLine.asJson(), expectedJson );
-  QString expectedJsonPrec3( QStringLiteral( "{\"type\": \"LineString\", \"coordinates\": [ [0.333, 0.667], [1.333, 1.667], [2.333, 2.667]]}" ) );
+  QString expectedJsonPrec3( "{\"coordinates\":[[0.333,0.667],[1.333,1.667],[2.333,2.667]],\"type\":\"LineString\"}" );
   QCOMPARE( exportLineFloat.asJson( 3 ), expectedJsonPrec3 );
 
   //length
@@ -3954,26 +4383,26 @@ void TestQgsGeometry::lineString()
   l35.setPoints( QgsPointSequence() << QgsPoint( 5, 10 ) );
   QVERIFY( l35.closestSegment( QgsPoint( 5, 10 ), p, v ) < 0 );
   l35.setPoints( QgsPointSequence() << QgsPoint( 5, 10 ) << QgsPoint( 10, 10 ) );
-  QGSCOMPARENEAR( l35.closestSegment( QgsPoint( 4, 11 ), p, v, &leftOf ), 2.0, 4 * DBL_EPSILON );
+  QGSCOMPARENEAR( l35.closestSegment( QgsPoint( 4, 11 ), p, v, &leftOf ), 2.0, 4 * std::numeric_limits<double>::epsilon() );
   QCOMPARE( p, QgsPoint( 5, 10 ) );
   QCOMPARE( v, QgsVertexId( 0, 0, 1 ) );
   QCOMPARE( leftOf, -1 );
-  QGSCOMPARENEAR( l35.closestSegment( QgsPoint( 8, 11 ), p, v, &leftOf ), 1.0, 4 * DBL_EPSILON );
+  QGSCOMPARENEAR( l35.closestSegment( QgsPoint( 8, 11 ), p, v, &leftOf ), 1.0, 4 * std::numeric_limits<double>::epsilon() );
   QCOMPARE( p, QgsPoint( 8, 10 ) );
   QCOMPARE( v, QgsVertexId( 0, 0, 1 ) );
   QCOMPARE( leftOf, -1 );
-  QGSCOMPARENEAR( l35.closestSegment( QgsPoint( 8, 9 ), p, v, &leftOf ), 1.0, 4 * DBL_EPSILON );
+  QGSCOMPARENEAR( l35.closestSegment( QgsPoint( 8, 9 ), p, v, &leftOf ), 1.0, 4 * std::numeric_limits<double>::epsilon() );
   QCOMPARE( p, QgsPoint( 8, 10 ) );
   QCOMPARE( v, QgsVertexId( 0, 0, 1 ) );
   QCOMPARE( leftOf, 1 );
-  QGSCOMPARENEAR( l35.closestSegment( QgsPoint( 11, 9 ), p, v, &leftOf ), 2.0, 4 * DBL_EPSILON );
+  QGSCOMPARENEAR( l35.closestSegment( QgsPoint( 11, 9 ), p, v, &leftOf ), 2.0, 4 * std::numeric_limits<double>::epsilon() );
   QCOMPARE( p, QgsPoint( 10, 10 ) );
   QCOMPARE( v, QgsVertexId( 0, 0, 1 ) );
   QCOMPARE( leftOf, 1 );
   l35.setPoints( QgsPointSequence() << QgsPoint( 5, 10 )
                  << QgsPoint( 10, 10 )
                  << QgsPoint( 10, 15 ) );
-  QGSCOMPARENEAR( l35.closestSegment( QgsPoint( 11, 12 ), p, v, &leftOf ), 1.0, 4 * DBL_EPSILON );
+  QGSCOMPARENEAR( l35.closestSegment( QgsPoint( 11, 12 ), p, v, &leftOf ), 1.0, 4 * std::numeric_limits<double>::epsilon() );
   QCOMPARE( p, QgsPoint( 10, 12 ) );
   QCOMPARE( v, QgsVertexId( 0, 0, 2 ) );
   QCOMPARE( leftOf, 1 );
@@ -3982,7 +4411,7 @@ void TestQgsGeometry::lineString()
                  << QgsPoint( 6, 4 )
                  << QgsPoint( 4, 4 )
                  << QgsPoint( 5, 5 ) );
-  QGSCOMPARENEAR( l35.closestSegment( QgsPoint( 2.35, 4 ), p, v, &leftOf ), 2.7225, 4 * DBL_EPSILON );
+  QGSCOMPARENEAR( l35.closestSegment( QgsPoint( 2.35, 4 ), p, v, &leftOf ), 2.7225, 4 * std::numeric_limits<double>::epsilon() );
   QCOMPARE( p, QgsPoint( 4, 4 ) );
   QCOMPARE( v, QgsVertexId( 0, 0, 2 ) );
   QCOMPARE( leftOf, -1 );
@@ -3991,7 +4420,7 @@ void TestQgsGeometry::lineString()
                  << QgsPoint( 4, 4 )
                  << QgsPoint( 6, 4 )
                  << QgsPoint( 5, 5 ) );
-  QGSCOMPARENEAR( l35.closestSegment( QgsPoint( 2.35, 4 ), p, v, &leftOf ), 2.7225, 4 * DBL_EPSILON );
+  QGSCOMPARENEAR( l35.closestSegment( QgsPoint( 2.35, 4 ), p, v, &leftOf ), 2.7225, 4 * std::numeric_limits<double>::epsilon() );
   QCOMPARE( p, QgsPoint( 4, 4 ) );
   QCOMPARE( v, QgsVertexId( 0, 0, 1 ) );
   QCOMPARE( leftOf, 1 );
@@ -4000,7 +4429,7 @@ void TestQgsGeometry::lineString()
                  << QgsPoint( 6, 4 )
                  << QgsPoint( 4, 4 )
                  << QgsPoint( 5, 5 ) );
-  QGSCOMPARENEAR( l35.closestSegment( QgsPoint( 3.5, 2 ), p, v, &leftOf ), 4.250000, 4 * DBL_EPSILON );
+  QGSCOMPARENEAR( l35.closestSegment( QgsPoint( 3.5, 2 ), p, v, &leftOf ), 4.250000, 4 * std::numeric_limits<double>::epsilon() );
   QCOMPARE( p, QgsPoint( 4, 4 ) );
   QCOMPARE( v, QgsVertexId( 0, 0, 2 ) );
   QCOMPARE( leftOf, -1 );
@@ -4009,7 +4438,7 @@ void TestQgsGeometry::lineString()
                  << QgsPoint( 4, 4 )
                  << QgsPoint( 6, 4 )
                  << QgsPoint( 5, 5 ) );
-  QGSCOMPARENEAR( l35.closestSegment( QgsPoint( 3.5, 2 ), p, v, &leftOf ), 4.250000, 4 * DBL_EPSILON );
+  QGSCOMPARENEAR( l35.closestSegment( QgsPoint( 3.5, 2 ), p, v, &leftOf ), 4.250000, 4 * std::numeric_limits<double>::epsilon() );
   QCOMPARE( p, QgsPoint( 4, 4 ) );
   QCOMPARE( v, QgsVertexId( 0, 0, 1 ) );
   QCOMPARE( leftOf, 1 );
@@ -4018,7 +4447,7 @@ void TestQgsGeometry::lineString()
                  << QgsPoint( 1, 4 )
                  << QgsPoint( 2, 2 )
                  << QgsPoint( 1, 1 ) );
-  QGSCOMPARENEAR( l35.closestSegment( QgsPoint( 1, 0 ), p, v, &leftOf ), 1, 4 * DBL_EPSILON );
+  QGSCOMPARENEAR( l35.closestSegment( QgsPoint( 1, 0 ), p, v, &leftOf ), 1, 4 * std::numeric_limits<double>::epsilon() );
   QCOMPARE( p, QgsPoint( 1, 1 ) );
   QCOMPARE( v, QgsVertexId( 0, 0, 1 ) );
   QCOMPARE( leftOf, -1 );
@@ -4027,7 +4456,7 @@ void TestQgsGeometry::lineString()
                  << QgsPoint( 2, 2 )
                  << QgsPoint( 1, 4 )
                  << QgsPoint( 1, 1 ) );
-  QGSCOMPARENEAR( l35.closestSegment( QgsPoint( 1, 0 ), p, v, &leftOf ), 1, 4 * DBL_EPSILON );
+  QGSCOMPARENEAR( l35.closestSegment( QgsPoint( 1, 0 ), p, v, &leftOf ), 1, 4 * std::numeric_limits<double>::epsilon() );
   QCOMPARE( p, QgsPoint( 1, 1 ) );
   QCOMPARE( v, QgsVertexId( 0, 0, 1 ) );
   QCOMPARE( leftOf, 1 );
@@ -4042,13 +4471,13 @@ void TestQgsGeometry::lineString()
   QCOMPARE( area, 1.0 );
   l36.setPoints( QgsPointSequence() << QgsPoint( 5, 10 ) << QgsPoint( 10, 10 ) );
   l36.sumUpArea( area );
-  QGSCOMPARENEAR( area, -24, 4 * DBL_EPSILON );
+  QGSCOMPARENEAR( area, -24, 4 * std::numeric_limits<double>::epsilon() );
   l36.setPoints( QgsPointSequence() << QgsPoint( 0, 0 ) << QgsPoint( 2, 0 ) << QgsPoint( 2, 2 ) );
   l36.sumUpArea( area );
-  QGSCOMPARENEAR( area, -22, 4 * DBL_EPSILON );
+  QGSCOMPARENEAR( area, -22, 4 * std::numeric_limits<double>::epsilon() );
   l36.setPoints( QgsPointSequence() << QgsPoint( 0, 0 ) << QgsPoint( 2, 0 ) << QgsPoint( 2, 2 ) << QgsPoint( 0, 2 ) );
   l36.sumUpArea( area );
-  QGSCOMPARENEAR( area, -18, 4 * DBL_EPSILON );
+  QGSCOMPARENEAR( area, -18, 4 * std::numeric_limits<double>::epsilon() );
 
   //boundingBox - test that bounding box is updated after every modification to the line string
   QgsLineString l37;
@@ -4097,8 +4526,8 @@ void TestQgsGeometry::lineString()
   QGSCOMPARENEAR( l38.vertexAngle( QgsVertexId( 0, 0, 1 ) ), 1.5708, 0.0001 );
   ( void )l38.vertexAngle( QgsVertexId( 0, 0, 2 ) ); //no crash
   l38.setPoints( QgsPointSequence() << QgsPoint( 0, 0 ) << QgsPoint( 0, 1 ) );
-  QGSCOMPARENEAR( l38.vertexAngle( QgsVertexId( 0, 0, 0 ) ), 0.0, 4 * DBL_EPSILON );
-  QGSCOMPARENEAR( l38.vertexAngle( QgsVertexId( 0, 0, 1 ) ), 0.0, 4 * DBL_EPSILON );
+  QGSCOMPARENEAR( l38.vertexAngle( QgsVertexId( 0, 0, 0 ) ), 0.0, 4 * std::numeric_limits<double>::epsilon() );
+  QGSCOMPARENEAR( l38.vertexAngle( QgsVertexId( 0, 0, 1 ) ), 0.0, 4 * std::numeric_limits<double>::epsilon() );
   l38.setPoints( QgsPointSequence() << QgsPoint( 1, 0 ) << QgsPoint( 0, 0 ) );
   QGSCOMPARENEAR( l38.vertexAngle( QgsVertexId( 0, 0, 0 ) ), 4.71239, 0.0001 );
   QGSCOMPARENEAR( l38.vertexAngle( QgsVertexId( 0, 0, 1 ) ), 4.71239, 0.0001 );
@@ -4289,6 +4718,102 @@ void TestQgsGeometry::lineString()
                       << QgsPoint( 11, 12, 4 ) << QgsPoint( 111, 12, 5 ) << QgsPoint( 111.01, 11.99, 6 ) );
   QVERIFY( !nodeLine.removeDuplicateNodes( 0.02, true ) );
   QCOMPARE( nodeLine.asWkt( 2 ), QStringLiteral( "LineStringZ (11 2 1, 11.01 1.99 2, 11.02 2.01 3, 11 12 4, 111 12 5, 111.01 11.99 6)" ) );
+
+  // swap xy
+  QgsLineString swapLine;
+  swapLine.swapXy(); // no crash
+  swapLine.setPoints( QgsPointSequence() << QgsPoint( 11, 2, 3, 4, QgsWkbTypes::PointZM ) << QgsPoint( 11, 12, 13, 14, QgsWkbTypes::PointZM ) << QgsPoint( 111, 12, 23, 24, QgsWkbTypes::PointZM ) );
+  swapLine.swapXy();
+  QCOMPARE( swapLine.asWkt( 2 ), QStringLiteral( "LineStringZM (2 11 3 4, 12 11 13 14, 12 111 23 24)" ) );
+
+  // filter vertex
+  QgsLineString filterLine;
+  auto filter = []( const QgsPoint & point )-> bool
+  {
+    return point.x() < 5;
+  };
+  filterLine.filterVertices( filter ); // no crash
+  filterLine.setPoints( QgsPointSequence()  << QgsPoint( 11, 2, 3, 4, QgsWkbTypes::PointZM ) << QgsPoint( 1, 2, 3, 4, QgsWkbTypes::PointZM ) << QgsPoint( 4, 12, 13, 14, QgsWkbTypes::PointZM ) << QgsPoint( 111, 12, 23, 24, QgsWkbTypes::PointZM ) );
+  filterLine.filterVertices( filter );
+  QCOMPARE( filterLine.asWkt( 2 ), QStringLiteral( "LineStringZM (1 2 3 4, 4 12 13 14)" ) );
+
+  // transform vertex
+  QgsLineString transformLine;
+  auto transform = []( const QgsPoint & point )-> QgsPoint
+  {
+    return QgsPoint( point.x() + 5, point.y() + 6, point.z() + 7, point.m() + 8 );
+  };
+  transformLine.transformVertices( transform ); // no crash
+  transformLine.setPoints( QgsPointSequence()  << QgsPoint( 11, 2, 3, 4, QgsWkbTypes::PointZM ) << QgsPoint( 1, 2, 3, 4, QgsWkbTypes::PointZM ) << QgsPoint( 4, 12, 13, 14, QgsWkbTypes::PointZM ) << QgsPoint( 111, 12, 23, 24, QgsWkbTypes::PointZM ) );
+  transformLine.transformVertices( transform );
+  QCOMPARE( transformLine.asWkt( 2 ), QStringLiteral( "LineStringZM (16 8 10 12, 6 8 10 12, 9 18 20 22, 116 18 30 32)" ) );
+
+  // substring
+  QgsLineString substring;
+  std::unique_ptr< QgsLineString > substringResult( substring.curveSubstring( 1, 2 ) ); // no crash
+  QVERIFY( substringResult.get() );
+  QVERIFY( substringResult->isEmpty() );
+  substring.setPoints( QgsPointSequence() << QgsPoint( 11, 2, 3, 4, QgsWkbTypes::PointZM ) << QgsPoint( 11, 12, 13, 14, QgsWkbTypes::PointZM ) << QgsPoint( 111, 12, 23, 24, QgsWkbTypes::PointZM ) );
+  substringResult.reset( substring.curveSubstring( 0, 0 ) );
+  QCOMPARE( substringResult->asWkt( 2 ), QStringLiteral( "LineStringZM (11 2 3 4, 11 2 3 4)" ) );
+  substringResult.reset( substring.curveSubstring( -1, -0.1 ) );
+  QVERIFY( substringResult->isEmpty() );
+  substringResult.reset( substring.curveSubstring( 100000, 10000 ) );
+  QVERIFY( substringResult->isEmpty() );
+  substringResult.reset( substring.curveSubstring( -1, 1 ) );
+  QCOMPARE( substringResult->asWkt( 2 ), QStringLiteral( "LineStringZM (11 2 3 4, 11 3 4 5)" ) );
+  substringResult.reset( substring.curveSubstring( 1, -1 ) );
+  QCOMPARE( substringResult->asWkt( 2 ), QStringLiteral( "LineStringZM (11 3 4 5, 11 3 4 5)" ) );
+  substringResult.reset( substring.curveSubstring( -1, 10000 ) );
+  QCOMPARE( substringResult->asWkt( 2 ), QStringLiteral( "LineStringZM (11 2 3 4, 11 12 13 14, 111 12 23 24)" ) );
+  substringResult.reset( substring.curveSubstring( 1, 10000 ) );
+  QCOMPARE( substringResult->asWkt( 2 ), QStringLiteral( "LineStringZM (11 3 4 5, 11 12 13 14, 111 12 23 24)" ) );
+  substringResult.reset( substring.curveSubstring( 1, 20 ) );
+  QCOMPARE( substringResult->asWkt( 2 ), QStringLiteral( "LineStringZM (11 3 4 5, 11 12 13 14, 21 12 14 15)" ) );
+  substring.setPoints( QgsPointSequence() << QgsPoint( 11, 2, 3, 0, QgsWkbTypes::PointZ ) << QgsPoint( 11, 12, 13, 0, QgsWkbTypes::PointZ ) << QgsPoint( 111, 12, 23, 0, QgsWkbTypes::PointZ ) );
+  substringResult.reset( substring.curveSubstring( 1, 20 ) );
+  QCOMPARE( substringResult->asWkt( 2 ), QStringLiteral( "LineStringZ (11 3 4, 11 12 13, 21 12 14)" ) );
+  substring.setPoints( QgsPointSequence() << QgsPoint( 11, 2, 0, 3, QgsWkbTypes::PointM ) << QgsPoint( 11, 12, 0, 13, QgsWkbTypes::PointM ) << QgsPoint( 111, 12, 0, 23, QgsWkbTypes::PointM ) );
+  substringResult.reset( substring.curveSubstring( 1, 20 ) );
+  QCOMPARE( substringResult->asWkt( 2 ), QStringLiteral( "LineStringM (11 3 4, 11 12 13, 21 12 14)" ) );
+  substring.setPoints( QgsPointSequence() << QgsPoint( 11, 2 ) << QgsPoint( 11, 12 ) << QgsPoint( 111, 12 ) );
+  substringResult.reset( substring.curveSubstring( 1, 20 ) );
+  QCOMPARE( substringResult->asWkt( 2 ), QStringLiteral( "LineString (11 3, 11 12, 21 12)" ) );
+
+  //interpolate point
+  QgsLineString interpolate;
+  std::unique_ptr< QgsPoint > interpolateResult( interpolate.interpolatePoint( 1 ) ); // no crash
+  QVERIFY( !interpolateResult.get() );
+  interpolate.setPoints( QgsPointSequence() << QgsPoint( 11, 2, 3, 4, QgsWkbTypes::PointZM ) << QgsPoint( 11, 12, 13, 14, QgsWkbTypes::PointZM ) << QgsPoint( 111, 12, 23, 24, QgsWkbTypes::PointZM ) );
+  interpolateResult.reset( interpolate.interpolatePoint( 0 ) );
+  QCOMPARE( interpolateResult->asWkt( 2 ), QStringLiteral( "PointZM (11 2 3 4)" ) );
+  interpolateResult.reset( interpolate.interpolatePoint( -1 ) );
+  QVERIFY( !interpolateResult.get() );
+  interpolateResult.reset( interpolate.interpolatePoint( 100000 ) );
+  QVERIFY( !interpolateResult.get() );
+  interpolateResult.reset( interpolate.interpolatePoint( 1 ) );
+  QCOMPARE( interpolateResult->asWkt( 2 ), QStringLiteral( "PointZM (11 3 4 5)" ) );
+  interpolateResult.reset( interpolate.interpolatePoint( 20 ) );
+  QCOMPARE( interpolateResult->asWkt( 2 ), QStringLiteral( "PointZM (21 12 14 15)" ) );
+  interpolateResult.reset( interpolate.interpolatePoint( 110 ) );
+  QCOMPARE( interpolateResult->asWkt( 2 ), QStringLiteral( "PointZM (111 12 23 24)" ) );
+  interpolate.setPoints( QgsPointSequence() << QgsPoint( 11, 2, 3, 0, QgsWkbTypes::PointZ ) << QgsPoint( 11, 12, 13, 0, QgsWkbTypes::PointZ ) << QgsPoint( 111, 12, 23, 0, QgsWkbTypes::PointZ ) );
+  interpolateResult.reset( interpolate.interpolatePoint( 1 ) );
+  QCOMPARE( interpolateResult->asWkt( 2 ), QStringLiteral( "PointZ (11 3 4)" ) );
+  interpolate.setPoints( QgsPointSequence() << QgsPoint( 11, 2, 0, 3, QgsWkbTypes::PointM ) << QgsPoint( 11, 12, 0, 13, QgsWkbTypes::PointM ) << QgsPoint( 111, 12, 0, 23, QgsWkbTypes::PointM ) );
+  interpolateResult.reset( interpolate.interpolatePoint( 1 ) );
+  QCOMPARE( interpolateResult->asWkt( 2 ), QStringLiteral( "PointM (11 3 4)" ) );
+  interpolate.setPoints( QgsPointSequence() << QgsPoint( 11, 2 ) << QgsPoint( 11, 12 ) << QgsPoint( 111, 12 ) );
+  interpolateResult.reset( interpolate.interpolatePoint( 1 ) );
+  QCOMPARE( interpolateResult->asWkt( 2 ), QStringLiteral( "Point (11 3)" ) );
+
+  // orientation
+  QgsLineString orientation;
+  ( void )orientation.orientation(); // no crash
+  orientation.setPoints( QgsPointSequence() << QgsPoint( 0, 0 ) << QgsPoint( 0, 1 ) << QgsPoint( 1, 1 ) << QgsPoint( 1, 0 ) << QgsPoint( 0, 0 ) );
+  QCOMPARE( orientation.orientation(), QgsCurve::Clockwise );
+  orientation.setPoints( QgsPointSequence() << QgsPoint( 0, 0 ) << QgsPoint( 1, 0 ) << QgsPoint( 1, 1 ) << QgsPoint( 0, 1 ) << QgsPoint( 0, 0 ) );
+  QCOMPARE( orientation.orientation(), QgsCurve::CounterClockwise );
 }
 
 void TestQgsGeometry::polygon()
@@ -4315,7 +4840,7 @@ void TestQgsGeometry::polygon()
   //set exterior ring
 
   //try with no ring
-  QgsLineString *ext = 0;
+  QgsLineString *ext = nullptr;
   p1.setExteriorRing( ext );
   QVERIFY( p1.isEmpty() );
   QCOMPARE( p1.numInteriorRings(), 0 );
@@ -4439,7 +4964,7 @@ void TestQgsGeometry::polygon()
   QCOMPARE( p6.numInteriorRings(), 0 );
   QVERIFY( !p6.interiorRing( -1 ) );
   QVERIFY( !p6.interiorRing( 0 ) );
-  p6.addInteriorRing( 0 );
+  p6.addInteriorRing( nullptr );
   QCOMPARE( p6.numInteriorRings(), 0 );
   QgsLineString *ring = new QgsLineString();
   ring->setPoints( QgsPointSequence() << QgsPoint( 1, 1 ) << QgsPoint( 1, 9 ) << QgsPoint( 9, 9 )
@@ -5010,7 +5535,7 @@ void TestQgsGeometry::polygon()
   QGSCOMPAREGML( elemToString( QgsPolygon().asGml3( doc ) ), expectedGML3empty );
 
   // as JSON
-  QString expectedSimpleJson( QStringLiteral( "{\"type\": \"Polygon\", \"coordinates\": [[ [0, 0], [0, 10], [10, 10], [10, 0], [0, 0]]] }" ) );
+  QString expectedSimpleJson( QStringLiteral( "{\"coordinates\":[[[0.0,0.0],[0.0,10.0],[10.0,10.0],[10.0,0.0],[0.0,0.0]]],\"type\":\"Polygon\"}" ) );
   QCOMPARE( exportPolygon.asJson(), expectedSimpleJson );
 
   ring = new QgsLineString();
@@ -5019,7 +5544,7 @@ void TestQgsGeometry::polygon()
                    << QgsPoint( QgsWkbTypes::Point, 9, 1 ) << QgsPoint( QgsWkbTypes::Point, 1, 1 ) );
   exportPolygon.addInteriorRing( ring );
 
-  QString expectedJson( QStringLiteral( "{\"type\": \"Polygon\", \"coordinates\": [[ [0, 0], [0, 10], [10, 10], [10, 0], [0, 0]], [ [1, 1], [1, 9], [9, 9], [9, 1], [1, 1]]] }" ) );
+  QString expectedJson( QStringLiteral( "{\"coordinates\":[[[0.0,0.0],[0.0,10.0],[10.0,10.0],[10.0,0.0],[0.0,0.0]],[[1.0,1.0],[1.0,9.0],[9.0,9.0],[9.0,1.0],[1.0,1.0]]],\"type\":\"Polygon\"}" ) );
   QCOMPARE( exportPolygon.asJson(), expectedJson );
 
   QgsPolygon exportPolygonFloat;
@@ -5034,7 +5559,7 @@ void TestQgsGeometry::polygon()
                    << QgsPoint( QgsWkbTypes::Point, 4 / 3.0, 2 / 3.0 ) << QgsPoint( QgsWkbTypes::Point, 2 / 3.0, 2 / 3.0 ) );
   exportPolygonFloat.addInteriorRing( ring );
 
-  QString expectedJsonPrec3( QStringLiteral( "{\"type\": \"Polygon\", \"coordinates\": [[ [1.111, 1.111], [1.111, 11.111], [11.111, 11.111], [11.111, 1.111], [1.111, 1.111]], [ [0.667, 0.667], [0.667, 1.333], [1.333, 1.333], [1.333, 0.667], [0.667, 0.667]]] }" ) );
+  QString expectedJsonPrec3( QStringLiteral( "{\"coordinates\":[[[1.111,1.111],[1.111,11.111],[11.111,11.111],[11.111,1.111],[1.111,1.111]],[[0.667,0.667],[0.667,1.333],[1.333,1.333],[1.333,0.667],[0.667,0.667]]],\"type\":\"Polygon\"}" ) );
   QCOMPARE( exportPolygonFloat.asJson( 3 ), expectedJsonPrec3 );
 
   // as GML2
@@ -6036,6 +6561,92 @@ void TestQgsGeometry::polygon()
   nodePolygon.addInteriorRing( nodeLine.clone() );
   QVERIFY( nodePolygon.removeDuplicateNodes( 0.02 ) );
   QCOMPARE( nodePolygon.asWkt( 2 ), QStringLiteral( "Polygon ((11 2, 11 12, 11 22, 11 2),(11 2, 11.01 2.01, 11 2.01, 11 2))" ) );
+
+  // swap XY
+  QgsPolygon swapPolygon;
+  swapPolygon.swapXy(); //no crash
+  QgsLineString swapLine;
+  swapLine.setPoints( QgsPointSequence() << QgsPoint( 11, 2, 3, 4, QgsWkbTypes::PointZM ) << QgsPoint( 11, 12, 13, 14, QgsWkbTypes::PointZM ) << QgsPoint( 11, 22, 23, 24, QgsWkbTypes::PointZM ) << QgsPoint( 11, 2, 3, 4, QgsWkbTypes::PointZM ) );
+  swapPolygon.setExteriorRing( swapLine.clone() );
+  swapPolygon.swapXy();
+  QCOMPARE( swapPolygon.asWkt(), QStringLiteral( "PolygonZM ((2 11 3 4, 12 11 13 14, 22 11 23 24, 2 11 3 4))" ) );
+  swapLine.setPoints( QgsPointSequence() << QgsPoint( 1, 2, 5, 6, QgsWkbTypes::PointZM ) << QgsPoint( 11.01, 2.01, 15, 16, QgsWkbTypes::PointZM ) << QgsPoint( 11, 2.01, 25, 26, QgsWkbTypes::PointZM ) << QgsPoint( 11, 2, 5, 6, QgsWkbTypes::PointZM ) );
+  swapPolygon.addInteriorRing( swapLine.clone() );
+  swapPolygon.swapXy();
+  QCOMPARE( swapPolygon.asWkt( 2 ), QStringLiteral( "PolygonZM ((11 2 3 4, 11 12 13 14, 11 22 23 24, 11 2 3 4),(2 1 5 6, 2.01 11.01 15 16, 2.01 11 25 26, 2 11 5 6, 2 1 5 6))" ) );
+
+  // filter vertex
+  QgsPolygon filterPolygon;
+  auto filter = []( const QgsPoint & point )-> bool
+  {
+    return point.x() > 5;
+  };
+  filterPolygon.filterVertices( filter ); // no crash
+  QgsLineString filterPolygonRing;
+  filterPolygonRing.setPoints( QgsPointSequence() << QgsPoint( 11, 2, 3, 4, QgsWkbTypes::PointZM ) << QgsPoint( 4, 12, 13, 14, QgsWkbTypes::PointZM ) << QgsPoint( 11, 12, 13, 14, QgsWkbTypes::PointZM ) << QgsPoint( 11, 22, 23, 24, QgsWkbTypes::PointZM ) << QgsPoint( 11, 2, 3, 4, QgsWkbTypes::PointZM ) );
+  filterPolygon.setExteriorRing( filterPolygonRing.clone() );
+  filterPolygon.filterVertices( filter );
+  QCOMPARE( filterPolygon.asWkt(), QStringLiteral( "PolygonZM ((11 2 3 4, 11 12 13 14, 11 22 23 24, 11 2 3 4))" ) );
+  filterPolygonRing.setPoints( QgsPointSequence() << QgsPoint( 10, 2, 5, 6, QgsWkbTypes::PointZM ) << QgsPoint( 4, 12, 13, 14, QgsWkbTypes::PointZM ) << QgsPoint( 11.01, 2.01, 15, 16, QgsWkbTypes::PointZM ) << QgsPoint( 11, 2.01, 25, 26, QgsWkbTypes::PointZM ) << QgsPoint( 11, 2, 5, 6, QgsWkbTypes::PointZM ) << QgsPoint( 10, 2, 5, 6, QgsWkbTypes::PointZM ) );
+  filterPolygon.addInteriorRing( filterPolygonRing.clone() );
+  filterPolygonRing.setPoints( QgsPointSequence() << QgsPoint( 1, 2, 5, 6, QgsWkbTypes::PointZM ) << QgsPoint( 11.01, 2.01, 15, 16, QgsWkbTypes::PointZM ) << QgsPoint( 11, 2.01, 25, 26, QgsWkbTypes::PointZM ) << QgsPoint( 1, 2, 5, 6, QgsWkbTypes::PointZM ) );
+  filterPolygon.addInteriorRing( filterPolygonRing.clone() );
+  filterPolygon.filterVertices( filter );
+  QCOMPARE( filterPolygon.asWkt( 2 ), QStringLiteral( "PolygonZM ((11 2 3 4, 11 12 13 14, 11 22 23 24, 11 2 3 4),(10 2 5 6, 11.01 2.01 15 16, 11 2.01 25 26, 11 2 5 6, 10 2 5 6),(11.01 2.01 15 16, 11 2.01 25 26))" ) );
+
+  // transform vertex
+  QgsPolygon transformPolygon;
+  auto transform = []( const QgsPoint & point )-> QgsPoint
+  {
+    return QgsPoint( point.x() + 2, point.y() + 3, point.z() + 4, point.m() + 5 );
+  };
+  transformPolygon.transformVertices( transform ); // no crash
+  QgsLineString transformPolygonRing;
+  transformPolygonRing.setPoints( QgsPointSequence() << QgsPoint( 11, 2, 3, 4, QgsWkbTypes::PointZM ) << QgsPoint( 4, 12, 13, 14, QgsWkbTypes::PointZM ) << QgsPoint( 11, 12, 13, 14, QgsWkbTypes::PointZM ) << QgsPoint( 11, 22, 23, 24, QgsWkbTypes::PointZM ) << QgsPoint( 11, 2, 3, 4, QgsWkbTypes::PointZM ) );
+  transformPolygon.setExteriorRing( transformPolygonRing.clone() );
+  transformPolygon.transformVertices( transform );
+  QCOMPARE( transformPolygon.asWkt(), QStringLiteral( "PolygonZM ((13 5 7 9, 6 15 17 19, 13 15 17 19, 13 25 27 29, 13 5 7 9))" ) );
+  transformPolygonRing.setPoints( QgsPointSequence() << QgsPoint( 10, 2, 5, 6, QgsWkbTypes::PointZM ) << QgsPoint( 4, 12, 13, 14, QgsWkbTypes::PointZM ) << QgsPoint( 11.01, 2.01, 15, 16, QgsWkbTypes::PointZM ) << QgsPoint( 11, 2.01, 25, 26, QgsWkbTypes::PointZM ) << QgsPoint( 11, 2, 5, 6, QgsWkbTypes::PointZM ) << QgsPoint( 10, 2, 5, 6, QgsWkbTypes::PointZM ) );
+  transformPolygon.addInteriorRing( transformPolygonRing.clone() );
+  transformPolygonRing.setPoints( QgsPointSequence() << QgsPoint( 1, 2, 5, 6, QgsWkbTypes::PointZM ) << QgsPoint( 11.01, 2.01, 15, 16, QgsWkbTypes::PointZM ) << QgsPoint( 11, 2.01, 25, 26, QgsWkbTypes::PointZM ) << QgsPoint( 1, 2, 5, 6, QgsWkbTypes::PointZM ) );
+  transformPolygon.addInteriorRing( transformPolygonRing.clone() );
+  transformPolygon.transformVertices( transform );
+  QCOMPARE( transformPolygon.asWkt( 2 ), QStringLiteral( "PolygonZM ((15 8 11 14, 8 18 21 24, 15 18 21 24, 15 28 31 34, 15 8 11 14),(12 5 9 11, 6 15 17 19, 13.01 5.01 19 21, 13 5.01 29 31, 13 5 9 11, 12 5 9 11),(3 5 9 11, 13.01 5.01 19 21, 13 5.01 29 31, 3 5 9 11))" ) );
+
+
+  // remove invalid rings
+  QgsPolygon invalidRingPolygon;
+  invalidRingPolygon.removeInvalidRings(); // no crash
+  QgsLineString removeInvalidPolygonRing;
+  removeInvalidPolygonRing.setPoints( QgsPointSequence() << QgsPoint( 11, 2, 3, 4, QgsWkbTypes::PointZM ) << QgsPoint( 4, 12, 13, 14, QgsWkbTypes::PointZM ) << QgsPoint( 11, 12, 13, 14, QgsWkbTypes::PointZM ) << QgsPoint( 11, 22, 23, 24, QgsWkbTypes::PointZM ) << QgsPoint( 11, 2, 3, 4, QgsWkbTypes::PointZM ) );
+  invalidRingPolygon.setExteriorRing( removeInvalidPolygonRing.clone() );
+  invalidRingPolygon.removeInvalidRings();
+  QCOMPARE( invalidRingPolygon.asWkt(), QStringLiteral( "PolygonZM ((11 2 3 4, 4 12 13 14, 11 12 13 14, 11 22 23 24, 11 2 3 4))" ) );
+  removeInvalidPolygonRing.setPoints( QgsPointSequence() << QgsPoint( 10, 2, 5, 6, QgsWkbTypes::PointZM )  << QgsPoint( 11, 2, 5, 6, QgsWkbTypes::PointZM ) << QgsPoint( 10, 2, 5, 6, QgsWkbTypes::PointZM ) );
+  invalidRingPolygon.addInteriorRing( removeInvalidPolygonRing.clone() );
+  removeInvalidPolygonRing.setPoints( QgsPointSequence() << QgsPoint( 1, 2, 5, 6, QgsWkbTypes::PointZM ) << QgsPoint( 11.01, 2.01, 15, 16, QgsWkbTypes::PointZM ) << QgsPoint( 11, 2.01, 25, 26, QgsWkbTypes::PointZM ) << QgsPoint( 1, 2, 5, 6, QgsWkbTypes::PointZM ) );
+  invalidRingPolygon.addInteriorRing( removeInvalidPolygonRing.clone() );
+  invalidRingPolygon.removeInvalidRings();
+  QCOMPARE( invalidRingPolygon.asWkt( 2 ), QStringLiteral( "PolygonZM ((11 2 3 4, 4 12 13 14, 11 12 13 14, 11 22 23 24, 11 2 3 4),(1 2 5 6, 11.01 2.01 15 16, 11 2.01 25 26, 1 2 5 6))" ) );
+
+  // force RHR
+  QgsPolygon rhr;
+  rhr.forceRHR(); // no crash
+  rhr.fromWkt( QStringLiteral( "PolygonZM ((0 0 3 4, 0 100 13 14, 100 100 13 14, 100 0 23 24, 0 0 3 4))" ) );
+  rhr.forceRHR();
+  QCOMPARE( rhr.asWkt( 2 ), QStringLiteral( "PolygonZM ((0 0 3 4, 0 100 13 14, 100 100 13 14, 100 0 23 24, 0 0 3 4))" ) );
+  rhr.fromWkt( QStringLiteral( "PolygonZM ((0 0 3 4, 100 0 13 14, 100 100 23 24, 0 100 23 24, 0 0 3 4))" ) );
+  rhr.forceRHR();
+  QCOMPARE( rhr.asWkt( 2 ), QStringLiteral( "PolygonZM ((0 0 3 4, 0 100 23 24, 100 100 23 24, 100 0 13 14, 0 0 3 4))" ) );
+  rhr.fromWkt( QStringLiteral( "PolygonZM ((0 0 3 4, 0 100 13 14, 100 100 13 14, 100 0 23 24, 0 0 3 4),(10 10 1 2, 20 10 3 4, 20 20 4, 5, 10 20 6 8, 10 10 1 2))" ) );
+  rhr.forceRHR();
+  QCOMPARE( rhr.asWkt( 2 ), QStringLiteral( "PolygonZM ((0 0 3 4, 0 100 13 14, 100 100 13 14, 100 0 23 24, 0 0 3 4),(10 10 1 2, 20 10 3 4, 10 20 6 8, 10 10 1 2))" ) );
+  rhr.fromWkt( QStringLiteral( "PolygonZM ((0 0 3 4, 100 0 13 14, 100 100 13 14, 0 100 23 24, 0 0 3 4),(10 10 1 2, 20 10 3 4, 20 20 4, 5, 10 20 6 8, 10 10 1 2))" ) );
+  rhr.forceRHR();
+  QCOMPARE( rhr.asWkt( 2 ), QStringLiteral( "PolygonZM ((0 0 3 4, 0 100 23 24, 100 100 13 14, 100 0 13 14, 0 0 3 4),(10 10 1 2, 20 10 3 4, 10 20 6 8, 10 10 1 2))" ) );
+  rhr.fromWkt( QStringLiteral( "PolygonZM ((0 0 3 4, 0 100 13 14, 100 100 13 14, 100 0 23 24, 0 0 3 4),(10 10 1 2, 10 20 3 4, 20 10 6 8, 10 10 1 2))" ) );
+  rhr.forceRHR();
+  QCOMPARE( rhr.asWkt( 2 ), QStringLiteral( "PolygonZM ((0 0 3 4, 0 100 13 14, 100 100 13 14, 100 0 23 24, 0 0 3 4),(10 10 1 2, 20 10 6 8, 10 20 3 4, 10 10 1 2))" ) );
 }
 
 void TestQgsGeometry::triangle()
@@ -7162,6 +7773,284 @@ void TestQgsGeometry::circle()
   QVERIFY( QgsCircle( QgsPoint( 0, 0 ), 5 ).contains( pc ) );
   pc = QgsPoint( 6, 1 );
   QVERIFY( !QgsCircle( QgsPoint( 0, 0 ), 5 ).contains( pc ) );
+
+  // intersections
+  QgsCircle ci1( QgsPoint( 0, 0 ), 1 );
+  QgsPoint int1;
+  QgsPoint int2;
+  QCOMPARE( ci1.intersections( QgsCircle( QgsPoint( 2, 0 ), 0.5 ), int1, int2 ), 0 );
+  QCOMPARE( ci1.intersections( QgsCircle( QgsPoint( 0.5, 0.1 ), 0.2 ), int1, int2 ), 0 );
+  // one intersection
+  QCOMPARE( ci1.intersections( QgsCircle( QgsPoint( 3, 0 ), 2 ), int1, int2 ), 1 );
+  QCOMPARE( int1, QgsPoint( 1, 0 ) );
+  QCOMPARE( int2, QgsPoint( 1, 0 ) );
+  // two intersections
+  ci1 = QgsCircle( QgsPoint( 5, 3 ), 2 );
+  QCOMPARE( ci1.intersections( QgsCircle( QgsPoint( 7, -1 ), 4 ), int1, int2 ), 2 );
+  QCOMPARE( int1.wkbType(), QgsWkbTypes::Point );
+  QGSCOMPARENEAR( int1.x(), 3.8, 0.001 );
+  QGSCOMPARENEAR( int1.y(), 1.4, 0.001 );
+  QCOMPARE( int2.wkbType(), QgsWkbTypes::Point );
+  QGSCOMPARENEAR( int2.x(), 7.0, 0.001 );
+  QGSCOMPARENEAR( int2.y(), 3.0, 0.001 );
+  // with z
+  ci1 = QgsCircle( QgsPoint( 5, 3, 11 ), 2 );
+  QCOMPARE( ci1.intersections( QgsCircle( QgsPoint( 7, -1, 5 ), 4 ), int1, int2, true ), 0 );
+  QCOMPARE( ci1.intersections( QgsCircle( QgsPoint( 7, -1, 11 ), 4 ), int1, int2, true ), 2 );
+  QCOMPARE( int1.wkbType(), QgsWkbTypes::PointZ );
+  QGSCOMPARENEAR( int1.x(), 3.8, 0.001 );
+  QGSCOMPARENEAR( int1.y(), 1.4, 0.001 );
+  QGSCOMPARENEAR( int1.z(), 11.0, 0.001 );
+  QCOMPARE( int2.wkbType(), QgsWkbTypes::PointZ );
+  QGSCOMPARENEAR( int2.x(), 7.0, 0.001 );
+  QGSCOMPARENEAR( int2.y(), 3.0, 0.001 );
+  QGSCOMPARENEAR( int2.z(), 11.0, 0.001 );
+
+  // tangent to point
+  QgsPointXY t1;
+  QgsPointXY t2;
+  QVERIFY( !QgsCircle( QgsPoint( 1, 2 ), 4 ).tangentToPoint( QgsPointXY( 1, 2 ), t1, t2 ) );
+  QVERIFY( QgsCircle( QgsPoint( 1, 2 ), 4 ).tangentToPoint( QgsPointXY( 8, 4 ), t1, t2 ) );
+  QGSCOMPARENEAR( t1.x(), 4.03, 0.01 );
+  QGSCOMPARENEAR( t1.y(), -0.61, 0.01 );
+  QGSCOMPARENEAR( t2.x(), 2.2, 0.01 );
+  QGSCOMPARENEAR( t2.y(), 5.82, 0.01 );
+
+  // two outer circle tangents
+  QgsPointXY l1p1, l1p2, l2p1, l2p2;
+  QCOMPARE( QgsCircle( QgsPoint( 1, 2 ), 4 ).outerTangents( QgsCircle( QgsPoint( 2, 3 ), 1 ), l1p1, l1p2, l2p1, l2p2 ), 0 );
+  QCOMPARE( QgsCircle( QgsPoint( 1, 2 ), 1 ).outerTangents( QgsCircle( QgsPoint( 10, 3 ), 4 ), l1p1, l1p2, l2p1, l2p2 ), 2 );
+  QGSCOMPARENEAR( l1p1.x(), 0.566, 0.01 );
+  QGSCOMPARENEAR( l1p1.y(), 2.901, 0.01 );
+  QGSCOMPARENEAR( l1p2.x(), 8.266, 0.01 );
+  QGSCOMPARENEAR( l1p2.y(), 6.604, 0.01 );
+  QGSCOMPARENEAR( l2p1.x(), 0.7749, 0.01 );
+  QGSCOMPARENEAR( l2p1.y(), 1.025, 0.01 );
+  QGSCOMPARENEAR( l2p2.x(), 9.099, 0.01 );
+  QGSCOMPARENEAR( l2p2.y(), -0.897, 0.01 );
+
+  // two inner circle tangents
+  QCOMPARE( QgsCircle( QgsPoint( 1, 2 ), 4 ).innerTangents( QgsCircle( QgsPoint( 2, 3 ), 1 ), l1p1, l1p2, l2p1, l2p2 ), 0 );
+  QCOMPARE( QgsCircle( QgsPoint( 0, 0 ), 4 ).innerTangents( QgsCircle( QgsPoint( 8, 0 ), 5 ), l1p1, l1p2, l2p1, l2p2 ), 0 );
+  QCOMPARE( QgsCircle( QgsPoint( 0, 0 ), 4 ).innerTangents( QgsCircle( QgsPoint( 8, 0 ), 4 ), l1p1, l1p2, l2p1, l2p2 ), 0 );
+  QCOMPARE( QgsCircle( QgsPoint( 1, 2 ), 1 ).innerTangents( QgsCircle( QgsPoint( 10, 3 ), 4 ), l1p1, l1p2, l2p1, l2p2 ), 2 );
+  QGSCOMPARENEAR( l1p1.x(), 7.437, 0.01 );
+  QGSCOMPARENEAR( l1p1.y(), 6.071, 0.01 );
+  QGSCOMPARENEAR( l1p2.x(), 1.641, 0.01 );
+  QGSCOMPARENEAR( l1p2.y(), 1.232, 0.01 );
+  QGSCOMPARENEAR( l2p1.x(), 8.173, 0.01 );
+  QGSCOMPARENEAR( l2p1.y(), -0.558, 0.01 );
+  QGSCOMPARENEAR( l2p2.x(), 1.457, 0.01 );
+  QGSCOMPARENEAR( l2p2.y(), 2.89, 0.01 );
+}
+
+void TestQgsGeometry::quadrilateral()
+{
+
+  // default
+  QgsQuadrilateral quad_init;
+  QgsPointSequence pts = quad_init.points();
+  QCOMPARE( pts.at( 0 ), QgsPoint() );
+  QCOMPARE( pts.at( 1 ), QgsPoint() );
+  QCOMPARE( pts.at( 2 ), QgsPoint() );
+  QCOMPARE( pts.at( 3 ), QgsPoint() );
+  QVERIFY( !quad_init.isValid() );
+
+  // colinear
+  QgsQuadrilateral quad4points_col( QgsPoint( 0, 0 ), QgsPoint( 0, 5 ), QgsPoint( 0, 10 ), QgsPoint( 10, 10 ) );
+  QVERIFY( !quad4points_col.isValid() );
+  pts = quad4points_col.points();
+  QCOMPARE( pts.at( 0 ), QgsPoint() );
+  QCOMPARE( pts.at( 1 ), QgsPoint() );
+  QCOMPARE( pts.at( 2 ), QgsPoint() );
+  QCOMPARE( pts.at( 3 ), QgsPoint() );
+
+
+  QgsQuadrilateral quad4pointsXY_col( QgsPoint( 0, 0 ), QgsPoint( 0, 5 ), QgsPoint( 0, 10 ), QgsPoint( 10, 10 ) );
+  QVERIFY( !quad4pointsXY_col.isValid() );
+  pts = quad4pointsXY_col.points();
+  QCOMPARE( pts.at( 0 ), QgsPoint() );
+  QCOMPARE( pts.at( 1 ), QgsPoint() );
+  QCOMPARE( pts.at( 2 ), QgsPoint() );
+  QCOMPARE( pts.at( 3 ), QgsPoint() );
+
+
+  // anti parallelogram
+  QgsQuadrilateral quad4points_anti( QgsPoint( 0, 0 ), QgsPoint( 5, 5 ), QgsPoint( 5, 0 ), QgsPoint( 0, 5 ) );
+  QVERIFY( !quad4points_anti.isValid() );
+  pts = quad4points_anti.points();
+  QCOMPARE( pts.at( 0 ), QgsPoint() );
+  QCOMPARE( pts.at( 1 ), QgsPoint() );
+  QCOMPARE( pts.at( 2 ), QgsPoint() );
+  QCOMPARE( pts.at( 3 ), QgsPoint() );
+
+
+  QgsQuadrilateral quad4pointsXY_anti( QgsPoint( 0, 0 ), QgsPoint( 5, 5 ), QgsPoint( 5, 0 ), QgsPoint( 0, 5 ) );
+  QVERIFY( !quad4pointsXY_anti.isValid() );
+  pts = quad4pointsXY_anti.points();
+  QCOMPARE( pts.at( 0 ), QgsPoint() );
+  QCOMPARE( pts.at( 1 ), QgsPoint() );
+  QCOMPARE( pts.at( 2 ), QgsPoint() );
+  QCOMPARE( pts.at( 3 ), QgsPoint() );
+
+  // valid
+  QgsQuadrilateral quad4points_valid( QgsPoint( 0, 0 ), QgsPoint( 0, 5 ), QgsPoint( 5, 5 ), QgsPoint( 5, 0 ) );
+  QVERIFY( quad4points_valid.isValid() );
+  pts = quad4points_valid.points();
+  QCOMPARE( pts.at( 0 ), QgsPoint( 0, 0 ) );
+  QCOMPARE( pts.at( 1 ), QgsPoint( 0, 5 ) );
+  QCOMPARE( pts.at( 2 ), QgsPoint( 5, 5 ) );
+  QCOMPARE( pts.at( 3 ), QgsPoint( 5, 0 ) );
+
+  // setPoint
+  QVERIFY( quad4points_valid.setPoint( QgsPoint( -1, -1 ), QgsQuadrilateral::Point1 ) );
+  QVERIFY( quad4points_valid.setPoint( QgsPoint( -1, 6 ), QgsQuadrilateral::Point2 ) );
+  QVERIFY( quad4points_valid.setPoint( QgsPoint( 6, 6 ), QgsQuadrilateral::Point3 ) );
+  QVERIFY( quad4points_valid.setPoint( QgsPoint( 6, -1 ), QgsQuadrilateral::Point4 ) );
+  QVERIFY( quad4points_valid.isValid() );
+  pts = quad4points_valid.points();
+  QCOMPARE( pts.at( 0 ), QgsPoint( -1, -1 ) );
+  QCOMPARE( pts.at( 1 ), QgsPoint( -1, 6 ) );
+  QCOMPARE( pts.at( 2 ), QgsPoint( 6, 6 ) );
+  QCOMPARE( pts.at( 3 ), QgsPoint( 6, -1 ) );
+
+  // invalid: must have same type
+  QVERIFY( !quad4points_valid.setPoint( QgsPoint( -1, -1, 10 ), QgsQuadrilateral::Point1 ) );
+  QVERIFY( !quad4points_valid.setPoint( QgsPoint( -1, 6, 10 ), QgsQuadrilateral::Point2 ) );
+  QVERIFY( !quad4points_valid.setPoint( QgsPoint( 6, 6, 10 ), QgsQuadrilateral::Point3 ) );
+  QVERIFY( !quad4points_valid.setPoint( QgsPoint( 6, -1, 10 ), QgsQuadrilateral::Point4 ) );
+
+  // invalid self-intersection
+  QVERIFY( !quad4points_valid.setPoint( QgsPoint( 7, 3 ), QgsQuadrilateral::Point1 ) );
+  QVERIFY( !quad4points_valid.setPoint( QgsPoint( 3, 7 ), QgsQuadrilateral::Point1 ) );
+  QVERIFY( !quad4points_valid.setPoint( QgsPoint( 3, -7 ), QgsQuadrilateral::Point2 ) );
+  QVERIFY( !quad4points_valid.setPoint( QgsPoint( 7, 3 ), QgsQuadrilateral::Point2 ) );
+  QVERIFY( !quad4points_valid.setPoint( QgsPoint( 3, -7 ), QgsQuadrilateral::Point3 ) );
+  QVERIFY( !quad4points_valid.setPoint( QgsPoint( -7, 3 ), QgsQuadrilateral::Point3 ) );
+  QVERIFY( !quad4points_valid.setPoint( QgsPoint( 3, 7 ), QgsQuadrilateral::Point4 ) );
+  QVERIFY( !quad4points_valid.setPoint( QgsPoint( -7, 3 ), QgsQuadrilateral::Point4 ) );
+
+  // invalid colinear
+  QVERIFY( !quad4points_valid.setPoint( QgsPoint( 6, -2 ), QgsQuadrilateral::Point1 ) );
+  QVERIFY( !quad4points_valid.setPoint( QgsPoint( -2, 6 ), QgsQuadrilateral::Point1 ) );
+  QVERIFY( !quad4points_valid.setPoint( QgsPoint( 6, 7 ), QgsQuadrilateral::Point2 ) );
+  QVERIFY( !quad4points_valid.setPoint( QgsPoint( -2, -1 ), QgsQuadrilateral::Point2 ) );
+  QVERIFY( !quad4points_valid.setPoint( QgsPoint( 7, -1 ), QgsQuadrilateral::Point3 ) );
+  QVERIFY( !quad4points_valid.setPoint( QgsPoint( -1, 7 ), QgsQuadrilateral::Point3 ) );
+  QVERIFY( !quad4points_valid.setPoint( QgsPoint( -1, -2 ), QgsQuadrilateral::Point4 ) );
+  QVERIFY( !quad4points_valid.setPoint( QgsPoint( 7, 6 ), QgsQuadrilateral::Point4 ) );
+
+//equals
+  QVERIFY( QgsQuadrilateral( QgsPoint( 0, 0 ), QgsPoint( 0, 5 ), QgsPoint( 5, 5 ), QgsPoint( 5, 0 ) ) !=
+           QgsQuadrilateral( QgsPoint( 0.01, 0.01 ), QgsPoint( 0.01, 5.01 ), QgsPoint( 5.01, 5.01 ), QgsPoint( 5.01, 0.01 ) ) );
+  QVERIFY( QgsQuadrilateral( QgsPoint( 0, 0 ), QgsPoint( 0, 5 ), QgsPoint( 5, 5 ), QgsPoint( 5, 0 ) ).equals(
+             QgsQuadrilateral( QgsPoint( 0.01, 0.01 ), QgsPoint( 0.01, 5.01 ), QgsPoint( 5.01, 5.01 ), QgsPoint( 5.01, 0.01 ) ), 1e-1 ) );
+  QVERIFY( QgsQuadrilateral( QgsPoint( 0, 0, 0 ), QgsPoint( 0, 5, -0.02 ), QgsPoint( 5, 5, 0 ), QgsPoint( 5, 0, -0.02 ) ).equals(
+             QgsQuadrilateral( QgsPoint( 0.01, 0.01, 0.01 ), QgsPoint( 0.01, 5.01, 0 ), QgsPoint( 5.01, 5.01, -0.01 ), QgsPoint( 5.01, 0.01, 0.04 ) ), 1e-1 ) );
+
+// rectangleFromExtent
+  QgsQuadrilateral rectangleFromExtent( QgsPoint( 0, 0 ), QgsPoint( 0, 5 ), QgsPoint( 5, 5 ), QgsPoint( 5, 0 ) );
+  QgsQuadrilateral rectangleFromExtentZ( QgsPoint( 0, 0, 10 ), QgsPoint( 0, 5, 10 ), QgsPoint( 5, 5, 10 ), QgsPoint( 5, 0, 10 ) );
+  QCOMPARE( QgsQuadrilateral::rectangleFromExtent( QgsPoint( 0, 0 ), QgsPoint( 0, 0 ) ), QgsQuadrilateral() );
+  QCOMPARE( QgsQuadrilateral::rectangleFromExtent( QgsPoint( 0, 0 ), QgsPoint( 0, 10 ) ), QgsQuadrilateral() );
+  QCOMPARE( QgsQuadrilateral::rectangleFromExtent( QgsPoint( 0, 0 ), QgsPoint( 5, 5 ) ), rectangleFromExtent );
+  QCOMPARE( QgsQuadrilateral::rectangleFromExtent( QgsPoint( 5, 5 ), QgsPoint( 0, 0 ) ), rectangleFromExtent );
+  QCOMPARE( QgsQuadrilateral::rectangleFromExtent( QgsPoint( 0, 0, 10 ), QgsPoint( 5, 5 ) ), rectangleFromExtentZ );
+  QVERIFY( QgsQuadrilateral::rectangleFromExtent( QgsPoint( 0, 0 ), QgsPoint( 5, 5, 10 ) ) != rectangleFromExtentZ );
+  QCOMPARE( QgsQuadrilateral::rectangleFromExtent( QgsPoint( 0, 0 ), QgsPoint( 5, 5, 10 ) ), rectangleFromExtent );
+
+// squareFromDiagonal
+  QgsQuadrilateral squareFromDiagonal( QgsPoint( 0, 0 ), QgsPoint( 0, 5 ), QgsPoint( 5, 5 ), QgsPoint( 5, 0 ) );
+  QgsQuadrilateral squareFromDiagonalZ( QgsPoint( 0, 0, 10 ), QgsPoint( 0, 5, 10 ), QgsPoint( 5, 5, 10 ), QgsPoint( 5, 0, 10 ) );
+  QgsQuadrilateral squareFromDiagonalInv( QgsPoint( 5, 5 ), QgsPoint( 5, 0 ), QgsPoint( 0, 0 ), QgsPoint( 0, 5 ) );
+  QCOMPARE( QgsQuadrilateral::squareFromDiagonal( QgsPoint( 0, 0 ), QgsPoint( 0, 0 ) ), QgsQuadrilateral() );
+  QCOMPARE( QgsQuadrilateral::squareFromDiagonal( QgsPoint( 0, 0 ), QgsPoint( 5, 5 ) ), squareFromDiagonal );
+  QVERIFY( QgsQuadrilateral::squareFromDiagonal( QgsPoint( 5, 5 ), QgsPoint( 0, 0 ) ) != squareFromDiagonal );
+  QVERIFY( QgsQuadrilateral::squareFromDiagonal( QgsPoint( 5, 5 ), QgsPoint( 0, 0 ) ).equals( squareFromDiagonalInv, 1E-8 ) );
+  QCOMPARE( QgsQuadrilateral::squareFromDiagonal( QgsPoint( 0, 0, 10 ), QgsPoint( 5, 5 ) ), squareFromDiagonalZ );
+  QVERIFY( QgsQuadrilateral::squareFromDiagonal( QgsPoint( 0, 0 ), QgsPoint( 5, 5, 10 ) ) != squareFromDiagonalZ );
+  QCOMPARE( QgsQuadrilateral::squareFromDiagonal( QgsPoint( 0, 0 ), QgsPoint( 5, 5, 10 ) ), squareFromDiagonal );
+
+// rectangleFromCenterPoint
+  QgsQuadrilateral rectangleFromCenterPoint( QgsPoint( 0, 0 ), QgsPoint( 0, 5 ), QgsPoint( 5, 5 ), QgsPoint( 5, 0 ) );
+  QgsQuadrilateral rectangleFromCenterPointZ( QgsPoint( 0, 0, 10 ), QgsPoint( 0, 5, 10 ), QgsPoint( 5, 5, 10 ), QgsPoint( 5, 0, 10 ) );
+  QCOMPARE( QgsQuadrilateral::rectangleFromCenterPoint( QgsPoint( 2.5, 2.5 ), QgsPoint( 2.5, 2.5 ) ), QgsQuadrilateral() ) ;
+  QCOMPARE( QgsQuadrilateral::rectangleFromCenterPoint( QgsPoint( 2.5, 2.5 ), QgsPoint( 5, 5 ) ), rectangleFromCenterPoint ) ;
+  QCOMPARE( QgsQuadrilateral::rectangleFromCenterPoint( QgsPoint( 2.5, 2.5 ), QgsPoint( 5, 0 ) ), rectangleFromCenterPoint ) ;
+  QCOMPARE( QgsQuadrilateral::rectangleFromCenterPoint( QgsPoint( 2.5, 2.5 ), QgsPoint( 0, 5 ) ), rectangleFromCenterPoint ) ;
+  QCOMPARE( QgsQuadrilateral::rectangleFromCenterPoint( QgsPoint( 2.5, 2.5 ), QgsPoint( 0, 0 ) ), rectangleFromCenterPoint ) ;
+  QCOMPARE( QgsQuadrilateral::rectangleFromCenterPoint( QgsPoint( 2.5, 2.5, 10 ), QgsPoint( 5, 5 ) ), rectangleFromCenterPointZ ) ;
+  QCOMPARE( QgsQuadrilateral::rectangleFromCenterPoint( QgsPoint( 2.5, 2.5, 10 ), QgsPoint( 5, 0 ) ), rectangleFromCenterPointZ ) ;
+  QCOMPARE( QgsQuadrilateral::rectangleFromCenterPoint( QgsPoint( 2.5, 2.5, 10 ), QgsPoint( 0, 5 ) ), rectangleFromCenterPointZ ) ;
+  QCOMPARE( QgsQuadrilateral::rectangleFromCenterPoint( QgsPoint( 2.5, 2.5, 10 ), QgsPoint( 0, 0 ) ), rectangleFromCenterPointZ ) ;
+  QCOMPARE( QgsQuadrilateral::rectangleFromCenterPoint( QgsPoint( 2.5, 2.5 ), QgsPoint( 0, 0, 10 ) ), rectangleFromCenterPoint ) ;
+
+// fromRectangle
+  QgsQuadrilateral fromRectangle( QgsPoint( 0, 0 ), QgsPoint( 0, 5 ), QgsPoint( 5, 5 ), QgsPoint( 5, 0 ) );
+  QCOMPARE( QgsQuadrilateral::fromRectangle( QgsRectangle( QgsPointXY( 0, 0 ), QgsPointXY( 0, 0 ) ) ), QgsQuadrilateral() );
+  QCOMPARE( QgsQuadrilateral::fromRectangle( QgsRectangle( QgsPointXY( 0, 0 ), QgsPointXY( 5, 5 ) ) ), fromRectangle ) ;
+  QCOMPARE( QgsQuadrilateral::fromRectangle( QgsRectangle( QgsPointXY( 5, 5 ), QgsPointXY( 0, 0 ) ) ), fromRectangle ) ;
+// rectangleFrom3points
+  QgsQuadrilateral rectangleFrom3Points( QgsPoint( 0, 0 ), QgsPoint( 0, 5 ), QgsPoint( 5, 5 ), QgsPoint( 5, 0 ) );
+  QCOMPARE( QgsQuadrilateral::rectangleFrom3Points( QgsPoint( 0, 0 ), QgsPoint( 0, 5 ), QgsPoint( 0, 5 ), QgsQuadrilateral::Distance ), QgsQuadrilateral() );
+  QCOMPARE( QgsQuadrilateral::rectangleFrom3Points( QgsPoint( 0, 0 ), QgsPoint( 0, 5 ), QgsPoint( 0, 5 ), QgsQuadrilateral::Projected ), QgsQuadrilateral() );
+
+  QCOMPARE( QgsQuadrilateral::rectangleFrom3Points( QgsPoint( 0, 0 ), QgsPoint( 0, 5 ), QgsPoint( 5, 5 ), QgsQuadrilateral::Distance ).toLineString()->asWkt( 0 ),
+            QString( "LineString (0 0, 0 5, 5 5, 5 0, 0 0)" ) );
+  QCOMPARE( QgsQuadrilateral::rectangleFrom3Points( QgsPoint( 0, 0, 10 ), QgsPoint( 0, 5 ), QgsPoint( 5, 5 ), QgsQuadrilateral::Distance ).toLineString()->asWkt( 0 ),
+            QString( "LineStringZ (0 0 10, 0 5 10, 5 5 10, 5 0 10, 0 0 10)" ) );
+  QCOMPARE( QgsQuadrilateral::rectangleFrom3Points( QgsPoint( 0, 0 ), QgsPoint( 0, 5, 10 ), QgsPoint( 5, 5 ), QgsQuadrilateral::Distance ).toLineString()->asWkt( 0 ),
+            QString( "LineStringZ (0 0 10, 0 5 10, 5 5 10, 5 0 10, 0 0 10)" ) );
+  QCOMPARE( QgsQuadrilateral::rectangleFrom3Points( QgsPoint( 0, 0 ), QgsPoint( 0, 5 ), QgsPoint( 5, 5, 10 ), QgsQuadrilateral::Distance ).toLineString()->asWkt( 0 ),
+            QString( "LineStringZ (0 0 10, 0 5 10, 5 5 10, 5 0 10, 0 0 10)" ) );
+
+  QCOMPARE( QgsQuadrilateral::rectangleFrom3Points( QgsPoint( 0, 0 ), QgsPoint( 0, 5 ), QgsPoint( 5, 4 ), QgsQuadrilateral::Projected ).toLineString()->asWkt( 0 ),
+            QString( "LineString (0 0, 0 5, 5 5, 5 0, 0 0)" ) );
+  QCOMPARE( QgsQuadrilateral::rectangleFrom3Points( QgsPoint( 0, 0, 10 ), QgsPoint( 0, 5 ), QgsPoint( 5, 4 ), QgsQuadrilateral::Projected ).toLineString()->asWkt( 0 ),
+            QString( "LineStringZ (0 0 10, 0 5 10, 5 5 10, 5 0 10, 0 0 10)" ) );
+  QCOMPARE( QgsQuadrilateral::rectangleFrom3Points( QgsPoint( 0, 0 ), QgsPoint( 0, 5, 10 ), QgsPoint( 5, 4 ), QgsQuadrilateral::Projected ).toLineString()->asWkt( 0 ),
+            QString( "LineStringZ (0 0 10, 0 5 10, 5 5 10, 5 0 10, 0 0 10)" ) );
+  QCOMPARE( QgsQuadrilateral::rectangleFrom3Points( QgsPoint( 0, 0 ), QgsPoint( 0, 5 ), QgsPoint( 5, 4, 10 ), QgsQuadrilateral::Projected ).toLineString()->asWkt( 0 ),
+            QString( "LineStringZ (0 0 10, 0 5 10, 5 5 10, 5 0 10, 0 0 10)" ) );
+  QCOMPARE( QgsQuadrilateral::rectangleFrom3Points( QgsPoint( 0, 0, 10 ), QgsPoint( 0, 5, 10 ), QgsPoint( 5, 4, 10 ), QgsQuadrilateral::Projected ).toLineString()->asWkt( 0 ),
+            QString( "LineStringZ (0 0 10, 0 5 10, 5 5 10, 5 0 10, 0 0 10)" ) );
+  QCOMPARE( QgsQuadrilateral::rectangleFrom3Points( QgsPoint( 0, 0, 5 ), QgsPoint( 0, 5, 5 ), QgsPoint( 5, 5, 0 ), QgsQuadrilateral::Projected ).toString( 2 ),
+            QString( "Quadrilateral (Point 1: PointZ (0 0 5), Point 2: PointZ (0 5 5), Point 3: PointZ (5 5 0), Point 4: PointZ (5 0 0))" ) );
+  QCOMPARE( QgsQuadrilateral::rectangleFrom3Points( QgsPoint( 0, 0, 5 ), QgsPoint( 0, 5, 5 ), QgsPoint( 5, 5, 10 ), QgsQuadrilateral::Projected ).toString( 2 ),
+            QString( "Quadrilateral (Point 1: PointZ (0 0 5), Point 2: PointZ (0 5 5), Point 3: PointZ (5 5 10), Point 4: PointZ (5 0 10))" ) );
+// toString
+  QCOMPARE( QgsQuadrilateral( ).toString(), QString( "Empty" ) );
+  QCOMPARE( QgsQuadrilateral::rectangleFromCenterPoint( QgsPoint( 2.5, 2.5 ), QgsPoint( 2.5, 2.5 ) ).toString(), QString( "Empty" ) );
+  QCOMPARE( QgsQuadrilateral::rectangleFromCenterPoint( QgsPoint( 2.5, 2.5 ), QgsPoint( 5, 0 ) ).toString(), QString( "Quadrilateral (Point 1: Point (0 0), Point 2: Point (0 5), Point 3: Point (5 5), Point 4: Point (5 0))" ) );
+  QCOMPARE( QgsQuadrilateral::rectangleFromCenterPoint( QgsPoint( 2.5, 2.5, 10 ), QgsPoint( 5, 0 ) ).toString(), QString( "Quadrilateral (Point 1: PointZ (0 0 10), Point 2: PointZ (0 5 10), Point 3: PointZ (5 5 10), Point 4: PointZ (5 0 10))" ) );
+
+// toPolygon / toLineString
+  QCOMPARE( quad_init.toPolygon()->asWkt(), QgsPolygon().asWkt() );
+  QCOMPARE( quad_init.toLineString()->asWkt(), QgsLineString().asWkt() );
+  QgsLineString ext, extZ;
+  QgsPolygon polyg, polygZ;
+  QgsQuadrilateral quad( QgsPoint( 0, 0 ), QgsPoint( 0, 5 ), QgsPoint( 5, 5 ), QgsPoint( 5, 0 ) );
+  QgsQuadrilateral quadZ( QgsPoint( 0, 0, 10 ), QgsPoint( 0, 5, 10 ), QgsPoint( 5, 5, 10 ), QgsPoint( 5, 0, 10 ) );
+  ext.fromWkt( "LineString (0 0, 0 5, 5 5, 5 0, 0 0)" );
+  QCOMPARE( quad.toLineString()->asWkt(), ext.asWkt() );
+  polyg.fromWkt( "Polygon ((0 0, 0 5, 5 5, 5 0, 0 0))" );
+  QCOMPARE( quad.toPolygon()->asWkt(), polyg.asWkt() );
+
+  extZ.fromWkt( "LineStringZ (0 0 10, 0 5 10, 5 5 10, 5 0 10, 0 0 10)" );
+  QCOMPARE( quadZ.toLineString()->asWkt(), extZ.asWkt() );
+  QCOMPARE( quadZ.toLineString( true )->asWkt(), ext.asWkt() );
+  polygZ.fromWkt( "PolygonZ ((0 0 10, 0 5 10, 5 5 10, 5 0 10, 0 0 10))" );
+  QCOMPARE( quadZ.toPolygon()->asWkt(), polygZ.asWkt() );
+  QCOMPARE( quadZ.toPolygon( true )->asWkt(), polyg.asWkt() );
+
+
+// area / perimeter
+
+  QCOMPARE( QgsQuadrilateral().area(), 0.0 );
+  QCOMPARE( QgsQuadrilateral().perimeter(), 0.0 );
+
+  QVERIFY( qgsDoubleNear( QgsQuadrilateral::rectangleFrom3Points( QgsPoint( 0, 0, 10 ), QgsPoint( 0, 5 ), QgsPoint( 5, 4 ), QgsQuadrilateral::Projected ).area(), 25.0 ) );
+  QVERIFY( qgsDoubleNear( QgsQuadrilateral::rectangleFrom3Points( QgsPoint( 0, 0, 10 ), QgsPoint( 0, 5 ), QgsPoint( 5, 4 ), QgsQuadrilateral::Projected ).perimeter(), 20 ) );
 }
 
 void TestQgsGeometry::regularPolygon()
@@ -7466,7 +8355,7 @@ void TestQgsGeometry::curvePolygon()
   QCOMPARE( p6.numInteriorRings(), 0 );
   QVERIFY( !p6.interiorRing( -1 ) );
   QVERIFY( !p6.interiorRing( 0 ) );
-  p6.addInteriorRing( 0 );
+  p6.addInteriorRing( nullptr );
   QCOMPARE( p6.numInteriorRings(), 0 );
   QgsCircularString *ring = new QgsCircularString();
   ring->setPoints( QgsPointSequence() << QgsPoint( 1, 1 ) << QgsPoint( 1, 9 ) << QgsPoint( 9, 9 )
@@ -8029,7 +8918,7 @@ void TestQgsGeometry::curvePolygon()
   QGSCOMPAREGML( elemToString( QgsCurvePolygon().asGml3( doc ) ), expectedGML3empty );
 
   // as JSON
-  QString expectedSimpleJson( QStringLiteral( "{\"type\": \"Polygon\", \"coordinates\": [[ [0, 0], [1, 0], [2, 0], [2, 0], [2, 0], [2, 0.1], [1.9, 0.1], [1.9, 0.1], [1.9, 0.1], [1.9, 0.1], [1.9, 0.1], [1.9, 0.1], [1.9, 0.2], [1.8, 0.2], [1.8, 0.2], [1.8, 0.2], [1.8, 0.2], [1.8, 0.2], [1.8, 0.2], [1.7, 0.3], [1.7, 0.3], [1.7, 0.3], [1.7, 0.3], [1.7, 0.3], [1.6, 0.3], [1.6, 0.3], [1.6, 0.3], [1.6, 0.4], [1.6, 0.4], [1.6, 0.4], [1.5, 0.4], [1.5, 0.4], [1.5, 0.4], [1.5, 0.4], [1.5, 0.4], [1.4, 0.4], [1.4, 0.4], [1.4, 0.4], [1.4, 0.4], [1.4, 0.4], [1.3, 0.5], [1.3, 0.5], [1.3, 0.5], [1.3, 0.5], [1.2, 0.5], [1.2, 0.5], [1.2, 0.5], [1.2, 0.5], [1.2, 0.5], [1.1, 0.5], [1.1, 0.5], [1.1, 0.5], [1.1, 0.5], [1.1, 0.5], [1, 0.5], [1, 0.5], [1, 0.5], [1, 0.5], [0.9, 0.5], [0.9, 0.5], [0.9, 0.5], [0.9, 0.5], [0.9, 0.5], [0.8, 0.5], [0.8, 0.5], [0.8, 0.5], [0.8, 0.5], [0.8, 0.5], [0.7, 0.5], [0.7, 0.5], [0.7, 0.5], [0.7, 0.5], [0.6, 0.4], [0.6, 0.4], [0.6, 0.4], [0.6, 0.4], [0.6, 0.4], [0.5, 0.4], [0.5, 0.4], [0.5, 0.4], [0.5, 0.4], [0.5, 0.4], [0.4, 0.4], [0.4, 0.4], [0.4, 0.4], [0.4, 0.3], [0.4, 0.3], [0.4, 0.3], [0.3, 0.3], [0.3, 0.3], [0.3, 0.3], [0.3, 0.3], [0.3, 0.3], [0.2, 0.2], [0.2, 0.2], [0.2, 0.2], [0.2, 0.2], [0.2, 0.2], [0.2, 0.2], [0.1, 0.2], [0.1, 0.1], [0.1, 0.1], [0.1, 0.1], [0.1, 0.1], [0.1, 0.1], [0.1, 0.1], [0, 0.1], [0, 0], [0, 0], [0, 0]]] }" ) );
+  QString expectedSimpleJson( "{\"coordinates\":[[[0.0,0.0,10.0],[1.0,0.0,11.0],[2.0,0.0,12.0],[2.0,0.0,12.0],[2.0,0.0,12.0],[2.0,0.1,12.1],[1.9,0.1,12.1],[1.9,0.1,12.1],[1.9,0.1,12.1],[1.9,0.1,12.1],[1.9,0.1,12.1],[1.9,0.1,12.2],[1.9,0.2,12.2],[1.8,0.2,12.2],[1.8,0.2,12.2],[1.8,0.2,12.2],[1.8,0.2,12.3],[1.8,0.2,12.3],[1.8,0.2,12.3],[1.7,0.3,12.3],[1.7,0.3,12.3],[1.7,0.3,12.4],[1.7,0.3,12.4],[1.7,0.3,12.4],[1.6,0.3,12.4],[1.6,0.3,12.4],[1.6,0.3,12.4],[1.6,0.4,12.5],[1.6,0.4,12.5],[1.6,0.4,12.5],[1.5,0.4,12.5],[1.5,0.4,12.5],[1.5,0.4,12.6],[1.5,0.4,12.6],[1.5,0.4,12.6],[1.4,0.4,12.6],[1.4,0.4,12.6],[1.4,0.4,12.7],[1.4,0.4,12.7],[1.4,0.4,12.7],[1.3,0.5,12.7],[1.3,0.5,12.7],[1.3,0.5,12.7],[1.3,0.5,12.8],[1.2,0.5,12.8],[1.2,0.5,12.8],[1.2,0.5,12.8],[1.2,0.5,12.8],[1.2,0.5,12.9],[1.1,0.5,12.9],[1.1,0.5,12.9],[1.1,0.5,12.9],[1.1,0.5,12.9],[1.1,0.5,13.0],[1.0,0.5,13.0],[1.0,0.5,13.0],[1.0,0.5,13.0],[1.0,0.5,12.9],[0.9,0.5,12.9],[0.9,0.5,12.8],[0.9,0.5,12.7],[0.9,0.5,12.7],[0.9,0.5,12.6],[0.8,0.5,12.6],[0.8,0.5,12.5],[0.8,0.5,12.5],[0.8,0.5,12.4],[0.8,0.5,12.4],[0.7,0.5,12.3],[0.7,0.5,12.2],[0.7,0.5,12.2],[0.7,0.5,12.1],[0.6,0.4,12.1],[0.6,0.4,12.0],[0.6,0.4,12.0],[0.6,0.4,11.9],[0.6,0.4,11.9],[0.5,0.4,11.8],[0.5,0.4,11.7],[0.5,0.4,11.7],[0.5,0.4,11.6],[0.5,0.4,11.6],[0.4,0.4,11.5],[0.4,0.4,11.5],[0.4,0.4,11.4],[0.4,0.3,11.3],[0.4,0.3,11.3],[0.4,0.3,11.2],[0.3,0.3,11.2],[0.3,0.3,11.1],[0.3,0.3,11.1],[0.3,0.3,11.0],[0.3,0.3,11.0],[0.2,0.2,10.9],[0.2,0.2,10.8],[0.2,0.2,10.8],[0.2,0.2,10.7],[0.2,0.2,10.7],[0.2,0.2,10.6],[0.1,0.2,10.6],[0.1,0.1,10.5],[0.1,0.1,10.4],[0.1,0.1,10.4],[0.1,0.1,10.3],[0.1,0.1,10.3],[0.1,0.1,10.2],[0.0,0.1,10.2],[0.0,0.0,10.1],[0.0,0.0,10.1],[0.0,0.0,10.0]]],\"type\":\"Polygon\"}" );
   res = exportPolygon.asJson( 1 );
   QCOMPARE( res, expectedSimpleJson );
 
@@ -8038,7 +8927,7 @@ void TestQgsGeometry::curvePolygon()
                    << QgsPoint( QgsWkbTypes::PointZM, 0.1, 0.05, 13, 4 ) << QgsPoint( QgsWkbTypes::PointZM, 0, 0, 10, 1 ) );
   exportPolygon.addInteriorRing( ring );
 
-  QString expectedJson( QStringLiteral( "{\"type\": \"Polygon\", \"coordinates\": [[ [0, 0], [1, 0], [2, 0], [2, 0], [2, 0], [2, 0.1], [1.9, 0.1], [1.9, 0.1], [1.9, 0.1], [1.9, 0.1], [1.9, 0.1], [1.9, 0.1], [1.9, 0.2], [1.8, 0.2], [1.8, 0.2], [1.8, 0.2], [1.8, 0.2], [1.8, 0.2], [1.8, 0.2], [1.7, 0.3], [1.7, 0.3], [1.7, 0.3], [1.7, 0.3], [1.7, 0.3], [1.6, 0.3], [1.6, 0.3], [1.6, 0.3], [1.6, 0.4], [1.6, 0.4], [1.6, 0.4], [1.5, 0.4], [1.5, 0.4], [1.5, 0.4], [1.5, 0.4], [1.5, 0.4], [1.4, 0.4], [1.4, 0.4], [1.4, 0.4], [1.4, 0.4], [1.4, 0.4], [1.3, 0.5], [1.3, 0.5], [1.3, 0.5], [1.3, 0.5], [1.2, 0.5], [1.2, 0.5], [1.2, 0.5], [1.2, 0.5], [1.2, 0.5], [1.1, 0.5], [1.1, 0.5], [1.1, 0.5], [1.1, 0.5], [1.1, 0.5], [1, 0.5], [1, 0.5], [1, 0.5], [1, 0.5], [0.9, 0.5], [0.9, 0.5], [0.9, 0.5], [0.9, 0.5], [0.9, 0.5], [0.8, 0.5], [0.8, 0.5], [0.8, 0.5], [0.8, 0.5], [0.8, 0.5], [0.7, 0.5], [0.7, 0.5], [0.7, 0.5], [0.7, 0.5], [0.6, 0.4], [0.6, 0.4], [0.6, 0.4], [0.6, 0.4], [0.6, 0.4], [0.5, 0.4], [0.5, 0.4], [0.5, 0.4], [0.5, 0.4], [0.5, 0.4], [0.4, 0.4], [0.4, 0.4], [0.4, 0.4], [0.4, 0.3], [0.4, 0.3], [0.4, 0.3], [0.3, 0.3], [0.3, 0.3], [0.3, 0.3], [0.3, 0.3], [0.3, 0.3], [0.2, 0.2], [0.2, 0.2], [0.2, 0.2], [0.2, 0.2], [0.2, 0.2], [0.2, 0.2], [0.1, 0.2], [0.1, 0.1], [0.1, 0.1], [0.1, 0.1], [0.1, 0.1], [0.1, 0.1], [0.1, 0.1], [0, 0.1], [0, 0], [0, 0], [0, 0]], [ [0, 0], [0.1, 0], [0.2, 0], [0.2, 0], [0.2, 0], [0.2, 0], [0.2, 0], [0.2, 0], [0.2, 0], [0.2, 0], [0.2, 0], [0.2, 0], [0.2, 0], [0.2, 0], [0.2, 0], [0.2, 0], [0.2, 0], [0.2, 0], [0.2, 0], [0.2, 0], [0.2, 0], [0.2, 0], [0.2, 0], [0.2, 0], [0.2, 0], [0.2, 0], [0.2, 0], [0.2, 0], [0.2, 0], [0.2, 0], [0.2, 0], [0.2, 0], [0.1, 0], [0.1, 0], [0.1, 0], [0.1, 0], [0.1, 0], [0.1, 0], [0.1, 0], [0.1, 0], [0.1, 0], [0.1, 0], [0.1, 0], [0.1, 0], [0.1, 0], [0.1, 0], [0.1, 0], [0.1, 0], [0.1, 0], [0.1, 0], [0.1, 0], [0.1, 0], [0.1, 0], [0.1, 0], [0.1, 0], [0.1, 0], [0.1, 0], [0.1, 0], [0.1, 0], [0.1, 0], [0.1, 0], [0.1, 0], [0.1, 0], [0.1, 0], [0.1, 0], [0.1, 0], [0.1, 0], [0.1, 0], [0.1, 0], [0.1, 0], [0.1, 0], [0.1, 0], [0.1, 0], [0.1, 0], [0.1, 0], [0.1, 0], [0.1, 0], [0.1, 0], [0.1, 0], [0.1, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0]]] }" ) );
+  QString expectedJson( "{\"coordinates\":[[[0.0,0.0,10.0],[1.0,0.0,11.0],[2.0,0.0,12.0],[2.0,0.0,12.0],[2.0,0.0,12.0],[2.0,0.1,12.1],[1.9,0.1,12.1],[1.9,0.1,12.1],[1.9,0.1,12.1],[1.9,0.1,12.1],[1.9,0.1,12.1],[1.9,0.1,12.2],[1.9,0.2,12.2],[1.8,0.2,12.2],[1.8,0.2,12.2],[1.8,0.2,12.2],[1.8,0.2,12.3],[1.8,0.2,12.3],[1.8,0.2,12.3],[1.7,0.3,12.3],[1.7,0.3,12.3],[1.7,0.3,12.4],[1.7,0.3,12.4],[1.7,0.3,12.4],[1.6,0.3,12.4],[1.6,0.3,12.4],[1.6,0.3,12.4],[1.6,0.4,12.5],[1.6,0.4,12.5],[1.6,0.4,12.5],[1.5,0.4,12.5],[1.5,0.4,12.5],[1.5,0.4,12.6],[1.5,0.4,12.6],[1.5,0.4,12.6],[1.4,0.4,12.6],[1.4,0.4,12.6],[1.4,0.4,12.7],[1.4,0.4,12.7],[1.4,0.4,12.7],[1.3,0.5,12.7],[1.3,0.5,12.7],[1.3,0.5,12.7],[1.3,0.5,12.8],[1.2,0.5,12.8],[1.2,0.5,12.8],[1.2,0.5,12.8],[1.2,0.5,12.8],[1.2,0.5,12.9],[1.1,0.5,12.9],[1.1,0.5,12.9],[1.1,0.5,12.9],[1.1,0.5,12.9],[1.1,0.5,13.0],[1.0,0.5,13.0],[1.0,0.5,13.0],[1.0,0.5,13.0],[1.0,0.5,12.9],[0.9,0.5,12.9],[0.9,0.5,12.8],[0.9,0.5,12.7],[0.9,0.5,12.7],[0.9,0.5,12.6],[0.8,0.5,12.6],[0.8,0.5,12.5],[0.8,0.5,12.5],[0.8,0.5,12.4],[0.8,0.5,12.4],[0.7,0.5,12.3],[0.7,0.5,12.2],[0.7,0.5,12.2],[0.7,0.5,12.1],[0.6,0.4,12.1],[0.6,0.4,12.0],[0.6,0.4,12.0],[0.6,0.4,11.9],[0.6,0.4,11.9],[0.5,0.4,11.8],[0.5,0.4,11.7],[0.5,0.4,11.7],[0.5,0.4,11.6],[0.5,0.4,11.6],[0.4,0.4,11.5],[0.4,0.4,11.5],[0.4,0.4,11.4],[0.4,0.3,11.3],[0.4,0.3,11.3],[0.4,0.3,11.2],[0.3,0.3,11.2],[0.3,0.3,11.1],[0.3,0.3,11.1],[0.3,0.3,11.0],[0.3,0.3,11.0],[0.2,0.2,10.9],[0.2,0.2,10.8],[0.2,0.2,10.8],[0.2,0.2,10.7],[0.2,0.2,10.7],[0.2,0.2,10.6],[0.1,0.2,10.6],[0.1,0.1,10.5],[0.1,0.1,10.4],[0.1,0.1,10.4],[0.1,0.1,10.3],[0.1,0.1,10.3],[0.1,0.1,10.2],[0.0,0.1,10.2],[0.0,0.0,10.1],[0.0,0.0,10.1],[0.0,0.0,10.0]],[[0.0,0.0,10.0],[0.1,0.0,11.0],[0.2,0.0,12.0],[0.2,0.0,12.0],[0.2,0.0,12.0],[0.2,0.0,12.1],[0.2,0.0,12.1],[0.2,0.0,12.1],[0.2,0.0,12.1],[0.2,0.0,12.1],[0.2,0.0,12.1],[0.2,0.0,12.2],[0.2,0.0,12.2],[0.2,0.0,12.2],[0.2,0.0,12.2],[0.2,0.0,12.2],[0.2,0.0,12.3],[0.2,0.0,12.3],[0.2,0.0,12.3],[0.2,0.0,12.3],[0.2,0.0,12.3],[0.2,0.0,12.4],[0.2,0.0,12.4],[0.2,0.0,12.4],[0.2,0.0,12.4],[0.2,0.0,12.4],[0.2,0.0,12.4],[0.2,0.0,12.5],[0.2,0.0,12.5],[0.2,0.0,12.5],[0.2,0.0,12.5],[0.2,0.0,12.5],[0.1,0.0,12.6],[0.1,0.0,12.6],[0.1,0.0,12.6],[0.1,0.0,12.6],[0.1,0.0,12.6],[0.1,0.0,12.7],[0.1,0.0,12.7],[0.1,0.0,12.7],[0.1,0.0,12.7],[0.1,0.0,12.7],[0.1,0.0,12.7],[0.1,0.0,12.8],[0.1,0.0,12.8],[0.1,0.0,12.8],[0.1,0.0,12.8],[0.1,0.0,12.8],[0.1,0.0,12.9],[0.1,0.0,12.9],[0.1,0.0,12.9],[0.1,0.0,12.9],[0.1,0.0,12.9],[0.1,0.0,13.0],[0.1,0.0,13.0],[0.1,0.0,13.0],[0.1,0.0,13.0],[0.1,0.0,12.9],[0.1,0.0,12.9],[0.1,0.0,12.8],[0.1,0.0,12.7],[0.1,0.0,12.7],[0.1,0.0,12.6],[0.1,0.0,12.6],[0.1,0.0,12.5],[0.1,0.0,12.5],[0.1,0.0,12.4],[0.1,0.0,12.4],[0.1,0.0,12.3],[0.1,0.0,12.2],[0.1,0.0,12.2],[0.1,0.0,12.1],[0.1,0.0,12.1],[0.1,0.0,12.0],[0.1,0.0,12.0],[0.1,0.0,11.9],[0.1,0.0,11.9],[0.1,0.0,11.8],[0.1,0.0,11.7],[0.1,0.0,11.7],[0.0,0.0,11.6],[0.0,0.0,11.6],[0.0,0.0,11.5],[0.0,0.0,11.5],[0.0,0.0,11.4],[0.0,0.0,11.3],[0.0,0.0,11.3],[0.0,0.0,11.2],[0.0,0.0,11.2],[0.0,0.0,11.1],[0.0,0.0,11.1],[0.0,0.0,11.0],[0.0,0.0,11.0],[0.0,0.0,10.9],[0.0,0.0,10.8],[0.0,0.0,10.8],[0.0,0.0,10.7],[0.0,0.0,10.7],[0.0,0.0,10.6],[0.0,0.0,10.6],[0.0,0.0,10.5],[0.0,0.0,10.4],[0.0,0.0,10.4],[0.0,0.0,10.3],[0.0,0.0,10.3],[0.0,0.0,10.2],[0.0,0.0,10.2],[0.0,0.0,10.1],[0.0,0.0,10.1],[0.0,0.0,10.0]]],\"type\":\"Polygon\"}" );
   res = exportPolygon.asJson( 1 );
   QCOMPARE( res, expectedJson );
 
@@ -8053,7 +8942,7 @@ void TestQgsGeometry::curvePolygon()
                    << QgsPoint( QgsWkbTypes::PointZM, 0.1 / 3.0, 0.05 / 3.0, 13, 4 ) << QgsPoint( QgsWkbTypes::PointZM, 0, 0, 10, 1 ) );
   exportPolygonFloat.addInteriorRing( ring );
 
-  QString expectedJsonPrec3( QStringLiteral( "{\"type\": \"Polygon\", \"coordinates\": [[ [0, 0], [0.333, 0], [0.667, 0], [0.669, 0.006], [0.671, 0.012], [0.673, 0.018], [0.676, 0.024], [0.677, 0.029], [0.679, 0.035], [0.681, 0.042], [0.683, 0.048], [0.684, 0.054], [0.686, 0.06], [0.687, 0.066], [0.688, 0.072], [0.689, 0.078], [0.69, 0.084], [0.691, 0.091], [0.692, 0.097], [0.693, 0.103], [0.693, 0.109], [0.694, 0.116], [0.694, 0.122], [0.694, 0.128], [0.694, 0.135], [0.694, 0.141], [0.694, 0.147], [0.694, 0.153], [0.694, 0.16], [0.693, 0.166], [0.693, 0.172], [0.692, 0.178], [0.692, 0.185], [0.691, 0.191], [0.69, 0.197], [0.689, 0.203], [0.687, 0.209], [0.686, 0.216], [0.685, 0.222], [0.683, 0.228], [0.682, 0.234], [0.68, 0.24], [0.678, 0.246], [0.676, 0.252], [0.674, 0.258], [0.672, 0.264], [0.67, 0.27], [0.668, 0.275], [0.665, 0.281], [0.663, 0.287], [0.66, 0.293], [0.657, 0.298], [0.654, 0.304], [0.652, 0.31], [0.649, 0.315], [0.645, 0.321], [0.642, 0.326], [0.639, 0.331], [0.636, 0.337], [0.632, 0.342], [0.628, 0.347], [0.625, 0.352], [0.621, 0.357], [0.617, 0.362], [0.613, 0.367], [0.609, 0.372], [0.605, 0.377], [0.601, 0.381], [0.597, 0.386], [0.592, 0.39], [0.588, 0.395], [0.584, 0.399], [0.579, 0.404], [0.574, 0.408], [0.57, 0.412], [0.565, 0.416], [0.56, 0.42], [0.555, 0.424], [0.55, 0.428], [0.545, 0.431], [0.54, 0.435], [0.535, 0.439], [0.529, 0.442], [0.524, 0.445], [0.519, 0.449], [0.513, 0.452], [0.508, 0.455], [0.502, 0.458], [0.497, 0.461], [0.491, 0.464], [0.485, 0.466], [0.48, 0.469], [0.474, 0.471], [0.468, 0.474], [0.462, 0.476], [0.456, 0.478], [0.451, 0.48], [0.445, 0.482], [0.439, 0.484], [0.433, 0.486], [0.426, 0.488], [0.42, 0.489], [0.414, 0.491], [0.408, 0.492], [0.402, 0.493], [0.396, 0.495], [0.39, 0.496], [0.383, 0.497], [0.377, 0.497], [0.371, 0.498], [0.365, 0.499], [0.358, 0.499], [0.352, 0.5], [0.346, 0.5], [0.34, 0.5], [0.333, 0.5], [0.327, 0.5], [0.321, 0.5], [0.314, 0.5], [0.308, 0.499], [0.302, 0.499], [0.296, 0.498], [0.289, 0.497], [0.283, 0.497], [0.277, 0.496], [0.271, 0.495], [0.265, 0.493], [0.259, 0.492], [0.252, 0.491], [0.246, 0.489], [0.24, 0.488], [0.234, 0.486], [0.228, 0.484], [0.222, 0.482], [0.216, 0.48], [0.21, 0.478], [0.204, 0.476], [0.198, 0.474], [0.193, 0.471], [0.187, 0.469], [0.181, 0.466], [0.176, 0.464], [0.17, 0.461], [0.164, 0.458], [0.159, 0.455], [0.153, 0.452], [0.148, 0.449], [0.143, 0.445], [0.137, 0.442], [0.132, 0.439], [0.127, 0.435], [0.122, 0.431], [0.117, 0.428], [0.112, 0.424], [0.107, 0.42], [0.102, 0.416], [0.097, 0.412], [0.092, 0.408], [0.088, 0.404], [0.083, 0.399], [0.079, 0.395], [0.074, 0.39], [0.07, 0.386], [0.066, 0.381], [0.061, 0.377], [0.057, 0.372], [0.053, 0.367], [0.049, 0.362], [0.046, 0.357], [0.042, 0.352], [0.038, 0.347], [0.035, 0.342], [0.031, 0.337], [0.028, 0.331], [0.024, 0.326], [0.021, 0.321], [0.018, 0.315], [0.015, 0.31], [0.012, 0.304], [0.009, 0.298], [0.007, 0.293], [0.004, 0.287], [0.001, 0.281], [-0.001, 0.275], [-0.003, 0.27], [-0.005, 0.264], [-0.008, 0.258], [-0.01, 0.252], [-0.012, 0.246], [-0.013, 0.24], [-0.015, 0.234], [-0.017, 0.228], [-0.018, 0.222], [-0.02, 0.216], [-0.021, 0.209], [-0.022, 0.203], [-0.023, 0.197], [-0.024, 0.191], [-0.025, 0.185], [-0.026, 0.178], [-0.026, 0.172], [-0.027, 0.166], [-0.027, 0.16], [-0.027, 0.153], [-0.028, 0.147], [-0.028, 0.141], [-0.028, 0.135], [-0.028, 0.128], [-0.027, 0.122], [-0.027, 0.116], [-0.027, 0.109], [-0.026, 0.103], [-0.025, 0.097], [-0.025, 0.091], [-0.024, 0.084], [-0.023, 0.078], [-0.022, 0.072], [-0.02, 0.066], [-0.019, 0.06], [-0.018, 0.054], [-0.016, 0.048], [-0.014, 0.042], [-0.013, 0.035], [-0.011, 0.029], [-0.009, 0.024], [-0.007, 0.018], [-0.005, 0.012], [-0.002, 0.006], [0, 0]], [ [0, 0], [0.033, 0], [0.067, 0], [0.066, 0.001], [0.066, 0.001], [0.065, 0.002], [0.065, 0.002], [0.064, 0.003], [0.064, 0.003], [0.063, 0.004], [0.063, 0.004], [0.062, 0.005], [0.062, 0.005], [0.061, 0.006], [0.061, 0.006], [0.06, 0.007], [0.06, 0.007], [0.059, 0.008], [0.059, 0.008], [0.058, 0.009], [0.057, 0.009], [0.057, 0.009], [0.056, 0.01], [0.056, 0.01], [0.055, 0.011], [0.054, 0.011], [0.054, 0.011], [0.053, 0.012], [0.052, 0.012], [0.052, 0.012], [0.051, 0.013], [0.051, 0.013], [0.05, 0.013], [0.049, 0.014], [0.049, 0.014], [0.048, 0.014], [0.047, 0.014], [0.046, 0.015], [0.046, 0.015], [0.045, 0.015], [0.044, 0.015], [0.044, 0.015], [0.043, 0.016], [0.042, 0.016], [0.042, 0.016], [0.041, 0.016], [0.04, 0.016], [0.039, 0.016], [0.039, 0.016], [0.038, 0.016], [0.037, 0.016], [0.037, 0.017], [0.036, 0.017], [0.035, 0.017], [0.034, 0.017], [0.034, 0.017], [0.033, 0.017], [0.032, 0.017], [0.032, 0.017], [0.031, 0.017], [0.03, 0.017], [0.029, 0.016], [0.029, 0.016], [0.028, 0.016], [0.027, 0.016], [0.027, 0.016], [0.026, 0.016], [0.025, 0.016], [0.024, 0.016], [0.024, 0.016], [0.023, 0.015], [0.022, 0.015], [0.022, 0.015], [0.021, 0.015], [0.02, 0.015], [0.02, 0.014], [0.019, 0.014], [0.018, 0.014], [0.017, 0.014], [0.017, 0.013], [0.016, 0.013], [0.016, 0.013], [0.015, 0.012], [0.014, 0.012], [0.014, 0.012], [0.013, 0.011], [0.012, 0.011], [0.012, 0.011], [0.011, 0.01], [0.01, 0.01], [0.01, 0.009], [0.009, 0.009], [0.009, 0.009], [0.008, 0.008], [0.008, 0.008], [0.007, 0.007], [0.006, 0.007], [0.006, 0.006], [0.005, 0.006], [0.005, 0.005], [0.004, 0.005], [0.004, 0.004], [0.003, 0.004], [0.003, 0.003], [0.002, 0.003], [0.002, 0.002], [0.001, 0.002], [0.001, 0.001], [0, 0.001], [0, 0]]] }" ) );
+  QString expectedJsonPrec3( "{\"coordinates\":[[[0.0,0.0,10.0],[0.333,0.0,11.0],[0.667,0.0,12.0],[0.669,0.006,12.009],[0.671,0.012,12.018],[0.673,0.018,12.027],[0.676,0.024,12.035],[0.677,0.029,12.044],[0.679,0.035,12.053],[0.681,0.042,12.062],[0.683,0.048,12.071],[0.684,0.054,12.08],[0.686,0.06,12.088],[0.687,0.066,12.097],[0.688,0.072,12.106],[0.689,0.078,12.115],[0.69,0.084,12.124],[0.691,0.091,12.133],[0.692,0.097,12.142],[0.693,0.103,12.15],[0.693,0.109,12.159],[0.694,0.116,12.168],[0.694,0.122,12.177],[0.694,0.128,12.186],[0.694,0.135,12.195],[0.694,0.141,12.204],[0.694,0.147,12.212],[0.694,0.153,12.221],[0.694,0.16,12.23],[0.693,0.166,12.239],[0.693,0.172,12.248],[0.692,0.178,12.257],[0.692,0.185,12.265],[0.691,0.191,12.274],[0.69,0.197,12.283],[0.689,0.203,12.292],[0.687,0.209,12.301],[0.686,0.216,12.31],[0.685,0.222,12.319],[0.683,0.228,12.327],[0.682,0.234,12.336],[0.68,0.24,12.345],[0.678,0.246,12.354],[0.676,0.252,12.363],[0.674,0.258,12.372],[0.672,0.264,12.381],[0.67,0.27,12.389],[0.668,0.275,12.398],[0.665,0.281,12.407],[0.663,0.287,12.416],[0.66,0.293,12.425],[0.657,0.298,12.434],[0.654,0.304,12.442],[0.652,0.31,12.451],[0.649,0.315,12.46],[0.645,0.321,12.469],[0.642,0.326,12.478],[0.639,0.331,12.487],[0.636,0.337,12.496],[0.632,0.342,12.504],[0.628,0.347,12.513],[0.625,0.352,12.522],[0.621,0.357,12.531],[0.617,0.362,12.54],[0.613,0.367,12.549],[0.609,0.372,12.558],[0.605,0.377,12.566],[0.601,0.381,12.575],[0.597,0.386,12.584],[0.592,0.39,12.593],[0.588,0.395,12.602],[0.584,0.399,12.611],[0.579,0.404,12.619],[0.574,0.408,12.628],[0.57,0.412,12.637],[0.565,0.416,12.646],[0.56,0.42,12.655],[0.555,0.424,12.664],[0.55,0.428,12.673],[0.545,0.431,12.681],[0.54,0.435,12.69],[0.535,0.439,12.699],[0.529,0.442,12.708],[0.524,0.445,12.717],[0.519,0.449,12.726],[0.513,0.452,12.735],[0.508,0.455,12.743],[0.502,0.458,12.752],[0.497,0.461,12.761],[0.491,0.464,12.77],[0.485,0.466,12.779],[0.48,0.469,12.788],[0.474,0.471,12.796],[0.468,0.474,12.805],[0.462,0.476,12.814],[0.456,0.478,12.823],[0.451,0.48,12.832],[0.445,0.482,12.841],[0.439,0.484,12.85],[0.433,0.486,12.858],[0.426,0.488,12.867],[0.42,0.489,12.876],[0.414,0.491,12.885],[0.408,0.492,12.894],[0.402,0.493,12.903],[0.396,0.495,12.912],[0.39,0.496,12.92],[0.383,0.497,12.929],[0.377,0.497,12.938],[0.371,0.498,12.947],[0.365,0.499,12.956],[0.358,0.499,12.965],[0.352,0.5,12.973],[0.346,0.5,12.982],[0.34,0.5,12.991],[0.333,0.5,13.0],[0.327,0.5,12.973],[0.321,0.5,12.947],[0.314,0.5,12.92],[0.308,0.499,12.894],[0.302,0.499,12.867],[0.296,0.498,12.841],[0.289,0.497,12.814],[0.283,0.497,12.788],[0.277,0.496,12.761],[0.271,0.495,12.735],[0.265,0.493,12.708],[0.259,0.492,12.681],[0.252,0.491,12.655],[0.246,0.489,12.628],[0.24,0.488,12.602],[0.234,0.486,12.575],[0.228,0.484,12.549],[0.222,0.482,12.522],[0.216,0.48,12.496],[0.21,0.478,12.469],[0.204,0.476,12.442],[0.198,0.474,12.416],[0.193,0.471,12.389],[0.187,0.469,12.363],[0.181,0.466,12.336],[0.176,0.464,12.31],[0.17,0.461,12.283],[0.164,0.458,12.257],[0.159,0.455,12.23],[0.153,0.452,12.204],[0.148,0.449,12.177],[0.143,0.445,12.15],[0.137,0.442,12.124],[0.132,0.439,12.097],[0.127,0.435,12.071],[0.122,0.431,12.044],[0.117,0.428,12.018],[0.112,0.424,11.991],[0.107,0.42,11.965],[0.102,0.416,11.938],[0.097,0.412,11.912],[0.092,0.408,11.885],[0.088,0.404,11.858],[0.083,0.399,11.832],[0.079,0.395,11.805],[0.074,0.39,11.779],[0.07,0.386,11.752],[0.066,0.381,11.726],[0.061,0.377,11.699],[0.057,0.372,11.673],[0.053,0.367,11.646],[0.049,0.362,11.619],[0.046,0.357,11.593],[0.042,0.352,11.566],[0.038,0.347,11.54],[0.035,0.342,11.513],[0.031,0.337,11.487],[0.028,0.331,11.46],[0.024,0.326,11.434],[0.021,0.321,11.407],[0.018,0.315,11.381],[0.015,0.31,11.354],[0.012,0.304,11.327],[0.009,0.298,11.301],[0.007,0.293,11.274],[0.004,0.287,11.248],[0.001,0.281,11.221],[-0.001,0.275,11.195],[-0.003,0.27,11.168],[-0.005,0.264,11.142],[-0.008,0.258,11.115],[-0.01,0.252,11.088],[-0.012,0.246,11.062],[-0.013,0.24,11.035],[-0.015,0.234,11.009],[-0.017,0.228,10.982],[-0.018,0.222,10.956],[-0.02,0.216,10.929],[-0.021,0.209,10.903],[-0.022,0.203,10.876],[-0.023,0.197,10.85],[-0.024,0.191,10.823],[-0.025,0.185,10.796],[-0.026,0.178,10.77],[-0.026,0.172,10.743],[-0.027,0.166,10.717],[-0.027,0.16,10.69],[-0.027,0.153,10.664],[-0.028,0.147,10.637],[-0.028,0.141,10.611],[-0.028,0.135,10.584],[-0.028,0.128,10.558],[-0.027,0.122,10.531],[-0.027,0.116,10.504],[-0.027,0.109,10.478],[-0.026,0.103,10.451],[-0.025,0.097,10.425],[-0.025,0.091,10.398],[-0.024,0.084,10.372],[-0.023,0.078,10.345],[-0.022,0.072,10.319],[-0.02,0.066,10.292],[-0.019,0.06,10.265],[-0.018,0.054,10.239],[-0.016,0.048,10.212],[-0.014,0.042,10.186],[-0.013,0.035,10.159],[-0.011,0.029,10.133],[-0.009,0.024,10.106],[-0.007,0.018,10.08],[-0.005,0.012,10.053],[-0.002,0.006,10.027],[0.0,0.0,10.0]],[[0.0,0.0,10.0],[0.033,0.0,11.0],[0.067,0.0,12.0],[0.066,0.001,12.019],[0.066,0.001,12.037],[0.065,0.002,12.056],[0.065,0.002,12.075],[0.064,0.003,12.093],[0.064,0.003,12.112],[0.063,0.004,12.131],[0.063,0.004,12.15],[0.062,0.005,12.168],[0.062,0.005,12.187],[0.061,0.006,12.206],[0.061,0.006,12.224],[0.06,0.007,12.243],[0.06,0.007,12.262],[0.059,0.008,12.28],[0.059,0.008,12.299],[0.058,0.009,12.318],[0.057,0.009,12.336],[0.057,0.009,12.355],[0.056,0.01,12.374],[0.056,0.01,12.393],[0.055,0.011,12.411],[0.054,0.011,12.43],[0.054,0.011,12.449],[0.053,0.012,12.467],[0.052,0.012,12.486],[0.052,0.012,12.505],[0.051,0.013,12.523],[0.051,0.013,12.542],[0.05,0.013,12.561],[0.049,0.014,12.579],[0.049,0.014,12.598],[0.048,0.014,12.617],[0.047,0.014,12.636],[0.046,0.015,12.654],[0.046,0.015,12.673],[0.045,0.015,12.692],[0.044,0.015,12.71],[0.044,0.015,12.729],[0.043,0.016,12.748],[0.042,0.016,12.766],[0.042,0.016,12.785],[0.041,0.016,12.804],[0.04,0.016,12.822],[0.039,0.016,12.841],[0.039,0.016,12.86],[0.038,0.016,12.879],[0.037,0.016,12.897],[0.037,0.017,12.916],[0.036,0.017,12.935],[0.035,0.017,12.953],[0.034,0.017,12.972],[0.034,0.017,12.991],[0.033,0.017,12.972],[0.032,0.017,12.916],[0.032,0.017,12.86],[0.031,0.017,12.804],[0.03,0.017,12.748],[0.029,0.016,12.692],[0.029,0.016,12.636],[0.028,0.016,12.579],[0.027,0.016,12.523],[0.027,0.016,12.467],[0.026,0.016,12.411],[0.025,0.016,12.355],[0.024,0.016,12.299],[0.024,0.016,12.243],[0.023,0.015,12.187],[0.022,0.015,12.131],[0.022,0.015,12.075],[0.021,0.015,12.019],[0.02,0.015,11.963],[0.02,0.014,11.907],[0.019,0.014,11.85],[0.018,0.014,11.794],[0.017,0.014,11.738],[0.017,0.013,11.682],[0.016,0.013,11.626],[0.016,0.013,11.57],[0.015,0.012,11.514],[0.014,0.012,11.458],[0.014,0.012,11.402],[0.013,0.011,11.346],[0.012,0.011,11.29],[0.012,0.011,11.234],[0.011,0.01,11.178],[0.01,0.01,11.121],[0.01,0.009,11.065],[0.009,0.009,11.009],[0.009,0.009,10.953],[0.008,0.008,10.897],[0.008,0.008,10.841],[0.007,0.007,10.785],[0.006,0.007,10.729],[0.006,0.006,10.673],[0.005,0.006,10.617],[0.005,0.005,10.561],[0.004,0.005,10.505],[0.004,0.004,10.449],[0.003,0.004,10.393],[0.003,0.003,10.336],[0.002,0.003,10.28],[0.002,0.002,10.224],[0.001,0.002,10.168],[0.001,0.001,10.112],[0.0,0.001,10.056],[0.0,0.0,10.0]]],\"type\":\"Polygon\"}" );
   res = exportPolygonFloat.asJson( 3 );
   QCOMPARE( exportPolygonFloat.asJson( 3 ), expectedJsonPrec3 );
 
@@ -9378,10 +10267,10 @@ void TestQgsGeometry::compoundCurve()
   QGSCOMPAREGML( elemToString( QgsCompoundCurve().asGml3( doc ) ), expectedGML3empty );
 
   //asJSON
-  QString expectedJson( QStringLiteral( "{\"type\": \"LineString\", \"coordinates\": [ [31, 32], [41, 42], [51, 52], [61, 62]]}" ) );
+  QString expectedJson( "{\"coordinates\":[[31.0,32.0],[41.0,42.0],[51.0,52.0],[61.0,62.0]],\"type\":\"LineString\"}" );
   result = exportCurve.asJson();
   QCOMPARE( result, expectedJson );
-  QString expectedJsonPrec3( QStringLiteral( "{\"type\": \"LineString\", \"coordinates\": [ [0.333, 0.667], [1.333, 1.667], [2.333, 2.667], [3.333, 3.667]]}" ) );
+  QString expectedJsonPrec3( "{\"coordinates\":[[0.333,0.667],[1.333,1.667],[2.333,2.667],[3.333,3.667]],\"type\":\"LineString\"}" );
   result = exportCurveFloat.asJson( 3 );
   QCOMPARE( result, expectedJsonPrec3 );
 
@@ -10562,7 +11451,7 @@ void TestQgsGeometry::compoundCurve()
                 << QgsPoint( 1, 1 ) );
   double lsArea = 0.0;
   ls.sumUpArea( lsArea );
-  QGSCOMPARENEAR( ccArea, lsArea, 4 * DBL_EPSILON );
+  QGSCOMPARENEAR( ccArea, lsArea, 4 * std::numeric_limits<double>::epsilon() );
 
 
   //addVertex
@@ -10736,6 +11625,126 @@ void TestQgsGeometry::compoundCurve()
   nodeCurve.addCurve( linePart.clone() );
   QVERIFY( nodeCurve.removeDuplicateNodes( 0.02 ) );
   QCOMPARE( nodeCurve.asWkt( 2 ), QStringLiteral( "CompoundCurve ((1 1, 111.01 11.99),(111.01 11.99, 31 33))" ) );
+
+  // swap xy
+  QgsCompoundCurve swapCurve;
+  swapCurve.swapXy(); //no crash
+  nodeLine.setPoints( QgsPointSequence() << QgsPoint( 11, 2, 3, 4, QgsWkbTypes::PointZM ) << QgsPoint( 11, 12, 13, 14, QgsWkbTypes::PointZM ) << QgsPoint( 111, 12, 23, 24, QgsWkbTypes::PointZM ) );
+  swapCurve.addCurve( nodeLine.clone() );
+  swapCurve.swapXy();
+  QCOMPARE( swapCurve.asWkt(), QStringLiteral( "CompoundCurveZM (CircularStringZM (2 11 3 4, 12 11 13 14, 12 111 23 24))" ) );
+  QgsLineString lsSwap;
+  lsSwap.setPoints( QgsPointSequence() << QgsPoint( 12, 111, 23, 24, QgsWkbTypes::PointZM ) << QgsPoint( 22, 122, 33, 34, QgsWkbTypes::PointZM ) );
+  swapCurve.addCurve( lsSwap.clone() );
+  swapCurve.swapXy();
+  QCOMPARE( swapCurve.asWkt(), QStringLiteral( "CompoundCurveZM (CircularStringZM (11 2 3 4, 11 12 13 14, 111 12 23 24),(111 12 23 24, 122 22 33 34))" ) );
+
+  // filter vertices
+  auto filter = []( const QgsPoint & point )-> bool
+  {
+    return point.x() > 5;
+  };
+  QgsCompoundCurve filterCurve;
+  filterCurve.filterVertices( filter ); //no crash
+  nodeLine.setPoints( QgsPointSequence()   << QgsPoint( 1, 2, 3, 4, QgsWkbTypes::PointZM ) << QgsPoint( 11, 2, 3, 4, QgsWkbTypes::PointZM ) << QgsPoint( 11, 12, 13, 14, QgsWkbTypes::PointZM ) << QgsPoint( 111, 12, 23, 24, QgsWkbTypes::PointZM )   << QgsPoint( 1, 2, 3, 4, QgsWkbTypes::PointZM ) );
+  filterCurve.addCurve( nodeLine.clone() );
+  filterCurve.filterVertices( filter );
+  QCOMPARE( filterCurve.asWkt(), QStringLiteral( "CompoundCurveZM (CircularStringZM (11 2 3 4, 11 12 13 14, 111 12 23 24))" ) );
+  QgsLineString lsFilter;
+  lsFilter.setPoints( QgsPointSequence() << QgsPoint( 12, 111, 23, 24, QgsWkbTypes::PointZM ) << QgsPoint( 22, 122, 33, 34, QgsWkbTypes::PointZM ) << QgsPoint( 1, 111, 23, 24, QgsWkbTypes::PointZM ) );
+  filterCurve.addCurve( lsFilter.clone() );
+  filterCurve.filterVertices( filter );
+  QCOMPARE( filterCurve.asWkt(), QStringLiteral( "CompoundCurveZM (CircularStringZM (11 2 3 4, 11 12 13 14, 111 12 23 24),(12 111 23 24, 22 122 33 34))" ) );
+
+  // transform vertices
+  auto transform = []( const QgsPoint & point )-> QgsPoint
+  {
+    return QgsPoint( point.x() + 2, point.y() + 3, point.z() + 4, point.m() + 5 );
+  };
+  QgsCompoundCurve transformCurve;
+  transformCurve.transformVertices( transform ); //no crash
+  nodeLine.setPoints( QgsPointSequence()   << QgsPoint( 1, 2, 3, 4, QgsWkbTypes::PointZM ) << QgsPoint( 11, 2, 3, 4, QgsWkbTypes::PointZM ) << QgsPoint( 11, 12, 13, 14, QgsWkbTypes::PointZM ) << QgsPoint( 111, 12, 23, 24, QgsWkbTypes::PointZM )   << QgsPoint( 1, 2, 3, 4, QgsWkbTypes::PointZM ) );
+  transformCurve.addCurve( nodeLine.clone() );
+  transformCurve.transformVertices( transform );
+  QCOMPARE( transformCurve.asWkt(), QStringLiteral( "CompoundCurveZM (CircularStringZM (3 5 7 9, 13 5 7 9, 13 15 17 19, 113 15 27 29, 3 5 7 9))" ) );
+  QgsLineString lsTransform;
+  lsTransform.setPoints( QgsPointSequence() << QgsPoint( 12, 111, 23, 24, QgsWkbTypes::PointZM ) << QgsPoint( 22, 122, 33, 34, QgsWkbTypes::PointZM ) << QgsPoint( 1, 111, 23, 24, QgsWkbTypes::PointZM ) );
+  transformCurve.addCurve( lsTransform.clone() );
+  transformCurve.transformVertices( transform );
+  QCOMPARE( transformCurve.asWkt(), QStringLiteral( "CompoundCurveZM (CircularStringZM (5 8 11 14, 15 8 11 14, 15 18 21 24, 115 18 31 34, 5 8 11 14),(14 114 27 29, 24 125 37 39, 3 114 27 29))" ) );
+
+  // substring
+  QgsCompoundCurve substring;
+  std::unique_ptr< QgsCompoundCurve > substringResult( substring.curveSubstring( 1, 2 ) ); // no crash
+  QVERIFY( substringResult.get() );
+  QVERIFY( substringResult->isEmpty() );
+  substring.fromWkt( QStringLiteral( "CompoundCurveZM( ( 5 0 -1 -2, 10 0 1 2 ), CircularStringZM (10 0 1 2, 11 1 3 4, 12 0 13 14))" ) );
+  substringResult.reset( substring.curveSubstring( 0, 0 ) );
+  QCOMPARE( substringResult->asWkt( 2 ), QStringLiteral( "CompoundCurveZM ((5 0 -1 -2, 5 0 -1 -2))" ) );
+  substringResult.reset( substring.curveSubstring( -1, -0.1 ) );
+  QVERIFY( substringResult->isEmpty() );
+  substringResult.reset( substring.curveSubstring( 100000, 10000 ) );
+  QVERIFY( substringResult->isEmpty() );
+  substringResult.reset( substring.curveSubstring( -1, 1 ) );
+  QCOMPARE( substringResult->asWkt( 2 ), QStringLiteral( "CompoundCurveZM ((5 0 -1 -2, 6 0 -0.6 -1.2))" ) );
+  substringResult.reset( substring.curveSubstring( 1, -1 ) );
+  QCOMPARE( substringResult->asWkt( 2 ), QStringLiteral( "CompoundCurveZM ((6 0 -0.6 -1.2, 6 0 -0.6 -1.2))" ) );
+  substringResult.reset( substring.curveSubstring( -1, 10000 ) );
+  QCOMPARE( substringResult->asWkt( 2 ), QStringLiteral( "CompoundCurveZM ((5 0 -1 -2, 10 0 1 2),CircularStringZM (10 0 1 2, 11 1 3 4, 12 0 13 14))" ) );
+  substringResult.reset( substring.curveSubstring( 1, 10000 ) );
+  QCOMPARE( substringResult->asWkt( 2 ), QStringLiteral( "CompoundCurveZM ((6 0 -0.6 -1.2, 10 0 1 2),CircularStringZM (10 0 1 2, 11 1 3 4, 12 0 13 14))" ) );
+  substringResult.reset( substring.curveSubstring( 1, 7 ) );
+  QCOMPARE( substringResult->asWkt( 2 ), QStringLiteral( "CompoundCurveZM ((6 0 -0.6 -1.2, 10 0 1 2),CircularStringZM (10 0 1 2, 10.46 0.84 2.27 3.27, 11.42 0.91 5.73 6.73))" ) );
+  substringResult.reset( substring.curveSubstring( 1, 1.5 ) );
+  QCOMPARE( substringResult->asWkt( 2 ), QStringLiteral( "CompoundCurveZM ((6 0 -0.6 -1.2, 6.5 0 -0.4 -0.8))" ) );
+
+  substring.fromWkt( QStringLiteral( "CompoundCurveZ( ( 5 0 -1, 10 0 1 ), CircularStringZ (10 0 1, 11 1 3, 12 0 13))" ) );
+  substringResult.reset( substring.curveSubstring( 1, 7 ) );
+  QCOMPARE( substringResult->asWkt( 2 ), QStringLiteral( "CompoundCurveZ ((6 0 -0.6, 10 0 1),CircularStringZ (10 0 1, 10.46 0.84 2.27, 11.42 0.91 5.73))" ) );
+  substring.fromWkt( QStringLiteral( "CompoundCurveM( ( 5 0 -1, 10 0 1 ), CircularStringM (10 0 1, 11 1 3, 12 0 13))" ) );
+  substringResult.reset( substring.curveSubstring( 1, 7 ) );
+  QCOMPARE( substringResult->asWkt( 2 ), QStringLiteral( "CompoundCurveM ((6 0 -0.6, 10 0 1),CircularStringM (10 0 1, 10.46 0.84 2.27, 11.42 0.91 5.73))" ) );
+  substring.fromWkt( QStringLiteral( "CompoundCurve( ( 5 0, 10 0 ), CircularString (10 0, 11 1, 12 0))" ) );
+  substringResult.reset( substring.curveSubstring( 1, 7 ) );
+  QCOMPARE( substringResult->asWkt( 2 ), QStringLiteral( "CompoundCurve ((6 0, 10 0),CircularString (10 0, 10.46 0.84, 11.42 0.91))" ) );
+
+  // substring
+  QgsCompoundCurve interpolate;
+  std::unique_ptr< QgsPoint > interpolateResult( interpolate.interpolatePoint( 1 ) ); // no crash
+  QVERIFY( !interpolateResult.get() );
+  interpolate.fromWkt( QStringLiteral( "CompoundCurveZM( ( 5 0 -1 -2, 10 0 1 2 ), CircularStringZM (10 0 1 2, 11 1 3 4, 12 0 13 14))" ) );
+  interpolateResult.reset( interpolate.interpolatePoint( 0 ) );
+  QCOMPARE( interpolateResult->asWkt( 2 ), QStringLiteral( "PointZM (5 0 -1 -2)" ) );
+  interpolateResult.reset( interpolate.interpolatePoint( -1 ) );
+  QVERIFY( !interpolateResult.get() );
+  interpolateResult.reset( interpolate.interpolatePoint( 100000 ) );
+  QVERIFY( !interpolateResult.get() );
+  interpolateResult.reset( interpolate.interpolatePoint( 1 ) );
+  QCOMPARE( interpolateResult->asWkt( 2 ), QStringLiteral( "PointZM (6 0 -0.6 -1.2)" ) );
+  interpolateResult.reset( interpolate.interpolatePoint( 7 ) );
+  QCOMPARE( interpolateResult->asWkt( 2 ), QStringLiteral( "PointZM (11.42 0.91 5.73 6.73)" ) );
+  interpolateResult.reset( interpolate.interpolatePoint( 1.5 ) );
+  QCOMPARE( interpolateResult->asWkt( 2 ), QStringLiteral( "PointZM (6.5 0 -0.4 -0.8)" ) );
+  interpolateResult.reset( interpolate.interpolatePoint( interpolate.length() ) );
+  QCOMPARE( interpolateResult->asWkt( 2 ), QStringLiteral( "PointZM (12 0 13 14)" ) );
+
+  interpolate.fromWkt( QStringLiteral( "CompoundCurveZ( ( 5 0 -1, 10 0 1 ), CircularStringZ (10 0 1, 11 1 3, 12 0 13))" ) );
+  interpolateResult.reset( interpolate.interpolatePoint( 1 ) );
+  QCOMPARE( interpolateResult->asWkt( 2 ), QStringLiteral( "PointZ (6 0 -0.6)" ) );
+  interpolate.fromWkt( QStringLiteral( "CompoundCurveM( ( 5 0 -1, 10 0 1 ), CircularStringM (10 0 1, 11 1 3, 12 0 13))" ) );
+  interpolateResult.reset( interpolate.interpolatePoint( 1 ) );
+  QCOMPARE( interpolateResult->asWkt( 2 ), QStringLiteral( "PointM (6 0 -0.6)" ) );
+  interpolate.fromWkt( QStringLiteral( "CompoundCurve( ( 5 0, 10 0 ), CircularString (10 0, 11 1, 12 0))" ) );
+  interpolateResult.reset( interpolate.interpolatePoint( 1 ) );
+  QCOMPARE( interpolateResult->asWkt( 2 ), QStringLiteral( "Point (6 0)" ) );
+
+  // orientation
+  QgsCompoundCurve orientation;
+  ( void )orientation.orientation(); // no crash
+  orientation.fromWkt( QStringLiteral( "CompoundCurve( ( 0 0, 0 1), CircularString (0 1, 1 1, 1 0), (1 0, 0 0))" ) );
+  QCOMPARE( orientation.orientation(), QgsCurve::Clockwise );
+  orientation.fromWkt( QStringLiteral( "CompoundCurve( ( 0 0, 1 0), CircularString (1 0, 1 1, 0 1), (0 1, 0 0))" ) );
+  QCOMPARE( orientation.orientation(), QgsCurve::CounterClockwise );
 }
 
 void TestQgsGeometry::multiPoint()
@@ -11092,7 +12101,7 @@ void TestQgsGeometry::multiPoint()
   QGSCOMPAREGML( elemToString( QgsMultiPoint().asGml3( doc ) ), expectedGML3empty );
 
   // as JSON
-  QString expectedSimpleJson( "{\"type\": \"MultiPoint\", \"coordinates\": [ [0, 10], [10, 0]] }" );
+  QString expectedSimpleJson( "{\"coordinates\":[[0.0,10.0],[10.0,0.0]],\"type\":\"MultiPoint\"}" );
   res = exportC.asJson();
   QCOMPARE( res, expectedSimpleJson );
 
@@ -11101,7 +12110,7 @@ void TestQgsGeometry::multiPoint()
   exportFloat.addGeometry( new QgsPoint( QgsWkbTypes::Point, 4 / 3.0, 2 / 3.0 ) );
 
 
-  QString expectedJsonPrec3( QStringLiteral( "{\"type\": \"MultiPoint\", \"coordinates\": [ [1.111, 11.111], [1.333, 0.667]] }" ) );
+  QString expectedJsonPrec3( "{\"coordinates\":[[1.111,11.111],[1.333,0.667]],\"type\":\"MultiPoint\"}" );
   res = exportFloat.asJson( 3 );
   QCOMPARE( res, expectedJsonPrec3 );
 
@@ -11215,6 +12224,20 @@ void TestQgsGeometry::multiPoint()
   mp.addGeometry( new QgsPoint( QgsWkbTypes::PointZM, 10, 1, 4, 8 ) );
   QVERIFY( !mp.removeDuplicateNodes() );
   QCOMPARE( mp.numGeometries(), 2 );
+
+  // filter vertex
+  QgsMultiPoint filterPoint;
+  auto filter = []( const QgsPoint & point )-> bool
+  {
+    return point.x() < 5;
+  };
+  filterPoint.filterVertices( filter ); // no crash
+  filterPoint.addGeometry( new QgsPoint( QgsWkbTypes::PointZM, 10, 0, 4, 8 ) );
+  filterPoint.addGeometry( new QgsPoint( QgsWkbTypes::PointZM, 3, 0, 4, 8 ) );
+  filterPoint.addGeometry( new QgsPoint( QgsWkbTypes::PointZM, 1, 0, 4, 8 ) );
+  filterPoint.addGeometry( new QgsPoint( QgsWkbTypes::PointZM, 11, 0, 4, 8 ) );
+  filterPoint.filterVertices( filter );
+  QCOMPARE( filterPoint.asWkt( 2 ), QStringLiteral( "MultiPointZM ((3 0 4 8),(1 0 4 8))" ) );
 }
 
 void TestQgsGeometry::multiLineString()
@@ -11624,7 +12647,7 @@ void TestQgsGeometry::multiLineString()
   QGSCOMPAREGML( elemToString( QgsMultiLineString().asGml3( doc ) ), expectedGML3empty );
 
   // as JSON
-  QString expectedSimpleJson( "{\"type\": \"MultiLineString\", \"coordinates\": [[ [7, 17], [3, 13]], [ [27, 37], [43, 43]]] }" );
+  QString expectedSimpleJson( "{\"coordinates\":[[[7.0,17.0],[3.0,13.0]],[[27.0,37.0],[43.0,43.0]]],\"type\":\"MultiLineString\"}" );
   res = exportC.asJson();
   QCOMPARE( res, expectedSimpleJson );
 
@@ -11634,7 +12657,7 @@ void TestQgsGeometry::multiLineString()
   part.setPoints( QgsPointSequence() << QgsPoint( QgsWkbTypes::Point, 27 / 3.0, 37 / 9.0 ) << QgsPoint( QgsWkbTypes::Point, 43 / 41.0, 43 / 42.0 ) ) ;
   exportFloat.addGeometry( part.clone() );
 
-  QString expectedJsonPrec3( QStringLiteral( "{\"type\": \"MultiLineString\", \"coordinates\": [[ [2.333, 5.667], [0.6, 4.333]], [ [9, 4.111], [1.049, 1.024]]] }" ) );
+  QString expectedJsonPrec3( "{\"coordinates\":[[[2.333,5.667],[0.6,4.333]],[[9.0,4.111],[1.049,1.024]]],\"type\":\"MultiLineString\"}" );
   res = exportFloat.asJson( 3 );
   QCOMPARE( res, expectedJsonPrec3 );
 
@@ -12282,7 +13305,7 @@ void TestQgsGeometry::multiCurve()
   QGSCOMPAREGML( elemToString( QgsMultiCurve().asGml3( doc ) ), expectedGML3empty );
 
   // as JSON
-  QString expectedSimpleJson( "{\"type\": \"MultiLineString\", \"coordinates\": [[ [7, 17], [6.9, 17], [6.9, 17], [6.8, 17], [6.8, 17.1], [6.7, 17.1], [6.7, 17.1], [6.6, 17.1], [6.6, 17.1], [6.5, 17.1], [6.5, 17.1], [6.4, 17.1], [6.4, 17.1], [6.3, 17.1], [6.2, 17.2], [6.2, 17.2], [6.1, 17.2], [6.1, 17.2], [6, 17.2], [6, 17.2], [5.9, 17.2], [5.9, 17.2], [5.8, 17.2], [5.7, 17.2], [5.7, 17.1], [5.6, 17.1], [5.6, 17.1], [5.5, 17.1], [5.5, 17.1], [5.4, 17.1], [5.4, 17.1], [5.3, 17.1], [5.3, 17.1], [5.2, 17.1], [5.2, 17], [5.1, 17], [5, 17], [5, 17], [4.9, 17], [4.9, 17], [4.8, 16.9], [4.8, 16.9], [4.7, 16.9], [4.7, 16.9], [4.6, 16.9], [4.6, 16.8], [4.5, 16.8], [4.5, 16.8], [4.4, 16.8], [4.4, 16.7], [4.3, 16.7], [4.3, 16.7], [4.3, 16.6], [4.2, 16.6], [4.2, 16.6], [4.1, 16.5], [4.1, 16.5], [4, 16.5], [4, 16.4], [3.9, 16.4], [3.9, 16.4], [3.9, 16.3], [3.8, 16.3], [3.8, 16.3], [3.7, 16.2], [3.7, 16.2], [3.7, 16.1], [3.6, 16.1], [3.6, 16.1], [3.6, 16], [3.5, 16], [3.5, 15.9], [3.5, 15.9], [3.4, 15.8], [3.4, 15.8], [3.4, 15.7], [3.3, 15.7], [3.3, 15.7], [3.3, 15.6], [3.2, 15.6], [3.2, 15.5], [3.2, 15.5], [3.2, 15.4], [3.1, 15.4], [3.1, 15.3], [3.1, 15.3], [3.1, 15.2], [3.1, 15.2], [3, 15.1], [3, 15.1], [3, 15], [3, 15], [3, 14.9], [3, 14.8], [2.9, 14.8], [2.9, 14.7], [2.9, 14.7], [2.9, 14.6], [2.9, 14.6], [2.9, 14.5], [2.9, 14.5], [2.9, 14.4], [2.9, 14.4], [2.9, 14.3], [2.8, 14.2], [2.8, 14.2], [2.8, 14.1], [2.8, 14.1], [2.8, 14], [2.8, 14], [2.8, 13.9], [2.8, 13.9], [2.8, 13.8], [2.8, 13.8], [2.9, 13.7], [2.9, 13.6], [2.9, 13.6], [2.9, 13.5], [2.9, 13.5], [2.9, 13.4], [2.9, 13.4], [2.9, 13.3], [2.9, 13.3], [2.9, 13.2], [3, 13.2], [3, 13.1], [3, 13], [3, 13], [3, 12.9], [3, 12.9], [3.1, 12.8], [3.1, 12.8], [3.1, 12.7], [3.1, 12.7], [3.1, 12.6], [3.2, 12.6], [3.2, 12.5], [3.2, 12.5], [3.2, 12.4], [3.3, 12.4], [3.3, 12.3], [3.3, 12.3], [3.4, 12.3], [3.4, 12.2], [3.4, 12.2], [3.5, 12.1], [3.5, 12.1], [3.5, 12], [3.6, 12], [3.6, 11.9], [3.6, 11.9], [3.7, 11.9], [3.7, 11.8], [3.7, 11.8], [3.8, 11.7], [3.8, 11.7], [3.9, 11.7], [3.9, 11.6], [3.9, 11.6], [4, 11.6], [4, 11.5], [4.1, 11.5], [4.1, 11.5], [4.2, 11.4], [4.2, 11.4], [4.3, 11.4], [4.3, 11.3], [4.3, 11.3], [4.4, 11.3], [4.4, 11.2], [4.5, 11.2], [4.5, 11.2], [4.6, 11.2], [4.6, 11.1], [4.7, 11.1], [4.7, 11.1], [4.8, 11.1], [4.8, 11.1], [4.9, 11], [4.9, 11], [5, 11], [5, 11], [5.1, 11], [5.2, 11], [5.2, 10.9], [5.3, 10.9], [5.3, 10.9], [5.4, 10.9], [5.4, 10.9], [5.5, 10.9], [5.5, 10.9], [5.6, 10.9], [5.6, 10.9], [5.7, 10.9], [5.7, 10.8], [5.8, 10.8], [5.9, 10.8], [5.9, 10.8], [6, 10.8], [6, 10.8], [6.1, 10.8], [6.1, 10.8], [6.2, 10.8], [6.2, 10.8], [6.3, 10.9], [6.4, 10.9], [6.4, 10.9], [6.5, 10.9], [6.5, 10.9], [6.6, 10.9], [6.6, 10.9], [6.7, 10.9], [6.7, 10.9], [6.8, 10.9], [6.8, 11], [6.9, 11], [6.9, 11], [7, 11]], [ [27, 37], [27.1, 36.9], [27.2, 36.8], [27.3, 36.6], [27.4, 36.5], [27.5, 36.4], [27.6, 36.3], [27.7, 36.2], [27.8, 36], [27.9, 35.9], [28, 35.8], [28.1, 35.7], [28.2, 35.6], [28.3, 35.5], [28.4, 35.4], [28.5, 35.3], [28.7, 35.2], [28.8, 35.1], [28.9, 35], [29, 34.9], [29.1, 34.8], [29.3, 34.7], [29.4, 34.6], [29.5, 34.6], [29.7, 34.5], [29.8, 34.4], [29.9, 34.3], [30.1, 34.3], [30.2, 34.2], [30.3, 34.1], [30.5, 34], [30.6, 34], [30.7, 33.9], [30.9, 33.9], [31, 33.8], [31.2, 33.7], [31.3, 33.7], [31.5, 33.6], [31.6, 33.6], [31.8, 33.6], [31.9, 33.5], [32.1, 33.5], [32.2, 33.4], [32.4, 33.4], [32.5, 33.4], [32.7, 33.3], [32.8, 33.3], [33, 33.3], [33.1, 33.3], [33.3, 33.2], [33.4, 33.2], [33.6, 33.2], [33.7, 33.2], [33.9, 33.2], [34, 33.2], [34.2, 33.2], [34.3, 33.2], [34.5, 33.2], [34.6, 33.2], [34.8, 33.2], [34.9, 33.2], [35.1, 33.2], [35.3, 33.3], [35.4, 33.3], [35.6, 33.3], [35.7, 33.3], [35.9, 33.3], [36, 33.4], [36.2, 33.4], [36.3, 33.4], [36.5, 33.5], [36.6, 33.5], [36.8, 33.6], [36.9, 33.6], [37.1, 33.7], [37.2, 33.7], [37.3, 33.8], [37.5, 33.8], [37.6, 33.9], [37.8, 33.9], [37.9, 34], [38, 34.1], [38.2, 34.1], [38.3, 34.2], [38.5, 34.3], [38.6, 34.3], [38.7, 34.4], [38.9, 34.5], [39, 34.6], [39.1, 34.7], [39.2, 34.7], [39.4, 34.8], [39.5, 34.9], [39.6, 35], [39.7, 35.1], [39.9, 35.2], [40, 35.3], [40.1, 35.4], [40.2, 35.5], [40.3, 35.6], [40.4, 35.7], [40.5, 35.8], [40.6, 35.9], [40.7, 36.1], [40.8, 36.2], [40.9, 36.3], [41, 36.4], [41.1, 36.5], [41.2, 36.6], [41.3, 36.8], [41.4, 36.9], [41.5, 37], [41.6, 37.1], [41.7, 37.3], [41.8, 37.4], [41.8, 37.5], [41.9, 37.7], [42, 37.8], [42.1, 37.9], [42.1, 38.1], [42.2, 38.2], [42.3, 38.3], [42.3, 38.5], [42.4, 38.6], [42.4, 38.8], [42.5, 38.9], [42.6, 39.1], [42.6, 39.2], [42.6, 39.4], [42.7, 39.5], [42.7, 39.6], [42.8, 39.8], [42.8, 39.9], [42.8, 40.1], [42.9, 40.2], [42.9, 40.4], [42.9, 40.5], [43, 40.7], [43, 40.9], [43, 41], [43, 41.2], [43, 41.3], [43, 41.5], [43, 41.6], [43.1, 41.8], [43.1, 41.9], [43.1, 42.1], [43.1, 42.2], [43, 42.4], [43, 42.5], [43, 42.7], [43, 42.8], [43, 43], [43, 43.1], [43, 43.3], [42.9, 43.5], [42.9, 43.6], [42.9, 43.8], [42.8, 43.9], [42.8, 44.1], [42.8, 44.2], [42.7, 44.4], [42.7, 44.5], [42.6, 44.6], [42.6, 44.8], [42.6, 44.9], [42.5, 45.1], [42.4, 45.2], [42.4, 45.4], [42.3, 45.5], [42.3, 45.7], [42.2, 45.8], [42.1, 45.9], [42.1, 46.1], [42, 46.2], [41.9, 46.3], [41.8, 46.5], [41.8, 46.6], [41.7, 46.7], [41.6, 46.9], [41.5, 47], [41.4, 47.1], [41.3, 47.2], [41.2, 47.4], [41.1, 47.5], [41, 47.6], [40.9, 47.7], [40.8, 47.8], [40.7, 47.9], [40.6, 48.1], [40.5, 48.2], [40.4, 48.3], [40.3, 48.4], [40.2, 48.5], [40.1, 48.6], [40, 48.7], [39.9, 48.8], [39.7, 48.9], [39.6, 49], [39.5, 49.1], [39.4, 49.2], [39.2, 49.3], [39.1, 49.3], [39, 49.4], [38.9, 49.5], [38.7, 49.6], [38.6, 49.7], [38.5, 49.7], [38.3, 49.8], [38.2, 49.9], [38, 49.9], [37.9, 50], [37.8, 50.1], [37.6, 50.1], [37.5, 50.2], [37.3, 50.2], [37.2, 50.3], [37.1, 50.3], [36.9, 50.4], [36.8, 50.4], [36.6, 50.5], [36.5, 50.5], [36.3, 50.6], [36.2, 50.6], [36, 50.6], [35.9, 50.7], [35.7, 50.7], [35.6, 50.7], [35.4, 50.7], [35.3, 50.7], [35.1, 50.8], [34.9, 50.8], [34.8, 50.8], [34.6, 50.8], [34.5, 50.8], [34.3, 50.8], [34.2, 50.8], [34, 50.8], [33.9, 50.8], [33.7, 50.8], [33.6, 50.8], [33.4, 50.8], [33.3, 50.8], [33.1, 50.7], [33, 50.7], [32.8, 50.7], [32.7, 50.7], [32.5, 50.6], [32.4, 50.6], [32.2, 50.6], [32.1, 50.5], [31.9, 50.5], [31.8, 50.4], [31.6, 50.4], [31.5, 50.4], [31.3, 50.3], [31.2, 50.3], [31, 50.2], [30.9, 50.1], [30.7, 50.1], [30.6, 50], [30.5, 50], [30.3, 49.9], [30.2, 49.8], [30.1, 49.7], [29.9, 49.7], [29.8, 49.6], [29.7, 49.5], [29.5, 49.4], [29.4, 49.4], [29.3, 49.3], [29.1, 49.2], [29, 49.1], [28.9, 49], [28.8, 48.9], [28.7, 48.8], [28.5, 48.7], [28.4, 48.6], [28.3, 48.5], [28.2, 48.4], [28.1, 48.3], [28, 48.2], [27.9, 48.1], [27.8, 48], [27.7, 47.8], [27.6, 47.7], [27.5, 47.6], [27.4, 47.5], [27.3, 47.4], [27.2, 47.2], [27.1, 47.1], [27, 47]]] }" );
+  QString expectedSimpleJson( "{\"coordinates\":[[[7.0,17.0],[6.9,17.0],[6.9,17.0],[6.8,17.0],[6.8,17.1],[6.7,17.1],[6.7,17.1],[6.6,17.1],[6.6,17.1],[6.5,17.1],[6.5,17.1],[6.4,17.1],[6.4,17.1],[6.3,17.1],[6.2,17.2],[6.2,17.2],[6.1,17.2],[6.1,17.2],[6.0,17.2],[6.0,17.2],[5.9,17.2],[5.9,17.2],[5.8,17.2],[5.7,17.2],[5.7,17.1],[5.6,17.1],[5.6,17.1],[5.5,17.1],[5.5,17.1],[5.4,17.1],[5.4,17.1],[5.3,17.1],[5.3,17.1],[5.2,17.1],[5.2,17.0],[5.1,17.0],[5.0,17.0],[5.0,17.0],[4.9,17.0],[4.9,17.0],[4.8,16.9],[4.8,16.9],[4.7,16.9],[4.7,16.9],[4.6,16.9],[4.6,16.8],[4.5,16.8],[4.5,16.8],[4.4,16.8],[4.4,16.7],[4.3,16.7],[4.3,16.7],[4.3,16.6],[4.2,16.6],[4.2,16.6],[4.1,16.5],[4.1,16.5],[4.0,16.5],[4.0,16.4],[3.9,16.4],[3.9,16.4],[3.9,16.3],[3.8,16.3],[3.8,16.3],[3.7,16.2],[3.7,16.2],[3.7,16.1],[3.6,16.1],[3.6,16.1],[3.6,16.0],[3.5,16.0],[3.5,15.9],[3.5,15.9],[3.4,15.8],[3.4,15.8],[3.4,15.7],[3.3,15.7],[3.3,15.7],[3.3,15.6],[3.2,15.6],[3.2,15.5],[3.2,15.5],[3.2,15.4],[3.1,15.4],[3.1,15.3],[3.1,15.3],[3.1,15.2],[3.1,15.2],[3.0,15.1],[3.0,15.1],[3.0,15.0],[3.0,15.0],[3.0,14.9],[3.0,14.8],[2.9,14.8],[2.9,14.7],[2.9,14.7],[2.9,14.6],[2.9,14.6],[2.9,14.5],[2.9,14.5],[2.9,14.4],[2.9,14.4],[2.9,14.3],[2.8,14.2],[2.8,14.2],[2.8,14.1],[2.8,14.1],[2.8,14.0],[2.8,14.0],[2.8,13.9],[2.8,13.9],[2.8,13.8],[2.8,13.8],[2.9,13.7],[2.9,13.6],[2.9,13.6],[2.9,13.5],[2.9,13.5],[2.9,13.4],[2.9,13.4],[2.9,13.3],[2.9,13.3],[2.9,13.2],[3.0,13.2],[3.0,13.1],[3.0,13.0],[3.0,13.0],[3.0,12.9],[3.0,12.9],[3.1,12.8],[3.1,12.8],[3.1,12.7],[3.1,12.7],[3.1,12.6],[3.2,12.6],[3.2,12.5],[3.2,12.5],[3.2,12.4],[3.3,12.4],[3.3,12.3],[3.3,12.3],[3.4,12.3],[3.4,12.2],[3.4,12.2],[3.5,12.1],[3.5,12.1],[3.5,12.0],[3.6,12.0],[3.6,11.9],[3.6,11.9],[3.7,11.9],[3.7,11.8],[3.7,11.8],[3.8,11.7],[3.8,11.7],[3.9,11.7],[3.9,11.6],[3.9,11.6],[4.0,11.6],[4.0,11.5],[4.1,11.5],[4.1,11.5],[4.2,11.4],[4.2,11.4],[4.3,11.4],[4.3,11.3],[4.3,11.3],[4.4,11.3],[4.4,11.2],[4.5,11.2],[4.5,11.2],[4.6,11.2],[4.6,11.1],[4.7,11.1],[4.7,11.1],[4.8,11.1],[4.8,11.1],[4.9,11.0],[4.9,11.0],[5.0,11.0],[5.0,11.0],[5.1,11.0],[5.2,11.0],[5.2,10.9],[5.3,10.9],[5.3,10.9],[5.4,10.9],[5.4,10.9],[5.5,10.9],[5.5,10.9],[5.6,10.9],[5.6,10.9],[5.7,10.9],[5.7,10.8],[5.8,10.8],[5.9,10.8],[5.9,10.8],[6.0,10.8],[6.0,10.8],[6.1,10.8],[6.1,10.8],[6.2,10.8],[6.2,10.8],[6.3,10.9],[6.4,10.9],[6.4,10.9],[6.5,10.9],[6.5,10.9],[6.6,10.9],[6.6,10.9],[6.7,10.9],[6.7,10.9],[6.8,10.9],[6.8,11.0],[6.9,11.0],[6.9,11.0],[7.0,11.0]],[[27.0,37.0],[27.1,36.9],[27.2,36.8],[27.3,36.6],[27.4,36.5],[27.5,36.4],[27.6,36.3],[27.7,36.2],[27.8,36.0],[27.9,35.9],[28.0,35.8],[28.1,35.7],[28.2,35.6],[28.3,35.5],[28.4,35.4],[28.5,35.3],[28.7,35.2],[28.8,35.1],[28.9,35.0],[29.0,34.9],[29.1,34.8],[29.3,34.7],[29.4,34.6],[29.5,34.6],[29.7,34.5],[29.8,34.4],[29.9,34.3],[30.1,34.3],[30.2,34.2],[30.3,34.1],[30.5,34.0],[30.6,34.0],[30.7,33.9],[30.9,33.9],[31.0,33.8],[31.2,33.7],[31.3,33.7],[31.5,33.6],[31.6,33.6],[31.8,33.6],[31.9,33.5],[32.1,33.5],[32.2,33.4],[32.4,33.4],[32.5,33.4],[32.7,33.3],[32.8,33.3],[33.0,33.3],[33.1,33.3],[33.3,33.2],[33.4,33.2],[33.6,33.2],[33.7,33.2],[33.9,33.2],[34.0,33.2],[34.2,33.2],[34.3,33.2],[34.5,33.2],[34.6,33.2],[34.8,33.2],[34.9,33.2],[35.1,33.2],[35.3,33.3],[35.4,33.3],[35.6,33.3],[35.7,33.3],[35.9,33.3],[36.0,33.4],[36.2,33.4],[36.3,33.4],[36.5,33.5],[36.6,33.5],[36.8,33.6],[36.9,33.6],[37.1,33.7],[37.2,33.7],[37.3,33.8],[37.5,33.8],[37.6,33.9],[37.8,33.9],[37.9,34.0],[38.0,34.1],[38.2,34.1],[38.3,34.2],[38.5,34.3],[38.6,34.3],[38.7,34.4],[38.9,34.5],[39.0,34.6],[39.1,34.7],[39.2,34.7],[39.4,34.8],[39.5,34.9],[39.6,35.0],[39.7,35.1],[39.9,35.2],[40.0,35.3],[40.1,35.4],[40.2,35.5],[40.3,35.6],[40.4,35.7],[40.5,35.8],[40.6,35.9],[40.7,36.1],[40.8,36.2],[40.9,36.3],[41.0,36.4],[41.1,36.5],[41.2,36.6],[41.3,36.8],[41.4,36.9],[41.5,37.0],[41.6,37.1],[41.7,37.3],[41.8,37.4],[41.8,37.5],[41.9,37.7],[42.0,37.8],[42.1,37.9],[42.1,38.1],[42.2,38.2],[42.3,38.3],[42.3,38.5],[42.4,38.6],[42.4,38.8],[42.5,38.9],[42.6,39.1],[42.6,39.2],[42.6,39.4],[42.7,39.5],[42.7,39.6],[42.8,39.8],[42.8,39.9],[42.8,40.1],[42.9,40.2],[42.9,40.4],[42.9,40.5],[43.0,40.7],[43.0,40.9],[43.0,41.0],[43.0,41.2],[43.0,41.3],[43.0,41.5],[43.0,41.6],[43.1,41.8],[43.1,41.9],[43.1,42.1],[43.1,42.2],[43.0,42.4],[43.0,42.5],[43.0,42.7],[43.0,42.8],[43.0,43.0],[43.0,43.1],[43.0,43.3],[42.9,43.5],[42.9,43.6],[42.9,43.8],[42.8,43.9],[42.8,44.1],[42.8,44.2],[42.7,44.4],[42.7,44.5],[42.6,44.6],[42.6,44.8],[42.6,44.9],[42.5,45.1],[42.4,45.2],[42.4,45.4],[42.3,45.5],[42.3,45.7],[42.2,45.8],[42.1,45.9],[42.1,46.1],[42.0,46.2],[41.9,46.3],[41.8,46.5],[41.8,46.6],[41.7,46.7],[41.6,46.9],[41.5,47.0],[41.4,47.1],[41.3,47.2],[41.2,47.4],[41.1,47.5],[41.0,47.6],[40.9,47.7],[40.8,47.8],[40.7,47.9],[40.6,48.1],[40.5,48.2],[40.4,48.3],[40.3,48.4],[40.2,48.5],[40.1,48.6],[40.0,48.7],[39.9,48.8],[39.7,48.9],[39.6,49.0],[39.5,49.1],[39.4,49.2],[39.2,49.3],[39.1,49.3],[39.0,49.4],[38.9,49.5],[38.7,49.6],[38.6,49.7],[38.5,49.7],[38.3,49.8],[38.2,49.9],[38.0,49.9],[37.9,50.0],[37.8,50.1],[37.6,50.1],[37.5,50.2],[37.3,50.2],[37.2,50.3],[37.1,50.3],[36.9,50.4],[36.8,50.4],[36.6,50.5],[36.5,50.5],[36.3,50.6],[36.2,50.6],[36.0,50.6],[35.9,50.7],[35.7,50.7],[35.6,50.7],[35.4,50.7],[35.3,50.7],[35.1,50.8],[34.9,50.8],[34.8,50.8],[34.6,50.8],[34.5,50.8],[34.3,50.8],[34.2,50.8],[34.0,50.8],[33.9,50.8],[33.7,50.8],[33.6,50.8],[33.4,50.8],[33.3,50.8],[33.1,50.7],[33.0,50.7],[32.8,50.7],[32.7,50.7],[32.5,50.6],[32.4,50.6],[32.2,50.6],[32.1,50.5],[31.9,50.5],[31.8,50.4],[31.6,50.4],[31.5,50.4],[31.3,50.3],[31.2,50.3],[31.0,50.2],[30.9,50.1],[30.7,50.1],[30.6,50.0],[30.5,50.0],[30.3,49.9],[30.2,49.8],[30.1,49.7],[29.9,49.7],[29.8,49.6],[29.7,49.5],[29.5,49.4],[29.4,49.4],[29.3,49.3],[29.1,49.2],[29.0,49.1],[28.9,49.0],[28.8,48.9],[28.7,48.8],[28.5,48.7],[28.4,48.6],[28.3,48.5],[28.2,48.4],[28.1,48.3],[28.0,48.2],[27.9,48.1],[27.8,48.0],[27.7,47.8],[27.6,47.7],[27.5,47.6],[27.4,47.5],[27.3,47.4],[27.2,47.2],[27.1,47.1],[27.0,47.0]]],\"type\":\"MultiLineString\"}" );
   res = exportC.asJson( 1 );
   QCOMPARE( res, expectedSimpleJson );
 
@@ -12292,7 +13315,7 @@ void TestQgsGeometry::multiCurve()
   part.setPoints( QgsPointSequence() << QgsPoint( QgsWkbTypes::Point, 27 / 3.0, 37 / 9.0 ) << QgsPoint( QgsWkbTypes::Point, 43 / 41.0, 43 / 42.0 ) << QgsPoint( QgsWkbTypes::Point, 27 / 3.0, 1 / 3.0 ) ) ;
   exportFloat.addGeometry( part.clone() );
 
-  QString expectedJsonPrec3( QStringLiteral( "{\"type\": \"MultiLineString\", \"coordinates\": [[ [2.333, 5.667], [2.316, 5.677], [2.298, 5.687], [2.28, 5.697], [2.262, 5.707], [2.244, 5.716], [2.226, 5.725], [2.207, 5.734], [2.188, 5.742], [2.17, 5.75], [2.151, 5.757], [2.131, 5.765], [2.112, 5.772], [2.093, 5.778], [2.074, 5.785], [2.054, 5.79], [2.034, 5.796], [2.015, 5.801], [1.995, 5.806], [1.975, 5.811], [1.955, 5.815], [1.935, 5.819], [1.915, 5.822], [1.894, 5.826], [1.874, 5.828], [1.854, 5.831], [1.834, 5.833], [1.813, 5.835], [1.793, 5.836], [1.773, 5.837], [1.752, 5.838], [1.732, 5.838], [1.711, 5.838], [1.691, 5.838], [1.67, 5.837], [1.65, 5.836], [1.63, 5.834], [1.609, 5.833], [1.589, 5.83], [1.569, 5.828], [1.548, 5.825], [1.528, 5.822], [1.508, 5.818], [1.488, 5.814], [1.468, 5.81], [1.448, 5.805], [1.428, 5.801], [1.409, 5.795], [1.389, 5.79], [1.37, 5.784], [1.35, 5.777], [1.331, 5.771], [1.312, 5.764], [1.293, 5.756], [1.274, 5.749], [1.255, 5.741], [1.236, 5.732], [1.218, 5.724], [1.199, 5.715], [1.181, 5.705], [1.163, 5.696], [1.145, 5.686], [1.128, 5.676], [1.11, 5.665], [1.093, 5.654], [1.076, 5.643], [1.059, 5.632], [1.042, 5.62], [1.025, 5.608], [1.009, 5.596], [0.993, 5.583], [0.977, 5.57], [0.962, 5.557], [0.946, 5.543], [0.931, 5.53], [0.916, 5.516], [0.901, 5.502], [0.887, 5.487], [0.873, 5.473], [0.859, 5.458], [0.845, 5.442], [0.832, 5.427], [0.819, 5.411], [0.806, 5.395], [0.793, 5.379], [0.781, 5.363], [0.769, 5.346], [0.757, 5.33], [0.746, 5.313], [0.735, 5.296], [0.724, 5.278], [0.713, 5.261], [0.703, 5.243], [0.693, 5.225], [0.684, 5.207], [0.674, 5.189], [0.666, 5.171], [0.657, 5.152], [0.649, 5.133], [0.641, 5.115], [0.633, 5.096], [0.626, 5.077], [0.619, 5.057], [0.612, 5.038], [0.606, 5.019], [0.6, 4.999], [0.594, 4.979], [0.589, 4.96], [0.584, 4.94], [0.579, 4.92], [0.575, 4.9], [0.571, 4.88], [0.568, 4.86], [0.564, 4.84], [0.562, 4.819], [0.559, 4.799], [0.557, 4.779], [0.555, 4.759], [0.554, 4.738], [0.553, 4.718], [0.552, 4.697], [0.552, 4.677], [0.552, 4.656], [0.552, 4.636], [0.553, 4.616], [0.554, 4.595], [0.555, 4.575], [0.557, 4.554], [0.559, 4.534], [0.562, 4.514], [0.564, 4.494], [0.568, 4.473], [0.571, 4.453], [0.575, 4.433], [0.579, 4.413], [0.584, 4.393], [0.589, 4.374], [0.594, 4.354], [0.6, 4.334], [0.606, 4.315], [0.612, 4.295], [0.619, 4.276], [0.626, 4.257], [0.633, 4.238], [0.641, 4.219], [0.649, 4.2], [0.657, 4.181], [0.666, 4.163], [0.674, 4.144], [0.684, 4.126], [0.693, 4.108], [0.703, 4.09], [0.713, 4.073], [0.724, 4.055], [0.735, 4.038], [0.746, 4.021], [0.757, 4.004], [0.769, 3.987], [0.781, 3.97], [0.793, 3.954], [0.806, 3.938], [0.819, 3.922], [0.832, 3.906], [0.845, 3.891], [0.859, 3.876], [0.873, 3.861], [0.887, 3.846], [0.901, 3.832], [0.916, 3.817], [0.931, 3.804], [0.946, 3.79], [0.962, 3.776], [0.977, 3.763], [0.993, 3.75], [1.009, 3.738], [1.025, 3.726], [1.042, 3.713], [1.059, 3.702], [1.076, 3.69], [1.093, 3.679], [1.11, 3.668], [1.128, 3.658], [1.145, 3.648], [1.163, 3.638], [1.181, 3.628], [1.199, 3.619], [1.218, 3.61], [1.236, 3.601], [1.255, 3.593], [1.274, 3.585], [1.293, 3.577], [1.312, 3.57], [1.331, 3.563], [1.35, 3.556], [1.37, 3.55], [1.389, 3.544], [1.409, 3.538], [1.428, 3.533], [1.448, 3.528], [1.468, 3.523], [1.488, 3.519], [1.508, 3.515], [1.528, 3.511], [1.548, 3.508], [1.569, 3.505], [1.589, 3.503], [1.609, 3.501], [1.63, 3.499], [1.65, 3.497], [1.67, 3.496], [1.691, 3.496], [1.711, 3.495], [1.732, 3.495], [1.752, 3.496], [1.773, 3.496], [1.793, 3.497], [1.813, 3.499], [1.834, 3.5], [1.854, 3.503], [1.874, 3.505], [1.894, 3.508], [1.915, 3.511], [1.935, 3.514], [1.955, 3.518], [1.975, 3.523], [1.995, 3.527], [2.015, 3.532], [2.034, 3.537], [2.054, 3.543], [2.074, 3.549], [2.093, 3.555], [2.112, 3.562], [2.131, 3.569], [2.151, 3.576], [2.17, 3.584], [2.188, 3.592], [2.207, 3.6], [2.226, 3.608], [2.244, 3.617], [2.262, 3.627], [2.28, 3.636], [2.298, 3.646], [2.316, 3.656], [2.333, 3.667]], [ [9, 4.111], [8.966, 4.178], [8.932, 4.244], [8.896, 4.309], [8.859, 4.374], [8.821, 4.438], [8.782, 4.502], [8.742, 4.565], [8.7, 4.627], [8.658, 4.688], [8.614, 4.749], [8.57, 4.809], [8.524, 4.868], [8.477, 4.926], [8.43, 4.983], [8.381, 5.04], [8.331, 5.096], [8.281, 5.151], [8.229, 5.205], [8.177, 5.258], [8.124, 5.31], [8.069, 5.361], [8.014, 5.411], [7.958, 5.461], [7.901, 5.509], [7.844, 5.556], [7.785, 5.603], [7.726, 5.648], [7.666, 5.692], [7.605, 5.735], [7.543, 5.777], [7.481, 5.818], [7.418, 5.858], [7.354, 5.897], [7.29, 5.935], [7.225, 5.971], [7.159, 6.007], [7.093, 6.041], [7.026, 6.074], [6.958, 6.106], [6.89, 6.137], [6.822, 6.167], [6.753, 6.195], [6.683, 6.222], [6.613, 6.248], [6.543, 6.273], [6.472, 6.296], [6.401, 6.319], [6.329, 6.34], [6.257, 6.36], [6.185, 6.378], [6.112, 6.395], [6.04, 6.411], [5.966, 6.426], [5.893, 6.44], [5.819, 6.452], [5.746, 6.463], [5.672, 6.472], [5.597, 6.48], [5.523, 6.487], [5.449, 6.493], [5.374, 6.498], [5.3, 6.501], [5.225, 6.503], [5.15, 6.503], [5.076, 6.502], [5.001, 6.5], [4.927, 6.497], [4.852, 6.492], [4.778, 6.486], [4.704, 6.479], [4.629, 6.47], [4.555, 6.46], [4.482, 6.449], [4.408, 6.437], [4.335, 6.423], [4.262, 6.408], [4.189, 6.392], [4.116, 6.374], [4.044, 6.355], [3.972, 6.335], [3.901, 6.314], [3.83, 6.292], [3.759, 6.268], [3.688, 6.243], [3.619, 6.217], [3.549, 6.189], [3.48, 6.16], [3.412, 6.131], [3.344, 6.1], [3.277, 6.067], [3.21, 6.034], [3.144, 5.999], [3.078, 5.964], [3.013, 5.927], [2.949, 5.889], [2.886, 5.85], [2.823, 5.81], [2.761, 5.768], [2.699, 5.726], [2.638, 5.683], [2.578, 5.638], [2.519, 5.593], [2.461, 5.546], [2.403, 5.499], [2.347, 5.45], [2.291, 5.401], [2.236, 5.35], [2.182, 5.299], [2.129, 5.246], [2.076, 5.193], [2.025, 5.139], [1.975, 5.084], [1.925, 5.028], [1.877, 4.971], [1.829, 4.914], [1.783, 4.855], [1.738, 4.796], [1.693, 4.736], [1.65, 4.675], [1.608, 4.614], [1.567, 4.551], [1.527, 4.488], [1.488, 4.425], [1.45, 4.36], [1.413, 4.295], [1.378, 4.23], [1.343, 4.164], [1.31, 4.097], [1.278, 4.029], [1.247, 3.961], [1.217, 3.893], [1.189, 3.824], [1.161, 3.755], [1.135, 3.685], [1.11, 3.614], [1.087, 3.544], [1.064, 3.472], [1.043, 3.401], [1.023, 3.329], [1.004, 3.257], [0.987, 3.184], [0.971, 3.111], [0.956, 3.038], [0.942, 2.965], [0.93, 2.891], [0.919, 2.817], [0.909, 2.743], [0.901, 2.669], [0.894, 2.595], [0.888, 2.52], [0.883, 2.446], [0.88, 2.371], [0.878, 2.297], [0.878, 2.222], [0.878, 2.148], [0.88, 2.073], [0.883, 1.998], [0.888, 1.924], [0.894, 1.85], [0.901, 1.775], [0.909, 1.701], [0.919, 1.627], [0.93, 1.553], [0.942, 1.48], [0.956, 1.406], [0.971, 1.333], [0.987, 1.26], [1.004, 1.188], [1.023, 1.116], [1.043, 1.044], [1.064, 0.972], [1.087, 0.901], [1.11, 0.83], [1.135, 0.76], [1.161, 0.69], [1.189, 0.62], [1.217, 0.551], [1.247, 0.483], [1.278, 0.415], [1.31, 0.348], [1.343, 0.281], [1.378, 0.215], [1.413, 0.149], [1.45, 0.084], [1.488, 0.02], [1.527, -0.044], [1.567, -0.107], [1.608, -0.169], [1.65, -0.231], [1.693, -0.291], [1.738, -0.351], [1.783, -0.411], [1.829, -0.469], [1.877, -0.527], [1.925, -0.584], [1.975, -0.639], [2.025, -0.694], [2.076, -0.749], [2.129, -0.802], [2.182, -0.854], [2.236, -0.906], [2.291, -0.956], [2.347, -1.006], [2.403, -1.054], [2.461, -1.102], [2.519, -1.148], [2.578, -1.194], [2.638, -1.238], [2.699, -1.282], [2.761, -1.324], [2.823, -1.365], [2.886, -1.405], [2.949, -1.444], [3.013, -1.482], [3.078, -1.519], [3.144, -1.555], [3.21, -1.589], [3.277, -1.623], [3.344, -1.655], [3.412, -1.686], [3.48, -1.716], [3.549, -1.745], [3.619, -1.772], [3.688, -1.798], [3.759, -1.823], [3.83, -1.847], [3.901, -1.87], [3.972, -1.891], [4.044, -1.911], [4.116, -1.93], [4.189, -1.947], [4.262, -1.964], [4.335, -1.979], [4.408, -1.992], [4.482, -2.005], [4.555, -2.016], [4.629, -2.026], [4.704, -2.034], [4.778, -2.042], [4.852, -2.048], [4.927, -2.052], [5.001, -2.056], [5.076, -2.058], [5.15, -2.059], [5.225, -2.058], [5.3, -2.056], [5.374, -2.053], [5.449, -2.049], [5.523, -2.043], [5.597, -2.036], [5.672, -2.028], [5.746, -2.018], [5.819, -2.007], [5.893, -1.995], [5.966, -1.982], [6.04, -1.967], [6.112, -1.951], [6.185, -1.934], [6.257, -1.915], [6.329, -1.895], [6.401, -1.874], [6.472, -1.852], [6.543, -1.829], [6.613, -1.804], [6.683, -1.778], [6.753, -1.751], [6.822, -1.722], [6.89, -1.693], [6.958, -1.662], [7.026, -1.63], [7.093, -1.597], [7.159, -1.562], [7.225, -1.527], [7.29, -1.49], [7.354, -1.453], [7.418, -1.414], [7.481, -1.374], [7.543, -1.333], [7.605, -1.291], [7.666, -1.248], [7.726, -1.203], [7.785, -1.158], [7.844, -1.112], [7.901, -1.065], [7.958, -1.016], [8.014, -0.967], [8.069, -0.917], [8.124, -0.865], [8.177, -0.813], [8.229, -0.76], [8.281, -0.706], [8.331, -0.651], [8.381, -0.596], [8.43, -0.539], [8.477, -0.482], [8.524, -0.423], [8.57, -0.364], [8.614, -0.304], [8.658, -0.244], [8.7, -0.182], [8.742, -0.12], [8.782, -0.057], [8.821, 0.006], [8.859, 0.07], [8.896, 0.135], [8.932, 0.201], [8.966, 0.267], [9, 0.333]]] }" ) );
+  QString expectedJsonPrec3( QStringLiteral( "{\"coordinates\":[[[2.333,5.667],[2.316,5.677],[2.298,5.687],[2.28,5.697],[2.262,5.707],[2.244,5.716],[2.226,5.725],[2.207,5.734],[2.188,5.742],[2.17,5.75],[2.151,5.757],[2.131,5.765],[2.112,5.772],[2.093,5.778],[2.074,5.785],[2.054,5.79],[2.034,5.796],[2.015,5.801],[1.995,5.806],[1.975,5.811],[1.955,5.815],[1.935,5.819],[1.915,5.822],[1.894,5.826],[1.874,5.828],[1.854,5.831],[1.834,5.833],[1.813,5.835],[1.793,5.836],[1.773,5.837],[1.752,5.838],[1.732,5.838],[1.711,5.838],[1.691,5.838],[1.67,5.837],[1.65,5.836],[1.63,5.834],[1.609,5.833],[1.589,5.83],[1.569,5.828],[1.548,5.825],[1.528,5.822],[1.508,5.818],[1.488,5.814],[1.468,5.81],[1.448,5.805],[1.428,5.801],[1.409,5.795],[1.389,5.79],[1.37,5.784],[1.35,5.777],[1.331,5.771],[1.312,5.764],[1.293,5.756],[1.274,5.749],[1.255,5.741],[1.236,5.732],[1.218,5.724],[1.199,5.715],[1.181,5.705],[1.163,5.696],[1.145,5.686],[1.128,5.676],[1.11,5.665],[1.093,5.654],[1.076,5.643],[1.059,5.632],[1.042,5.62],[1.025,5.608],[1.009,5.596],[0.993,5.583],[0.977,5.57],[0.962,5.557],[0.946,5.543],[0.931,5.53],[0.916,5.516],[0.901,5.502],[0.887,5.487],[0.873,5.473],[0.859,5.458],[0.845,5.442],[0.832,5.427],[0.819,5.411],[0.806,5.395],[0.793,5.379],[0.781,5.363],[0.769,5.346],[0.757,5.33],[0.746,5.313],[0.735,5.296],[0.724,5.278],[0.713,5.261],[0.703,5.243],[0.693,5.225],[0.684,5.207],[0.674,5.189],[0.666,5.171],[0.657,5.152],[0.649,5.133],[0.641,5.115],[0.633,5.096],[0.626,5.077],[0.619,5.057],[0.612,5.038],[0.606,5.019],[0.6,4.999],[0.594,4.979],[0.589,4.96],[0.584,4.94],[0.579,4.92],[0.575,4.9],[0.571,4.88],[0.568,4.86],[0.564,4.84],[0.562,4.819],[0.559,4.799],[0.557,4.779],[0.555,4.759],[0.554,4.738],[0.553,4.718],[0.552,4.697],[0.552,4.677],[0.552,4.656],[0.552,4.636],[0.553,4.616],[0.554,4.595],[0.555,4.575],[0.557,4.554],[0.559,4.534],[0.562,4.514],[0.564,4.494],[0.568,4.473],[0.571,4.453],[0.575,4.433],[0.579,4.413],[0.584,4.393],[0.589,4.374],[0.594,4.354],[0.6,4.334],[0.606,4.315],[0.612,4.295],[0.619,4.276],[0.626,4.257],[0.633,4.238],[0.641,4.219],[0.649,4.2],[0.657,4.181],[0.666,4.163],[0.674,4.144],[0.684,4.126],[0.693,4.108],[0.703,4.09],[0.713,4.073],[0.724,4.055],[0.735,4.038],[0.746,4.021],[0.757,4.004],[0.769,3.987],[0.781,3.97],[0.793,3.954],[0.806,3.938],[0.819,3.922],[0.832,3.906],[0.845,3.891],[0.859,3.876],[0.873,3.861],[0.887,3.846],[0.901,3.832],[0.916,3.817],[0.931,3.804],[0.946,3.79],[0.962,3.776],[0.977,3.763],[0.993,3.75],[1.009,3.738],[1.025,3.726],[1.042,3.713],[1.059,3.702],[1.076,3.69],[1.093,3.679],[1.11,3.668],[1.128,3.658],[1.145,3.648],[1.163,3.638],[1.181,3.628],[1.199,3.619],[1.218,3.61],[1.236,3.601],[1.255,3.593],[1.274,3.585],[1.293,3.577],[1.312,3.57],[1.331,3.563],[1.35,3.556],[1.37,3.55],[1.389,3.544],[1.409,3.538],[1.428,3.533],[1.448,3.528],[1.468,3.523],[1.488,3.519],[1.508,3.515],[1.528,3.511],[1.548,3.508],[1.569,3.505],[1.589,3.503],[1.609,3.501],[1.63,3.499],[1.65,3.497],[1.67,3.496],[1.691,3.496],[1.711,3.495],[1.732,3.495],[1.752,3.496],[1.773,3.496],[1.793,3.497],[1.813,3.499],[1.834,3.5],[1.854,3.503],[1.874,3.505],[1.894,3.508],[1.915,3.511],[1.935,3.514],[1.955,3.518],[1.975,3.523],[1.995,3.527],[2.015,3.532],[2.034,3.537],[2.054,3.543],[2.074,3.549],[2.093,3.555],[2.112,3.562],[2.131,3.569],[2.151,3.576],[2.17,3.584],[2.188,3.592],[2.207,3.6],[2.226,3.608],[2.244,3.617],[2.262,3.627],[2.28,3.636],[2.298,3.646],[2.316,3.656],[2.333,3.667]],[[9.0,4.111],[8.966,4.178],[8.932,4.244],[8.896,4.309],[8.859,4.374],[8.821,4.438],[8.782,4.502],[8.742,4.565],[8.7,4.627],[8.658,4.688],[8.614,4.749],[8.57,4.809],[8.524,4.868],[8.477,4.926],[8.43,4.983],[8.381,5.04],[8.331,5.096],[8.281,5.151],[8.229,5.205],[8.177,5.258],[8.124,5.31],[8.069,5.361],[8.014,5.411],[7.958,5.461],[7.901,5.509],[7.844,5.556],[7.785,5.603],[7.726,5.648],[7.666,5.692],[7.605,5.735],[7.543,5.777],[7.481,5.818],[7.418,5.858],[7.354,5.897],[7.29,5.935],[7.225,5.971],[7.159,6.007],[7.093,6.041],[7.026,6.074],[6.958,6.106],[6.89,6.137],[6.822,6.167],[6.753,6.195],[6.683,6.222],[6.613,6.248],[6.543,6.273],[6.472,6.296],[6.401,6.319],[6.329,6.34],[6.257,6.36],[6.185,6.378],[6.112,6.395],[6.04,6.411],[5.966,6.426],[5.893,6.44],[5.819,6.452],[5.746,6.463],[5.672,6.472],[5.597,6.48],[5.523,6.487],[5.449,6.493],[5.374,6.498],[5.3,6.501],[5.225,6.503],[5.15,6.503],[5.076,6.502],[5.001,6.5],[4.927,6.497],[4.852,6.492],[4.778,6.486],[4.704,6.479],[4.629,6.47],[4.555,6.46],[4.482,6.449],[4.408,6.437],[4.335,6.423],[4.262,6.408],[4.189,6.392],[4.116,6.374],[4.044,6.355],[3.972,6.335],[3.901,6.314],[3.83,6.292],[3.759,6.268],[3.688,6.243],[3.619,6.217],[3.549,6.189],[3.48,6.16],[3.412,6.131],[3.344,6.1],[3.277,6.067],[3.21,6.034],[3.144,5.999],[3.078,5.964],[3.013,5.927],[2.949,5.889],[2.886,5.85],[2.823,5.81],[2.761,5.768],[2.699,5.726],[2.638,5.683],[2.578,5.638],[2.519,5.593],[2.461,5.546],[2.403,5.499],[2.347,5.45],[2.291,5.401],[2.236,5.35],[2.182,5.299],[2.129,5.246],[2.076,5.193],[2.025,5.139],[1.975,5.084],[1.925,5.028],[1.877,4.971],[1.829,4.914],[1.783,4.855],[1.738,4.796],[1.693,4.736],[1.65,4.675],[1.608,4.614],[1.567,4.551],[1.527,4.488],[1.488,4.425],[1.45,4.36],[1.413,4.295],[1.378,4.23],[1.343,4.164],[1.31,4.097],[1.278,4.029],[1.247,3.961],[1.217,3.893],[1.189,3.824],[1.161,3.755],[1.135,3.685],[1.11,3.614],[1.087,3.544],[1.064,3.472],[1.043,3.401],[1.023,3.329],[1.004,3.257],[0.987,3.184],[0.971,3.111],[0.956,3.038],[0.942,2.965],[0.93,2.891],[0.919,2.817],[0.909,2.743],[0.901,2.669],[0.894,2.595],[0.888,2.52],[0.883,2.446],[0.88,2.371],[0.878,2.297],[0.878,2.222],[0.878,2.148],[0.88,2.073],[0.883,1.998],[0.888,1.924],[0.894,1.85],[0.901,1.775],[0.909,1.701],[0.919,1.627],[0.93,1.553],[0.942,1.48],[0.956,1.406],[0.971,1.333],[0.987,1.26],[1.004,1.188],[1.023,1.116],[1.043,1.044],[1.064,0.972],[1.087,0.901],[1.11,0.83],[1.135,0.76],[1.161,0.69],[1.189,0.62],[1.217,0.551],[1.247,0.483],[1.278,0.415],[1.31,0.348],[1.343,0.281],[1.378,0.215],[1.413,0.149],[1.45,0.084],[1.488,0.02],[1.527,-0.044],[1.567,-0.107],[1.608,-0.169],[1.65,-0.231],[1.693,-0.291],[1.738,-0.351],[1.783,-0.411],[1.829,-0.469],[1.877,-0.527],[1.925,-0.584],[1.975,-0.639],[2.025,-0.694],[2.076,-0.749],[2.129,-0.802],[2.182,-0.854],[2.236,-0.906],[2.291,-0.956],[2.347,-1.006],[2.403,-1.054],[2.461,-1.102],[2.519,-1.148],[2.578,-1.194],[2.638,-1.238],[2.699,-1.282],[2.761,-1.324],[2.823,-1.365],[2.886,-1.405],[2.949,-1.444],[3.013,-1.482],[3.078,-1.519],[3.144,-1.555],[3.21,-1.589],[3.277,-1.623],[3.344,-1.655],[3.412,-1.686],[3.48,-1.716],[3.549,-1.745],[3.619,-1.772],[3.688,-1.798],[3.759,-1.823],[3.83,-1.847],[3.901,-1.87],[3.972,-1.891],[4.044,-1.911],[4.116,-1.93],[4.189,-1.947],[4.262,-1.964],[4.335,-1.979],[4.408,-1.992],[4.482,-2.005],[4.555,-2.016],[4.629,-2.026],[4.704,-2.034],[4.778,-2.042],[4.852,-2.048],[4.927,-2.052],[5.001,-2.056],[5.076,-2.058],[5.15,-2.059],[5.225,-2.058],[5.3,-2.056],[5.374,-2.053],[5.449,-2.049],[5.523,-2.043],[5.597,-2.036],[5.672,-2.028],[5.746,-2.018],[5.819,-2.007],[5.893,-1.995],[5.966,-1.982],[6.04,-1.967],[6.112,-1.951],[6.185,-1.934],[6.257,-1.915],[6.329,-1.895],[6.401,-1.874],[6.472,-1.852],[6.543,-1.829],[6.613,-1.804],[6.683,-1.778],[6.753,-1.751],[6.822,-1.722],[6.89,-1.693],[6.958,-1.662],[7.026,-1.63],[7.093,-1.597],[7.159,-1.562],[7.225,-1.527],[7.29,-1.49],[7.354,-1.453],[7.418,-1.414],[7.481,-1.374],[7.543,-1.333],[7.605,-1.291],[7.666,-1.248],[7.726,-1.203],[7.785,-1.158],[7.844,-1.112],[7.901,-1.065],[7.958,-1.016],[8.014,-0.967],[8.069,-0.917],[8.124,-0.865],[8.177,-0.813],[8.229,-0.76],[8.281,-0.706],[8.331,-0.651],[8.381,-0.596],[8.43,-0.539],[8.477,-0.482],[8.524,-0.423],[8.57,-0.364],[8.614,-0.304],[8.658,-0.244],[8.7,-0.182],[8.742,-0.12],[8.782,-0.057],[8.821,0.006],[8.859,0.07],[8.896,0.135],[8.932,0.201],[8.966,0.267],[9.0,0.333]]],\"type\":\"MultiLineString\"}" ) );
   res = exportFloat.asJson( 3 );
   QCOMPARE( res, expectedJsonPrec3 );
 
@@ -12904,66 +13927,64 @@ void TestQgsGeometry::multiSurface()
 
   //as JSON
   QgsMultiSurface exportC;
-  ring.setPoints( QgsPointSequence() << QgsPoint( QgsWkbTypes::Point, 7, 17 ) << QgsPoint( QgsWkbTypes::Point, 3, 13 ) << QgsPoint( QgsWkbTypes::Point, 7, 17 ) ) ;
+  QgsLineString lineRing;
+  lineRing.setPoints( QgsPointSequence() << QgsPoint( QgsWkbTypes::Point, 7, 17 ) << QgsPoint( QgsWkbTypes::Point, 7, 13 )  << QgsPoint( QgsWkbTypes::Point, 3, 13 ) << QgsPoint( QgsWkbTypes::Point, 7, 17 ) ) ;
   part.clear();
-  part.setExteriorRing( ring.clone() );
+  part.setExteriorRing( lineRing.clone() );
   exportC.addGeometry( part.clone() );
-  ring.setPoints( QgsPointSequence() << QgsPoint( QgsWkbTypes::Point, 27, 37 ) << QgsPoint( QgsWkbTypes::Point, 43, 43 )  << QgsPoint( QgsWkbTypes::Point, 27, 37 ) ) ;
+  lineRing.setPoints( QgsPointSequence() << QgsPoint( QgsWkbTypes::Point, 27, 37 ) << QgsPoint( QgsWkbTypes::Point, 27, 43 ) << QgsPoint( QgsWkbTypes::Point, 43, 43 )  << QgsPoint( QgsWkbTypes::Point, 27, 37 ) ) ;
   part.clear();
-  part.setExteriorRing( ring.clone() );
+  part.setExteriorRing( lineRing.clone() );
   exportC.addGeometry( part.clone() );
 
   // GML document for compare
   QDomDocument doc( "gml" );
 
   // as GML2
-  QString expectedSimpleGML2( QStringLiteral( "<MultiPolygon xmlns=\"gml\"><polygonMember xmlns=\"gml\"><Polygon xmlns=\"gml\"><outerBoundaryIs xmlns=\"gml\"><LinearRing xmlns=\"gml\"><coordinates xmlns=\"gml\" cs=\",\" ts=\" \">7,17 7,17</coordinates></LinearRing></outerBoundaryIs></Polygon></polygonMember><polygonMember xmlns=\"gml\"><Polygon xmlns=\"gml\"><outerBoundaryIs xmlns=\"gml\"><LinearRing xmlns=\"gml\"><coordinates xmlns=\"gml\" cs=\",\" ts=\" \">27,37 27,37</coordinates></LinearRing></outerBoundaryIs></Polygon></polygonMember></MultiPolygon>" ) );
+  QString expectedSimpleGML2( QStringLiteral( "<MultiPolygon xmlns=\"gml\"><polygonMember xmlns=\"gml\"><Polygon xmlns=\"gml\"><outerBoundaryIs xmlns=\"gml\"><LinearRing xmlns=\"gml\"><coordinates xmlns=\"gml\" cs=\",\" ts=\" \">7,17 7,13 3,13 7,17</coordinates></LinearRing></outerBoundaryIs></Polygon></polygonMember><polygonMember xmlns=\"gml\"><Polygon xmlns=\"gml\"><outerBoundaryIs xmlns=\"gml\"><LinearRing xmlns=\"gml\"><coordinates xmlns=\"gml\" cs=\",\" ts=\" \">27,37 27,43 43,43 27,37</coordinates></LinearRing></outerBoundaryIs></Polygon></polygonMember></MultiPolygon>" ) );
   QString res = elemToString( exportC.asGml2( doc, 1 ) );
   QGSCOMPAREGML( res, expectedSimpleGML2 );
   QString expectedGML2empty( QStringLiteral( "<MultiPolygon xmlns=\"gml\"/>" ) );
   QGSCOMPAREGML( elemToString( QgsMultiSurface().asGml2( doc ) ), expectedGML2empty );
 
   //as GML3
-  QString expectedSimpleGML3( QStringLiteral( "<MultiSurface xmlns=\"gml\"><surfaceMember xmlns=\"gml\"><Polygon xmlns=\"gml\"><exterior xmlns=\"gml\"><Curve xmlns=\"gml\"><segments xmlns=\"gml\"><ArcString xmlns=\"gml\"><posList xmlns=\"gml\" srsDimension=\"2\">7 17 3 13 7 17</posList></ArcString></segments></Curve></exterior></Polygon></surfaceMember><surfaceMember xmlns=\"gml\"><Polygon xmlns=\"gml\"><exterior xmlns=\"gml\"><Curve xmlns=\"gml\"><segments xmlns=\"gml\"><ArcString xmlns=\"gml\"><posList xmlns=\"gml\" srsDimension=\"2\">27 37 43 43 27 37</posList></ArcString></segments></Curve></exterior></Polygon></surfaceMember></MultiSurface>" ) );
+
+  QString expectedSimpleGML3( QStringLiteral( "<MultiSurface xmlns=\"gml\"><surfaceMember xmlns=\"gml\"><Polygon xmlns=\"gml\"><exterior xmlns=\"gml\"><LinearRing xmlns=\"gml\"><posList xmlns=\"gml\" srsDimension=\"2\">7 17 7 13 3 13 7 17</posList></LinearRing></exterior></Polygon></surfaceMember><surfaceMember xmlns=\"gml\"><Polygon xmlns=\"gml\"><exterior xmlns=\"gml\"><LinearRing xmlns=\"gml\"><posList xmlns=\"gml\" srsDimension=\"2\">27 37 27 43 43 43 27 37</posList></LinearRing></exterior></Polygon></surfaceMember></MultiSurface>" ) );
   res = elemToString( exportC.asGml3( doc ) );
   QCOMPARE( res, expectedSimpleGML3 );
   QString expectedGML3empty( QStringLiteral( "<MultiSurface xmlns=\"gml\"/>" ) );
   QGSCOMPAREGML( elemToString( QgsMultiSurface().asGml3( doc ) ), expectedGML3empty );
 
   // as JSON
-  QString expectedSimpleJson( "{\"type\": \"MultiPolygon\", \"coordinates\": [[[ [7, 17], [7, 17]]], [[ [27, 37], [27, 37]]]] }" );
+  QString expectedSimpleJson( "{\"coordinates\":[[[[7.0,17.0],[7.0,13.0],[3.0,13.0],[7.0,17.0]]],[[[27.0,37.0],[27.0,43.0],[43.0,43.0],[27.0,37.0]]]],\"type\":\"MultiPolygon\"}" );
   res = exportC.asJson( 1 );
   QCOMPARE( res, expectedSimpleJson );
 
-  ring.setPoints( QgsPointSequence() << QgsPoint( QgsWkbTypes::Point, 17, 27 ) << QgsPoint( QgsWkbTypes::Point, 18, 28 )  << QgsPoint( QgsWkbTypes::Point, 17, 27 ) ) ;
-  part.addInteriorRing( ring.clone() );
+  lineRing.setPoints( QgsPointSequence() << QgsPoint( QgsWkbTypes::Point, 17, 27 ) << QgsPoint( QgsWkbTypes::Point, 17, 28 ) << QgsPoint( QgsWkbTypes::Point, 18, 28 )  << QgsPoint( QgsWkbTypes::Point, 17, 27 ) ) ;
+  part.addInteriorRing( lineRing.clone() );
   exportC.addGeometry( part.clone() );
 
-  QString expectedJsonWithRings( "{\"type\": \"MultiPolygon\", \"coordinates\": [[[ [7, 17], [7, 17]]], [[ [27, 37], [27, 37]]], [[ [27, 37], [27, 37]], [ [17, 27], [17, 27]]]] }" );
+  QString expectedJsonWithRings( "{\"coordinates\":[[[[7.0,17.0],[7.0,13.0],[3.0,13.0],[7.0,17.0]]],[[[27.0,37.0],[27.0,43.0],[43.0,43.0],[27.0,37.0]]],[[[27.0,37.0],[27.0,43.0],[43.0,43.0],[27.0,37.0]],[[17.0,27.0],[17.0,28.0],[18.0,28.0],[17.0,27.0]]]],\"type\":\"MultiPolygon\"}" );
   res = exportC.asJson( 1 );
   QCOMPARE( res, expectedJsonWithRings );
 
   QgsMultiSurface exportFloat;
-  ring.setPoints( QgsPointSequence() << QgsPoint( QgsWkbTypes::Point, 7 / 3.0, 17 / 3.0 ) << QgsPoint( QgsWkbTypes::Point, 3 / 5.0, 13 / 3.0 ) << QgsPoint( QgsWkbTypes::Point, 7 / 3.0, 17 / 3.0 ) ) ;
+  lineRing.setPoints( QgsPointSequence() << QgsPoint( QgsWkbTypes::Point, 0.1234, 0.1234 ) << QgsPoint( QgsWkbTypes::Point, 0.1234, 1.2344 ) << QgsPoint( QgsWkbTypes::Point, 1.2344, 1.2344 ) << QgsPoint( QgsWkbTypes::Point, 0.1234, 0.1234 ) ) ;
   part.clear();
-  part.setExteriorRing( ring.clone() );
-  exportFloat.addGeometry( part.clone() );
-  ring.setPoints( QgsPointSequence() << QgsPoint( QgsWkbTypes::Point, 27 / 3.0, 37 / 9.0 ) << QgsPoint( QgsWkbTypes::Point, 43 / 41.0, 43 / 42.0 ) << QgsPoint( QgsWkbTypes::Point, 27 / 3.0, 37 / 9.0 ) ) ;
-  part.clear();
-  part.setExteriorRing( ring.clone() );
+  part.setExteriorRing( lineRing.clone() );
   exportFloat.addGeometry( part.clone() );
 
-  QString expectedJsonPrec3( QStringLiteral( "{\"type\": \"MultiPolygon\", \"coordinates\": [[[ [2.333, 5.667], [2.333, 5.667]]], [[ [9, 4.111], [9, 4.111]]]] }" ) );
+  QString expectedJsonPrec3( QStringLiteral( "{\"coordinates\":[[[[0.123,0.123],[0.123,1.234],[1.234,1.234],[0.123,0.123]]]],\"type\":\"MultiPolygon\"}" ) );
   res = exportFloat.asJson( 3 );
   QCOMPARE( res, expectedJsonPrec3 );
 
   // as GML2
-  QString expectedGML2prec3( QStringLiteral( "<MultiPolygon xmlns=\"gml\"><polygonMember xmlns=\"gml\"><Polygon xmlns=\"gml\"><outerBoundaryIs xmlns=\"gml\"><LinearRing xmlns=\"gml\"><coordinates xmlns=\"gml\" cs=\",\" ts=\" \">2.333,5.667 2.333,5.667</coordinates></LinearRing></outerBoundaryIs></Polygon></polygonMember><polygonMember xmlns=\"gml\"><Polygon xmlns=\"gml\"><outerBoundaryIs xmlns=\"gml\"><LinearRing xmlns=\"gml\"><coordinates xmlns=\"gml\" cs=\",\" ts=\" \">9,4.111 9,4.111</coordinates></LinearRing></outerBoundaryIs></Polygon></polygonMember></MultiPolygon>" ) );
+  QString expectedGML2prec3( QStringLiteral( "<MultiPolygon xmlns=\"gml\"><polygonMember xmlns=\"gml\"><Polygon xmlns=\"gml\"><outerBoundaryIs xmlns=\"gml\"><LinearRing xmlns=\"gml\"><coordinates xmlns=\"gml\" cs=\",\" ts=\" \">0.123,0.123 0.123,1.234 1.234,1.234 0.123,0.123</coordinates></LinearRing></outerBoundaryIs></Polygon></polygonMember></MultiPolygon>" ) );
   res = elemToString( exportFloat.asGml2( doc, 3 ) );
   QGSCOMPAREGML( res, expectedGML2prec3 );
 
   //as GML3
-  QString expectedGML3prec3( QStringLiteral( "<MultiSurface xmlns=\"gml\"><surfaceMember xmlns=\"gml\"><Polygon xmlns=\"gml\"><exterior xmlns=\"gml\"><Curve xmlns=\"gml\"><segments xmlns=\"gml\"><ArcString xmlns=\"gml\"><posList xmlns=\"gml\" srsDimension=\"2\">2.333 5.667 0.6 4.333 2.333 5.667</posList></ArcString></segments></Curve></exterior></Polygon></surfaceMember><surfaceMember xmlns=\"gml\"><Polygon xmlns=\"gml\"><exterior xmlns=\"gml\"><Curve xmlns=\"gml\"><segments xmlns=\"gml\"><ArcString xmlns=\"gml\"><posList xmlns=\"gml\" srsDimension=\"2\">9 4.111 1.049 1.024 9 4.111</posList></ArcString></segments></Curve></exterior></Polygon></surfaceMember></MultiSurface>" ) );
+  QString expectedGML3prec3( QStringLiteral( "<MultiSurface xmlns=\"gml\"><surfaceMember xmlns=\"gml\"><Polygon xmlns=\"gml\"><exterior xmlns=\"gml\"><LinearRing xmlns=\"gml\"><posList xmlns=\"gml\" srsDimension=\"2\">0.123 0.123 0.123 1.234 1.234 1.234 0.123 0.123</posList></LinearRing></exterior></Polygon></surfaceMember></MultiSurface>" ) );
   res = elemToString( exportFloat.asGml3( doc, 3 ) );
   QCOMPARE( res, expectedGML3prec3 );
 
@@ -13562,7 +14583,7 @@ void TestQgsGeometry::multiPolygon()
   QGSCOMPAREGML( elemToString( QgsMultiPolygon().asGml3( doc ) ), expectedGML3empty );
 
   // as JSON
-  QString expectedSimpleJson( "{\"type\": \"MultiPolygon\", \"coordinates\": [[[ [7, 17], [3, 13], [7, 21], [7, 17]]], [[ [27, 37], [43, 43], [41, 39], [27, 37]]]] }" );
+  QString expectedSimpleJson( "{\"coordinates\":[[[[7.0,17.0],[3.0,13.0],[7.0,21.0],[7.0,17.0]]],[[[27.0,37.0],[43.0,43.0],[41.0,39.0],[27.0,37.0]]]],\"type\":\"MultiPolygon\"}" );
   res = exportC.asJson( 1 );
   QCOMPARE( res, expectedSimpleJson );
 
@@ -13570,7 +14591,7 @@ void TestQgsGeometry::multiPolygon()
   part.addInteriorRing( ring.clone() );
   exportC.addGeometry( part.clone() );
 
-  QString expectedJsonWithRings( "{\"type\": \"MultiPolygon\", \"coordinates\": [[[ [7, 17], [3, 13], [7, 21], [7, 17]]], [[ [27, 37], [43, 43], [41, 39], [27, 37]]], [[ [27, 37], [43, 43], [41, 39], [27, 37]], [ [17, 27], [18, 28], [19, 37], [17, 27]]]] }" );
+  QString expectedJsonWithRings( "{\"coordinates\":[[[[7.0,17.0],[3.0,13.0],[7.0,21.0],[7.0,17.0]]],[[[27.0,37.0],[43.0,43.0],[41.0,39.0],[27.0,37.0]]],[[[27.0,37.0],[43.0,43.0],[41.0,39.0],[27.0,37.0]],[[17.0,27.0],[18.0,28.0],[19.0,37.0],[17.0,27.0]]]],\"type\":\"MultiPolygon\"}" );
   res = exportC.asJson( 1 );
   QCOMPARE( res, expectedJsonWithRings );
 
@@ -13585,17 +14606,17 @@ void TestQgsGeometry::multiPolygon()
   part.setExteriorRing( ring.clone() );
   exportFloat.addGeometry( part.clone() );
 
-  QString expectedJsonPrec3( QStringLiteral( "{\"type\": \"MultiPolygon\", \"coordinates\": [[[ [2.333, 5.667], [0.6, 4.333], [2.667, 9], [2.333, 5.667]]], [[ [9, 4.111], [1.049, 1.024], [9, 4.111]]]] }" ) );
+  QString expectedJsonPrec3( "{\"coordinates\":[[[[2.333,5.667],[0.6,4.333],[2.667,9.0],[2.333,5.667]]],[[[9.0,4.111],[1.049,1.024],[9.0,4.111]]]],\"type\":\"MultiPolygon\"}" );
   res = exportFloat.asJson( 3 );
   QCOMPARE( res, expectedJsonPrec3 );
 
   // as GML2
-  QString expectedGML2prec3( QStringLiteral( "<MultiPolygon xmlns=\"gml\"><polygonMember xmlns=\"gml\"><Polygon xmlns=\"gml\"><outerBoundaryIs xmlns=\"gml\"><LinearRing xmlns=\"gml\"><coordinates xmlns=\"gml\" cs=\",\" ts=\" \">2.333,5.667 0.6,4.333 2.667,9 2.333,5.667</coordinates></LinearRing></outerBoundaryIs></Polygon></polygonMember><polygonMember xmlns=\"gml\"><Polygon xmlns=\"gml\"><outerBoundaryIs xmlns=\"gml\"><LinearRing xmlns=\"gml\"><coordinates xmlns=\"gml\" cs=\",\" ts=\" \">9,4.111 1.049,1.024 9,4.111</coordinates></LinearRing></outerBoundaryIs></Polygon></polygonMember></MultiPolygon>" ) );
+  QString expectedGML2prec3( "<MultiPolygon xmlns=\"gml\"><polygonMember xmlns=\"gml\"><Polygon xmlns=\"gml\"><outerBoundaryIs xmlns=\"gml\"><LinearRing xmlns=\"gml\"><coordinates xmlns=\"gml\" cs=\",\" ts=\" \">2.333,5.667 0.6,4.333 2.667,9 2.333,5.667</coordinates></LinearRing></outerBoundaryIs></Polygon></polygonMember><polygonMember xmlns=\"gml\"><Polygon xmlns=\"gml\"><outerBoundaryIs xmlns=\"gml\"><LinearRing xmlns=\"gml\"><coordinates xmlns=\"gml\" cs=\",\" ts=\" \">9,4.111 1.049,1.024 9,4.111</coordinates></LinearRing></outerBoundaryIs></Polygon></polygonMember></MultiPolygon>" );
   res = elemToString( exportFloat.asGml2( doc, 3 ) );
   QGSCOMPAREGML( res, expectedGML2prec3 );
 
   //as GML3
-  QString expectedGML3prec3( QStringLiteral( "<MultiPolygon xmlns=\"gml\"><polygonMember xmlns=\"gml\"><Polygon xmlns=\"gml\"><exterior xmlns=\"gml\"><LinearRing xmlns=\"gml\"><posList xmlns=\"gml\" srsDimension=\"2\">2.333 5.667 0.6 4.333 2.667 9 2.333 5.667</posList></LinearRing></exterior></Polygon></polygonMember><polygonMember xmlns=\"gml\"><Polygon xmlns=\"gml\"><exterior xmlns=\"gml\"><LinearRing xmlns=\"gml\"><posList xmlns=\"gml\" srsDimension=\"2\">9 4.111 1.049 1.024 9 4.111</posList></LinearRing></exterior></Polygon></polygonMember></MultiPolygon>" ) );
+  QString expectedGML3prec3( "<MultiPolygon xmlns=\"gml\"><polygonMember xmlns=\"gml\"><Polygon xmlns=\"gml\"><exterior xmlns=\"gml\"><LinearRing xmlns=\"gml\"><posList xmlns=\"gml\" srsDimension=\"2\">2.333 5.667 0.6 4.333 2.667 9 2.333 5.667</posList></LinearRing></exterior></Polygon></polygonMember><polygonMember xmlns=\"gml\"><Polygon xmlns=\"gml\"><exterior xmlns=\"gml\"><LinearRing xmlns=\"gml\"><posList xmlns=\"gml\" srsDimension=\"2\">9 4.111 1.049 1.024 9 4.111</posList></LinearRing></exterior></Polygon></polygonMember></MultiPolygon>" );
   res = elemToString( exportFloat.asGml3( doc, 3 ) );
   QCOMPARE( res, expectedGML3prec3 );
 
@@ -14002,17 +15023,21 @@ void TestQgsGeometry::geometryCollection()
   QgsMultiPoint mp;
   QgsMultiLineString ml;
   QVERIFY( mp != ml );
-  QgsMultiLineString ml2;
   part.setPoints( QgsPointSequence() << QgsPoint( QgsWkbTypes::PointZ, 0, 0, 1 )
                   << QgsPoint( QgsWkbTypes::PointZ, 0, 10, 2 ) << QgsPoint( QgsWkbTypes::PointZ, 10, 10, 3 )
                   << QgsPoint( QgsWkbTypes::PointZ, 10, 0, 4 ) << QgsPoint( QgsWkbTypes::PointZ, 0, 0, 1 ) );
   ml.addGeometry( part.clone() );
+  QgsMultiLineString ml2;
   QVERIFY( ml != ml2 );
   part.setPoints( QgsPointSequence() << QgsPoint( QgsWkbTypes::PointZ, 1, 1, 1 )
                   << QgsPoint( QgsWkbTypes::PointZ, 0, 10, 2 ) << QgsPoint( QgsWkbTypes::PointZ, 10, 10, 3 )
                   << QgsPoint( QgsWkbTypes::PointZ, 10, 0, 4 ) << QgsPoint( QgsWkbTypes::PointZ, 0, 0, 1 ) );
   ml2.addGeometry( part.clone() );
   QVERIFY( ml != ml2 );
+
+  QgsMultiLineString ml3;
+  ml3.addGeometry( part.clone() );
+  QVERIFY( ml2 == ml3 );
 
   //toCurveType
   std::unique_ptr< QgsGeometryCollection > curveType( c12.toCurveType() );
@@ -14170,7 +15195,7 @@ void TestQgsGeometry::geometryCollection()
   QGSCOMPAREGML( elemToString( QgsGeometryCollection().asGml3( doc ) ), expectedGML3empty );
 
   // as JSON
-  QString expectedSimpleJson( "{\"type\": \"GeometryCollection\", \"geometries\": [{\"type\": \"LineString\", \"coordinates\": [ [0, 0], [0, 10], [10, 10], [10, 0], [0, 0]]}] }" );
+  QString expectedSimpleJson( "{\"geometries\":[{\"coordinates\":[[0.0,0.0],[0.0,10.0],[10.0,10.0],[10.0,0.0],[0.0,0.0]],\"type\":\"LineString\"}],\"type\":\"GeometryCollection\"}" );
   res = exportC.asJson();
   QCOMPARE( res, expectedSimpleJson );
 
@@ -14179,7 +15204,7 @@ void TestQgsGeometry::geometryCollection()
                   << QgsPoint( QgsWkbTypes::Point, 9, 1 ) << QgsPoint( QgsWkbTypes::Point, 1, 1 ) );
   exportC.addGeometry( part.clone() );
 
-  QString expectedJson( QStringLiteral( "{\"type\": \"GeometryCollection\", \"geometries\": [{\"type\": \"LineString\", \"coordinates\": [ [0, 0], [0, 10], [10, 10], [10, 0], [0, 0]]}, {\"type\": \"LineString\", \"coordinates\": [ [1, 1], [1, 9], [9, 9], [9, 1], [1, 1]]}] }" ) );
+  QString expectedJson( "{\"geometries\":[{\"coordinates\":[[0.0,0.0],[0.0,10.0],[10.0,10.0],[10.0,0.0],[0.0,0.0]],\"type\":\"LineString\"},{\"coordinates\":[[1.0,1.0],[1.0,9.0],[9.0,9.0],[9.0,1.0],[1.0,1.0]],\"type\":\"LineString\"}],\"type\":\"GeometryCollection\"}" );
   res = exportC.asJson();
   QCOMPARE( res, expectedJson );
 
@@ -14193,7 +15218,7 @@ void TestQgsGeometry::geometryCollection()
                   << QgsPoint( QgsWkbTypes::Point, 4 / 3.0, 2 / 3.0 ) << QgsPoint( QgsWkbTypes::Point, 2 / 3.0, 2 / 3.0 ) );
   exportFloat.addGeometry( part.clone() );
 
-  QString expectedJsonPrec3( QStringLiteral( "{\"type\": \"GeometryCollection\", \"geometries\": [{\"type\": \"LineString\", \"coordinates\": [ [1.111, 1.111], [1.111, 11.111], [11.111, 11.111], [11.111, 1.111], [1.111, 1.111]]}, {\"type\": \"LineString\", \"coordinates\": [ [0.667, 0.667], [0.667, 1.333], [1.333, 1.333], [1.333, 0.667], [0.667, 0.667]]}] }" ) );
+  QString expectedJsonPrec3( "{\"geometries\":[{\"coordinates\":[[1.111,1.111],[1.111,11.111],[11.111,11.111],[11.111,1.111],[1.111,1.111]],\"type\":\"LineString\"},{\"coordinates\":[[0.667,0.667],[0.667,1.333],[1.333,1.333],[1.333,0.667],[0.667,0.667]],\"type\":\"LineString\"}],\"type\":\"GeometryCollection\"}" );
   res = exportFloat.asJson( 3 );
   QCOMPARE( res, expectedJsonPrec3 );
 
@@ -15113,6 +16138,54 @@ void TestQgsGeometry::geometryCollection()
   gcNodes.addGeometry( nodeLine.clone() );
   QVERIFY( gcNodes.removeDuplicateNodes( 0.02 ) );
   QCOMPARE( gcNodes.asWkt( 2 ), QStringLiteral( "GeometryCollection (LineString (11 2, 11 12, 111 12),LineString (11 2, 11 12, 111 12))" ) );
+
+  //swapXy
+  QgsGeometryCollection swapCollect;
+  QgsLineString swapLine;
+  swapCollect.swapXy(); // no crash
+  swapLine.setPoints( QgsPointSequence() << QgsPoint( 11, 2, 3, 4, QgsWkbTypes::PointZM ) << QgsPoint( 11, 12, 13, 14, QgsWkbTypes::PointZM ) << QgsPoint( 111, 12, 23, 24, QgsWkbTypes::PointZM ) );
+  swapCollect.addGeometry( swapLine.clone() );
+  swapCollect.swapXy();
+  QCOMPARE( swapCollect.asWkt(), QStringLiteral( "GeometryCollection (LineStringZM (2 11 3 4, 12 11 13 14, 12 111 23 24))" ) );
+  swapLine.setPoints( QgsPointSequence() << QgsPoint( 11, 2, 5, 6, QgsWkbTypes::PointZM ) << QgsPoint( 11.01, 1.99, 15, 16, QgsWkbTypes::PointZM ) << QgsPoint( 11.02, 2.01, 25, 26, QgsWkbTypes::PointZM ) );
+  swapCollect.addGeometry( swapLine.clone() );
+  swapCollect.swapXy();
+  QCOMPARE( swapCollect.asWkt( 2 ), QStringLiteral( "GeometryCollection (LineStringZM (11 2 3 4, 11 12 13 14, 111 12 23 24),LineStringZM (2 11 5 6, 1.99 11.01 15 16, 2.01 11.02 25 26))" ) );
+
+  // filter vertices
+  QgsGeometryCollection filterCollect;
+  auto filter = []( const QgsPoint & point )-> bool
+  {
+    return point.x() > 5;
+  };
+  QgsLineString filterLine;
+  filterCollect.filterVertices( filter ); // no crash
+  filterLine.setPoints( QgsPointSequence() << QgsPoint( 1, 2, 3, 4, QgsWkbTypes::PointZM ) << QgsPoint( 11, 12, 13, 14, QgsWkbTypes::PointZM ) << QgsPoint( 111, 12, 23, 24, QgsWkbTypes::PointZM ) );
+  filterCollect.addGeometry( filterLine.clone() );
+  filterCollect.filterVertices( filter );
+  QCOMPARE( filterCollect.asWkt(), QStringLiteral( "GeometryCollection (LineStringZM (11 12 13 14, 111 12 23 24))" ) );
+  filterLine.setPoints( QgsPointSequence() << QgsPoint( 11, 2, 5, 6, QgsWkbTypes::PointZM ) << QgsPoint( 1.01, 1.99, 15, 16, QgsWkbTypes::PointZM ) << QgsPoint( 11.02, 2.01, 25, 26, QgsWkbTypes::PointZM ) );
+  filterCollect.addGeometry( filterLine.clone() );
+  filterCollect.filterVertices( filter );
+  QCOMPARE( filterCollect.asWkt( 2 ), QStringLiteral( "GeometryCollection (LineStringZM (11 12 13 14, 111 12 23 24),LineStringZM (11 2 5 6, 11.02 2.01 25 26))" ) );
+
+  // transform vertices
+  QgsGeometryCollection transformCollect;
+  auto transform = []( const QgsPoint & point )-> QgsPoint
+  {
+    return QgsPoint( point.x() + 2, point.y() + 3, point.z() + 4, point.m() + 5 );
+  };
+  QgsLineString transformLine;
+  transformCollect.transformVertices( transform ); // no crash
+  transformLine.setPoints( QgsPointSequence() << QgsPoint( 1, 2, 3, 4, QgsWkbTypes::PointZM ) << QgsPoint( 11, 12, 13, 14, QgsWkbTypes::PointZM ) << QgsPoint( 111, 12, 23, 24, QgsWkbTypes::PointZM ) );
+  transformCollect.addGeometry( transformLine.clone() );
+  transformCollect.transformVertices( transform );
+  QCOMPARE( transformCollect.asWkt(), QStringLiteral( "GeometryCollection (LineStringZM (3 5 7 9, 13 15 17 19, 113 15 27 29))" ) );
+  transformLine.setPoints( QgsPointSequence() << QgsPoint( 11, 2, 5, 6, QgsWkbTypes::PointZM ) << QgsPoint( 1.01, 1.99, 15, 16, QgsWkbTypes::PointZM ) << QgsPoint( 11.02, 2.01, 25, 26, QgsWkbTypes::PointZM ) );
+  transformCollect.addGeometry( transformLine.clone() );
+  transformCollect.transformVertices( transform );
+  QCOMPARE( transformCollect.asWkt( 2 ), QStringLiteral( "GeometryCollection (LineStringZM (5 8 11 14, 15 18 21 24, 115 18 31 34),LineStringZM (13 5 9 11, 3.01 4.99 19 21, 13.02 5.01 29 31))" ) );
+
 }
 
 void TestQgsGeometry::fromQgsPointXY()
@@ -15532,6 +16605,24 @@ void TestQgsGeometry::smoothCheck()
                << QgsPointXY( 10.0, 7.5 ) << QgsPointXY( 12.5, 10.0 ) << QgsPointXY( 20.0, 10.0 );
   QVERIFY( QgsGeometry::compare( line, expectedLine ) );
 
+  //linestringM
+  wkt = QStringLiteral( "LineStringM(0 0 1, 10 0 2, 10 10 6, 20 10 4)" );
+  geom = QgsGeometry::fromWkt( wkt );
+  result = geom.smooth( 1, 0.25 );
+  QCOMPARE( result.asWkt(), QStringLiteral( "LineStringM (0 0 1, 7.5 0 1.75, 10 2.5 3, 10 7.5 5, 12.5 10 5.5, 20 10 4)" ) );
+
+  //linestringZ
+  wkt = QStringLiteral( "LineStringZ(0 0 1, 10 0 2, 10 10 6, 20 10 4)" );
+  geom = QgsGeometry::fromWkt( wkt );
+  result = geom.smooth( 1, 0.25 );
+  QCOMPARE( result.asWkt(), QStringLiteral( "LineStringZ (0 0 1, 7.5 0 1.75, 10 2.5 3, 10 7.5 5, 12.5 10 5.5, 20 10 4)" ) );
+
+  //linestringZM
+  wkt = QStringLiteral( "LineStringZM(0 0 1 4, 10 0 2 8, 10 10 6 2, 20 10 4 0)" );
+  geom = QgsGeometry::fromWkt( wkt );
+  result = geom.smooth( 1, 0.25 );
+  QCOMPARE( result.asWkt(), QStringLiteral( "LineStringZM (0 0 1 4, 7.5 0 1.75 7, 10 2.5 3 6.5, 10 7.5 5 3.5, 12.5 10 5.5 1.5, 20 10 4 0)" ) );
+
   //linestring, with min distance
   wkt = QStringLiteral( "LineString(0 0, 10 0, 10 10, 15 10, 15 20)" );
   geom = QgsGeometry::fromWkt( wkt );
@@ -15595,6 +16686,24 @@ void TestQgsGeometry::smoothCheck()
                        << QgsPointXY( 4.0, 3.5 ) << QgsPointXY( 3.5, 4.0 ) << QgsPointXY( 2.5, 4.0 )
                        << QgsPointXY( 2.0, 3.5 ) << QgsPointXY( 2.0, 2.5 ) << QgsPointXY( 2.5, 2.0 ) );
   QVERIFY( QgsGeometry::compare( poly, expectedPolygon ) );
+
+  //polygonM
+  wkt = QStringLiteral( "PolygonM ((0 0 1, 10 0 4, 10 10 6, 0 10 8, 0 0 1 ),(2 2 3, 4 2 5, 4 4 7, 2 4 9, 2 2 3))" );
+  geom = QgsGeometry::fromWkt( wkt );
+  result = geom.smooth( 1, 0.25 );
+  QCOMPARE( result.asWkt(), QStringLiteral( "PolygonM ((2.5 0 1.75, 7.5 0 3.25, 10 2.5 4.5, 10 7.5 5.5, 7.5 10 6.5, 2.5 10 7.5, 0 7.5 6.25, 0 2.5 2.75, 2.5 0 1.75),(2.5 2 3.5, 3.5 2 4.5, 4 2.5 5.5, 4 3.5 6.5, 3.5 4 7.5, 2.5 4 8.5, 2 3.5 7.5, 2 2.5 4.5, 2.5 2 3.5))" ) );
+
+  //polygonZ
+  wkt = QStringLiteral( "PolygonZ ((0 0 1, 10 0 4, 10 10 6, 0 10 8, 0 0 1 ),(2 2 3, 4 2 5, 4 4 7, 2 4 9, 2 2 3))" );
+  geom = QgsGeometry::fromWkt( wkt );
+  result = geom.smooth( 1, 0.25 );
+  QCOMPARE( result.asWkt(), QStringLiteral( "PolygonZ ((2.5 0 1.75, 7.5 0 3.25, 10 2.5 4.5, 10 7.5 5.5, 7.5 10 6.5, 2.5 10 7.5, 0 7.5 6.25, 0 2.5 2.75, 2.5 0 1.75),(2.5 2 3.5, 3.5 2 4.5, 4 2.5 5.5, 4 3.5 6.5, 3.5 4 7.5, 2.5 4 8.5, 2 3.5 7.5, 2 2.5 4.5, 2.5 2 3.5))" ) );
+
+  //polygonZM
+  wkt = QStringLiteral( "PolygonZ ((0 0 1 6, 10 0 4 2, 10 10 6 0, 0 10 8 4, 0 0 1 6 ))" );
+  geom = QgsGeometry::fromWkt( wkt );
+  result = geom.smooth( 1, 0.25 );
+  QCOMPARE( result.asWkt(), QStringLiteral( "PolygonZM ((2.5 0 1.75 5, 7.5 0 3.25 3, 10 2.5 4.5 1.5, 10 7.5 5.5 0.5, 7.5 10 6.5 1, 2.5 10 7.5 3, 0 7.5 6.25 4.5, 0 2.5 2.75 5.5, 2.5 0 1.75 5))" ) );
 
   //polygon with max angle - should be unchanged
   wkt = QStringLiteral( "Polygon ((0 0, 10 0, 10 10, 0 10, 0 0))" );
@@ -15671,42 +16780,42 @@ void TestQgsGeometry::exportToGeoJSON()
   QString wkt = QStringLiteral( "Point (40 50)" );
   QgsGeometry geom( QgsGeometry::fromWkt( wkt ) );
   QString obtained = geom.asJson();
-  QString geojson = QStringLiteral( "{\"type\": \"Point\", \"coordinates\": [40, 50]}" );
+  QString geojson = QStringLiteral( "{\"coordinates\":[40.0,50.0],\"type\":\"Point\"}" );
   QCOMPARE( obtained, geojson );
 
   //MultiPoint
   wkt = QStringLiteral( "MultiPoint (0 0, 10 0, 10 10, 20 10)" );
   geom = QgsGeometry::fromWkt( wkt );
   obtained = geom.asJson();
-  geojson = QStringLiteral( "{\"type\": \"MultiPoint\", \"coordinates\": [ [0, 0], [10, 0], [10, 10], [20, 10]] }" );
+  geojson = QStringLiteral( "{\"coordinates\":[[0.0,0.0],[10.0,0.0],[10.0,10.0],[20.0,10.0]],\"type\":\"MultiPoint\"}" );
   QCOMPARE( obtained, geojson );
 
   //Linestring
   wkt = QStringLiteral( "LineString(0 0, 10 0, 10 10, 20 10)" );
   geom = QgsGeometry::fromWkt( wkt );
   obtained = geom.asJson();
-  geojson = QStringLiteral( "{\"type\": \"LineString\", \"coordinates\": [ [0, 0], [10, 0], [10, 10], [20, 10]]}" );
+  geojson = QStringLiteral( "{\"coordinates\":[[0.0,0.0],[10.0,0.0],[10.0,10.0],[20.0,10.0]],\"type\":\"LineString\"}" );
   QCOMPARE( obtained, geojson );
 
   //MultiLineString
   wkt = QStringLiteral( "MultiLineString ((0 0, 10 0, 10 10, 20 10),(30 30, 40 30, 40 40, 50 40))" );
   geom = QgsGeometry::fromWkt( wkt );
   obtained = geom.asJson();
-  geojson = QStringLiteral( "{\"type\": \"MultiLineString\", \"coordinates\": [[ [0, 0], [10, 0], [10, 10], [20, 10]], [ [30, 30], [40, 30], [40, 40], [50, 40]]] }" );
+  geojson = QStringLiteral( "{\"coordinates\":[[[0.0,0.0],[10.0,0.0],[10.0,10.0],[20.0,10.0]],[[30.0,30.0],[40.0,30.0],[40.0,40.0],[50.0,40.0]]],\"type\":\"MultiLineString\"}" );
   QCOMPARE( obtained, geojson );
 
   //Polygon
   wkt = QStringLiteral( "Polygon ((0 0, 10 0, 10 10, 0 10, 0 0 ),(2 2, 4 2, 4 4, 2 4, 2 2))" );
   geom = QgsGeometry::fromWkt( wkt );
   obtained = geom.asJson();
-  geojson = QStringLiteral( "{\"type\": \"Polygon\", \"coordinates\": [[ [0, 0], [10, 0], [10, 10], [0, 10], [0, 0]], [ [2, 2], [4, 2], [4, 4], [2, 4], [2, 2]]] }" );
+  geojson = QStringLiteral( "{\"coordinates\":[[[0.0,0.0],[10.0,0.0],[10.0,10.0],[0.0,10.0],[0.0,0.0]],[[2.0,2.0],[4.0,2.0],[4.0,4.0],[2.0,4.0],[2.0,2.0]]],\"type\":\"Polygon\"}" );
   QCOMPARE( obtained, geojson );
 
   //MultiPolygon
   wkt = QStringLiteral( "MultiPolygon (((0 0, 10 0, 10 10, 0 10, 0 0 )),((2 2, 4 2, 4 4, 2 4, 2 2)))" );
   geom = QgsGeometry::fromWkt( wkt );
   obtained = geom.asJson();
-  geojson = QStringLiteral( "{\"type\": \"MultiPolygon\", \"coordinates\": [[[ [0, 0], [10, 0], [10, 10], [0, 10], [0, 0]]], [[ [2, 2], [4, 2], [4, 4], [2, 4], [2, 2]]]] }" );
+  geojson = QStringLiteral( "{\"coordinates\":[[[[0.0,0.0],[10.0,0.0],[10.0,10.0],[0.0,10.0],[0.0,0.0]]],[[[2.0,2.0],[4.0,2.0],[4.0,4.0],[2.0,4.0],[2.0,2.0]]]],\"type\":\"MultiPolygon\"}" );
   QCOMPARE( obtained, geojson );
 
   // no geometry
@@ -15793,7 +16902,7 @@ QString TestQgsGeometry::elemToString( const QDomElement &elem ) const
 void TestQgsGeometry::wkbInOut()
 {
   // Premature end of WKB
-  // See https://issues.qgis.org/issues/14182
+  // See https://github.com/qgis/QGIS/issues/22184
   const char *hexwkb = "0102000000EF0000000000000000000000000000000000000000000000000000000000000000000000";
   int size;
   unsigned char *wkb = hex2bytes( hexwkb, &size );
@@ -16120,59 +17229,56 @@ void TestQgsGeometry::minimalEnclosingCircle()
   result = geomTest.minimalEnclosingCircle( center, radius );
   QCOMPARE( center, QgsPointXY() );
   QCOMPARE( radius, 0.0 );
-  QCOMPARE( result, QgsGeometry() );
+  QVERIFY( result.isNull() );
 
-  // caase 1
+  // case 1
   geomTest = QgsGeometry::fromPointXY( QgsPointXY( 5, 5 ) );
   result = geomTest.minimalEnclosingCircle( center, radius );
   QCOMPARE( center, QgsPointXY( 5, 5 ) );
   QCOMPARE( radius, 0.0 );
   resultTest.set( QgsCircle( QgsPoint( center ), radius ).toPolygon( 36 ) );
-  QCOMPARE( result, resultTest );
+  QCOMPARE( result.asWkt(), resultTest.asWkt() );
 
   // case 2
   geomTest = QgsGeometry::fromWkt( QStringLiteral( "MULTIPOINT( 3 8, 7 4 )" ) );
-  result = geomTest.minimalEnclosingCircle( center, radius );
+  result = geomTest.minimalEnclosingCircle( center, radius, 6 );
   QGSCOMPARENEARPOINT( center, QgsPointXY( 5, 6 ), 0.0001 );
   QGSCOMPARENEAR( radius, sqrt( 2 ) * 2, 0.0001 );
-  resultTest.set( QgsCircle( QgsPoint( center ), radius ).toPolygon( 36 ) );
-  QCOMPARE( result, resultTest );
+  QCOMPARE( result.asWkt( 1 ), QStringLiteral( "Polygon ((7 4, 4.3 3.3, 2.3 5.3, 3 8, 5.7 8.7, 7.7 6.7, 7 4))" ) );
 
   geomTest = QgsGeometry::fromWkt( QStringLiteral( "LINESTRING( 0 5, 2 2, 0 -5, -1 -1 )" ) );
-  result = geomTest.minimalEnclosingCircle( center, radius );
+  result = geomTest.minimalEnclosingCircle( center, radius, 6 );
   QGSCOMPARENEARPOINT( center, QgsPointXY( 0, 0 ), 0.0001 );
   QGSCOMPARENEAR( radius, 5, 0.0001 );
-  resultTest.set( QgsCircle( QgsPoint( center ), radius ).toPolygon( 36 ) );
-  QCOMPARE( result, resultTest );
+  QCOMPARE( result.asWkt( 1 ), QStringLiteral( "Polygon ((0 5, 4.3 2.5, 4.3 -2.5, -0 -5, -4.3 -2.5, -4.3 2.5, 0 5))" ) );
 
   geomTest = QgsGeometry::fromWkt( QStringLiteral( "MULTIPOINT( 0 5, 2 2, 0 -5, -1 -1 )" ) );
-  result = geomTest.minimalEnclosingCircle( center, radius );
+  result = geomTest.minimalEnclosingCircle( center, radius, 6 );
   QGSCOMPARENEARPOINT( center, QgsPointXY( 0, 0 ), 0.0001 );
   QGSCOMPARENEAR( radius, 5, 0.0001 );
-  resultTest.set( QgsCircle( QgsPoint( center ), radius ).toPolygon( 36 ) );
-  QCOMPARE( result, resultTest );
+  QCOMPARE( result.asWkt( 1 ), QStringLiteral( "Polygon ((0 5, 4.3 2.5, 4.3 -2.5, -0 -5, -4.3 -2.5, -4.3 2.5, 0 5))" ) );
 
   geomTest = QgsGeometry::fromWkt( QStringLiteral( "POLYGON(( 0 5, 2 2, 0 -5, -1 -1 ))" ) );
-  result = geomTest.minimalEnclosingCircle( center, radius );
+  result = geomTest.minimalEnclosingCircle( center, radius, 6 );
   QGSCOMPARENEARPOINT( center, QgsPointXY( 0, 0 ), 0.0001 );
   QGSCOMPARENEAR( radius, 5, 0.0001 );
   resultTest.set( QgsCircle( QgsPoint( center ), radius ).toPolygon( 36 ) );
-  QCOMPARE( result, resultTest );
+  QCOMPARE( result.asWkt( 1 ), QStringLiteral( "Polygon ((0 5, 4.3 2.5, 4.3 -2.5, -0 -5, -4.3 -2.5, -4.3 2.5, 0 5))" ) );
 
   geomTest = QgsGeometry::fromWkt( QStringLiteral( "MULTIPOINT( 0 5, 0 -5, 0 0 )" ) );
-  result = geomTest.minimalEnclosingCircle( center, radius );
+  result = geomTest.minimalEnclosingCircle( center, radius, 6 );
   QGSCOMPARENEARPOINT( center, QgsPointXY( 0, 0 ), 0.0001 );
   QGSCOMPARENEAR( radius, 5, 0.0001 );
   resultTest.set( QgsCircle( QgsPoint( center ), radius ).toPolygon( 36 ) );
-  QCOMPARE( result, resultTest );
+  QCOMPARE( result.asWkt( 1 ), QStringLiteral( "Polygon ((0 5, 4.3 2.5, 4.3 -2.5, -0 -5, -4.3 -2.5, -4.3 2.5, 0 5))" ) );
 
   // case 3
   geomTest = QgsGeometry::fromWkt( QStringLiteral( "MULTIPOINT((0 0), (5 5), (0 -5), (0 5), (-5 0))" ) );
-  result = geomTest.minimalEnclosingCircle( center, radius );
+  result = geomTest.minimalEnclosingCircle( center, radius, 6 );
   QGSCOMPARENEARPOINT( center, QgsPointXY( 0.8333, 0.8333 ), 0.0001 );
   QGSCOMPARENEAR( radius, 5.8926, 0.0001 );
   resultTest.set( QgsCircle( QgsPoint( center ), radius ).toPolygon( 36 ) );
-  QCOMPARE( result, resultTest );
+  QCOMPARE( result.asWkt( 1 ), QStringLiteral( "Polygon ((0.8 6.7, 5.9 3.8, 5.9 -2.1, 0.8 -5.1, -4.3 -2.1, -4.3 3.8, 0.8 6.7))" ) );
 
 }
 
@@ -16339,6 +17445,59 @@ void TestQgsGeometry::snappedToGrid()
     std::unique_ptr<QgsAbstractGeometry> snapped { curve.constGet()->snappedToGrid( 1, 1 ) };
     QCOMPARE( snapped->asWkt(), QStringLiteral( "CompoundCurve ((59 402, 68 415),CircularString (68 415, 27 505, 27 406))" ) );
   }
+}
+
+void TestQgsGeometry::convertGeometryCollectionToSubclass()
+{
+  QgsGeometry gc0 = QgsGeometry::fromWkt( QStringLiteral( "GeometryCollection(Point(1 1), Polygon((2 2, 3 3, 2 3, 2 2)))" ) );
+
+  QgsGeometry gc1 = gc0;
+  QVERIFY( gc1.convertGeometryCollectionToSubclass( QgsWkbTypes::PointGeometry ) );
+  QCOMPARE( gc1.asWkt(), QStringLiteral( "MultiPoint ((1 1))" ) );
+
+  QgsGeometry gc2 = gc0;
+  QVERIFY( gc2.convertGeometryCollectionToSubclass( QgsWkbTypes::PolygonGeometry ) );
+  QCOMPARE( gc2.asWkt(), QStringLiteral( "MultiPolygon (((2 2, 3 3, 2 3, 2 2)))" ) );
+
+  QgsGeometry gc3 = gc0;
+  QVERIFY( gc3.convertGeometryCollectionToSubclass( QgsWkbTypes::LineGeometry ) );
+  QCOMPARE( gc3.asWkt(), QStringLiteral( "MultiLineString ()" ) );  // I think this is not correct, WKT should be "MultiLineString Empty"
+  QVERIFY( gc3.isEmpty() );
+
+  // trying to convert a geometry that is not a geometry collection
+  QgsGeometry wrong = QgsGeometry::fromWkt( QStringLiteral( "Point(1 2)" ) );
+  QVERIFY( !wrong.convertGeometryCollectionToSubclass( QgsWkbTypes::PolygonGeometry ) );
+}
+
+void TestQgsGeometry::emptyJson()
+{
+  QString expected;
+// TODO: harmonize Json output. Should be ... [] }
+  expected = QStringLiteral( "{\"coordinates\":[],\"type\":\"LineString\"}" );
+  QCOMPARE( QgsCircularString().asJson(), expected );
+  QCOMPARE( QgsCompoundCurve().asJson(), expected );
+  QCOMPARE( QgsLineString().asJson(), expected );
+
+  expected = QStringLiteral( "{\"geometries\":[],\"type\":\"GeometryCollection\"}" );
+  QCOMPARE( QgsGeometryCollection().asJson(), expected );
+
+  expected = QStringLiteral( "{\"coordinates\":[],\"type\":\"MultiLineString\"}" );
+  QCOMPARE( QgsMultiCurve().asJson(), expected );
+  QCOMPARE( QgsMultiLineString().asJson(), expected );
+
+  expected = QStringLiteral( "{\"coordinates\":[],\"type\":\"MultiPoint\"}" );
+  QCOMPARE( QgsMultiPoint().asJson(), expected );
+
+  expected = QStringLiteral( "{\"coordinates\":[],\"type\":\"MultiPolygon\"}" );
+  QCOMPARE( QgsMultiSurface().asJson(), expected );
+
+  expected = QStringLiteral( "{\"coordinates\":[0.0,0.0],\"type\":\"Point\"}" ); // should be []
+  QCOMPARE( QgsPoint().asJson(), expected );
+
+  expected = QStringLiteral( "{\"coordinates\":[],\"type\":\"Polygon\"}" );
+  QCOMPARE( QgsCurvePolygon().asJson(), expected );
+  QCOMPARE( QgsPolygon().asJson(), expected );
+  QCOMPARE( QgsTriangle().asJson(), expected );
 }
 
 QGSTEST_MAIN( TestQgsGeometry )

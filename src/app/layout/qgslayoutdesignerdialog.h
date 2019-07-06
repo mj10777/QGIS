@@ -55,15 +55,34 @@ class QgsAppLayoutDesignerInterface : public QgsLayoutDesignerInterface
 
   public:
     QgsAppLayoutDesignerInterface( QgsLayoutDesignerDialog *dialog );
+    QWidget *window() override;
     QgsLayout *layout() override;
     QgsMasterLayoutInterface *masterLayout() override;
     QgsLayoutView *view() override;
     QgsMessageBar *messageBar() override;
-    void selectItems( const QList< QgsLayoutItem * > items ) override;
+    void selectItems( const QList< QgsLayoutItem * > &items ) override;
+    void setAtlasPreviewEnabled( bool enabled ) override;
+    bool atlasPreviewEnabled() const override;
+    void showItemOptions( QgsLayoutItem *item, bool bringPanelToFront = true ) override;
+    QMenu *layoutMenu() override;
+    QMenu *editMenu() override;
+    QMenu *viewMenu() override;
+    QMenu *itemsMenu() override;
+    QMenu *atlasMenu() override;
+    QMenu *reportMenu() override;
+    QMenu *settingsMenu() override;
+    QToolBar *layoutToolbar() override;
+    QToolBar *navigationToolbar() override;
+    QToolBar *actionsToolbar() override;
+    QToolBar *atlasToolbar() override;
+    void addDockWidget( Qt::DockWidgetArea area, QDockWidget *dock ) override;
+    void removeDockWidget( QDockWidget *dock ) override;
+    void activateTool( StandardTool tool ) override;
 
   public slots:
 
     void close() override;
+    void showRulers( bool visible ) override;
 
   private:
 
@@ -74,7 +93,7 @@ class QgsAppLayoutDesignerInterface : public QgsLayoutDesignerInterface
  * \ingroup app
  * \brief A window for designing layouts.
  */
-class QgsLayoutDesignerDialog: public QMainWindow, private Ui::QgsLayoutDesignerBase
+class QgsLayoutDesignerDialog: public QMainWindow, public Ui::QgsLayoutDesignerBase
 {
     Q_OBJECT
 
@@ -132,12 +151,27 @@ class QgsLayoutDesignerDialog: public QMainWindow, private Ui::QgsLayoutDesigner
     /**
      * Selects the specified \a items.
      */
-    void selectItems( const QList< QgsLayoutItem * > items );
+    void selectItems( const QList<QgsLayoutItem *> &items );
 
     /**
      * Returns the designer's message bar.
      */
     QgsMessageBar *messageBar();
+
+
+    /**
+     * Toggles whether the atlas preview mode should be \a enabled in the designer.
+     *
+     * \see atlasPreviewModeEnabled()
+     */
+    void setAtlasPreviewEnabled( bool enabled );
+
+    /**
+     * Returns whether the atlas preview mode is enabled in the designer.
+     *
+     * \see setAtlasPreviewEnabled()
+     */
+    bool atlasPreviewEnabled() const;
 
     /**
      * Sets the specified feature as the current atlas feature
@@ -309,7 +343,7 @@ class QgsLayoutDesignerDialog: public QMainWindow, private Ui::QgsLayoutDesigner
     void addPages();
     void statusMessageReceived( const QString &message );
     void dockVisibilityChanged( bool visible );
-    void undoRedoOccurredForItems( const QSet< QString > itemUuids );
+    void undoRedoOccurredForItems( const QSet< QString > &itemUuids );
     void saveAsTemplate();
     void addItemsFromTemplate();
     void duplicate();
@@ -322,7 +356,6 @@ class QgsLayoutDesignerDialog: public QMainWindow, private Ui::QgsLayoutDesigner
     void exportToRaster();
     void exportToPdf();
     void exportToSvg();
-    void showAtlasSettings( bool checked );
     void atlasPreviewTriggered( bool checked );
     void atlasPageComboEditingFinished();
     void atlasNext();
@@ -338,7 +371,6 @@ class QgsLayoutDesignerDialog: public QMainWindow, private Ui::QgsLayoutDesigner
     void exportReportToSvg();
     void exportReportToPdf();
     void printReport();
-    void showReportSettings( bool checked );
 
     void pageSetup();
 
@@ -347,6 +379,8 @@ class QgsLayoutDesignerDialog: public QMainWindow, private Ui::QgsLayoutDesigner
 
     //! Populate layouts menu from main app's
     void populateLayoutsMenu();
+
+    void updateWindowTitle();
 
   private:
 
@@ -471,7 +505,8 @@ class QgsLayoutDesignerDialog: public QMainWindow, private Ui::QgsLayoutDesigner
 
     bool showFileSizeWarning();
     bool getRasterExportSettings( QgsLayoutExporter::ImageExportSettings &settings, QSize &imageSize );
-    bool getSvgExportSettings( QgsLayoutExporter::SvgExportSettings &settings, bool &exportAsText );
+    bool getSvgExportSettings( QgsLayoutExporter::SvgExportSettings &settings );
+    bool getPdfExportSettings( QgsLayoutExporter::PdfExportSettings &settings );
 
     void toggleAtlasActions( bool enabled );
 
@@ -499,7 +534,11 @@ class QgsLayoutDesignerDialog: public QMainWindow, private Ui::QgsLayoutDesigner
     QPrinter *printer();
     QString reportTypeString();
     void updateActionNames( QgsMasterLayoutInterface::Type type );
-    void updateWindowTitle();
+
+    QString defaultExportPath() const;
+    void setLastExportPath( const QString &path ) const;
+
+    bool checkBeforeExport();
 };
 
 #endif // QGSLAYOUTDESIGNERDIALOG_H

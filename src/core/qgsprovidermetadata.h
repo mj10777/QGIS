@@ -21,11 +21,25 @@
 
 
 #include <QString>
-#include "qgis.h"
+#include <QVariantMap>
+#include <QMap>
+#include <QList>
+#include <memory>
+#include <QPair>
+
+#include "qgis_sip.h"
+#include "qgsdataprovider.h"
 #include "qgis_core.h"
 #include <functional>
+#include "qgsvectorlayerexporter.h"
+#include "qgsfields.h"
 
-class QgsDataProvider;
+class QgsDataItem;
+class QgsDataItemProvider;
+class QgsTransaction;
+
+class QgsRasterDataProvider;
+
 
 /**
  * \ingroup core
@@ -52,61 +66,203 @@ class CORE_EXPORT QgsProviderMetadata
      * Typedef for data provider creation function.
      * \since QGIS 3.0
      */
-    SIP_SKIP typedef std::function < QgsDataProvider*( const QString & ) > CreateDataProviderFunction;
+    SIP_SKIP typedef std::function < QgsDataProvider*( const QString &, const QgsDataProvider::ProviderOptions & ) > CreateDataProviderFunction;
 
-    QgsProviderMetadata( const QString &_key, const QString &_description, const QString &_library );
+    /**
+     * Constructor for provider metadata
+     * \param key provider key
+     * \param description provider description
+     * \param library plugin library file name (empty if the provider is not loaded from a library)
+     */
+    QgsProviderMetadata( const QString &key, const QString &description, const QString &library = QString() );
 
     /**
      * Metadata for provider with direct provider creation function pointer, where
      * no library is involved.
      * \since QGIS 3.0
-     * \note not available in Python bindings
+     * \deprecated QGIS 3.10
      */
-    SIP_SKIP QgsProviderMetadata( const QString &key, const QString &description, const QgsProviderMetadata::CreateDataProviderFunction &createFunc );
+    SIP_SKIP Q_DECL_DEPRECATED QgsProviderMetadata( const QString &key, const QString &description, const QgsProviderMetadata::CreateDataProviderFunction &createFunc );
+
+    //! dtor
+    virtual ~QgsProviderMetadata();
 
     /**
      * This returns the unique key associated with the provider
-
-        This key string is used for the associative container in QgsProviderRegistry
+     *
+     * This key string is used for the associative container in QgsProviderRegistry
      */
     QString key() const;
 
     /**
      * This returns descriptive text for the provider
-
-        This is used to provide a descriptive list of available data providers.
+     *
+     * This is used to provide a descriptive list of available data providers.
      */
     QString description() const;
 
     /**
      * This returns the library file name
-
-        This is used to QLibrary calls to load the data provider.
+     *
+     * This is used to QLibrary calls to load the data provider (only for dynamically loaded libraries)
+     *
+     * \deprecated QGIS 3.10 - providers may not need to be loaded from a library (empty string returned)
      */
-    QString library() const;
+    Q_DECL_DEPRECATED QString library() const SIP_DEPRECATED;
 
     /**
      * Returns a pointer to the direct provider creation function, if supported
      * by the provider.
-     * \since QGIS 3.0
      * \note not available in Python bindings
+     * \since QGIS 3.0
+     * \deprecated QGIS 3.10
      */
-    SIP_SKIP CreateDataProviderFunction createFunction() const;
+    SIP_SKIP Q_DECL_DEPRECATED CreateDataProviderFunction createFunction() const;
+
+    /**
+      * Initialize the provider
+      * \since QGIS 3.10
+      */
+    virtual void initProvider();
+
+    /**
+     * Cleanup the provider
+     * \since QGIS 3.10
+     */
+    virtual void cleanupProvider();
+
+    /**
+     * Type of file filters
+     * \since QGIS 3.10
+     */
+    enum class FilterType
+    {
+      FilterVector = 1,
+      FilterRaster,
+      FilterMesh,
+      FilterMeshDataset
+    };
+
+    /**
+     * Builds the list of file filter strings (supported formats)
+     *
+     * Suitable for use in a QFileDialog::getOpenFileNames() call.
+     *
+     * \since QGIS 3.10
+     */
+    virtual QString filters( FilterType type );
+
+    /**
+     * Class factory to return a pointer to a newly created QgsDataProvider object
+     * \since QGIS 3.10
+     */
+    virtual QgsDataProvider *createProvider( const QString &uri, const QgsDataProvider::ProviderOptions &options ) SIP_FACTORY;
+
+    /**
+     * Creates new empty vector layer
+     * \note not available in Python bindings
+     * \since QGIS 3.10
+     */
+    SIP_SKIP virtual QgsVectorLayerExporter::ExportError createEmptyLayer( const QString &uri, const QgsFields &fields, QgsWkbTypes::Type wkbType, const QgsCoordinateReferenceSystem &srs, bool overwrite, QMap<int, int> &oldToNewAttrIdxMap, QString &errorMessage, const QMap<QString, QVariant> *options );
+
+    /**
+     * Creates a new instance of the raster data provider.
+     * \since QGIS 3.10
+     */
+    virtual QgsRasterDataProvider *createRasterDataProvider(
+      const QString &uri,
+      const QString &format,
+      int nBands,
+      Qgis::DataType type,
+      int width,
+      int height,
+      double *geoTransform,
+      const QgsCoordinateReferenceSystem &crs,
+      const QStringList &createOptions = QStringList() ) SIP_FACTORY;
+
+    /**
+     * Returns pyramid resampling methods available for provider
+     * \since QGIS 3.10
+     */
+    virtual QList<QPair<QString, QString> > pyramidResamplingMethods();
+
+    /**
+     * Breaks a provider data source URI into its component paths (e.g. file path, layer name).
+     * \param uri uri string
+     * \returns map containing components. Standard components include "path", "layerName", "url".
+     * \note this function may not be supported by all providers, an empty map will be returned in such case
+     * \since QGIS 3.10
+     */
+    virtual QVariantMap decodeUri( const QString &uri );
+
+    /**
+     * Returns data item providers. Caller is responsible for ownership of the item providers
+     * \see QgsProviderGuiMetadata::dataItemGuiProviders()
+     * \note Ownership of created data item providers is passed to the caller.
+     * \since QGIS 3.10
+     */
+    virtual QList< QgsDataItemProvider * > dataItemProviders() const SIP_FACTORY;
+
+    /**
+     * Lists stored layer styles in the provider defined by \a uri
+     * \returns -1 if not implemented by provider, otherwise number of styles stored
+     * \since QGIS 3.10
+     */
+    virtual int listStyles( const QString &uri, QStringList &ids, QStringList &names,
+                            QStringList &descriptions, QString &errCause );
+
+    /**
+     * Gets a layer style defined by \a uri
+     * \since QGIS 3.10
+     */
+    virtual QString getStyleById( const QString &uri, QString styleId, QString &errCause );
+
+    /**
+     * Deletes a layer style defined by \a styleId
+     * \since QGIS 3.10
+     */
+    virtual bool deleteStyleById( const QString &uri, QString styleId, QString &errCause );
+
+    /**
+     * Saves a layer style to provider
+     * \since QGIS 3.10
+     */
+    virtual bool saveStyle( const QString &uri, const QString &qmlStyle, const QString &sldStyle,
+                            const QString &styleName, const QString &styleDescription,
+                            const QString &uiFileContent, bool useAsDefault, QString &errCause );
+
+    /**
+     * Loads a layer style defined by \a uri
+     * \since QGIS 3.10
+     */
+    virtual QString loadStyle( const QString &uri, QString &errCause );
+
+    /**
+     * Creates database by the provider on the path
+     * \since QGIS 3.10
+     */
+    virtual bool createDb( const QString &dbPath, QString &errCause );
+
+    /**
+     * Returns new instance of transaction. Ownership is transferred to the caller
+     * \since QGIS 3.10
+     */
+    virtual QgsTransaction *createTransaction( const QString &connString ) SIP_FACTORY;
+
 
   private:
 
     /// unique key for data provider
-    QString key_;
+    QString mKey;
 
     /// associated terse description
-    QString description_;
+    QString mDescription;
 
     /// file path
-    QString library_;
+    /// deprecated QGIS 3.10
+    QString mLibrary;
 
-    CreateDataProviderFunction mCreateFunc = nullptr;
-
+    CreateDataProviderFunction mCreateFunction = nullptr;
 };
 
 #endif //QGSPROVIDERMETADATA_H
-

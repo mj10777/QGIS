@@ -18,9 +18,12 @@
 
 #include "qgis_core.h"
 #include "qgsfieldformatter.h"
+#include "qgsexpression.h"
+#include "qgsexpressioncontext.h"
 
 #include <QVector>
 #include <QVariant>
+
 
 /**
  * \ingroup core
@@ -63,13 +66,67 @@ class CORE_EXPORT QgsValueRelationFieldFormatter : public QgsFieldFormatter
     QVariant createCache( QgsVectorLayer *layer, int fieldIndex, const QVariantMap &config ) const override;
 
     /**
+     * Utility to convert a list or a string representation of an (hstore style: {1,2...}) list in \a value to a string list
+     * \since QGIS 3.2
+     */
+    static QStringList valueToStringList( const QVariant &value );
+
+    /**
      * Create a cache for a value relation field.
      * This can be used to keep the value map in the local memory
      * if doing multiple lookups in a loop.
+     * \param config The widget configuration
+     * \param formFeature The feature currently being edited with current attribute values
+     * \return A kvp list of values for the widget
      *
      * \since QGIS 3.0
      */
-    static QgsValueRelationFieldFormatter::ValueRelationCache createCache( const QVariantMap &config );
+    static QgsValueRelationFieldFormatter::ValueRelationCache createCache( const QVariantMap &config, const QgsFeature &formFeature = QgsFeature() );
+
+    /**
+     * Check if the \a expression requires a form scope (i.e. if it uses fields
+     * or geometry of the currently edited feature).
+     *
+     * \param expression The widget's filter expression
+     * \return TRUE if the expression requires a form scope
+     * \since QGIS 3.2
+     */
+    static bool expressionRequiresFormScope( const QString &expression );
+
+    /**
+     * Returns a list of attributes required by the form context \a expression
+     *
+     * \param expression Form filter expression
+     * \return list of attributes required by the expression
+     * \since QGIS 3.2
+     */
+    static QSet<QString> expressionFormAttributes( const QString &expression );
+
+    /**
+     * Returns a list of variables required by the form context \a expression
+     *
+     * \param expression Form filter expression
+     * \return list of variables required by the expression
+     * \since QGIS 3.2
+     */
+    static QSet<QString> expressionFormVariables( const QString &expression );
+
+    /**
+     * Check whether the \a feature has all values required by the \a expression
+     *
+     * \return TRUE if the expression can be used
+     * \since QGIS 3.2
+     */
+    static bool expressionIsUsable( const QString &expression, const QgsFeature &feature );
+
+    /**
+     * Returns the (possibly NULL) layer from the widget's \a config and \a project
+     * \since QGIS 3.8
+     */
+    static QgsVectorLayer *resolveLayer( const QVariantMap &config, const QgsProject *project );
+
+
+
 };
 
 Q_DECLARE_METATYPE( QgsValueRelationFieldFormatter::ValueRelationCache )

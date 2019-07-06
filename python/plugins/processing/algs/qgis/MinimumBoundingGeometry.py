@@ -21,23 +21,21 @@ __author__ = 'Nyall Dawson'
 __date__ = 'September 2017'
 __copyright__ = '(C) 2017, Nyall Dawson'
 
-# This will get replaced with a git SHA1 when you do a git archive
-
-__revision__ = '$Format:%H$'
-
 import os
 import math
 
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtCore import QVariant
 
-from qgis.core import (QgsField,
+from qgis.core import (QgsApplication,
+                       QgsField,
                        QgsFeatureSink,
                        QgsGeometry,
                        QgsWkbTypes,
                        QgsFeatureRequest,
                        QgsFields,
                        QgsRectangle,
+                       QgsProcessingException,
                        QgsProcessingParameterFeatureSource,
                        QgsProcessingParameterField,
                        QgsProcessingParameterEnum,
@@ -59,7 +57,10 @@ class MinimumBoundingGeometry(QgisAlgorithm):
     FIELD = 'FIELD'
 
     def icon(self):
-        return QIcon(os.path.join(pluginPath, 'images', 'ftools', 'convex_hull.png'))
+        return QgsApplication.getThemeIcon("/algorithms/mAlgorithmConvexHull.svg")
+
+    def svgIconPath(self):
+        return QgsApplication.iconPath("/algorithms/mAlgorithmConvexHull.svg")
 
     def group(self):
         return self.tr('Vector geometry')
@@ -99,6 +100,9 @@ class MinimumBoundingGeometry(QgisAlgorithm):
 
     def processAlgorithm(self, parameters, context, feedback):
         source = self.parameterAsSource(parameters, self.INPUT, context)
+        if source is None:
+            raise QgsProcessingException(self.invalidSourceError(parameters, self.INPUT))
+
         field_name = self.parameterAsString(parameters, self.FIELD, context)
         type = self.parameterAsEnum(parameters, self.TYPE, context)
         use_field = bool(field_name)
@@ -137,6 +141,8 @@ class MinimumBoundingGeometry(QgisAlgorithm):
 
         (sink, dest_id) = self.parameterAsSink(parameters, self.OUTPUT, context,
                                                fields, QgsWkbTypes.Polygon, source.sourceCrs())
+        if sink is None:
+            raise QgsProcessingException(self.invalidSinkError(parameters, self.OUTPUT))
 
         if field_index >= 0:
             geometry_dict = {}
@@ -152,15 +158,15 @@ class MinimumBoundingGeometry(QgisAlgorithm):
 
                 if type == 0:
                     # bounding boxes - calculate on the fly for efficiency
-                    if not f.attributes()[field_index] in bounds_dict:
-                        bounds_dict[f.attributes()[field_index]] = f.geometry().boundingBox()
+                    if not f[field_index] in bounds_dict:
+                        bounds_dict[f[field_index]] = f.geometry().boundingBox()
                     else:
-                        bounds_dict[f.attributes()[field_index]].combineExtentWith(f.geometry().boundingBox())
+                        bounds_dict[f[field_index]].combineExtentWith(f.geometry().boundingBox())
                 else:
-                    if not f.attributes()[field_index] in geometry_dict:
-                        geometry_dict[f.attributes()[field_index]] = [f.geometry()]
+                    if not f[field_index] in geometry_dict:
+                        geometry_dict[f[field_index]] = [f.geometry()]
                     else:
-                        geometry_dict[f.attributes()[field_index]].append(f.geometry())
+                        geometry_dict[f[field_index]].append(f.geometry())
 
                 feedback.setProgress(int(current * total))
 

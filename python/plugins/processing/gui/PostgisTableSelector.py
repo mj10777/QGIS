@@ -21,12 +21,10 @@ __author__ = 'Victor Olaya'
 __date__ = 'November 2015'
 __copyright__ = '(C) 2015, Victor Olaya'
 
-# This will get replaced with a git SHA1 when you do a git archive
-
-__revision__ = '$Format:%H$'
-
 
 import os
+import warnings
+
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QTreeWidgetItem, QMessageBox
 from qgis.PyQt import uic
@@ -34,8 +32,10 @@ from qgis.core import QgsSettings
 from processing.tools.postgis import GeoDB
 
 pluginPath = os.path.split(os.path.dirname(__file__))[0]
-WIDGET, BASE = uic.loadUiType(
-    os.path.join(pluginPath, 'ui', 'DlgPostgisTableSelector.ui'))
+with warnings.catch_warnings():
+    warnings.filterwarnings("ignore", category=DeprecationWarning)
+    WIDGET, BASE = uic.loadUiType(
+        os.path.join(pluginPath, 'ui', 'DlgPostgisTableSelector.ui'))
 
 
 class PostgisTableSelector(BASE, WIDGET):

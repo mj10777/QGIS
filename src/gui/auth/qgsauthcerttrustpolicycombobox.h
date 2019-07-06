@@ -18,7 +18,7 @@
 #define QGSAUTHCERTTRUSTPOLICYCOMBOBOX_H
 
 #include <QComboBox>
-#include "qgis.h"
+#include "qgis_sip.h"
 #include "qgsauthcertutils.h"
 #include "qgis_gui.h"
 
@@ -43,17 +43,17 @@ class GUI_EXPORT QgsAuthCertTrustPolicyComboBox : public QComboBox
       QgsAuthCertUtils::CertTrustPolicy policy = QgsAuthCertUtils::DefaultTrust,
       QgsAuthCertUtils::CertTrustPolicy defaultpolicy = QgsAuthCertUtils::DefaultTrust );
 
-    //! Get currently set trust policy
+    //! Gets currently set trust policy
     QgsAuthCertUtils::CertTrustPolicy trustPolicy();
 
-    //! Get trust policy for a given index of combobox
+    //! Gets trust policy for a given index of combobox
     QgsAuthCertUtils::CertTrustPolicy trustPolicyForIndex( int indx );
 
   public slots:
-    //! Set current trust policy
+    //! Sets current trust policy
     void setTrustPolicy( QgsAuthCertUtils::CertTrustPolicy policy );
 
-    //! Set default trust policy
+    //! Sets default trust policy
     void setDefaultTrustPolicy( QgsAuthCertUtils::CertTrustPolicy defaultpolicy );
 
   private slots:

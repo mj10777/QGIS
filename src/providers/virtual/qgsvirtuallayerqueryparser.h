@@ -19,13 +19,14 @@ email                : hugo dot mercier at oslandia dot com
 
 #include "qgis.h"
 #include "qgswkbtypes.h"
-#include "qgsvectorlayer.h"
+
+struct sqlite3;
 
 namespace QgsVirtualLayerQueryParser
 {
 
   /**
-   * Return the list of tables referenced in the SQL query
+   * Returns the list of tables referenced in the SQL query
    */
   QStringList referencedTables( const QString &q );
 
@@ -76,7 +77,7 @@ namespace QgsVirtualLayerQueryParser
   typedef QList<ColumnDef> TableDef;
 
   /**
-   * Get the column names and types that can be deduced from the query, using SQLite introspection
+   * Gets the column names and types that can be deduced from the query, using SQLite introspection
    * Special comments can also be used in the query to type columns
    * Comments should be set after the name of the column and are introduced by "/\htmlonly\endhtmlonly*:"
    * For instance 'SELECT t+1 /\htmlonly\endhtmlonly*:int*\htmlonly\endhtmlonly/ FROM table' will type the column 't' as integer
@@ -85,7 +86,7 @@ namespace QgsVirtualLayerQueryParser
    */
   TableDef columnDefinitionsFromQuery( sqlite3 *db, const QString &query );
 
-  //! Get the column types of a virtual table
+  //! Gets the column types of a virtual table
   TableDef tableDefinitionFromVirtualTable( sqlite3 *db, const QString &tableName );
 
 }

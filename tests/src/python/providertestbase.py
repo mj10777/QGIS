@@ -9,13 +9,13 @@ the Free Software Foundation; either version 2 of the License, or
 
 from builtins import str
 from builtins import object
+
 __author__ = 'Matthias Kuhn'
 __date__ = '2015-04-27'
 __copyright__ = 'Copyright 2015, The QGIS Project'
-# This will get replaced with a git SHA1 when you do a git archive
-__revision__ = '$Format:%H$'
 
 from qgis.core import (
+    QgsApplication,
     QgsRectangle,
     QgsFeatureRequest,
     QgsFeature,
@@ -23,19 +23,21 @@ from qgis.core import (
     QgsAbstractFeatureIterator,
     QgsExpressionContextScope,
     QgsExpressionContext,
+    QgsExpression,
     QgsVectorDataProvider,
     QgsVectorLayerFeatureSource,
     QgsFeatureSink,
     QgsTestUtils,
+    QgsFeatureSource,
     NULL
 )
+from qgis.PyQt.QtTest import QSignalSpy
 
 from utilities import compareWkt
 from featuresourcetestbase import FeatureSourceTestCase
 
 
 class ProviderTestCase(FeatureSourceTestCase):
-
     '''
         This is a collection of tests for vector data providers and kept generic.
         To make use of it, subclass it and set self.source to a provider you want to test.
@@ -51,6 +53,11 @@ class ProviderTestCase(FeatureSourceTestCase):
         """ Individual derived provider tests should override this to return a list of expressions which
         cannot be compiled """
         return set()
+
+    def enableCompiler(self):
+        """By default there is no expression compiling available, needs to be overridden in subclass"""
+        print('Provider does not support compiling')
+        return False
 
     def partiallyCompiledFilters(self):
         """ Individual derived provider tests should override this to return a list of expressions which
@@ -101,15 +108,33 @@ class ProviderTestCase(FeatureSourceTestCase):
         self.assert_query(provider, 'ymax($geometry) > 80', [1, 2])
         self.assert_query(provider, 'area($geometry) > 10', [1])
         self.assert_query(provider, 'perimeter($geometry) < 12', [2, 3])
-        self.assert_query(provider, 'relate($geometry,geom_from_wkt( \'Polygon ((-68.2 82.1, -66.95 82.1, -66.95 79.05, -68.2 79.05, -68.2 82.1))\')) = \'FF2FF1212\'', [1, 3])
-        self.assert_query(provider, 'relate($geometry,geom_from_wkt( \'Polygon ((-68.2 82.1, -66.95 82.1, -66.95 79.05, -68.2 79.05, -68.2 82.1))\'), \'****F****\')', [1, 3])
-        self.assert_query(provider, 'crosses($geometry,geom_from_wkt( \'Linestring (-68.2 82.1, -66.95 82.1, -66.95 79.05)\'))', [2])
-        self.assert_query(provider, 'overlaps($geometry,geom_from_wkt( \'Polygon ((-68.2 82.1, -66.95 82.1, -66.95 79.05, -68.2 79.05, -68.2 82.1))\'))', [2])
-        self.assert_query(provider, 'within($geometry,geom_from_wkt( \'Polygon ((-75.1 76.1, -75.1 81.6, -68.8 81.6, -68.8 76.1, -75.1 76.1))\'))', [1])
-        self.assert_query(provider, 'overlaps(translate($geometry,-1,-1),geom_from_wkt( \'Polygon ((-75.1 76.1, -75.1 81.6, -68.8 81.6, -68.8 76.1, -75.1 76.1))\'))', [1])
-        self.assert_query(provider, 'overlaps(buffer($geometry,1),geom_from_wkt( \'Polygon ((-75.1 76.1, -75.1 81.6, -68.8 81.6, -68.8 76.1, -75.1 76.1))\'))', [1, 3])
-        self.assert_query(provider, 'intersects(centroid($geometry),geom_from_wkt( \'Polygon ((-74.4 78.2, -74.4 79.1, -66.8 79.1, -66.8 78.2, -74.4 78.2))\'))', [2])
-        self.assert_query(provider, 'intersects(point_on_surface($geometry),geom_from_wkt( \'Polygon ((-74.4 78.2, -74.4 79.1, -66.8 79.1, -66.8 78.2, -74.4 78.2))\'))', [1, 2])
+        self.assert_query(provider,
+                          'relate($geometry,geom_from_wkt( \'Polygon ((-68.2 82.1, -66.95 82.1, -66.95 79.05, -68.2 79.05, -68.2 82.1))\')) = \'FF2FF1212\'',
+                          [1, 3])
+        self.assert_query(provider,
+                          'relate($geometry,geom_from_wkt( \'Polygon ((-68.2 82.1, -66.95 82.1, -66.95 79.05, -68.2 79.05, -68.2 82.1))\'), \'****F****\')',
+                          [1, 3])
+        self.assert_query(provider,
+                          'crosses($geometry,geom_from_wkt( \'Linestring (-68.2 82.1, -66.95 82.1, -66.95 79.05)\'))',
+                          [2])
+        self.assert_query(provider,
+                          'overlaps($geometry,geom_from_wkt( \'Polygon ((-68.2 82.1, -66.95 82.1, -66.95 79.05, -68.2 79.05, -68.2 82.1))\'))',
+                          [2])
+        self.assert_query(provider,
+                          'within($geometry,geom_from_wkt( \'Polygon ((-75.1 76.1, -75.1 81.6, -68.8 81.6, -68.8 76.1, -75.1 76.1))\'))',
+                          [1])
+        self.assert_query(provider,
+                          'overlaps(translate($geometry,-1,-1),geom_from_wkt( \'Polygon ((-75.1 76.1, -75.1 81.6, -68.8 81.6, -68.8 76.1, -75.1 76.1))\'))',
+                          [1])
+        self.assert_query(provider,
+                          'overlaps(buffer($geometry,1),geom_from_wkt( \'Polygon ((-75.1 76.1, -75.1 81.6, -68.8 81.6, -68.8 76.1, -75.1 76.1))\'))',
+                          [1, 3])
+        self.assert_query(provider,
+                          'intersects(centroid($geometry),geom_from_wkt( \'Polygon ((-74.4 78.2, -74.4 79.1, -66.8 79.1, -66.8 78.2, -74.4 78.2))\'))',
+                          [2])
+        self.assert_query(provider,
+                          'intersects(point_on_surface($geometry),geom_from_wkt( \'Polygon ((-74.4 78.2, -74.4 79.1, -66.8 79.1, -66.8 78.2, -74.4 78.2))\'))',
+                          [1, 2])
         self.assert_query(provider, 'distance($geometry,geom_from_wkt( \'Point (-70 70)\')) > 7', [1, 2])
 
     def testGetFeaturesUncompiled(self):
@@ -123,29 +148,34 @@ class ProviderTestCase(FeatureSourceTestCase):
             self.runPolyGetFeatureTests(self.poly_provider)
 
     def testGetFeaturesExp(self):
-        try:
-            self.enableCompiler()
+        if self.enableCompiler():
             self.compiled = True
             self.runGetFeatureTests(self.source)
             if hasattr(self, 'poly_provider'):
                 self.runPolyGetFeatureTests(self.poly_provider)
-        except AttributeError:
-            print('Provider does not support compiling')
 
     def testSubsetString(self):
         if not self.source.supportsSubsetString():
             print('Provider does not support subset strings')
             return
 
+        changed_spy = QSignalSpy(self.source.dataChanged)
         subset = self.getSubsetString()
         self.source.setSubsetString(subset)
         self.assertEqual(self.source.subsetString(), subset)
+        self.assertEqual(len(changed_spy), 1)
+
+        # No signal should be emitted if the subset string is not modified
+        self.source.setSubsetString(subset)
+        self.assertEqual(len(changed_spy), 1)
+
         result = set([f['pk'] for f in self.source.getFeatures()])
         all_valid = (all(f.isValid() for f in self.source.getFeatures()))
         self.source.setSubsetString(None)
 
         expected = set([2, 3, 4])
-        assert set(expected) == result, 'Expected {} and got {} when testing subset string {}'.format(set(expected), result, subset)
+        assert set(expected) == result, 'Expected {} and got {} when testing subset string {}'.format(set(expected),
+                                                                                                      result, subset)
         self.assertTrue(all_valid)
 
         # Subset string AND filter rect
@@ -156,7 +186,8 @@ class ProviderTestCase(FeatureSourceTestCase):
         all_valid = (all(f.isValid() for f in self.source.getFeatures(request)))
         self.source.setSubsetString(None)
         expected = set([2])
-        assert set(expected) == result, 'Expected {} and got {} when testing subset string {}'.format(set(expected), result, subset)
+        assert set(expected) == result, 'Expected {} and got {} when testing subset string {}'.format(set(expected),
+                                                                                                      result, subset)
         self.assertTrue(all_valid)
 
         # Subset string AND filter rect, version 2
@@ -165,7 +196,8 @@ class ProviderTestCase(FeatureSourceTestCase):
         result = set([f['pk'] for f in self.source.getFeatures(QgsFeatureRequest().setFilterRect(extent))])
         self.source.setSubsetString(None)
         expected = set([2, 4])
-        assert set(expected) == result, 'Expected {} and got {} when testing subset string {}'.format(set(expected), result, subset)
+        assert set(expected) == result, 'Expected {} and got {} when testing subset string {}'.format(set(expected),
+                                                                                                      result, subset)
 
         # Subset string AND expression
         self.source.setSubsetString(subset)
@@ -174,7 +206,8 @@ class ProviderTestCase(FeatureSourceTestCase):
         all_valid = (all(f.isValid() for f in self.source.getFeatures(request)))
         self.source.setSubsetString(None)
         expected = set([2, 4])
-        assert set(expected) == result, 'Expected {} and got {} when testing subset string {}'.format(set(expected), result, subset)
+        assert set(expected) == result, 'Expected {} and got {} when testing subset string {}'.format(set(expected),
+                                                                                                      result, subset)
         self.assertTrue(all_valid)
 
     def getSubsetString(self):
@@ -210,11 +243,8 @@ class ProviderTestCase(FeatureSourceTestCase):
         self.runOrderByTests()
 
     def testOrderByCompiled(self):
-        try:
-            self.enableCompiler()
+        if self.enableCompiler():
             self.runOrderByTests()
-        except AttributeError:
-            print('Provider does not support compiling')
 
     def runOrderByTests(self):
         FeatureSourceTestCase.runOrderByTests(self)
@@ -248,6 +278,17 @@ class ProviderTestCase(FeatureSourceTestCase):
             pks.append(f['pk'])
         self.assertEqual(set(pks), {1, 2, 3, 4, 5})
 
+    def testCloneLayer(self):
+        """
+        Test that cloning layer works and has all expected features
+        """
+        l = self.vl.clone()
+
+        pks = []
+        for f in l.getFeatures():
+            pks.append(f['pk'])
+        self.assertEqual(set(pks), {1, 2, 3, 4, 5})
+
     def testGetFeaturesPolyFilterRectTests(self):
         """ Test fetching features from a polygon layer with filter rect"""
         try:
@@ -277,6 +318,9 @@ class ProviderTestCase(FeatureSourceTestCase):
         assert set(features) == set([1, 2, 3, 4, 5]), 'Got {} instead'.format(features)
 
     def testMinValue(self):
+        self.assertFalse(self.source.minimumValue(-1))
+        self.assertFalse(self.source.minimumValue(1000))
+
         self.assertEqual(self.source.minimumValue(self.source.fields().lookupField('cnt')), -200)
         self.assertEqual(self.source.minimumValue(self.source.fields().lookupField('name')), 'Apple')
 
@@ -288,6 +332,8 @@ class ProviderTestCase(FeatureSourceTestCase):
             self.assertEqual(min_value, 200)
 
     def testMaxValue(self):
+        self.assertFalse(self.source.maximumValue(-1))
+        self.assertFalse(self.source.maximumValue(1000))
         self.assertEqual(self.source.maximumValue(self.source.fields().lookupField('cnt')), 400)
         self.assertEqual(self.source.maximumValue(self.source.fields().lookupField('name')), 'Pear')
 
@@ -328,10 +374,17 @@ class ProviderTestCase(FeatureSourceTestCase):
             self.source.setSubsetString(None)
             self.assertEqual(count, 0)
             self.assertTrue(provider_extent.isNull())
+            self.assertEqual(self.source.featureCount(), 5)
 
     def testUnique(self):
-        self.assertEqual(set(self.source.uniqueValues(self.source.fields().lookupField('cnt'))), set([-200, 100, 200, 300, 400]))
-        assert set(['Apple', 'Honey', 'Orange', 'Pear', NULL]) == set(self.source.uniqueValues(self.source.fields().lookupField('name'))), 'Got {}'.format(set(self.source.uniqueValues(self.source.fields().lookupField('name'))))
+        self.assertEqual(self.source.uniqueValues(-1), set())
+        self.assertEqual(self.source.uniqueValues(1000), set())
+
+        self.assertEqual(set(self.source.uniqueValues(self.source.fields().lookupField('cnt'))),
+                         set([-200, 100, 200, 300, 400]))
+        assert set(['Apple', 'Honey', 'Orange', 'Pear', NULL]) == set(
+            self.source.uniqueValues(self.source.fields().lookupField('name'))), 'Got {}'.format(
+            set(self.source.uniqueValues(self.source.fields().lookupField('name'))))
 
         if self.source.supportsSubsetString():
             subset = self.getSubsetString2()
@@ -341,6 +394,9 @@ class ProviderTestCase(FeatureSourceTestCase):
             self.assertEqual(set(values), set([200, 300]))
 
     def testUniqueStringsMatching(self):
+        self.assertEqual(self.source.uniqueStringsMatching(-1, 'a'), [])
+        self.assertEqual(self.source.uniqueStringsMatching(100001, 'a'), [])
+
         field_index = self.source.fields().lookupField('name')
         self.assertEqual(set(self.source.uniqueStringsMatching(field_index, 'a')), set(['Pear', 'Orange', 'Apple']))
         # test case insensitive
@@ -352,7 +408,8 @@ class ProviderTestCase(FeatureSourceTestCase):
         self.assertEqual(len(result), 2)
         self.assertTrue(result.issubset(set(['Pear', 'Orange', 'Apple'])))
 
-        assert set([u'Apple', u'Honey', u'Orange', u'Pear', NULL]) == set(self.source.uniqueValues(field_index)), 'Got {}'.format(set(self.source.uniqueValues(field_index)))
+        assert set([u'Apple', u'Honey', u'Orange', u'Pear', NULL]) == set(
+            self.source.uniqueValues(field_index)), 'Got {}'.format(set(self.source.uniqueValues(field_index)))
 
         if self.source.supportsSubsetString():
             subset = self.getSubsetString2()
@@ -365,7 +422,7 @@ class ProviderTestCase(FeatureSourceTestCase):
         self.assertEqual(self.source.featureCount(), 5)
 
         if self.source.supportsSubsetString():
-            #Add a subset string and test feature count
+            # Add a subset string and test feature count
             subset = self.getSubsetString()
             self.source.setSubsetString(subset)
             count = self.source.featureCount()
@@ -388,6 +445,46 @@ class ProviderTestCase(FeatureSourceTestCase):
             self.source.setSubsetString(None)
             self.assertEqual(count, 0)
             self.assertEqual(self.source.featureCount(), 5)
+
+    def testEmpty(self):
+        self.assertFalse(self.source.empty())
+        self.assertEqual(self.source.hasFeatures(), QgsFeatureSource.FeaturesAvailable)
+
+        if self.source.supportsSubsetString():
+            try:
+                backup = self.source.subsetString()
+                # Add a subset string and test feature count
+                subset = self.getSubsetString()
+                self.source.setSubsetString(subset)
+                self.assertFalse(self.source.empty())
+                self.assertEqual(self.source.hasFeatures(), QgsFeatureSource.FeaturesAvailable)
+                subsetNoMatching = self.getSubsetStringNoMatching()
+                self.source.setSubsetString(subsetNoMatching)
+                self.assertTrue(self.source.empty())
+                self.assertEqual(self.source.hasFeatures(), QgsFeatureSource.NoFeaturesAvailable)
+            finally:
+                self.source.setSubsetString(None)
+            self.assertFalse(self.source.empty())
+
+        # If the provider supports tests on editable layers
+        if getattr(self, 'getEditableLayer', None):
+            l = self.getEditableLayer()
+            self.assertTrue(l.isValid())
+
+            self.assertEqual(l.hasFeatures(), QgsFeatureSource.FeaturesAvailable)
+
+            # Test that deleting some features in the edit buffer does not
+            # return empty, we accept FeaturesAvailable as well as
+            # MaybeAvailable
+            l.startEditing()
+            l.deleteFeature(next(l.getFeatures()).id())
+            self.assertNotEqual(l.hasFeatures(), QgsFeatureSource.NoFeaturesAvailable)
+            l.rollBack()
+
+            # Call truncate(), we need an empty set now
+            l.dataProvider().truncate()
+            self.assertTrue(l.dataProvider().empty())
+            self.assertEqual(l.dataProvider().hasFeatures(), QgsFeatureSource.NoFeaturesAvailable)
 
     def testGetFeaturesNoGeometry(self):
         """ Test that no geometry is present when fetching features without geometry"""
@@ -423,9 +520,18 @@ class ProviderTestCase(FeatureSourceTestCase):
             # add empty list, should return true for consistency
             self.assertTrue(l.dataProvider().addFeatures([]))
 
+            # ensure that returned features have been given the correct id
+            f = next(l.getFeatures(QgsFeatureRequest().setFilterFid(added[0].id())))
+            self.assertTrue(f.isValid())
+            self.assertEqual(f['cnt'], -220)
+
+            f = next(l.getFeatures(QgsFeatureRequest().setFilterFid(added[1].id())))
+            self.assertTrue(f.isValid())
+            self.assertEqual(f['cnt'], 330)
         else:
             # expect fail
-            self.assertFalse(l.dataProvider().addFeatures([f1, f2]), 'Provider reported no AddFeatures capability, but returned true to addFeatures')
+            self.assertFalse(l.dataProvider().addFeatures([f1, f2]),
+                             'Provider reported no AddFeatures capability, but returned true to addFeatures')
 
     def testAddFeatureFastInsert(self):
         if not getattr(self, 'getEditableLayer', None):
@@ -465,7 +571,8 @@ class ProviderTestCase(FeatureSourceTestCase):
         f2.setAttributes([7, 330])
 
         result, added = l.dataProvider().addFeatures([f1, f2])
-        self.assertTrue(result, 'Provider returned False to addFeatures with missing attributes. Providers should accept these features but add NULL attributes to the end of the existing attributes to the required field length.')
+        self.assertTrue(result,
+                        'Provider returned False to addFeatures with missing attributes. Providers should accept these features but add NULL attributes to the end of the existing attributes to the required field length.')
         f1.setId(added[0].id())
         f2.setId(added[1].id())
 
@@ -519,7 +626,8 @@ class ProviderTestCase(FeatureSourceTestCase):
         f2.setAttributes([8])
 
         result, added = l.dataProvider().addFeatures([f1, f2])
-        self.assertFalse(result, 'Provider returned True to addFeatures with incorrect geometry type. Providers should reject these features.')
+        self.assertFalse(result,
+                         'Provider returned True to addFeatures with incorrect geometry type. Providers should reject these features.')
 
         # make sure feature was not added
         added = [f for f in l.dataProvider().getFeatures() if f['pk'] == 7]
@@ -561,7 +669,7 @@ class ProviderTestCase(FeatureSourceTestCase):
         l = self.getEditableLayer()
         self.assertTrue(l.isValid())
 
-        #find 2 features to delete
+        # find 2 features to delete
         features = [f for f in l.dataProvider().getFeatures()]
         to_delete = [f.id() for f in features if f.attributes()[0] in [1, 3]]
 
@@ -610,7 +718,8 @@ class ProviderTestCase(FeatureSourceTestCase):
         if l.dataProvider().capabilities() & QgsVectorDataProvider.FastTruncate or l.dataProvider().capabilities() & QgsVectorDataProvider.DeleteFeatures:
             # expect success
             result = l.dataProvider().truncate()
-            self.assertTrue(result, 'Provider reported FastTruncate or DeleteFeatures capability, but returned False to truncate()')
+            self.assertTrue(result,
+                            'Provider reported FastTruncate or DeleteFeatures capability, but returned False to truncate()')
 
             # check result
             features = [f['pk'] for f in l.dataProvider().getFeatures()]
@@ -627,7 +736,7 @@ class ProviderTestCase(FeatureSourceTestCase):
         l = self.getEditableLayer()
         self.assertTrue(l.isValid())
 
-        #find 2 features to change
+        # find 2 features to change
         features = [f for f in l.dataProvider().getFeatures()]
         # need to keep order here
         to_change = [f for f in features if f.attributes()[0] == 1]
@@ -640,7 +749,8 @@ class ProviderTestCase(FeatureSourceTestCase):
         if l.dataProvider().capabilities() & QgsVectorDataProvider.ChangeAttributeValues:
             # expect success
             result = l.dataProvider().changeAttributeValues(changes)
-            self.assertTrue(result, 'Provider reported ChangeAttributeValues capability, but returned False to changeAttributeValues')
+            self.assertTrue(result,
+                            'Provider reported ChangeAttributeValues capability, but returned False to changeAttributeValues')
 
             # check result
             self.testGetFeatures(l.dataProvider(), changed_attributes=new_attr_map)
@@ -733,3 +843,126 @@ class ProviderTestCase(FeatureSourceTestCase):
             # expect fail
             self.assertFalse(l.dataProvider().changeFeatures(attribute_changes, geometry_changes),
                              'Provider reported no ChangeAttributeValues capability, but returned true to changeFeatures')
+
+    def testMinMaxAfterChanges(self):
+        """
+        Tests retrieving field min and max value after making changes to the provider's features
+        """
+        if not getattr(self, 'getEditableLayer', None):
+            return
+
+        vl = self.getEditableLayer()
+        self.assertTrue(vl.isValid())
+
+        self.assertEqual(vl.dataProvider().minimumValue(0), 1)
+        self.assertEqual(vl.dataProvider().minimumValue(1), -200)
+        self.assertEqual(vl.dataProvider().maximumValue(0), 5)
+        self.assertEqual(vl.dataProvider().maximumValue(1), 400)
+
+        # add feature
+        f6 = QgsFeature()
+        f6.setAttributes([15, 1400])
+        res, [f6] = vl.dataProvider().addFeatures([f6])
+        self.assertTrue(res)
+        self.assertEqual(vl.dataProvider().minimumValue(0), 1)
+        self.assertEqual(vl.dataProvider().minimumValue(1), -200)
+        self.assertEqual(vl.dataProvider().maximumValue(0), 15)
+        self.assertEqual(vl.dataProvider().maximumValue(1), 1400)
+        f7 = QgsFeature()
+        f7.setAttributes([0, -1400])
+        res, [f7] = vl.dataProvider().addFeatures([f7])
+        self.assertTrue(res)
+        self.assertEqual(vl.dataProvider().minimumValue(0), 0)
+        self.assertEqual(vl.dataProvider().minimumValue(1), -1400)
+        self.assertEqual(vl.dataProvider().maximumValue(0), 15)
+        self.assertEqual(vl.dataProvider().maximumValue(1), 1400)
+
+        # change attribute values
+        self.assertTrue(vl.dataProvider().changeAttributeValues({f6.id(): {1: 150}, f7.id(): {1: -100}}))
+        self.assertEqual(vl.dataProvider().minimumValue(1), -200)
+        self.assertEqual(vl.dataProvider().maximumValue(1), 400)
+
+        # delete features
+        f1 = [f for f in vl.getFeatures() if f['pk'] == 5][0]
+        f3 = [f for f in vl.getFeatures() if f['pk'] == 3][0]
+        self.assertTrue(vl.dataProvider().deleteFeatures([f6.id(), f7.id()]))
+        self.assertEqual(vl.dataProvider().minimumValue(0), 1)
+        self.assertEqual(vl.dataProvider().minimumValue(1), -200)
+        self.assertEqual(vl.dataProvider().maximumValue(0), 5)
+        self.assertEqual(vl.dataProvider().maximumValue(1), 400)
+
+        if vl.dataProvider().capabilities() & QgsVectorDataProvider.DeleteAttributes:
+            # delete attributes
+            if vl.dataProvider().deleteAttributes([0]):
+                # may not be possible, e.g. if it's a primary key
+                self.assertEqual(vl.dataProvider().minimumValue(0), -200)
+                self.assertEqual(vl.dataProvider().maximumValue(0), 400)
+
+    def testStringComparison(self):
+        """
+        Test if string comparisons with numbers are cast by the expression
+        compiler (or work fine without doing anything :P)
+        """
+        for expression in (
+                '5 LIKE \'5\'',
+                '5 ILIKE \'5\'',
+                '15 NOT LIKE \'5\'',
+                '15 NOT ILIKE \'5\'',
+                '5 ~ \'5\''):
+            iterator = self.source.getFeatures(QgsFeatureRequest().setFilterExpression('5 LIKE \'5\''))
+            count = len([f for f in iterator])
+            self.assertEqual(count, 5)
+            self.assertFalse(iterator.compileFailed())
+            if self.enableCompiler():
+                iterator = self.source.getFeatures(QgsFeatureRequest().setFilterExpression('5 LIKE \'5\''))
+                self.assertEqual(count, 5)
+                self.assertFalse(iterator.compileFailed())
+                self.disableCompiler()
+
+    def testConcurrency(self):
+        """
+        The connection pool has a maximum of 4 connections defined (+2 spare connections)
+        Make sure that if we exhaust those 4 connections and force another connection
+        it is actually using the spare connections and does not freeze.
+        This situation normally happens when (at least) 4 rendering threads are active
+        in parallel and one requires an expression to be evaluated.
+        """
+        # Acquire the maximum amount of concurrent connections
+        iterators = list()
+        for i in range(QgsApplication.instance().maxConcurrentConnectionsPerPool()):
+            iterators.append(self.vl.getFeatures())
+
+        # Run an expression that will also do a request and should use a spare
+        # connection. It just should not deadlock here.
+
+        feat = next(iterators[0])
+        context = QgsExpressionContext()
+        context.setFeature(feat)
+        exp = QgsExpression('get_feature(\'{layer}\', \'pk\', 5)'.format(layer=self.vl.id()))
+        exp.evaluate(context)
+
+    def testEmptySubsetOfAttributesWithSubsetString(self):
+
+        if self.source.supportsSubsetString():
+            try:
+                # Add a subset string
+                subset = self.getSubsetString()
+                self.source.setSubsetString(subset)
+
+                # First test, in a regular way
+                features = [f for f in self.source.getFeatures()]
+                count = len(features)
+                self.assertEqual(count, 3)
+                has_geometry = features[0].hasGeometry()
+
+                # Ask for no attributes
+                request = QgsFeatureRequest().setSubsetOfAttributes([])
+                # Make sure we still retrieve features !
+                features = [f for f in self.source.getFeatures(request)]
+                count = len(features)
+                self.assertEqual(count, 3)
+                # Check that we still get a geometry if we add one before
+                self.assertEqual(features[0].hasGeometry(), has_geometry)
+
+            finally:
+                self.source.setSubsetString(None)

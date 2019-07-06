@@ -46,6 +46,8 @@ class QgsPointXY;
  */
 class CORE_EXPORT QgsRasterProjector : public QgsRasterInterface
 {
+    Q_GADGET
+
   public:
 
     /**
@@ -57,6 +59,7 @@ class CORE_EXPORT QgsRasterProjector : public QgsRasterInterface
       Approximate = 0, //!< Approximate (default), fast but possibly inaccurate
       Exact = 1,   //!< Exact, precise but slow
     };
+    Q_ENUM( Precision )
 
     QgsRasterProjector();
 
@@ -66,14 +69,24 @@ class CORE_EXPORT QgsRasterProjector : public QgsRasterInterface
 
     Qgis::DataType dataType( int bandNo ) const override;
 
-    //! \brief set source and destination CRS
-    void setCrs( const QgsCoordinateReferenceSystem &srcCRS, const QgsCoordinateReferenceSystem &destCRS,
-                 int srcDatumTransform = -1, int destDatumTransform = -1 );
+    /**
+     * Sets the source and destination CRS
+     * \deprecated since QGIS 3.8, use transformContext version instead
+     */
+    Q_DECL_DEPRECATED void setCrs( const QgsCoordinateReferenceSystem &srcCRS, const QgsCoordinateReferenceSystem &destCRS,
+                                   int srcDatumTransform = -1, int destDatumTransform = -1 ) SIP_DEPRECATED;
 
-    //! \brief Get source CRS
+    /**
+     * Sets source CRS to \a srcCRS and destination CRS to \a destCRS and the transformation context to \a transformContext
+     * \since QGIS 3.8
+     */
+    void setCrs( const QgsCoordinateReferenceSystem &srcCRS, const QgsCoordinateReferenceSystem &destCRS,
+                 QgsCoordinateTransformContext transformContext );
+
+    //! Returns the source CRS
     QgsCoordinateReferenceSystem sourceCrs() const { return mSrcCRS; }
 
-    //! \brief Get destination CRS
+    //! Returns the destination CRS
     QgsCoordinateReferenceSystem destinationCrs() const { return mDestCRS; }
 
     Precision precision() const { return mPrecision; }
@@ -101,13 +114,15 @@ class CORE_EXPORT QgsRasterProjector : public QgsRasterInterface
     QgsCoordinateReferenceSystem mDestCRS;
 
     //! Source datum transformation id (or -1 if none)
-    int mSrcDatumTransform = -1;
+    Q_DECL_DEPRECATED int mSrcDatumTransform = -1;
 
     //! Destination datum transformation id (or -1 if none)
-    int mDestDatumTransform = -1;
+    Q_DECL_DEPRECATED int mDestDatumTransform = -1;
 
     //! Requested precision
     Precision mPrecision = Approximate;
+
+    QgsCoordinateTransformContext mTransformContext;
 
 };
 
@@ -131,9 +146,9 @@ class ProjectorData
     ProjectorData &operator=( const ProjectorData &other ) = delete;
 
     /**
-     * \brief Get source row and column indexes for current source extent and resolution
-        If source pixel is outside source extent srcRow and srcCol are left unchanged.
-        \returns true if inside source
+     * Returns the source row and column indexes for current source extent and resolution.
+     * If the source pixel is outside source extent srcRow and srcCol are left unchanged.
+     * \returns TRUE if inside source
      */
     bool srcRowCol( int destRow, int destCol, int *srcRow, int *srcCol );
 
@@ -143,17 +158,19 @@ class ProjectorData
 
   private:
 
-    //! \brief get destination point for _current_ destination position
+    //! Returns the destination point for _current_ destination position.
     void destPointOnCPMatrix( int row, int col, double *theX, double *theY );
 
-    //! \brief Get matrix upper left row/col indexes for destination row/col
+    //! Returns the matrix upper left row index for destination row.
     int matrixRow( int destRow );
+
+    //! Returns the matrix upper left col index for destination col.
     int matrixCol( int destCol );
 
-    //! \brief Get precise source row and column indexes for current source extent and resolution
+    //! Returns precise source row and column indexes for current source extent and resolution.
     inline bool preciseSrcRowCol( int destRow, int destCol, int *srcRow, int *srcCol );
 
-    //! \brief Get approximate source row and column indexes for current source extent and resolution
+    //! Returns approximate source row and column indexes for current source extent and resolution.
     inline bool approximateSrcRowCol( int destRow, int destCol, int *srcRow, int *srcCol );
 
     //! \brief insert rows to matrix
@@ -179,12 +196,12 @@ class ProjectorData
 
     /**
      * \brief check error along columns
-      * returns true if within threshold */
+      * returns TRUE if within threshold */
     bool checkCols( const QgsCoordinateTransform &ct );
 
     /**
      * \brief check error along rows
-      * returns true if within threshold */
+      * returns TRUE if within threshold */
     bool checkRows( const QgsCoordinateTransform &ct );
 
     //! Calculate array of src helper points
@@ -193,7 +210,7 @@ class ProjectorData
     //! Calc / switch helper
     void nextHelper();
 
-    //! Get mCPMatrix as string
+    //! Gets mCPMatrix as string
     QString cpToString();
 
     /**

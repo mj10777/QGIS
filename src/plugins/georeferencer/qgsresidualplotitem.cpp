@@ -27,10 +27,15 @@ QgsResidualPlotItem::QgsResidualPlotItem( QgsLayout *layout )
   setBackgroundEnabled( false );
 }
 
+QgsLayoutItem::Flags QgsResidualPlotItem::itemFlags() const
+{
+  return QgsLayoutItem::FlagOverridesPaint;
+}
+
 void QgsResidualPlotItem::paint( QPainter *painter, const QStyleOptionGraphicsItem *itemStyle, QWidget *pWidget )
 {
-  Q_UNUSED( itemStyle );
-  Q_UNUSED( pWidget );
+  Q_UNUSED( itemStyle )
+  Q_UNUSED( pWidget )
   if ( mGCPList.size() < 1 || !painter )
   {
     return;
@@ -45,7 +50,7 @@ void QgsResidualPlotItem::paint( QPainter *painter, const QStyleOptionGraphicsIt
   QBrush disabledBrush( QColor( 255, 255, 255, 127 ) );
 
   //draw all points and collect minimal mm/pixel ratio
-  double minMMPixelRatio = DBL_MAX;
+  double minMMPixelRatio = std::numeric_limits<double>::max();
   double mmPixelRatio = 1;
 
   painter->setRenderHint( QPainter::Antialiasing, true );
@@ -115,7 +120,7 @@ void QgsResidualPlotItem::paint( QPainter *painter, const QStyleOptionGraphicsIt
   }
   else
   {
-    nDecPlaces = ( int )std::log10( scaleBarWidthUnits );
+    nDecPlaces = static_cast<int>( std::log10( scaleBarWidthUnits ) );
     scaleBarWidthUnits /= std::pow( 10.0, nDecPlaces );
     scaleBarWidthUnits = ( int )( scaleBarWidthUnits + 0.5 );
     scaleBarWidthUnits *= std::pow( 10.0, nDecPlaces );
@@ -163,8 +168,8 @@ double QgsResidualPlotItem::maxMMToPixelRatioForGCP( const QgsGeorefDataPoint *p
   }
 
   //calculate intersections with upper / lower frame edge depending on the residual y sign
-  double upDownDist = DBL_MAX; //distance to frame intersection with lower or upper frame
-  double leftRightDist = DBL_MAX; //distance to frame intersection with left or right frame
+  double upDownDist = std::numeric_limits<double>::max(); //distance to frame intersection with lower or upper frame
+  double leftRightDist = std::numeric_limits<double>::max(); //distance to frame intersection with left or right frame
 
   QPointF residual = p->residual();
   QLineF residualLine( pixelXMM, pixelYMM, pixelXMM + residual.x(), pixelYMM + residual.y() );

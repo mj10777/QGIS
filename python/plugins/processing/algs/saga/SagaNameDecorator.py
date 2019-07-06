@@ -21,10 +21,6 @@ __author__ = 'Victor Olaya'
 __date__ = 'August 2012'
 __copyright__ = '(C) 2012, Victor Olaya'
 
-# This will get replaced with a git SHA1 when you do a git archive
-
-__revision__ = '$Format:%H$'
-
 groups = {'grid_analysis': 'Raster analysis',
           'grid_calculus': 'Raster calculus',
           'grid_calculus_bsl': 'Raster calculus',
@@ -96,7 +92,6 @@ algorithms = {'Add Grid Values to Points': 'Add raster values to points',
               'Add Grid Values to Shapes': 'Add raster values to features',
               'Change Grid Values': 'Reclassify values (simple)',
               'Clip Grid with Polygon': 'Clip raster with polygon',
-              'K-Means Clustering for Grids': 'Cluster Analysis',
               'Contour Lines from Grid': 'Contour Lines',
               'Cubic Spline Approximation': 'Interpolate (Cubic spline)',
               'Cut Shapes Layer': 'Cut vector Layer',
@@ -155,7 +150,7 @@ algorithms = {'Add Grid Values to Points': 'Add raster values to points',
               'Threshold Buffer': 'Threshold raster buffer',
               'Transform Shapes': 'Transform vector layer',
               'Transpose Grids': 'Transpose Raster layers',
-              'Union': 'Polygon uUnion',
+              'Union': 'Polygon union',
               'Update': 'Polygon update',
               'Upslope Area': 'Upslope Area',
               'Zonal Grid Statistics': 'Zonal raster statistics'}

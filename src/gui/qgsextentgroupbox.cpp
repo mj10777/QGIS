@@ -24,6 +24,7 @@
 
 #include <QMenu>
 #include <QAction>
+#include <QDoubleValidator>
 
 QgsExtentGroupBox::QgsExtentGroupBox( QWidget *parent )
   : QgsCollapsibleGroupBox( parent )
@@ -77,6 +78,7 @@ void QgsExtentGroupBox::setOutputCrs( const QgsCoordinateReferenceSystem &output
 {
   if ( mOutputCrs != outputCrs )
   {
+    bool prevExtentEnabled = isChecked();
     switch ( mExtentState )
     {
       case CurrentExtent:
@@ -115,6 +117,8 @@ void QgsExtentGroupBox::setOutputCrs( const QgsCoordinateReferenceSystem &output
         break;
     }
 
+    if ( !prevExtentEnabled )
+      setChecked( false );
   }
 
 }
@@ -140,7 +144,7 @@ void QgsExtentGroupBox::setOutputExtent( const QgsRectangle &r, const QgsCoordin
     }
   }
 
-  int decimals;
+  int decimals = 4;
   switch ( mOutputCrs.mapUnits() )
   {
     case QgsUnitTypes::DistanceDegrees:

@@ -21,10 +21,6 @@ __author__ = 'Victor Olaya'
 __date__ = 'August 2012'
 __copyright__ = '(C) 2012, Victor Olaya'
 
-# This will get replaced with a git SHA1 when you do a git archive
-
-__revision__ = '$Format:%H$'
-
 import os
 
 from qgis.PyQt.QtGui import QIcon
@@ -36,6 +32,7 @@ from qgis.core import (QgsRasterFileWriter,
                        QgsProcessingParameterEnum,
                        QgsProcessingParameterString,
                        QgsProcessingParameterBoolean,
+                       QgsProcessingParameterNumber,
                        QgsProcessingParameterRasterDestination)
 from processing.algs.gdal.GdalAlgorithm import GdalAlgorithm
 from processing.algs.gdal.GdalUtils import GdalUtils
@@ -51,7 +48,10 @@ class merge(GdalAlgorithm):
     PCT = 'PCT'
     SEPARATE = 'SEPARATE'
     OPTIONS = 'OPTIONS'
+    EXTRA = 'EXTRA'
     DATA_TYPE = 'DATA_TYPE'
+    NODATA_INPUT = 'NODATA_INPUT'
+    NODATA_OUTPUT = 'NODATA_OUTPUT'
     OUTPUT = 'OUTPUT'
 
     TYPES = ['Byte', 'Int16', 'UInt16', 'UInt32', 'Int32', 'Float32', 'Float64', 'CInt16', 'CInt32', 'CFloat32', 'CFloat64']
@@ -70,8 +70,24 @@ class merge(GdalAlgorithm):
                                                         self.tr('Place each input file into a separate band'),
                                                         defaultValue=False))
 
+        nodata_param = QgsProcessingParameterNumber(self.NODATA_INPUT,
+                                                    self.tr('Input pixel value to treat as "nodata"'),
+                                                    type=QgsProcessingParameterNumber.Integer,
+                                                    defaultValue=None,
+                                                    optional=True)
+        nodata_param.setFlags(nodata_param.flags() | QgsProcessingParameterDefinition.FlagAdvanced)
+        self.addParameter(nodata_param)
+
+        nodata_out_param = QgsProcessingParameterNumber(self.NODATA_OUTPUT,
+                                                        self.tr('Assign specified "nodata" value to output'),
+                                                        type=QgsProcessingParameterNumber.Integer,
+                                                        defaultValue=None,
+                                                        optional=True)
+        nodata_out_param.setFlags(nodata_out_param.flags() | QgsProcessingParameterDefinition.FlagAdvanced)
+        self.addParameter(nodata_out_param)
+
         options_param = QgsProcessingParameterString(self.OPTIONS,
-                                                     self.tr('Additional creation parameters'),
+                                                     self.tr('Additional creation options'),
                                                      defaultValue='',
                                                      optional=True)
         options_param.setFlags(options_param.flags() | QgsProcessingParameterDefinition.FlagAdvanced)
@@ -79,6 +95,13 @@ class merge(GdalAlgorithm):
             'widget_wrapper': {
                 'class': 'processing.algs.gdal.ui.RasterOptionsWidget.RasterOptionsWidgetWrapper'}})
         self.addParameter(options_param)
+
+        extra_param = QgsProcessingParameterString(self.EXTRA,
+                                                   self.tr('Additional command-line parameters'),
+                                                   defaultValue=None,
+                                                   optional=True)
+        extra_param.setFlags(extra_param.flags() | QgsProcessingParameterDefinition.FlagAdvanced)
+        self.addParameter(extra_param)
 
         self.addParameter(QgsProcessingParameterEnum(self.DATA_TYPE,
                                                      self.tr('Output data type'),
@@ -104,16 +127,29 @@ class merge(GdalAlgorithm):
     def icon(self):
         return QIcon(os.path.join(pluginPath, 'images', 'gdaltools', 'merge.png'))
 
+    def commandName(self):
+        return 'gdal_merge'
+
     def getConsoleCommands(self, parameters, context, feedback, executing=True):
-        layers = self.parameterAsLayerList(parameters, self.INPUT, context)
         out = self.parameterAsOutputLayer(parameters, self.OUTPUT, context)
+        self.setOutputValue(self.OUTPUT, out)
 
         arguments = []
-        if self.parameterAsBool(parameters, self.PCT, context):
+        if self.parameterAsBoolean(parameters, self.PCT, context):
             arguments.append('-pct')
 
-        if self.parameterAsBool(parameters, self.SEPARATE, context):
+        if self.parameterAsBoolean(parameters, self.SEPARATE, context):
             arguments.append('-separate')
+
+        if self.NODATA_INPUT in parameters and parameters[self.NODATA_INPUT] is not None:
+            nodata_input = self.parameterAsInt(parameters, self.NODATA_INPUT, context)
+            arguments.append('-n')
+            arguments.append(str(nodata_input))
+
+        if self.NODATA_OUTPUT in parameters and parameters[self.NODATA_OUTPUT] is not None:
+            nodata_output = self.parameterAsInt(parameters, self.NODATA_OUTPUT, context)
+            arguments.append('-a_nodata')
+            arguments.append(str(nodata_output))
 
         arguments.append('-ot')
         arguments.append(self.TYPES[self.parameterAsEnum(parameters, self.DATA_TYPE, context)])
@@ -123,20 +159,26 @@ class merge(GdalAlgorithm):
 
         options = self.parameterAsString(parameters, self.OPTIONS, context)
         if options:
-            arguments.append('-co')
-            arguments.append(options)
+            arguments.extend(GdalUtils.parseCreationOptions(options))
+
+        if self.EXTRA in parameters and parameters[self.EXTRA] not in (None, ''):
+            extra = self.parameterAsString(parameters, self.EXTRA, context)
+            arguments.append(extra)
 
         arguments.append('-o')
         arguments.append(out)
 
-        for layer in layers:
-            arguments.append(layer.source())
+        # Always write input files to a text file in case there are many of them and the
+        # length of the command will be longer then allowed in command prompt
+        list_file = GdalUtils.writeLayerParameterToTextFile(filename='mergeInputFiles.txt', alg=self, parameters=parameters, parameter_name=self.INPUT, context=context, quote=True, executing=executing)
+        arguments.append('--optfile')
+        arguments.append(list_file)
 
-        commands = []
         if isWindows():
-            commands = ['cmd.exe', '/C ', 'gdal_merge.bat',
-                        GdalUtils.escapeAndJoin(arguments)]
+            commands = ["python3", "-m", self.commandName()]
         else:
-            commands = ['gdal_merge.py', GdalUtils.escapeAndJoin(arguments)]
+            commands = [self.commandName() + '.py']
+
+        commands.append(GdalUtils.escapeAndJoin(arguments))
 
         return commands

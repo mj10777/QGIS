@@ -79,9 +79,9 @@ struct QgsPostgresLayerProperty
   unsigned int                  nSpCols;
   QString                       sql;
   QString                       relKind;
-  bool                          isView;
+  bool                          isView = false;
+  bool                          isMaterializedView = false;
   QString                       tableComment;
-
 
   // TODO: rename this !
   int size() const { Q_ASSERT( types.size() == srids.size() ); return types.size(); }
@@ -110,6 +110,7 @@ struct QgsPostgresLayerProperty
     property.sql             = sql;
     property.relKind         = relKind;
     property.isView          = isView;
+    property.isMaterializedView = isMaterializedView;
     property.tableComment    = tableComment;
 
     return property;
@@ -119,14 +120,16 @@ struct QgsPostgresLayerProperty
   QString toString() const
   {
     QString typeString;
-    Q_FOREACH ( QgsWkbTypes::Type type, types )
+    const auto constTypes = types;
+    for ( QgsWkbTypes::Type type : constTypes )
     {
       if ( !typeString.isEmpty() )
         typeString += '|';
       typeString += QString::number( type );
     }
     QString sridString;
-    Q_FOREACH ( int srid, srids )
+    const auto constSrids = srids;
+    for ( int srid : constSrids )
     {
       if ( !sridString.isEmpty() )
         sridString += '|';
@@ -166,8 +169,8 @@ class QgsPostgresResult
 
     int PQnfields();
     QString PQfname( int col );
-    int PQftable( int col );
-    int PQftype( int col );
+    Oid PQftable( int col );
+    Oid PQftype( int col );
     int PQfmod( int col );
     int PQftablecol( int col );
     Oid PQoidValue();
@@ -195,22 +198,22 @@ class QgsPostgresConn : public QObject
     void ref() { ++mRef; }
     void unref();
 
-    //! get postgis version string
+    //! Gets postgis version string
     QString postgisVersion();
 
-    //! get status of GEOS capability
+    //! Gets status of GEOS capability
     bool hasGEOS();
 
-    //! get status of topology capability
+    //! Gets status of topology capability
     bool hasTopology();
 
-    //! get status of Pointcloud capability
+    //! Gets status of Pointcloud capability
     bool hasPointcloud();
 
-    //! get status of GIST capability
+    //! Gets status of GIST capability
     bool hasGIST();
 
-    //! get status of PROJ4 capability
+    //! Gets status of PROJ4 capability
     bool hasPROJ();
 
     //! encode wkb in hex
@@ -226,7 +229,7 @@ class QgsPostgresConn : public QObject
     int pgVersion() { return mPostgresqlVersion; }
 
     //! run a query and free result buffer
-    bool PQexecNR( const QString &query, bool retry = true );
+    bool PQexecNR( const QString &query );
 
     //! cursor handling
     bool openCursor( const QString &cursorName, const QString &declare );
@@ -242,15 +245,25 @@ class QgsPostgresConn : public QObject
     // libpq wrapper
     //
 
-    // run a query and check for errors
-    PGresult *PQexec( const QString &query, bool logError = true ) const;
+    // run a query and check for errors, thread-safe
+    PGresult *PQexec( const QString &query, bool logError = true, bool retry = true ) const;
     void PQfinish();
     QString PQerrorMessage() const;
-    int PQsendQuery( const QString &query );
     int PQstatus() const;
-    PGresult *PQgetResult();
     PGresult *PQprepare( const QString &stmtName, const QString &query, int nParams, const Oid *paramTypes );
     PGresult *PQexecPrepared( const QString &stmtName, const QStringList &params );
+
+    /**
+     * PQsendQuery is used for asynchronous queries (with PQgetResult)
+     * Thread safety must be ensured by the caller by calling QgsPostgresConn::lock() and QgsPostgresConn::unlock()
+     */
+    int PQsendQuery( const QString &query );
+
+    /**
+     * PQgetResult is used for asynchronous queries (with PQsendQuery)
+     * Thread safety must be ensured by the caller by calling QgsPostgresConn::lock() and QgsPostgresConn::unlock()
+     */
+    PGresult *PQgetResult();
 
     bool begin();
     bool commit();
@@ -271,7 +284,13 @@ class QgsPostgresConn : public QObject
     static QString quotedValue( const QVariant &value );
 
     /**
-     * Get the list of supported layers
+     * Quote a json(b) value for placement in a SQL string.
+     * \note a null value will be represented as a NULL and not as a json null.
+     */
+    static QString quotedJsonValue( const QVariant &value );
+
+    /**
+     * Gets the list of supported layers
      * \param layers list to store layers in
      * \param searchGeometryColumnsOnly only look for geometry columns which are
      * contained in the geometry_columns metatable
@@ -287,7 +306,7 @@ class QgsPostgresConn : public QObject
                           const QString &schema = QString() );
 
     /**
-     * Get the list of database schemas
+     * Gets the list of database schemas
      * \param schemas list to store schemas in
      * \returns true if schemas where fetched successfully
      * \since QGIS 2.7
@@ -344,6 +363,7 @@ class QgsPostgresConn : public QObject
     static bool geometryColumnsOnly( const QString &connName );
     static bool dontResolveType( const QString &connName );
     static bool allowGeometrylessTables( const QString &connName );
+    static bool allowProjectsInDatabase( const QString &connName );
     static void deleteConnection( const QString &connName );
 
     //! A connection needs to be locked when it uses transactions, see QgsPostgresConn::{begin,commit,rollback}
@@ -418,11 +438,11 @@ class QgsPostgresConn : public QObject
 
     int mNextCursorId;
 
-    bool mShared; //! < whether the connection is shared by more providers (must not be if going to be used in worker threads)
+    bool mShared; //!< Whether the connection is shared by more providers (must not be if going to be used in worker threads)
 
     bool mTransaction;
 
-    QMutex mLock;
+    mutable QMutex mLock;
 };
 
 // clazy:excludeall=qstring-allocations

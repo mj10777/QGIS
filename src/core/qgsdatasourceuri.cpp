@@ -31,8 +31,9 @@ QgsDataSourceUri::QgsDataSourceUri()
   // do nothing
 }
 
-QgsDataSourceUri::QgsDataSourceUri( QString uri )
+QgsDataSourceUri::QgsDataSourceUri( const QString &u )
 {
+  QString uri = u;
   int i = 0;
   while ( i < uri.length() )
   {
@@ -40,7 +41,7 @@ QgsDataSourceUri::QgsDataSourceUri( QString uri )
 
     if ( uri[i] == '=' )
     {
-      QgsDebugMsg( "parameter name expected before =" );
+      QgsDebugMsg( QStringLiteral( "parameter name expected before =" ) );
       i++;
       continue;
     }
@@ -56,7 +57,7 @@ QgsDataSourceUri::QgsDataSourceUri( QString uri )
 
     if ( i == uri.length() || uri[i] != '=' )
     {
-      QgsDebugMsg( QString( "= expected after parameter name, skipping text '%1'" ).arg( pname ) );
+      QgsDebugMsg( QStringLiteral( "= expected after parameter name, skipping text '%1'" ).arg( pname ) );
       continue;
     }
 
@@ -102,7 +103,7 @@ QgsDataSourceUri::QgsDataSourceUri( QString uri )
 
           if ( i == uri.length() )
           {
-            QgsDebugMsg( "closing parenthesis missing" );
+            QgsDebugMsg( QStringLiteral( "closing parenthesis missing" ) );
           }
 
           mGeometryColumn = uri.mid( start, i - start );
@@ -154,7 +155,7 @@ QgsDataSourceUri::QgsDataSourceUri( QString uri )
       }
       else if ( pname == QLatin1String( "connect_timeout" ) )
       {
-        QgsDebugMsg( "connection timeout ignored" );
+        QgsDebugMsg( QStringLiteral( "connection timeout ignored" ) );
       }
       else if ( pname == QLatin1String( "dbname" ) )
       {
@@ -166,7 +167,7 @@ QgsDataSourceUri::QgsDataSourceUri( QString uri )
       }
       else if ( pname == QLatin1String( "hostaddr" ) )
       {
-        QgsDebugMsg( "database host ip address ignored" );
+        QgsDebugMsg( QStringLiteral( "database host ip address ignored" ) );
       }
       else if ( pname == QLatin1String( "port" ) )
       {
@@ -178,26 +179,15 @@ QgsDataSourceUri::QgsDataSourceUri( QString uri )
       }
       else if ( pname == QLatin1String( "tty" ) )
       {
-        QgsDebugMsg( "backend debug tty ignored" );
+        QgsDebugMsg( QStringLiteral( "backend debug tty ignored" ) );
       }
       else if ( pname == QLatin1String( "options" ) )
       {
-        QgsDebugMsg( "backend debug options ignored" );
+        QgsDebugMsg( QStringLiteral( "backend debug options ignored" ) );
       }
       else if ( pname == QLatin1String( "sslmode" ) )
       {
-        if ( pval == QLatin1String( "disable" ) )
-          mSSLmode = SslDisable;
-        else if ( pval == QLatin1String( "allow" ) )
-          mSSLmode = SslAllow;
-        else if ( pval == QLatin1String( "prefer" ) )
-          mSSLmode = SslPrefer;
-        else if ( pval == QLatin1String( "require" ) )
-          mSSLmode = SslRequire;
-        else if ( pval == QLatin1String( "verify-ca" ) )
-          mSSLmode = SslVerifyCa;
-        else if ( pval == QLatin1String( "verify-full" ) )
-          mSSLmode = SslVerifyFull;
+        mSSLmode = decodeSslMode( pval );
       }
       else if ( pname == QLatin1String( "requiressl" ) )
       {
@@ -208,11 +198,11 @@ QgsDataSourceUri::QgsDataSourceUri( QString uri )
       }
       else if ( pname == QLatin1String( "krbsrvname" ) )
       {
-        QgsDebugMsg( "kerberos server name ignored" );
+        QgsDebugMsg( QStringLiteral( "kerberos server name ignored" ) );
       }
       else if ( pname == QLatin1String( "gsslib" ) )
       {
-        QgsDebugMsg( "gsslib ignored" );
+        QgsDebugMsg( QStringLiteral( "gsslib ignored" ) );
       }
       else
       {
@@ -419,7 +409,7 @@ QString QgsDataSourceUri::getValue( const QString &uri, int &i )
     {
       if ( i == uri.length() )
       {
-        QgsDebugMsg( "unterminated quoted string in connection info string" );
+        QgsDebugMsg( QStringLiteral( "unterminated quoted string in connection info string" ) );
         return pval;
       }
 
@@ -508,20 +498,10 @@ QString QgsDataSourceUri::connectionInfo( bool expandAuthConfig ) const
     }
   }
 
-  if ( mSSLmode == SslDisable )
-    connectionItems << QStringLiteral( "sslmode=disable" );
-  else if ( mSSLmode == SslAllow )
-    connectionItems << QStringLiteral( "sslmode=allow" );
-  else if ( mSSLmode == SslRequire )
-    connectionItems << QStringLiteral( "sslmode=require" );
-#if 0
-  else if ( mSSLmode == SSLprefer ) // no need to output the default
-    connectionItems << "sslmode=prefer";
-#endif
-  else if ( mSSLmode == SslVerifyCa )
-    connectionItems << QStringLiteral( "sslmode=verify-ca" );
-  else if ( mSSLmode == SslVerifyFull )
-    connectionItems << QStringLiteral( "sslmode=verify-full" );
+  if ( mSSLmode != SslPrefer )  // no need to output the default
+  {
+    connectionItems << QStringLiteral( "sslmode=" ) + encodeSslMode( mSSLmode );
+  }
 
   if ( !mAuthConfigId.isEmpty() )
   {
@@ -529,7 +509,7 @@ QString QgsDataSourceUri::connectionInfo( bool expandAuthConfig ) const
     {
       if ( !QgsApplication::authManager()->updateDataSourceUriItems( connectionItems, mAuthConfigId ) )
       {
-        QgsDebugMsg( QString( "Data source URI FAILED to update via loading configuration ID '%1'" ).arg( mAuthConfigId ) );
+        QgsDebugMsg( QStringLiteral( "Data source URI FAILED to update via loading configuration ID '%1'" ).arg( mAuthConfigId ) );
       }
     }
     else
@@ -575,7 +555,7 @@ QString QgsDataSourceUri::uri( bool expandAuthConfig ) const
   {
     if ( it.key().contains( '=' ) || it.key().contains( ' ' ) )
     {
-      QgsDebugMsg( QString( "invalid uri parameter %1 skipped" ).arg( it.key() ) );
+      QgsDebugMsg( QStringLiteral( "invalid uri parameter %1 skipped" ).arg( it.key() ) );
       continue;
     }
 
@@ -609,8 +589,9 @@ void QgsDataSourceUri::setEncodedUri( const QByteArray &uri )
   mParams.clear();
   QUrl url;
   url.setEncodedQuery( uri );
-  QPair<QString, QString> item;
-  Q_FOREACH ( item, url.queryItems() )
+
+  const auto constQueryItems = url.queryItems();
+  for ( const QPair<QString, QString> &item : constQueryItems )
   {
     mParams.insertMulti( item.first, item.second );
   }
@@ -707,6 +688,38 @@ void QgsDataSourceUri::setSrid( const QString &srid )
   mSrid = srid;
 }
 
+QgsDataSourceUri::SslMode QgsDataSourceUri::decodeSslMode( const QString &sslMode )
+{
+  if ( sslMode == QLatin1String( "prefer" ) )
+    return SslPrefer;
+  else if ( sslMode == QLatin1String( "disable" ) )
+    return SslDisable;
+  else if ( sslMode == QLatin1String( "allow" ) )
+    return SslAllow;
+  else if ( sslMode == QLatin1String( "require" ) )
+    return SslRequire;
+  else if ( sslMode == QLatin1String( "verify-ca" ) )
+    return SslVerifyCa;
+  else if ( sslMode == QLatin1String( "verify-full" ) )
+    return SslVerifyFull;
+  else
+    return SslPrefer;  // default
+}
+
+QString QgsDataSourceUri::encodeSslMode( QgsDataSourceUri::SslMode sslMode )
+{
+  switch ( sslMode )
+  {
+    case SslPrefer: return QStringLiteral( "prefer" );
+    case SslDisable: return QStringLiteral( "disable" );
+    case SslAllow: return QStringLiteral( "allow" );
+    case SslRequire: return QStringLiteral( "require" );
+    case SslVerifyCa: return QStringLiteral( "verify-ca" );
+    case SslVerifyFull: return QStringLiteral( "verify-full" );
+  }
+  return QString();
+}
+
 void QgsDataSourceUri::setParam( const QString &key, const QString &value )
 {
   // may be multiple
@@ -715,7 +728,8 @@ void QgsDataSourceUri::setParam( const QString &key, const QString &value )
 
 void QgsDataSourceUri::setParam( const QString &key, const QStringList &value )
 {
-  Q_FOREACH ( const QString &val, value )
+  const auto constValue = value;
+  for ( const QString &val : constValue )
   {
     mParams.insertMulti( key, val );
   }

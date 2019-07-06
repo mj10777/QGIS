@@ -21,12 +21,10 @@ __author__ = 'Giovanni Manghi'
 __date__ = 'January 2015'
 __copyright__ = '(C) 2015, Giovanni Manghi'
 
-# This will get replaced with a git SHA1 when you do a git archive
-
-__revision__ = '$Format:%H$'
-
 from qgis.core import (QgsProcessing,
+                       QgsProcessingException,
                        QgsProcessingParameterDefinition,
+                       QgsProcessingParameterDistance,
                        QgsProcessingParameterFeatureSource,
                        QgsProcessingParameterEnum,
                        QgsProcessingParameterField,
@@ -62,10 +60,10 @@ class OneSideBuffer(GdalAlgorithm):
         self.addParameter(QgsProcessingParameterString(self.GEOMETRY,
                                                        self.tr('Geometry column name'),
                                                        defaultValue='geometry'))
-        self.addParameter(QgsProcessingParameterNumber(self.DISTANCE,
-                                                       self.tr('Buffer distance'),
-                                                       type=QgsProcessingParameterNumber.Double,
-                                                       defaultValue=10))
+        self.addParameter(QgsProcessingParameterDistance(self.DISTANCE,
+                                                         self.tr('Buffer distance'),
+                                                         defaultValue=10,
+                                                         parentParameterName=self.INPUT))
         self.addParameter(QgsProcessingParameterEnum(self.BUFFER_SIDE,
                                                      self.tr('Buffer side'),
                                                      options=self.bufferSides,
@@ -111,15 +109,20 @@ class OneSideBuffer(GdalAlgorithm):
         return 'ogr2ogr'
 
     def getConsoleCommands(self, parameters, context, feedback, executing=True):
-        fields = self.parameterAsSource(parameters, self.INPUT, context).fields()
+        source = self.parameterAsSource(parameters, self.INPUT, context)
+        if source is None:
+            raise QgsProcessingException(self.invalidSourceError(parameters, self.INPUT))
+
+        fields = source.fields()
         ogrLayer, layerName = self.getOgrCompatibleSource(self.INPUT, parameters, context, feedback, executing)
         geometry = self.parameterAsString(parameters, self.GEOMETRY, context)
         distance = self.parameterAsDouble(parameters, self.DISTANCE, context)
         side = self.parameterAsEnum(parameters, self.BUFFER_SIDE, context)
         fieldName = self.parameterAsString(parameters, self.FIELD, context)
-        dissolve = self.parameterAsBool(parameters, self.DISSOLVE, context)
+        dissolve = self.parameterAsBoolean(parameters, self.DISSOLVE, context)
         options = self.parameterAsString(parameters, self.OPTIONS, context)
         outFile = self.parameterAsOutputLayer(parameters, self.OUTPUT, context)
+        self.setOutputValue(self.OUTPUT, outFile)
 
         output, outputFormat = GdalUtils.ogrConnectionStringAndFormat(outFile, context)
 
@@ -130,7 +133,7 @@ class OneSideBuffer(GdalAlgorithm):
             other_fields.append(f.name())
 
         if other_fields:
-            other_fields = ', {}'.format(','.join(other_fields))
+            other_fields = ',*'
         else:
             other_fields = ''
 
@@ -151,7 +154,7 @@ class OneSideBuffer(GdalAlgorithm):
 
         arguments.append(sql)
 
-        if self.parameterAsBool(parameters, self.EXPLODE_COLLECTIONS, context):
+        if self.parameterAsBoolean(parameters, self.EXPLODE_COLLECTIONS, context):
             arguments.append('-explodecollections')
 
         if options:

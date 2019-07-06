@@ -85,7 +85,8 @@ QgsFeatureRequest &QgsFeatureRequest::operator=( const QgsFeatureRequest &rh )
   mOrderBy = rh.mOrderBy;
   mCrs = rh.mCrs;
   mTransformErrorCallback = rh.mTransformErrorCallback;
-  mConnectionTimeout = rh.mConnectionTimeout;
+  mTimeout = rh.mTimeout;
+  mRequestMayBeNested = rh.mRequestMayBeNested;
   return *this;
 }
 
@@ -189,6 +190,11 @@ QgsFeatureRequest &QgsFeatureRequest::setSubsetOfAttributes( const QgsAttributeL
   return *this;
 }
 
+QgsFeatureRequest &QgsFeatureRequest::setNoAttributes()
+{
+  return setSubsetOfAttributes( QgsAttributeList() );
+}
+
 QgsFeatureRequest &QgsFeatureRequest::setSubsetOfAttributes( const QStringList &attrNames, const QgsFields &fields )
 {
   if ( attrNames.contains( QgsFeatureRequest::ALL_ATTRIBUTES ) )
@@ -200,7 +206,8 @@ QgsFeatureRequest &QgsFeatureRequest::setSubsetOfAttributes( const QStringList &
   mFlags |= SubsetOfAttributes;
   mAttrs.clear();
 
-  Q_FOREACH ( const QString &attrName, attrNames )
+  const auto constAttrNames = attrNames;
+  for ( const QString &attrName : constAttrNames )
   {
     int attrNum = fields.lookupField( attrName );
     if ( attrNum != -1 && !mAttrs.contains( attrNum ) )
@@ -221,7 +228,8 @@ QgsFeatureRequest &QgsFeatureRequest::setSubsetOfAttributes( const QSet<QString>
   mFlags |= SubsetOfAttributes;
   mAttrs.clear();
 
-  Q_FOREACH ( const QString &attrName, attrNames )
+  const auto constAttrNames = attrNames;
+  for ( const QString &attrName : constAttrNames )
   {
     int attrNum = fields.lookupField( attrName );
     if ( attrNum != -1 && !mAttrs.contains( attrNum ) )
@@ -290,12 +298,35 @@ bool QgsFeatureRequest::acceptFeature( const QgsFeature &feature )
 
 int QgsFeatureRequest::connectionTimeout() const
 {
-  return mConnectionTimeout;
+  return mTimeout;
 }
 
-void QgsFeatureRequest::setConnectionTimeout( int connectionTimeout )
+QgsFeatureRequest &QgsFeatureRequest::setConnectionTimeout( int connectionTimeout )
 {
-  mConnectionTimeout = connectionTimeout;
+  mTimeout = connectionTimeout;
+  return *this;
+}
+
+int QgsFeatureRequest::timeout() const
+{
+  return mTimeout;
+}
+
+QgsFeatureRequest &QgsFeatureRequest::setTimeout( int timeout )
+{
+  mTimeout = timeout;
+  return *this;
+}
+
+bool QgsFeatureRequest::requestMayBeNested() const
+{
+  return mRequestMayBeNested;
+}
+
+QgsFeatureRequest &QgsFeatureRequest::setRequestMayBeNested( bool requestMayBeNested )
+{
+  mRequestMayBeNested = requestMayBeNested;
+  return *this;
 }
 
 
@@ -307,7 +338,7 @@ QgsAbstractFeatureSource::~QgsAbstractFeatureSource()
   while ( !mActiveIterators.empty() )
   {
     QgsAbstractFeatureIterator *it = *mActiveIterators.begin();
-    QgsDebugMsg( "closing active iterator" );
+    QgsDebugMsg( QStringLiteral( "closing active iterator" ) );
     it->close();
   }
 }
@@ -397,7 +428,8 @@ QgsFeatureRequest::OrderBy::OrderBy() = default;
 
 QgsFeatureRequest::OrderBy::OrderBy( const QList<QgsFeatureRequest::OrderByClause> &other )
 {
-  Q_FOREACH ( const QgsFeatureRequest::OrderByClause &clause, other )
+  const auto constOther = other;
+  for ( const QgsFeatureRequest::OrderByClause &clause : constOther )
   {
     append( clause );
   }
@@ -454,6 +486,24 @@ QSet<QString> QgsFeatureRequest::OrderBy::usedAttributes() const
   }
 
   return usedAttributes;
+}
+
+QSet<int> QgsFeatureRequest::OrderBy::usedAttributeIndices( const QgsFields &fields ) const
+{
+  QSet<int> usedAttributeIdx;
+  for ( const OrderByClause &clause : *this )
+  {
+    const auto referencedColumns = clause.expression().referencedColumns();
+    for ( const QString &fieldName : referencedColumns )
+    {
+      int idx = fields.lookupField( fieldName );
+      if ( idx >= 0 )
+      {
+        usedAttributeIdx.insert( idx );
+      }
+    }
+  }
+  return usedAttributeIdx;
 }
 
 QString QgsFeatureRequest::OrderBy::dump() const

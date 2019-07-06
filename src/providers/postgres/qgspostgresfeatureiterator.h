@@ -44,8 +44,8 @@ class QgsPostgresFeatureSource : public QgsAbstractFeatureSource
     QgsPostgresGeometryColumnType mSpatialColType;
     QString mRequestedSrid;
     QString mDetectedSrid;
-    QgsWkbTypes::Type mRequestedGeomType; //! geometry type requested in the uri
-    QgsWkbTypes::Type mDetectedGeomType;  //! geometry type detected in the database
+    QgsWkbTypes::Type mRequestedGeomType; //!< Geometry type requested in the uri
+    QgsWkbTypes::Type mDetectedGeomType;  //!< Geometry type detected in the database
     QgsPostgresPrimaryKeyType mPrimaryKeyType;
     QList<int> mPrimaryKeyAttrs;
     QString mQuery;
@@ -102,13 +102,13 @@ class QgsPostgresFeatureIterator : public QgsAbstractFeatureIteratorFromSource<Q
     QQueue<QgsFeature> mFeatureQueue;
 
     //! Maximal size of the feature queue
-    int mFeatureQueueSize;
+    int mFeatureQueueSize = 2000;
 
     //! Number of retrieved features
-    int mFetched;
+    int mFetched = 0;
 
-    //! Set to true, if geometry is in the requested columns
-    bool mFetchGeometry;
+    //! Sets to true, if geometry is in the requested columns
+    bool mFetchGeometry = false;
 
     bool mIsTransactionConnection = false;
 
@@ -119,10 +119,10 @@ class QgsPostgresFeatureIterator : public QgsAbstractFeatureIteratorFromSource<Q
     inline void lock();
     inline void unlock();
 
-    bool mExpressionCompiled;
-    bool mOrderByCompiled;
-    bool mLastFetch;
-    bool mFilterRequiresGeometry;
+    bool mExpressionCompiled = false;
+    bool mOrderByCompiled = false;
+    bool mLastFetch = false;
+    bool mFilterRequiresGeometry = false;
 
     QgsCoordinateTransform mTransform;
     QgsRectangle mFilterRect;

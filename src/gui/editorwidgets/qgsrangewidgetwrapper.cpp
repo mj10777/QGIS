@@ -21,9 +21,12 @@
 #include "qgsvectorlayer.h"
 #include "qgsdial.h"
 #include "qgsslider.h"
+#include "qgsapplication.h"
 
-QgsRangeWidgetWrapper::QgsRangeWidgetWrapper( QgsVectorLayer *vl, int fieldIdx, QWidget *editor, QWidget *parent )
-  : QgsEditorWidgetWrapper( vl, fieldIdx, editor, parent )
+
+
+QgsRangeWidgetWrapper::QgsRangeWidgetWrapper( QgsVectorLayer *layer, int fieldIdx, QWidget *editor, QWidget *parent )
+  : QgsEditorWidgetWrapper( layer, fieldIdx, editor, parent )
 
 {
 }
@@ -98,7 +101,7 @@ void QgsRangeWidgetWrapper::initWidget( QWidget *editor )
 
     mDoubleSpinBox->setDecimals( precisionval );
 
-    QgsDoubleSpinBox *qgsWidget = dynamic_cast<QgsDoubleSpinBox *>( mDoubleSpinBox );
+    QgsDoubleSpinBox *qgsWidget = qobject_cast<QgsDoubleSpinBox *>( mDoubleSpinBox );
 
 
     if ( qgsWidget )
@@ -119,7 +122,11 @@ void QgsRangeWidgetWrapper::initWidget( QWidget *editor )
       // Note: call setMinimum here or setValue won't work
       mDoubleSpinBox->setMinimum( minval );
       mDoubleSpinBox->setValue( minval );
-      mDoubleSpinBox->setSpecialValueText( QgsApplication::nullRepresentation() );
+      QgsDoubleSpinBox *doubleSpinBox( qobject_cast<QgsDoubleSpinBox *>( mDoubleSpinBox ) );
+      if ( doubleSpinBox )
+        doubleSpinBox->setSpecialValueText( QgsApplication::nullRepresentation() );
+      else
+        mDoubleSpinBox->setSpecialValueText( QgsApplication::nullRepresentation() );
     }
     mDoubleSpinBox->setMinimum( minval );
     mDoubleSpinBox->setMaximum( maxval );
@@ -128,22 +135,31 @@ void QgsRangeWidgetWrapper::initWidget( QWidget *editor )
       mDoubleSpinBox->setSuffix( config( QStringLiteral( "Suffix" ) ).toString() );
 
     connect( mDoubleSpinBox, static_cast < void ( QDoubleSpinBox::* )( double ) > ( &QDoubleSpinBox::valueChanged ),
-    this, [ = ]( double value ) { emit valueChanged( value ); } );
+    this, [ = ]( double ) { emitValueChanged(); } );
   }
   else if ( mIntSpinBox )
   {
-    QgsSpinBox *qgsWidget = dynamic_cast<QgsSpinBox *>( mIntSpinBox );
+    QgsSpinBox *qgsWidget = qobject_cast<QgsSpinBox *>( mIntSpinBox );
     if ( qgsWidget )
       qgsWidget->setShowClearButton( allowNull );
+    int minval = min.toInt();
     if ( allowNull )
     {
-      int minval = min.toInt();
-      int stepval = step.toInt();
-      minval -= stepval;
+      uint stepval = step.isValid() ? step.toUInt() : 1;
+      // make sure there is room for a new value (i.e. signed integer does not overflow)
+      int minvalOverflow = uint( minval ) - stepval;
+      if ( minvalOverflow < minval )
+      {
+        minval = minvalOverflow;
+      }
       mIntSpinBox->setValue( minval );
-      mIntSpinBox->setSpecialValueText( QgsApplication::nullRepresentation() );
+      QgsSpinBox *intSpinBox( qobject_cast<QgsSpinBox *>( mIntSpinBox ) );
+      if ( intSpinBox )
+        intSpinBox->setSpecialValueText( QgsApplication::nullRepresentation() );
+      else
+        mIntSpinBox->setSpecialValueText( QgsApplication::nullRepresentation() );
     }
-    setupIntEditor( min, max, step, mIntSpinBox, this );
+    setupIntEditor( minval, max, step, mIntSpinBox, this );
     if ( config( QStringLiteral( "Suffix" ) ).isValid() )
       mIntSpinBox->setSuffix( config( QStringLiteral( "Suffix" ) ).toString() );
   }

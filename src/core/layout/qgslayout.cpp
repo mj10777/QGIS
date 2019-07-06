@@ -27,6 +27,10 @@
 #include "qgslayoutmultiframe.h"
 #include "qgslayoutitemmap.h"
 #include "qgslayoutundostack.h"
+#include "qgscompositionconverter.h"
+#include "qgsvectorlayer.h"
+#include "qgsexpressioncontextutils.h"
+#include "qgsstyleentityvisitor.h"
 
 QgsLayout::QgsLayout( QgsProject *project )
   : mProject( project )
@@ -321,7 +325,7 @@ QgsLayoutItem *QgsLayout::layoutItemAt( QPointF position, const QgsLayoutItem *b
   return nullptr;
 }
 
-double QgsLayout::convertToLayoutUnits( const QgsLayoutMeasurement &measurement ) const
+double QgsLayout::convertToLayoutUnits( QgsLayoutMeasurement measurement ) const
 {
   return mRenderContext->measurementConverter().convert( measurement, mUnits ).length();
 }
@@ -341,12 +345,12 @@ QgsLayoutMeasurement QgsLayout::convertFromLayoutUnits( const double length, con
   return mRenderContext->measurementConverter().convert( QgsLayoutMeasurement( length, mUnits ), unit );
 }
 
-QgsLayoutSize QgsLayout::convertFromLayoutUnits( const QSizeF &size, const QgsUnitTypes::LayoutUnit unit ) const
+QgsLayoutSize QgsLayout::convertFromLayoutUnits( QSizeF size, const QgsUnitTypes::LayoutUnit unit ) const
 {
   return mRenderContext->measurementConverter().convert( QgsLayoutSize( size.width(), size.height(), mUnits ), unit );
 }
 
-QgsLayoutPoint QgsLayout::convertFromLayoutUnits( const QPointF &point, const QgsUnitTypes::LayoutUnit unit ) const
+QgsLayoutPoint QgsLayout::convertFromLayoutUnits( QPointF point, const QgsUnitTypes::LayoutUnit unit ) const
 {
   return mRenderContext->measurementConverter().convert( QgsLayoutPoint( point.x(), point.y(), mUnits ), unit );
 }
@@ -392,6 +396,9 @@ QgsExpressionContext QgsLayout::createExpressionContext() const
   QgsExpressionContext context = QgsExpressionContext();
   context.appendScope( QgsExpressionContextUtils::globalScope() );
   context.appendScope( QgsExpressionContextUtils::projectScope( mProject ) );
+  if ( mReportContext->layer() )
+    context.appendScope( QgsExpressionContextUtils::layerScope( mReportContext->layer() ) );
+
   context.appendScope( QgsExpressionContextUtils::layoutScope( this ) );
   return context;
 }
@@ -464,7 +471,8 @@ QRectF QgsLayout::layoutBounds( bool ignorePages, double margin ) const
   QRectF bounds;
 
   //add all layout items and pages which are in the layout
-  Q_FOREACH ( const QGraphicsItem *item, items() )
+  const auto constItems = items();
+  for ( const QGraphicsItem *item : constItems )
   {
     const QgsLayoutItem *layoutItem = dynamic_cast<const QgsLayoutItem *>( item );
     if ( !layoutItem )
@@ -609,7 +617,17 @@ QList< QgsLayoutItem * > QgsLayout::loadFromTemplate( const QDomDocument &docume
     clear();
   }
 
-  QDomDocument doc = document;
+  QDomDocument doc;
+
+  // If this is a 2.x composition template, convert it to a layout template
+  if ( QgsCompositionConverter::isCompositionTemplate( document ) )
+  {
+    doc = QgsCompositionConverter::convertCompositionTemplate( document, mProject );
+  }
+  else
+  {
+    doc = document;
+  }
 
   // remove all uuid attributes since we don't want duplicates UUIDS
   QDomNodeList itemsNodes = doc.elementsByTagName( QStringLiteral( "LayoutItem" ) );
@@ -767,6 +785,29 @@ QList<QgsLayoutItem *> QgsLayout::ungroupItems( QgsLayoutItemGroup *group )
   return ungroupedItems;
 }
 
+bool QgsLayout::accept( QgsStyleEntityVisitorInterface *visitor ) const
+{
+  const QList< QGraphicsItem * > constItems = items();
+  for ( const QGraphicsItem *item : constItems )
+  {
+    const QgsLayoutItem *layoutItem = dynamic_cast<const QgsLayoutItem *>( item );
+    if ( !layoutItem )
+      continue;
+
+    if ( !layoutItem->accept( visitor ) )
+      return false;
+  }
+
+  if ( pageCollection()->pageStyleSymbol() )
+  {
+    QgsStyleSymbolEntity entity( pageCollection()->pageStyleSymbol() );
+    if ( !visitor->visit( QgsStyleEntityVisitorInterface::StyleLeaf( &entity, QStringLiteral( "page" ), QObject::tr( "Page" ) ) ) )
+      return false;
+  }
+
+  return true;
+}
+
 void QgsLayout::refresh()
 {
   mUndoStack->blockCommands( true );
@@ -825,7 +866,7 @@ bool QgsLayout::readXmlLayoutSettings( const QDomElement &layoutElement, const Q
   mCustomProperties.readXml( layoutElement );
   setUnits( QgsUnitTypes::decodeLayoutUnit( layoutElement.attribute( QStringLiteral( "units" ) ) ) );
   mWorldFileMapId = layoutElement.attribute( QStringLiteral( "worldFileMap" ) );
-  mRenderContext->setDpi( layoutElement.attribute( QStringLiteral( "printResolution" ), "300" ).toDouble() );
+  mRenderContext->setDpi( layoutElement.attribute( QStringLiteral( "printResolution" ), QStringLiteral( "300" ) ).toDouble() );
   emit changed();
 
   return true;

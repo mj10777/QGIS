@@ -9,8 +9,6 @@ the Free Software Foundation; either version 2 of the License, or
 __author__ = 'Nyall Dawson'
 __date__ = '2018-02-16'
 __copyright__ = 'Copyright 2018, Nyall Dawson'
-# This will get replaced with a git SHA1 when you do a git archive
-__revision__ = '$Format:%H$'
 
 import hashlib
 import os
@@ -18,17 +16,20 @@ import re
 import tempfile
 import shutil
 
-from qgis.PyQt.QtCore import QCoreApplication, Qt, QObject, QDateTime
+from qgis.PyQt.QtCore import QCoreApplication, Qt, QObject, QDate
 
-from qgis.core import (
-    QgsVectorLayer,
-    QgsLayerMetadata,
-    QgsBox3d,
-    QgsCoordinateReferenceSystem,
-    QgsApplication,
-    QgsSettings,
-    QgsRectangle
-)
+from qgis.core import (NULL,
+                       QgsVectorLayer,
+                       QgsLayerMetadata,
+                       QgsBox3d,
+                       QgsCoordinateReferenceSystem,
+                       QgsApplication,
+                       QgsSettings,
+                       QgsRectangle,
+                       QgsCategorizedSymbolRenderer,
+                       QgsProviderRegistry,
+                       QgsWkbTypes
+                       )
 from qgis.testing import (start_app,
                           unittest
                           )
@@ -108,7 +109,7 @@ class TestPyQgsAFSProvider(unittest.TestCase, ProviderTestCase):
 "supportsAdvancedQueries":true,"supportedQueryFormats":"JSON, AMF",
 "ownershipBasedAccessControlForFeatures":{"allowOthersToQuery":true},"useStandardizedQueries":true}""".encode('UTF-8'))
 
-        with open(sanitize(endpoint, '/query?f=json_where=OBJECTID=OBJECTID_returnIdsOnly=true'), 'wb') as f:
+        with open(sanitize(endpoint, '/query?f=json_where=1=1&returnIdsOnly=true'), 'wb') as f:
             f.write("""
 {
  "objectIdFieldName": "OBJECTID",
@@ -128,7 +129,7 @@ class TestPyQgsAFSProvider(unittest.TestCase, ProviderTestCase):
         cls.source = cls.vl.dataProvider()
 
         with open(sanitize(endpoint,
-                           '/query?f=json&objectIds=5,3,1,2,4&inSR=4326&outSR=4326&returnGeometry=true&outFields=OBJECTID,pk,cnt,name,name2,num_char&returnM=false&returnZ=false'),
+                           '/query?f=json&objectIds=5,3,1,2,4&inSR=4326&outSR=4326&returnGeometry=true&outFields=*&returnM=false&returnZ=false'),
                   'wb') as f:
             f.write("""
         {
@@ -219,7 +220,7 @@ class TestPyQgsAFSProvider(unittest.TestCase, ProviderTestCase):
          ]
         }""".encode('UTF-8'))
 
-        with open(sanitize(endpoint, '/query?f=json&objectIds=5,3,1,2,4&inSR=4326&outSR=4326&returnGeometry=true&outFields=OBJECTID,pk,cnt,name,name2,num_char&returnM=false&returnZ=false&geometry=-71.123000,66.330000,-65.320000,78.300000&geometryType=esriGeometryEnvelope&spatialRel=esriSpatialRelEnvelopeIntersects'), 'wb') as f:
+        with open(sanitize(endpoint, '/query?f=json&objectIds=5,3,1,2,4&inSR=4326&outSR=4326&returnGeometry=true&outFields=*&returnM=false&returnZ=false&geometry=-71.123000,66.330000,-65.320000,78.300000&geometryType=esriGeometryEnvelope&spatialRel=esriSpatialRelEnvelopeIntersects'), 'wb') as f:
             f.write("""
 {
  "displayFieldName": "name",
@@ -309,7 +310,60 @@ class TestPyQgsAFSProvider(unittest.TestCase, ProviderTestCase):
  ]
 }""".encode('UTF-8'))
 
-        with open(sanitize(endpoint, '/query?f=json&where=OBJECTID=OBJECTID&returnIdsOnly=true&geometry=-70.000000,67.000000,-60.000000,80.000000&geometryType=esriGeometryEnvelope&spatialRel=esriSpatialRelEnvelopeIntersects'), 'wb') as f:
+        with open(sanitize(endpoint,
+                           '/query?f=json&objectIds=2,4&inSR=4326&outSR=4326&returnGeometry=true&outFields=*&returnM=false&returnZ=false'),
+                  'wb') as f:
+            f.write("""
+        {
+         "displayFieldName": "name",
+         "fieldAliases": {
+          "name": "name"
+         },
+         "geometryType": "esriGeometryPoint",
+         "spatialReference": {
+          "wkid": 4326,
+          "latestWkid": 4326
+         },
+         "fields":[{"name":"OBJECTID","type":"esriFieldTypeOID","alias":"OBJECTID","domain":null},
+        {"name":"pk","type":"esriFieldTypeInteger","alias":"pk","domain":null},
+        {"name":"cnt","type":"esriFieldTypeInteger","alias":"cnt","domain":null},
+        {"name":"name","type":"esriFieldTypeString","alias":"name","length":100,"domain":null},
+        {"name":"name2","type":"esriFieldTypeString","alias":"name2","length":100,"domain":null},
+        {"name":"num_char","type":"esriFieldTypeString","alias":"num_char","length":100,"domain":null},
+        {"name":"Shape","type":"esriFieldTypeGeometry","alias":"Shape","domain":null}],
+         "features": [
+          {
+           "attributes": {
+            "OBJECTID": 2,
+            "pk": 2,
+            "cnt": 200,
+            "name": "Apple",
+            "name2":"Apple",
+            "num_char":"2"
+           },
+           "geometry": {
+            "x": -68.2,
+            "y": 70.8
+           }
+          },
+          {
+           "attributes": {
+            "OBJECTID": 4,
+            "pk": 4,
+            "cnt": 400,
+            "name": "Honey",
+            "name2":"Honey",
+            "num_char":"4"
+           },
+           "geometry": {
+            "x": -65.32,
+            "y": 78.3
+           }
+          }
+         ]
+        }""".encode('UTF-8'))
+
+        with open(sanitize(endpoint, '/query?f=json&where=1=1&returnIdsOnly=true&geometry=-70.000000,67.000000,-60.000000,80.000000&geometryType=esriGeometryEnvelope&spatialRel=esriSpatialRelEnvelopeIntersects'), 'wb') as f:
             f.write("""
         {
          "objectIdFieldName": "OBJECTID",
@@ -320,7 +374,7 @@ class TestPyQgsAFSProvider(unittest.TestCase, ProviderTestCase):
         }
         """.encode('UTF-8'))
 
-        with open(sanitize(endpoint, '/query?f=json&where=OBJECTID=OBJECTID&returnIdsOnly=true&geometry=-73.000000,70.000000,-63.000000,80.000000&geometryType=esriGeometryEnvelope&spatialRel=esriSpatialRelEnvelopeIntersects'), 'wb') as f:
+        with open(sanitize(endpoint, '/query?f=json&where==1=&returnIdsOnly=true&geometry=-73.000000,70.000000,-63.000000,80.000000&geometryType=esriGeometryEnvelope&spatialRel=esriSpatialRelEnvelopeIntersects'), 'wb') as f:
             f.write("""
         {
          "objectIdFieldName": "OBJECTID",
@@ -331,7 +385,7 @@ class TestPyQgsAFSProvider(unittest.TestCase, ProviderTestCase):
         }
         """.encode('UTF-8'))
 
-        with open(sanitize(endpoint, '/query?f=json&where=OBJECTID=OBJECTID&returnIdsOnly=true&geometry=-68.721119,68.177676,-64.678700,79.123755&geometryType=esriGeometryEnvelope&spatialRel=esriSpatialRelEnvelopeIntersects'), 'wb') as f:
+        with open(sanitize(endpoint, '/query?f=json&where=1=1&returnIdsOnly=true&geometry=-68.721119,68.177676,-64.678700,79.123755&geometryType=esriGeometryEnvelope&spatialRel=esriSpatialRelEnvelopeIntersects'), 'wb') as f:
             f.write("""
         {
          "objectIdFieldName": "OBJECTID",
@@ -363,6 +417,14 @@ class TestPyQgsAFSProvider(unittest.TestCase, ProviderTestCase):
         """
         pass
 
+    def testDecodeUri(self):
+        """
+        Test decoding an AFS uri
+        """
+        uri = self.vl.source()
+        parts = QgsProviderRegistry.instance().decodeUri(self.vl.dataProvider().name(), uri)
+        self.assertEqual(parts, {'url': 'http://' + self.basetestpath + '/fake_qgis_http_endpoint'})
+
     def testObjectIdDifferentName(self):
         """ Test that object id fields not named OBJECTID work correctly """
 
@@ -386,7 +448,7 @@ class TestPyQgsAFSProvider(unittest.TestCase, ProviderTestCase):
         "ownershipBasedAccessControlForFeatures":{"allowOthersToQuery":true},"useStandardizedQueries":true}""".encode(
                 'UTF-8'))
 
-        with open(sanitize(endpoint, '/query?f=json_where=OBJECTID1=OBJECTID1_returnIdsOnly=true'), 'wb') as f:
+        with open(sanitize(endpoint, '/query?f=json_where=1=1&returnIdsOnly=true'), 'wb') as f:
             f.write("""
         {
          "objectIdFieldName": "OBJECTID1",
@@ -400,9 +462,126 @@ class TestPyQgsAFSProvider(unittest.TestCase, ProviderTestCase):
         }
         """.encode('UTF-8'))
 
+        with open(sanitize(endpoint, '/query?f=json&objectIds=5,3,1,2,4&inSR=4326&outSR=4326&returnGeometry=true&outFields=*&returnM=false&returnZ=false'), 'wb') as f:
+            f.write("""
+        {
+         "displayFieldName": "LABEL",
+         "geometryType": "esriGeometryPoint",
+         "spatialReference": {
+          "wkid": 4326,
+          "latestWkid": 4326
+         },
+         "fields":[{"name":"OBJECTID1","type":"esriFieldTypeOID","alias":"OBJECTID1","domain":null},
+          {"name":"pk","type":"esriFieldTypeInteger","alias":"pk","domain":null},
+          {"name":"cnt","type":"esriFieldTypeInteger","alias":"cnt","domain":null},
+          {"name":"Shape","type":"esriFieldTypeGeometry","alias":"Shape","domain":null}],
+         "features": [
+          {
+           "attributes": {
+            "OBJECTID1": 5,
+            "pk": 5,
+            "cnt": -200,
+            "name": null
+           },
+           "geometry": {
+            "x": -71.123,
+            "y": 78.23
+           }
+          }
+         ]
+        }""".encode('UTF-8'))
+
         # Create test layer
         vl = QgsVectorLayer("url='http://" + endpoint + "' crs='epsg:4326'", 'test', 'arcgisfeatureserver')
         assert vl.isValid()
+
+        f = vl.getFeature(0)
+        assert f.isValid()
+
+    def testDateTime(self):
+        """ Test that datetime fields work correctly """
+
+        endpoint = self.basetestpath + '/oid_fake_qgis_http_endpoint'
+        with open(sanitize(endpoint, '?f=json'), 'wb') as f:
+            f.write("""
+        {"currentVersion":10.22,"id":1,"name":"QGIS Test","type":"Feature Layer","description":
+        "QGIS Provider Test Layer.\n","geometryType":"esriGeometryPoint","copyrightText":"","parentLayer":{"id":0,"name":"QGIS Tests"},"subLayers":[],
+        "minScale":72225,"maxScale":0,
+        "defaultVisibility":true,
+        "extent":{"xmin":-71.123,"ymin":66.33,"xmax":-65.32,"ymax":78.3,
+        "spatialReference":{"wkid":4326,"latestWkid":4326}},
+        "hasAttachments":false,"htmlPopupType":"esriServerHTMLPopupTypeAsHTMLText",
+        "displayField":"LABEL","typeIdField":null,
+        "fields":[{"name":"OBJECTID","type":"esriFieldTypeOID","alias":"OBJECTID","domain":null},
+        {"name":"pk","type":"esriFieldTypeInteger","alias":"pk","domain":null},
+        {"name":"dt","type":"esriFieldTypeDate","alias":"dt","length":8,"domain":null}],
+        "relationships":[],"canModifyLayer":false,"canScaleSymbols":false,"hasLabels":false,
+        "capabilities":"Map,Query,Data","maxRecordCount":1000,"supportsStatistics":true,
+        "supportsAdvancedQueries":true,"supportedQueryFormats":"JSON, AMF",
+        "ownershipBasedAccessControlForFeatures":{"allowOthersToQuery":true},"useStandardizedQueries":true}""".encode(
+                'UTF-8'))
+
+        with open(sanitize(endpoint, '/query?f=json_where=1=1&returnIdsOnly=true'), 'wb') as f:
+            f.write("""
+        {
+         "objectIdFieldName": "OBJECTID",
+         "objectIds": [
+          1,
+          2
+         ]
+        }
+        """.encode('UTF-8'))
+
+        # Create test layer
+        vl = QgsVectorLayer("url='http://" + endpoint + "' crs='epsg:4326'", 'test', 'arcgisfeatureserver')
+
+        self.assertTrue(vl.isValid())
+        with open(sanitize(endpoint,
+                           '/query?f=json&objectIds=1,2&inSR=4326&outSR=4326&returnGeometry=true&outFields=*&returnM=false&returnZ=false'), 'wb') as f:
+            f.write("""
+        {
+         "displayFieldName": "name",
+         "fieldAliases": {
+          "name": "name"
+         },
+         "geometryType": "esriGeometryPoint",
+         "spatialReference": {
+          "wkid": 4326,
+          "latestWkid": 4326
+         },
+         "fields":[{"name":"OBJECTID","type":"esriFieldTypeOID","alias":"OBJECTID","domain":null},
+        {"name":"pk","type":"esriFieldTypeInteger","alias":"pk","domain":null},
+        {"name":"dt","type":"esriFieldTypeDate","alias":"dt","domain":null},
+        {"name":"Shape","type":"esriFieldTypeGeometry","alias":"Shape","domain":null}],
+         "features": [
+          {
+           "attributes": {
+            "OBJECTID": 1,
+            "pk": 1,
+            "dt":1493769600000
+           },
+           "geometry": {
+            "x": -70.332,
+            "y": 66.33
+           }
+          },
+          {
+           "attributes": {
+            "OBJECTID": 2,
+            "pk": 2,
+            "dt":null
+           },
+           "geometry": {
+            "x": -68.2,
+            "y": 70.8
+           }
+          }
+         ]
+        }""".encode('UTF-8'))
+
+        features = [f for f in vl.getFeatures()]
+        self.assertEqual(len(features), 2)
+        self.assertEqual([f['dt'] for f in features], [QDate(2017, 5, 3), NULL])
 
     def testMetadata(self):
         """ Test that metadata is correctly acquired from provider """
@@ -425,7 +604,7 @@ class TestPyQgsAFSProvider(unittest.TestCase, ProviderTestCase):
         "ownershipBasedAccessControlForFeatures":{"allowOthersToQuery":true},"useStandardizedQueries":true}""".encode(
                 'UTF-8'))
 
-        with open(sanitize(endpoint, '/query?f=json_where=OBJECTID=OBJECTID_returnIdsOnly=true'), 'wb') as f:
+        with open(sanitize(endpoint, '/query?f=json_where=1=1&returnIdsOnly=true'), 'wb') as f:
             f.write("""
         {
          "objectIdFieldName": "OBJECTID",
@@ -458,6 +637,490 @@ class TestPyQgsAFSProvider(unittest.TestCase, ProviderTestCase):
         l.type = 'WWW:LINK'
         l.url = 'http://' + sanitize(endpoint, '')
         self.assertEqual(vl.metadata().links(), [l])
+
+    def testRenderer(self):
+        """ Test that renderer is correctly acquired from provider """
+
+        endpoint = self.basetestpath + '/renderer_fake_qgis_http_endpoint'
+        with open(sanitize(endpoint, '?f=json'), 'wb') as f:
+            f.write("""
+        {"currentVersion":10.22,"id":1,"name":"QGIS Test","type":"Feature Layer","description":
+        "QGIS Provider Test Layer","geometryType":"esriGeometryPoint","copyrightText":"not copyright","parentLayer":{"id":2,"name":"QGIS Tests"},"subLayers":[],
+        "minScale":72225,"maxScale":0,
+        "defaultVisibility":true,
+        "extent":{"xmin":-71.123,"ymin":66.33,"xmax":-65.32,"ymax":78.3,
+        "spatialReference":{"wkid":4326,"latestWkid":4326}},
+        "hasAttachments":false,"htmlPopupType":"esriServerHTMLPopupTypeAsHTMLText",
+        "displayField":"LABEL","typeIdField":null,
+        "fields":[{"name":"OBJECTID","type":"esriFieldTypeOID","alias":"OBJECTID","domain":null}],
+        "relationships":[],"canModifyLayer":false,"canScaleSymbols":false,"hasLabels":false,
+        "capabilities":"Map,Query,Data","maxRecordCount":1000,"supportsStatistics":true,
+        "supportsAdvancedQueries":true,"supportedQueryFormats":"JSON, AMF",
+        "drawingInfo":{"renderer": {
+    "type": "uniqueValue",
+    "field1": "COUNTRY",
+    "uniqueValueInfos": [
+      {
+        "value": "US",
+        "symbol": {
+          "color": [
+            253,
+            127,
+            111,
+            255
+          ],
+          "size": 12.75,
+          "angle": 0,
+          "xoffset": 0,
+          "yoffset": 0,
+          "type": "esriSMS",
+          "style": "esriSMSCircle",
+          "outline": {
+            "color": [
+              26,
+              26,
+              26,
+              255
+            ],
+            "width": 0.75,
+            "type": "esriSLS",
+            "style": "esriSLSSolid"
+          }
+        },
+        "label": "US"
+      },
+      {
+        "value": "Canada",
+        "symbol": {
+          "color": [
+            126,
+            176,
+            213,
+            255
+          ],
+          "size": 12.75,
+          "angle": 0,
+          "xoffset": 0,
+          "yoffset": 0,
+          "type": "esriSMS",
+          "style": "esriSMSCircle",
+          "outline": {
+            "color": [
+              26,
+              26,
+              26,
+              255
+            ],
+            "width": 0.75,
+            "type": "esriSLS",
+            "style": "esriSLSSolid"
+          }
+        },
+        "label": "Canada"
+      }]}},
+        "ownershipBasedAccessControlForFeatures":{"allowOthersToQuery":true},"useStandardizedQueries":true}""".encode(
+                'UTF-8'))
+
+        with open(sanitize(endpoint, '/query?f=json_where=1=1&returnIdsOnly=true'), 'wb') as f:
+            f.write("""
+        {
+         "objectIdFieldName": "OBJECTID",
+         "objectIds": [
+          1
+         ]
+        }
+        """.encode('UTF-8'))
+
+        # Create test layer
+        vl = QgsVectorLayer("url='http://" + endpoint + "' crs='epsg:4326'", 'test', 'arcgisfeatureserver')
+        self.assertTrue(vl.isValid())
+        self.assertIsNotNone(vl.dataProvider().createRenderer())
+        self.assertIsInstance(vl.renderer(), QgsCategorizedSymbolRenderer)
+        self.assertEqual(len(vl.renderer().categories()), 2)
+        self.assertEqual(vl.renderer().categories()[0].value(), 'US')
+        self.assertEqual(vl.renderer().categories()[1].value(), 'Canada')
+
+    def testBboxRestriction(self):
+        """
+        Test limiting provider to features within a preset bounding box
+        """
+        endpoint = self.basetestpath + '/fake_qgis_http_endpoint'
+        vl = QgsVectorLayer("url='http://" + endpoint + "' crs='epsg:4326' bbox='-70.000000,67.000000,-60.000000,80.000000'", 'test', 'arcgisfeatureserver')
+        self.assertTrue(vl.isValid())
+        self.assertEqual(vl.featureCount(), 2)
+        self.assertEqual([f['pk'] for f in vl.getFeatures()], [2, 4])
+
+    def testBadMultiPoints(self):
+        """
+        Test invalid server response where a layer's type is multipoint but single point geometries
+        are returned. Thanks Jack. Thack.
+        """
+        endpoint = self.basetestpath + '/multipoint_fake_qgis_http_endpoint'
+        with open(sanitize(endpoint, '?f=json'), 'wb') as f:
+            f.write("""
+        {"currentVersion":10.22,"id":1,"name":"QGIS Test","type":"Feature Layer","description":
+        "QGIS Provider Test Layer.\n","geometryType":"esriGeometryMultipoint","copyrightText":"","parentLayer":{"id":0,"name":"QGIS Tests"},"subLayers":[],
+        "minScale":72225,"maxScale":0,
+        "defaultVisibility":true,
+        "extent":{"xmin":-71.123,"ymin":66.33,"xmax":-65.32,"ymax":78.3,
+        "spatialReference":{"wkid":4326,"latestWkid":4326}},
+        "hasAttachments":false,"htmlPopupType":"esriServerHTMLPopupTypeAsHTMLText",
+        "displayField":"LABEL","typeIdField":null,
+        "fields":[{"name":"OBJECTID","type":"esriFieldTypeOID","alias":"OBJECTID","domain":null}],
+        "relationships":[],"canModifyLayer":false,"canScaleSymbols":false,"hasLabels":false,
+        "capabilities":"Map,Query,Data","maxRecordCount":1000,"supportsStatistics":true,
+        "supportsAdvancedQueries":true,"supportedQueryFormats":"JSON, AMF",
+        "ownershipBasedAccessControlForFeatures":{"allowOthersToQuery":true},"useStandardizedQueries":true}""".encode(
+                'UTF-8'))
+
+        with open(sanitize(endpoint, '/query?f=json_where=1=1&returnIdsOnly=true'), 'wb') as f:
+            f.write("""
+        {
+         "objectIdFieldName": "OBJECTID",
+         "objectIds": [
+          1,
+          2,
+          3
+         ]
+        }
+        """.encode('UTF-8'))
+
+        # Create test layer
+        vl = QgsVectorLayer("url='http://" + endpoint + "' crs='epsg:4326'", 'test', 'arcgisfeatureserver')
+
+        self.assertTrue(vl.isValid())
+        with open(sanitize(endpoint,
+                           '/query?f=json&objectIds=1,2,3&inSR=4326&outSR=4326&returnGeometry=true&outFields=*&returnM=false&returnZ=false'), 'wb') as f:
+            f.write("""
+        {
+         "displayFieldName": "name",
+         "fieldAliases": {
+          "name": "name"
+         },
+         "geometryType": "esriGeometryMultipoint",
+         "spatialReference": {
+          "wkid": 4326,
+          "latestWkid": 4326
+         },
+         "fields":[{"name":"OBJECTID","type":"esriFieldTypeOID","alias":"OBJECTID","domain":null},
+        {"name":"Shape","type":"esriFieldTypeGeometry","alias":"Shape","domain":null}],
+         "features": [
+          {
+           "attributes": {
+            "OBJECTID": 1
+           },
+           "geometry": {
+            "x": -70,
+            "y": 66
+           }
+          },
+          {
+           "attributes": {
+            "OBJECTID": 2
+           },
+           "geometry": null
+          },
+          {
+           "attributes": {
+            "OBJECTID": 3
+           },
+           "geometry":
+           {"points" :[[-68,70],
+           [-22,21]]
+           }
+          }
+         ]
+        }""".encode('UTF-8'))
+
+        features = [f for f in vl.getFeatures()]
+        self.assertEqual(len(features), 3)
+        self.assertEqual([f.geometry().asWkt() for f in features], ['MultiPoint ((-70 66))', '', 'MultiPoint ((-68 70),(-22 21))'])
+
+    def testDomain(self):
+        """
+        Test fields with a domain are mapped to value map wrapper, for correct value display
+        """
+        endpoint = self.basetestpath + '/domain_fake_qgis_http_endpoint'
+        with open(sanitize(endpoint, '?f=json'), 'wb') as f:
+            f.write("""
+        {"currentVersion":10.22,"id":1,"name":"QGIS Test","type":"Feature Layer","description":
+        "QGIS Provider Test Layer.\n","geometryType":"esriGeometryPoint","copyrightText":"","parentLayer":{"id":0,"name":"QGIS Tests"},"subLayers":[],
+        "minScale":72225,"maxScale":0,
+        "defaultVisibility":true,
+        "extent":{"xmin":-71.123,"ymin":66.33,"xmax":-65.32,"ymax":78.3,
+        "spatialReference":{"wkid":4326,"latestWkid":4326}},
+        "hasAttachments":false,"htmlPopupType":"esriServerHTMLPopupTypeAsHTMLText",
+        "displayField":"LABEL","typeIdField":null,
+        "fields":[{"name":"OBJECTID","type":"esriFieldTypeOID","alias":"OBJECTID","domain":null},
+        {"name":"with_domain","type":"esriFieldTypeInteger","alias":"with_domain",
+        "domain": {
+        "type": "codedValue",
+        "name": "Test Domain",
+        "description": "",
+        "codedValues": [
+         {
+          "name": "Value 1",
+          "code": 1
+         },
+         {
+          "name": "Value 2",
+          "code": 2
+         },
+         {
+          "name": "Value 3",
+          "code": 3
+         }
+        ],
+        "mergePolicy": "esriMPTDefaultValue",
+        "splitPolicy": "esriSPTDefaultValue"
+       }
+       }],
+        "relationships":[],"canModifyLayer":false,"canScaleSymbols":false,"hasLabels":false,
+        "capabilities":"Map,Query,Data","maxRecordCount":1000,"supportsStatistics":true,
+        "supportsAdvancedQueries":true,"supportedQueryFormats":"JSON, AMF",
+        "ownershipBasedAccessControlForFeatures":{"allowOthersToQuery":true},"useStandardizedQueries":true}""".encode(
+                'UTF-8'))
+
+        with open(sanitize(endpoint, '/query?f=json_where=1=1&returnIdsOnly=true'), 'wb') as f:
+            f.write("""
+        {
+         "objectIdFieldName": "OBJECTID",
+         "objectIds": [
+          1,
+          2,
+          3
+         ]
+        }
+        """.encode('UTF-8'))
+
+        # Create test layer
+        vl = QgsVectorLayer("url='http://" + endpoint + "' crs='epsg:4326'", 'test', 'arcgisfeatureserver')
+
+        self.assertTrue(vl.isValid())
+        self.assertFalse(vl.fields()[0].editorWidgetSetup().type())
+        self.assertEqual(vl.fields()[1].editorWidgetSetup().type(), 'ValueMap')
+        self.assertEqual(vl.fields()[1].editorWidgetSetup().config(), {'map': [{'Value 1': 1.0}, {'Value 2': 2.0}, {'Value 3': 3.0}]})
+
+    def testImageServer(self):
+        """
+        Test connecting to a image server endpoints works as a footprint featureserver
+        """
+        endpoint = self.basetestpath + '/imageserver_fake_qgis_http_endpoint'
+        with open(sanitize(endpoint, '?f=json'), 'wb') as f:
+            f.write("""
+        {
+ "currentVersion": 10.51,
+ "serviceDescription": "test",
+ "name": "test",
+ "description": "test",
+ "extent": {
+  "xmin": 1,
+  "ymin": 1,
+  "xmax": 2,
+  "ymax": 2,
+  "spatialReference": {
+   "wkid": 102100,
+   "latestWkid": 3857
+  }
+ },
+ "initialExtent": {
+  "xmin": 1,
+  "ymin": 1,
+  "xmax": 2,
+  "ymax": 2,
+  "spatialReference": {
+   "wkid": 102100,
+   "latestWkid": 3857
+  }
+ },
+ "fullExtent": {
+  "xmin": 1,
+  "ymin": 1,
+  "xmax": 2,
+  "ymax": 2,
+  "spatialReference": {
+   "wkid": 102100,
+   "latestWkid": 3857
+  }
+ },
+ "heightModelInfo": {
+  "heightModel": "orthometric",
+  "heightUnit": "meter"
+ },
+ "pixelSizeX": 30,
+ "pixelSizeY": 30,
+ "bandCount": 1,
+ "pixelType": "U8",
+ "minPixelSize": 38,
+ "maxPixelSize": 156543,
+ "copyrightText": "",
+ "serviceDataType": "esriImageServiceDataTypeGeneric",
+ "minValues": [
+  0
+ ],
+ "maxValues": [
+  30
+ ],
+ "meanValues": [
+  5
+ ],
+ "stdvValues": [
+  4
+ ],
+ "objectIdField": "OBJECTID",
+ "fields": [
+  {
+   "name": "OBJECTID",
+   "type": "esriFieldTypeOID",
+   "alias": "OBJECTID",
+   "domain": null
+  },
+  {
+   "name": "Shape",
+   "type": "esriFieldTypeGeometry",
+   "alias": "Shape",
+   "domain": null
+  },
+  {
+   "name": "Name",
+   "type": "esriFieldTypeString",
+   "alias": "Name",
+   "domain": null,
+   "length": 50
+  },
+  {
+   "name": "MinPS",
+   "type": "esriFieldTypeDouble",
+   "alias": "MinPS",
+   "domain": null
+  },
+  {
+   "name": "MaxPS",
+   "type": "esriFieldTypeDouble",
+   "alias": "MaxPS",
+   "domain": null
+  },
+  {
+   "name": "LowPS",
+   "type": "esriFieldTypeDouble",
+   "alias": "LowPS",
+   "domain": null
+  },
+  {
+   "name": "HighPS",
+   "type": "esriFieldTypeDouble",
+   "alias": "HighPS",
+   "domain": null
+  }
+ ],
+ "capabilities": "Catalog,Mensuration,Image,Metadata",
+ "defaultMosaicMethod": "Northwest",
+ "allowedMosaicMethods": "NorthWest,Center,LockRaster,ByAttribute,Nadir,Viewpoint,Seamline,None",
+ "sortField": "",
+ "sortValue": null,
+ "mosaicOperator": "First",
+ "maxDownloadSizeLimit": 4096,
+ "defaultCompressionQuality": 75,
+ "defaultResamplingMethod": "Nearest",
+ "maxImageHeight": 4100,
+ "maxImageWidth": 15000,
+ "maxRecordCount": 2147483647,
+ "maxDownloadImageCount": 200,
+ "maxMosaicImageCount": 2147483647,
+ "singleFusedMapCache": true,
+ "tileInfo": {
+  "rows": 256,
+  "cols": 256,
+  "dpi": 96,
+  "format": "MIXED",
+  "compressionQuality": 75,
+  "origin": {
+   "x": 2,
+   "y": 2
+  },
+  "spatialReference": {
+   "wkid": 102100,
+   "latestWkid": 3857
+  },
+  "lods": [
+   {
+    "level": 0,
+    "resolution": 156543.033928,
+    "scale": 5.91657527591555E8
+   },
+   {
+    "level": 1,
+    "resolution": 78271.5169639999,
+    "scale": 2.95828763795777E8
+   }
+  ]
+ },
+ "cacheType": "Map",
+ "allowRasterFunction": true,
+ "rasterFunctionInfos": [
+  {
+   "name": "Classified",
+   "description": "A raster function template.",
+   "help": ""
+  },
+  {
+   "name": "None",
+   "description": "",
+   "help": ""
+  }
+ ],
+ "rasterTypeInfos": [
+  {
+   "name": "Raster Dataset",
+   "description": "Supports all ArcGIS Raster Datasets",
+   "help": ""
+  }
+ ],
+ "mensurationCapabilities": "Basic",
+ "hasHistograms": true,
+ "hasColormap": false,
+ "hasRasterAttributeTable": false,
+ "minScale": 5,
+ "maxScale": 144447,
+ "exportTilesAllowed": false,
+ "hasMultidimensions": false,
+ "supportsStatistics": true,
+ "supportsAdvancedQueries": true,
+ "editFieldsInfo": null,
+ "ownershipBasedAccessControlForRasters": null,
+ "allowComputeTiePoints": false,
+ "useStandardizedQueries": true,
+ "advancedQueryCapabilities": {
+  "useStandardizedQueries": true,
+  "supportsStatistics": true,
+  "supportsOrderBy": true,
+  "supportsDistinct": true,
+  "supportsPagination": true
+ },
+ "spatialReference": {
+  "wkid": 102100,
+  "latestWkid": 3857
+ }
+}""".encode(
+                'UTF-8'))
+
+        with open(sanitize(endpoint, '/query?f=json_where=1=1&returnIdsOnly=true'), 'wb') as f:
+            f.write("""
+        {
+         "objectIdFieldName": "OBJECTID",
+         "objectIds": [
+          1,
+          2,
+          3
+         ]
+        }
+        """.encode('UTF-8'))
+
+        # Create test layer
+        vl = QgsVectorLayer("url='http://" + endpoint + "' crs='epsg:4326'", 'test', 'arcgisfeatureserver')
+
+        self.assertTrue(vl.isValid())
+        self.assertEqual(vl.wkbType(), QgsWkbTypes.Polygon)
 
 
 if __name__ == '__main__':

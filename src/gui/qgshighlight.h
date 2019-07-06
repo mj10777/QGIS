@@ -46,8 +46,15 @@ class QgsSymbol;
  *   highlight.show()
  * \endcode
  */
-class GUI_EXPORT QgsHighlight: public QgsMapCanvasItem
+class GUI_EXPORT QgsHighlight: public QObject, public QgsMapCanvasItem
 {
+
+    Q_OBJECT
+    Q_PROPERTY( QColor color READ color WRITE setColor )
+    Q_PROPERTY( QColor fillColor READ fillColor WRITE setFillColor )
+    Q_PROPERTY( int width READ width WRITE setWidth )
+    Q_PROPERTY( int buffer READ buffer WRITE setBuffer )
+
   public:
 
     /**
@@ -59,7 +66,7 @@ class GUI_EXPORT QgsHighlight: public QgsMapCanvasItem
     QgsHighlight( QgsMapCanvas *mapCanvas, const QgsGeometry &geom, QgsMapLayer *layer );
 
     /**
-     * Constructor for highlighting true feature shape using feature attributes
+     * Constructor for highlighting TRUE feature shape using feature attributes
      * and renderer.
      * \param mapCanvas map canvas
      * \param feature
@@ -69,9 +76,21 @@ class GUI_EXPORT QgsHighlight: public QgsMapCanvasItem
     ~QgsHighlight() override;
 
     /**
+     * Returns the line/stroke color
+     * \since QGIS 3.4
+     */
+    QColor color( ) const { return  mColor; }
+
+    /**
      * Set line/stroke to color, polygon fill to color with alpha = 63.
      *  This is legacy function, use setFillColor() after setColor() if different fill color is required. */
     void setColor( const QColor &color );
+
+    /**
+     * Returns the fill color
+     * \since QGIS 3.4
+     */
+    QColor fillColor( ) const { return mFillColor; }
 
     /**
      * Fill color for the highlight.
@@ -82,11 +101,23 @@ class GUI_EXPORT QgsHighlight: public QgsMapCanvasItem
     void setFillColor( const QColor &fillColor );
 
     /**
+     * Returns the stroke width
+     * \since QGIS 3.4
+     */
+    int width( ) const { return mWidth; }
+
+    /**
      * Set stroke width.
      *
      * \note Ignored in feature mode.
      */
     void setWidth( int width );
+
+    /**
+     * Returns the buffer
+     * \since QGIS 3.4
+     */
+    double buffer( ) const { return mBuffer; }
 
     /**
      * Set line / stroke buffer in millimeters.
@@ -103,7 +134,7 @@ class GUI_EXPORT QgsHighlight: public QgsMapCanvasItem
     void setMinWidth( double width ) { mMinWidth = width; }
 
     /**
-     * Return the layer for which this highlight has been created.
+     * Returns the layer for which this highlight has been created.
      */
     QgsMapLayer *layer() const { return mLayer; }
 
@@ -119,12 +150,15 @@ class GUI_EXPORT QgsHighlight: public QgsMapCanvasItem
     void init();
     void setSymbol( QgsSymbol *symbol, const QgsRenderContext &context, const QColor &color, const QColor &fillColor );
     double getSymbolWidth( const QgsRenderContext &context, double width, QgsUnitTypes::RenderUnit unit );
-    //! Get renderer for current color mode and colors. The renderer should be freed by caller.
+    //! Gets renderer for current color mode and colors. The renderer should be freed by caller.
     std::unique_ptr< QgsFeatureRenderer > createRenderer( QgsRenderContext &context, const QColor &color, const QColor &fillColor );
     void paintPoint( QPainter *p, const QgsPointXY &point );
     void paintLine( QPainter *p, QgsPolylineXY line );
     void paintPolygon( QPainter *p, const QgsPolygonXY &polygon );
 
+    int mWidth = 1; // line / stroke width property
+    QColor mColor; // line / stroke color property
+    QColor mFillColor; // line / stroke fillColor property
     QBrush mBrush;
     QPen mPen;
     QgsGeometry *mGeometry = nullptr;

@@ -36,6 +36,8 @@ extern "C"
 #include <fstream>
 #include <set>
 
+#include "qgsprovidermetadata.h"
+
 class QgsFeature;
 class QgsField;
 
@@ -57,6 +59,10 @@ class QgsSpatiaLiteProvider: public QgsVectorDataProvider
     Q_OBJECT
 
   public:
+
+    static const QString SPATIALITE_KEY;
+    static const QString SPATIALITE_DESCRIPTION;
+
     //! Import a vector layer into the database
     static QgsVectorLayerExporter::ExportError createEmptyLayer(
       const QString &uri,
@@ -66,14 +72,15 @@ class QgsSpatiaLiteProvider: public QgsVectorDataProvider
       bool overwrite,
       QMap<int, int> *oldToNewAttrIdxMap,
       QString *errorMessage = nullptr,
-      const QMap<QString, QVariant> *options = nullptr
+      const QMap<QString, QVariant> *coordinateTransformContext = nullptr
     );
 
     /**
      * Constructor of the vector provider
-     * \param uri  uniform resource locator (URI) for a dataset
+     * \param uri uniform resource locator (URI) for a dataset
+     * \param options generic data provider options
      */
-    explicit QgsSpatiaLiteProvider( QString const &uri = QString() );
+    explicit QgsSpatiaLiteProvider( QString const &uri, const QgsDataProvider::ProviderOptions &providerOptions );
 
     ~ QgsSpatiaLiteProvider() override;
 
@@ -85,9 +92,11 @@ class QgsSpatiaLiteProvider: public QgsVectorDataProvider
     bool setSubsetString( const QString &theSQL, bool updateFeatureCount = true ) override;
     bool supportsSubsetString() const override { return true; }
     QgsWkbTypes::Type wkbType() const override;
+    //! Return the table schema condition
+    static QString tableSchemaCondition( const QgsDataSourceUri &dsUri );
 
     /**
-     * Return the number of layers for the current data source
+     * Returns the number of layers for the current data source
      *
      * \note Should this be subLayerCount() instead?
      */
@@ -140,8 +149,6 @@ class QgsSpatiaLiteProvider: public QgsVectorDataProvider
                                   unsigned char **wkb, int *geom_size );
     static int computeMultiWKB3Dsize( const unsigned char *p_in, int little_endian,
                                       int endian_arch );
-    static QString quotedIdentifier( QString id );
-    static QString quotedValue( QString value );
 
     struct SLFieldNotFound {}; //! Exception to throw
 
@@ -173,24 +180,14 @@ class QgsSpatiaLiteProvider: public QgsVectorDataProvider
 
     };
 
+    //! Check if version is above major and minor
+    static bool versionIsAbove( sqlite3 *sqlite_handle, int major, int minor = 0 );
+
+
     /**
      * sqlite3 handles pointer
      */
     QgsSqliteHandle *mHandle = nullptr;
-
-  signals:
-
-    /**
-     *   This is emitted when this provider is satisfied that all objects
-     *   have had a chance to adjust themselves after they'd been notified that
-     *   the full extent is available.
-     *
-     *   \note  It currently isn't being emitted because we don't have an easy way
-     *          for the overview canvas to only be repainted.  In the meantime
-     *          we are satisfied for the overview to reflect the new extent
-     *          when the user adjusts the extent of the main map canvas.
-     */
-    void repaintRequested();
 
   private:
 
@@ -199,6 +196,9 @@ class QgsSpatiaLiteProvider: public QgsVectorDataProvider
 
     //! For views, try to get primary key from a dedicated meta table
     void determineViewPrimaryKey();
+
+    //! Returns integer primary key(s) from a table name
+    QStringList tablePrimaryKeys( const QString &tableName ) const;
 
     //! Check if a table/view has any triggers.  Triggers can be used on views to make them editable.
     bool hasTriggers();
@@ -211,7 +211,7 @@ class QgsSpatiaLiteProvider: public QgsVectorDataProvider
 
     QString geomParam() const;
 
-    //! get SpatiaLite version string
+    //! Gets SpatiaLite version string
     QString spatialiteVersion();
 
     /**
@@ -226,6 +226,9 @@ class QgsSpatiaLiteProvider: public QgsVectorDataProvider
 
     //! Flag indicating if the layer data source is based on a query
     bool mIsQuery = false;
+
+    //! Flag indicating if ROWID has been injected in the query
+    bool mRowidInjectedInQuery = false;
 
     //! Flag indicating if the layer data source is based on a plain Table
     bool mTableBased = false;
@@ -379,6 +382,30 @@ class QgsSpatiaLiteProvider: public QgsVectorDataProvider
 
     friend class QgsSpatiaLiteFeatureSource;
 
+};
+
+class QgsSpatiaLiteProviderMetadata: public QgsProviderMetadata
+{
+  public:
+    QgsSpatiaLiteProviderMetadata();
+
+    void cleanupProvider() override;
+    QString getStyleById( const QString &uri, QString styleId, QString &errCause ) override;
+    bool saveStyle( const QString &uri, const QString &qmlStyle, const QString &sldStyle,
+                    const QString &styleName, const QString &styleDescription,
+                    const QString &uiFileContent, bool useAsDefault, QString &errCause ) override;
+    QString loadStyle( const QString &uri, QString &errCause ) override;
+    int listStyles( const QString &uri, QStringList &ids, QStringList &names,
+                    QStringList &descriptions, QString &errCause ) override;
+    QVariantMap decodeUri( const QString &uri ) override;
+    QgsSpatiaLiteProvider *createProvider( const QString &uri, const QgsDataProvider::ProviderOptions &options ) override;
+
+    QgsVectorLayerExporter::ExportError createEmptyLayer( const QString &uri, const QgsFields &fields,
+        QgsWkbTypes::Type wkbType, const QgsCoordinateReferenceSystem &srs,
+        bool overwrite, QMap<int, int> &oldToNewAttrIdxMap, QString &errorMessage,
+        const QMap<QString, QVariant> *options ) override;
+    bool createDb( const QString &dbPath, QString &errCause ) override;
+    QList< QgsDataItemProvider * > dataItemProviders() const override;
 };
 
 // clazy:excludeall=qstring-allocations

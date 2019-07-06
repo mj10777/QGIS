@@ -23,6 +23,11 @@ email                : hugo dot mercier at oslandia dot com
 #include "qgsvirtuallayerdefinition.h"
 #include "qgsvirtuallayersqlitehelper.h"
 
+#include "qgsprovidermetadata.h"
+#ifdef HAVE_GUI
+#include "qgsproviderguimetadata.h"
+#endif
+
 class QgsVirtualLayerFeatureIterator;
 
 class QgsVirtualLayerProvider: public QgsVectorDataProvider
@@ -32,9 +37,10 @@ class QgsVirtualLayerProvider: public QgsVectorDataProvider
 
     /**
      * Constructor of the vector provider
-     * \param uri  uniform resource locator (URI) for a dataset
+     * \param uri uniform resource locator (URI) for a dataset
+     * \param options generic data provider options
      */
-    explicit QgsVirtualLayerProvider( QString const &uri = QString() );
+    explicit QgsVirtualLayerProvider( QString const &uri, const ProviderOptions &coordinateTransformContext );
 
     QgsAbstractFeatureSource *featureSource() const override;
     QString storageType() const override;
@@ -53,6 +59,8 @@ class QgsVirtualLayerProvider: public QgsVectorDataProvider
     QString description() const override;
     QgsAttributeList pkAttributeIndexes() const override;
     QSet<QgsMapLayerDependency> dependencies() const override;
+    bool cancelReload() override;
+    void reloadData() override;
 
   private:
 
@@ -108,12 +116,30 @@ class QgsVirtualLayerProvider: public QgsVectorDataProvider
     bool openIt();
     bool createIt();
     bool loadSourceLayers();
+    void createVirtualTable( QgsVectorLayer *vlayer, const QString &name );
 
     friend class QgsVirtualLayerFeatureSource;
 
   private slots:
     void invalidateStatistics();
+
 };
+
+class QgsVirtualLayerProviderMetadata: public QgsProviderMetadata
+{
+  public:
+    QgsVirtualLayerProviderMetadata();
+    QgsVirtualLayerProvider *createProvider( const QString &uri, const QgsDataProvider::ProviderOptions &options ) override;
+};
+
+#ifdef HAVE_GUI
+class QgsVirtualLayerProviderGuiMetadata: public QgsProviderGuiMetadata
+{
+  public:
+    QgsVirtualLayerProviderGuiMetadata();
+    QList<QgsSourceSelectProvider *> sourceSelectProviders() override;
+};
+#endif
 
 // clazy:excludeall=qstring-allocations
 

@@ -29,7 +29,7 @@
  * QLineEdit subclass with built in support for showing/hiding
  * entered password.
  * \since QGIS 3.0
- **/
+ */
 class GUI_EXPORT QgsPasswordLineEdit : public QLineEdit
 {
     Q_OBJECT
@@ -46,7 +46,7 @@ class GUI_EXPORT QgsPasswordLineEdit : public QLineEdit
 
     /**
      * Define if a lock icon shall be shown on the left of the widget
-     * \param visible set to false to hide the lock icon
+     * \param visible set to FALSE to hide the lock icon
      */
     void setShowLockIcon( bool visible );
 

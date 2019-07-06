@@ -16,17 +16,19 @@
 #define QGSWFSDESCRIBEFEATURETYPE_H
 
 #include "qgswfsrequest.h"
+#include "qgswfscapabilities.h"
 
 //! Manages the DescribeFeatureType request
 class QgsWFSDescribeFeatureType : public QgsWfsRequest
 {
     Q_OBJECT
   public:
-    explicit QgsWFSDescribeFeatureType( const QString &uri );
+    explicit QgsWFSDescribeFeatureType( QgsWFSDataSourceURI &uri );
 
     //! Issue the request
-    bool requestFeatureType( const QString &WFSVersion, const QString &typeName,
-                             bool forceSingularTypeName = false );
+    bool requestFeatureType( const QString &WFSVersion,
+                             const QString &typeName,
+                             const QgsWfsCapabilities::Capabilities &caps );
 
   protected:
     QString errorMessageWithReason( const QString &reason ) override;

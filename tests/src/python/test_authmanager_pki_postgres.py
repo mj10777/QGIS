@@ -30,6 +30,7 @@ import signal
 import stat
 import subprocess
 import tempfile
+import glob
 
 from shutil import rmtree
 
@@ -44,6 +45,7 @@ from qgis.core import (
 )
 
 from qgis.PyQt.QtNetwork import QSslCertificate
+from qgis.PyQt.QtCore import QFile
 
 from qgis.testing import (
     start_app,
@@ -54,8 +56,6 @@ from qgis.testing import (
 __author__ = 'Alessandro Pasotti'
 __date__ = '25/10/2016'
 __copyright__ = 'Copyright 2016, The QGIS Project'
-# This will get replaced with a git SHA1 when you do a git archive
-__revision__ = '$Format:%H$'
 
 QGIS_POSTGRES_SERVER_PORT = os.environ.get('QGIS_POSTGRES_SERVER_PORT', '55432')
 QGIS_POSTGRES_EXECUTABLE_PATH = os.environ.get('QGIS_POSTGRES_EXECUTABLE_PATH', '/usr/lib/postgresql/9.4/bin')
@@ -233,6 +233,28 @@ class TestAuthManager(unittest.TestCase):
         """
         pg_layer = self._getPostGISLayer('testlayer_èé')
         self.assertFalse(pg_layer.isValid())
+
+    def testRemoveTemporaryCerts(self):
+        """
+        Check that no temporary cert remain after connection with
+        postgres provider
+        """
+        def cleanTempPki():
+            pkies = glob.glob(os.path.join(tempfile.gettempdir(), 'tmp*_{*}.pem'))
+            for fn in pkies:
+                f = QFile(fn)
+                f.setPermissions(QFile.WriteOwner)
+                f.remove()
+
+        # remove any temppki in temprorary path to check that no
+        # other pki remain after connection
+        cleanTempPki()
+        # connect using postgres provider
+        pg_layer = self._getPostGISLayer('testlayer_èé', authcfg=self.auth_config.id())
+        self.assertTrue(pg_layer.isValid())
+        # do test no certs remained
+        pkies = glob.glob(os.path.join(tempfile.gettempdir(), 'tmp*_{*}.pem'))
+        self.assertEqual(len(pkies), 0)
 
 
 if __name__ == '__main__':

@@ -21,10 +21,6 @@ __author__ = 'Alexander Bruy'
 __date__ = 'September 2013'
 __copyright__ = '(C) 2013, Alexander Bruy'
 
-# This will get replaced with a git SHA1 when you do a git archive
-
-__revision__ = '$Format:%H$'
-
 import os
 
 from qgis.core import QgsProcessingUtils
@@ -70,13 +66,16 @@ class rasterize_over(GdalAlgorithm):
     def groupId(self):
         return 'vectorconversion'
 
+    def commandName(self):
+        return 'gdal_rasterize'
+
     def getConsoleCommands(self, parameters, context, feedback, executing=True):
         context = dataobjects.createContext()
         inLayer = QgsProcessingUtils.mapLayerFromString(self.getParameterValue(self.INPUT), context)
         inRasterLayer = QgsProcessingUtils.mapLayerFromString(self.getParameterValue(self.INPUT_RASTER), context)
 
-        ogrLayer = GdalUtils.ogrConnectionString(inLayer, context)[1:-1]
-        ogrRasterLayer = GdalUtils.ogrConnectionString(inRasterLayer, context)[1:-1]
+        ogrLayer = GdalUtils.ogrConnectionStringFromLayer(inLayer)
+        ogrRasterLayer = GdalUtils.ogrConnectionStringFromLayer(inRasterLayer)
 
         arguments = []
         arguments.append('-a')
@@ -87,7 +86,4 @@ class rasterize_over(GdalAlgorithm):
         arguments.append(ogrLayer)
         arguments.append(ogrRasterLayer)
 
-        return ['gdal_rasterize', GdalUtils.escapeAndJoin(arguments)]
-
-    def commandName(self):
-        return "gdal_rasterize"
+        return [self.commandName(), GdalUtils.escapeAndJoin(arguments)]

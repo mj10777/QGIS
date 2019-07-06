@@ -34,7 +34,7 @@ class APP_EXPORT QgisAppStyleSheet: public QObject
   public:
     QgisAppStyleSheet( QObject *parent = nullptr );
 
-    //! Return changeable options built from settings and/or defaults
+    //! Returns changeable options built from settings and/or defaults
     QMap<QString, QVariant> defaultOptions();
 
     /**
@@ -47,7 +47,7 @@ class APP_EXPORT QgisAppStyleSheet: public QObject
     //! Save changed default option keys/values to user settings
     void saveToSettings( const QMap<QString, QVariant> &opts );
 
-    //! Get reference font for initial qApp
+    //! Gets reference font for initial qApp
     QFont defaultFont() { return mDefaultFont; }
 
   signals:
@@ -59,38 +59,20 @@ class APP_EXPORT QgisAppStyleSheet: public QObject
     void appStyleSheetChanged( const QString &appStyleSheet );
 
   private:
-    //! Set active configuration values
+    //! Sets active configuration values
     void setActiveValues();
 
     // qt styles
     QString mStyle; // active style name (lowercase)
-    bool mMotifStyle; // motif
-    bool mCdeStyle; // cde
-    bool mPlastqStyle; // plastique
-    bool mCleanLkStyle; // cleanlooks
-    bool mGtkStyle; // gtk+
-    bool mWinStyle; // windows
-    bool mWinXpStyle; // windowsxp
-    bool mWinVistaStyle; // windowsvista
-    bool mMacStyle; // macintosh (aqua)
-    bool mOxyStyle; // oxygen
+    bool mMacStyle = false; // macintosh (aqua)
+    bool mOxyStyle = false; // oxygen
 
     // default font saved for reference
     QFont mDefaultFont;
 
     // platforms, specific
-    bool mLinuxOS;
-    bool mWinOS;
-    bool mMacOS;
-    bool mAndroidOS;
-
-    // platforms, general
-    bool mUnix;
-
-    // window servers
-    bool mX11WS;
-    bool mWinWS;
-    bool mMacWS;
+    bool mWinOS = false;
+    bool mAndroidOS = false;
 };
 
 #endif //QGISAPPSTYLESHEET_H

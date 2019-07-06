@@ -21,10 +21,6 @@ __author__ = 'Médéric Ribreux'
 __date__ = 'February 2016'
 __copyright__ = '(C) 2016, Médéric Ribreux'
 
-# This will get replaced with a git SHA1 when you do a git archive
-
-__revision__ = '$Format:%H$'
-
 import os
 from processing.algs.grass7.Grass7Utils import Grass7Utils
 
@@ -37,20 +33,20 @@ def checkParameterValuesBeforeExecuting(alg, parameters, context):
     outfile = alg.parameterAsString(parameters, 'outfile', context)
 
     if datapos and infile:
-        return alg.tr("You need to set either inline data positions or an input data positions file!")
+        return False, alg.tr("You need to set either inline data positions or an input data positions file!")
     if output and outfile:
-        return alg.tr("You need to set either sampling data positions or an output sampling data positions file!")
+        return False, alg.tr("You need to set either sampling data positions or an output sampling data positions file!")
     if not (datapos or infile or output or outfile):
-        return alg.tr("You need to set input and output data positions parameters!")
-    return None
+        return False, alg.tr("You need to set input and output data positions parameters!")
+    return True, None
 
 
-def processCommand(alg, parameters, context):
+def processCommand(alg, parameters, context, feedback):
     # We temporary remove the output directory
-    alg.processCommand(parameters, context, True)
+    alg.processCommand(parameters, context, feedback, True)
 
 
-def processOutputs(alg, parameters, context):
+def processOutputs(alg, parameters, context, feedback):
     # We take all the outputs and we export them to the output directory
     outputDir = alg.parameterAsString(parameters, 'output_dir', context)
     output = alg.parameterAsString(parameters, 'output', context)

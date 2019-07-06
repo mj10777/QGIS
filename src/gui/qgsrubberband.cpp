@@ -14,16 +14,17 @@
  ***************************************************************************/
 
 #include "qgsrubberband.h"
-#include "qgsfeature.h"
 #include "qgsgeometry.h"
 #include "qgslogger.h"
 #include "qgsmapcanvas.h"
 #include "qgsvectorlayer.h"
 #include "qgsproject.h"
+#include "qgsrectangle.h"
 #include <QPainter>
 
 QgsRubberBand::QgsRubberBand( QgsMapCanvas *mapCanvas, QgsWkbTypes::GeometryType geometryType )
-  : QgsMapCanvasItem( mapCanvas )
+  : QObject( nullptr )
+  , QgsMapCanvasItem( mapCanvas )
   , mGeometryType( geometryType )
 {
   reset( geometryType );
@@ -37,7 +38,8 @@ QgsRubberBand::QgsRubberBand( QgsMapCanvas *mapCanvas, QgsWkbTypes::GeometryType
 }
 
 QgsRubberBand::QgsRubberBand()
-  : QgsMapCanvasItem( nullptr )
+  : QObject( nullptr )
+  , QgsMapCanvasItem( nullptr )
 {
 }
 
@@ -49,6 +51,9 @@ void QgsRubberBand::setColor( const QColor &color )
 
 void QgsRubberBand::setFillColor( const QColor &color )
 {
+  if ( mBrush.color() == color )
+    return;
+
   mBrush.setColor( color );
 }
 
@@ -231,13 +236,32 @@ void QgsRubberBand::setToGeometry( const QgsGeometry &geom, QgsVectorLayer *laye
   addGeometry( geom, layer );
 }
 
+void QgsRubberBand::setToGeometry( const QgsGeometry &geom, const QgsCoordinateReferenceSystem &crs )
+{
+  if ( geom.isNull() )
+  {
+    reset( mGeometryType );
+    return;
+  }
+
+  reset( geom.type() );
+  addGeometry( geom, crs );
+}
+
 void QgsRubberBand::addGeometry( const QgsGeometry &geometry, QgsVectorLayer *layer )
 {
   QgsGeometry geom = geometry;
   if ( layer )
   {
     QgsCoordinateTransform ct = mMapCanvas->mapSettings().layerTransform( layer );
-    geom.transform( ct );
+    try
+    {
+      geom.transform( ct );
+    }
+    catch ( QgsCsException & )
+    {
+      return;
+    }
   }
 
   addGeometry( geom );
@@ -412,7 +436,8 @@ void QgsRubberBand::drawShape( QPainter *p, const QVector<QPointF> &pts )
 
     case QgsWkbTypes::PointGeometry:
     {
-      Q_FOREACH ( QPointF pt, pts )
+      const auto constPts = pts;
+      for ( QPointF pt : constPts )
       {
         double x = pt.x();
         double y = pt.y();
@@ -517,7 +542,7 @@ void QgsRubberBand::updateRect()
   // This is an hack to pass QgsMapCanvasItem::setRect what it
   // expects (encoding of position and size of the item)
   qreal res = m2p.mapUnitsPerPixel();
-  QgsPointXY topLeft = m2p.toMapPoint( r.xMinimum(), r.yMinimum() );
+  QgsPointXY topLeft = m2p.toMapCoordinates( r.xMinimum(), r.yMinimum() );
   QgsRectangle rect( topLeft.x(), topLeft.y(), topLeft.x() + r.width()*res, topLeft.y() - r.height()*res );
 
   setRect( rect );
@@ -526,7 +551,7 @@ void QgsRubberBand::updateRect()
 void QgsRubberBand::updatePosition()
 {
   // re-compute rectangle
-  // See https://issues.qgis.org/issues/12392
+  // See https://github.com/qgis/QGIS/issues/20566
   // NOTE: could be optimized by saving map-extent
   //       of rubberband and simply re-projecting
   //       that to device-rectangle on "updatePosition"

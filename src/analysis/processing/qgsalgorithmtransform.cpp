@@ -35,6 +35,11 @@ QString QgsTransformAlgorithm::outputName() const
   return QObject::tr( "Reprojected" );
 }
 
+QgsProcessingFeatureSource::Flag QgsTransformAlgorithm::sourceFlags() const
+{
+  return QgsProcessingFeatureSource::FlagSkipGeometryValidityChecks;
+}
+
 QString QgsTransformAlgorithm::name() const
 {
   return QStringLiteral( "reprojectlayer" );
@@ -47,7 +52,7 @@ QString QgsTransformAlgorithm::displayName() const
 
 QStringList QgsTransformAlgorithm::tags() const
 {
-  return QObject::tr( "transform,reproject,crs,srs,warp" ).split( ',' );
+  return QObject::tr( "transform,reprojection,crs,srs,warp" ).split( ',' );
 }
 
 QString QgsTransformAlgorithm::group() const
@@ -74,12 +79,13 @@ QgsTransformAlgorithm *QgsTransformAlgorithm::createInstance() const
 
 bool QgsTransformAlgorithm::prepareAlgorithm( const QVariantMap &parameters, QgsProcessingContext &context, QgsProcessingFeedback * )
 {
+  prepareSource( parameters, context );
   mDestCrs = parameterAsCrs( parameters, QStringLiteral( "TARGET_CRS" ), context );
   mTransformContext = context.project() ? context.project()->transformContext() : QgsCoordinateTransformContext();
   return true;
 }
 
-QgsFeature QgsTransformAlgorithm::processFeature( const QgsFeature &f, QgsProcessingContext &, QgsProcessingFeedback * )
+QgsFeatureList QgsTransformAlgorithm::processFeature( const QgsFeature &f, QgsProcessingContext &, QgsProcessingFeedback *feedback )
 {
   QgsFeature feature = f;
   if ( !mCreatedTransform )
@@ -91,16 +97,25 @@ QgsFeature QgsTransformAlgorithm::processFeature( const QgsFeature &f, QgsProces
   if ( feature.hasGeometry() )
   {
     QgsGeometry g = feature.geometry();
-    if ( g.transform( mTransform ) == 0 )
+    try
     {
-      feature.setGeometry( g );
+      if ( g.transform( mTransform ) == 0 )
+      {
+        feature.setGeometry( g );
+      }
+      else
+      {
+        feature.clearGeometry();
+      }
     }
-    else
+    catch ( QgsCsException & )
     {
+      if ( feedback )
+        feedback->reportError( QObject::tr( "Encountered a transform error when reprojecting feature with id %1." ).arg( f.id() ) );
       feature.clearGeometry();
     }
   }
-  return feature;
+  return QgsFeatureList() << feature;
 }
 
 ///@endcond

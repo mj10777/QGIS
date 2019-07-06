@@ -19,7 +19,6 @@
 #define QGSRASTERINTERFACE_H
 
 #include "qgis_core.h"
-#include "qgis.h"
 #include "qgis_sip.h"
 #include <limits>
 
@@ -77,6 +76,23 @@ class CORE_EXPORT QgsRasterBlockFeedback : public QgsFeedback
      */
     void setRenderPartialOutput( bool enable ) { mRenderPartialOutput = enable; }
 
+    /**
+     * Appends an error message to the stored list of errors. Should be called
+     * whenever an error is encountered while retrieving a raster block.
+     *
+     * \see errors()
+     * \since QGIS 3.8.0
+     */
+    void appendError( const QString &error ) { mErrors.append( error ); }
+
+    /**
+     * Returns a list of any errors encountered while retrieving the raster block.
+     *
+     * \see appendError()
+     * \since QGIS 3.8.0
+     */
+    QStringList errors() const { return mErrors; }
+
   private:
 
     /**
@@ -87,6 +103,9 @@ class CORE_EXPORT QgsRasterBlockFeedback : public QgsFeedback
 
     //! Whether our painter is drawing to a temporary image used just by this layer
     bool mRenderPartialOutput = false;
+
+    //! List of errors encountered while retrieving block
+    QStringList mErrors;
 };
 
 
@@ -198,25 +217,26 @@ class CORE_EXPORT QgsRasterInterface
 
     /**
      * Returns source data type for the band specified by number,
-     *  source data type may be shorter than dataType */
+     *  source data type may be shorter than dataType
+    */
     virtual Qgis::DataType sourceDataType( int bandNo ) const { return mInput ? mInput->sourceDataType( bandNo ) : Qgis::UnknownDataType; }
 
     /**
-     * Get the extent of the interface.
+     * Gets the extent of the interface.
      * \returns QgsRectangle containing the extent of the layer
      */
     virtual QgsRectangle extent() const { return mInput ? mInput->extent() : QgsRectangle(); }
 
     int dataTypeSize( int bandNo ) { return QgsRasterBlock::typeSize( dataType( bandNo ) ); }
 
-    //! Get number of bands
+    //! Gets number of bands
     virtual int bandCount() const = 0;
 
-    //! Get block size
+    //! Gets block size
     virtual int xBlockSize() const { return mInput ? mInput->xBlockSize() : 0; }
     virtual int yBlockSize() const { return mInput ? mInput->yBlockSize() : 0; }
 
-    //! Get raster size
+    //! Gets raster size
     virtual int xSize() const { return mInput ? mInput->xSize() : 0; }
     virtual int ySize() const { return mInput ? mInput->ySize() : 0; }
 
@@ -234,55 +254,55 @@ class CORE_EXPORT QgsRasterInterface
      * \param extent extent of block
      * \param width pixel width of block
      * \param height pixel height of block
-     * \param feedback optional raster feedback object for cancelation/preview. Added in QGIS 3.0.
+     * \param feedback optional raster feedback object for cancellation/preview. Added in QGIS 3.0.
      */
     virtual QgsRasterBlock *block( int bandNo, const QgsRectangle &extent, int width, int height, QgsRasterBlockFeedback *feedback = nullptr ) = 0 SIP_FACTORY;
 
     /**
      * Set input.
-      * Returns true if set correctly, false if cannot use that input */
+      * Returns TRUE if set correctly, FALSE if cannot use that input
+    */
     virtual bool setInput( QgsRasterInterface *input ) { mInput = input; return true; }
 
     //! Current input
     virtual QgsRasterInterface *input() const { return mInput; }
 
-    //! Is on/off
+    //! Returns whether the interface is on or off
     virtual bool on() const { return mOn; }
 
-    //! Set on/off
+    //! Sets whether the interface is on or off
     virtual void setOn( bool on ) { mOn = on; }
 
     /**
-     * Get source / raw input, the first in pipe, usually provider.
+     * Gets source / raw input, the first in pipe, usually provider.
      *  It may be used to get info about original data, e.g. resolution to decide
      *  resampling etc.
      * \note not available in Python bindings.
      */
     virtual const QgsRasterInterface *sourceInput() const SIP_SKIP
     {
-      QgsDebugMsgLevel( "Entered", 4 );
+      QgsDebugMsgLevel( QStringLiteral( "Entered" ), 4 );
       return mInput ? mInput->sourceInput() : this;
     }
 
     /**
-     * Get source / raw input, the first in pipe, usually provider.
+     * Gets source / raw input, the first in pipe, usually provider.
      *  It may be used to get info about original data, e.g. resolution to decide
      *  resampling etc.
      */
     virtual QgsRasterInterface *sourceInput()
     {
-      QgsDebugMsgLevel( "Entered", 4 );
+      QgsDebugMsgLevel( QStringLiteral( "Entered" ), 4 );
       return mInput ? mInput->sourceInput() : this;
     }
 
     /**
-     * \brief Get band statistics.
+     * Returns the band statistics.
      * \param bandNo The band (number).
      * \param stats Requested statistics
      * \param extent Extent used to calc statistics, if empty, whole raster extent is used.
      * \param sampleSize Approximate number of cells in sample. If 0, all cells (whole raster will be used). If raster does not have exact size (WCS without exact size for example), provider decides size of sample.
      * \param feedback optional feedback object
-     * \returns Band statistics.
      */
     virtual QgsRasterBandStats bandStatistics( int bandNo,
         int stats = QgsRasterBandStats::All,
@@ -290,8 +310,8 @@ class CORE_EXPORT QgsRasterInterface
         int sampleSize = 0, QgsRasterBlockFeedback *feedback = nullptr );
 
     /**
-     * \brief Returns true if histogram is available (cached, already calculated).     *   The parameters are the same as in bandStatistics()
-     * \returns true if statistics are available (ready to use)
+     * \brief Returns TRUE if histogram is available (cached, already calculated).     *   The parameters are the same as in bandStatistics()
+     * \returns TRUE if statistics are available (ready to use)
      */
     virtual bool hasStatistics( int bandNo,
                                 int stats = QgsRasterBandStats::All,
@@ -300,7 +320,7 @@ class CORE_EXPORT QgsRasterInterface
 
 
     /**
-     * \brief Get histogram. Histograms are cached in providers.
+     * Returns a band histogram. Histograms are cached in providers.
      * \param bandNo The band (number).
      * \param binCount Number of bins (intervals,buckets). If 0, the number of bins is decided automatically according to data type, raster size etc.
      * \param minimum Minimum value, if NaN (None for Python), raster minimum value will be used.
@@ -359,14 +379,14 @@ class CORE_EXPORT QgsRasterInterface
       maximum = PyFloat_AsDouble( a3 );
     }
 
-    QgsRasterHistogram h = sipCpp->histogram( a0, a1, minimum, maximum, *a4, a5, a6, a7 );
-    sipRes = &h;
+    QgsRasterHistogram *h = new QgsRasterHistogram( sipCpp->histogram( a0, a1, minimum, maximum, *a4, a5, a6, a7 ) );
+    return sipConvertFromType( h, sipType_QgsRasterHistogram, Py_None );
     % End
 #endif
 
 
     /**
-     * \brief Returns true if histogram is available (cached, already calculated)
+     * \brief Returns TRUE if histogram is available (cached, already calculated)
      * \note the parameters are the same as in \see histogram()
      */
 #ifndef SIP_RUN
@@ -437,9 +457,9 @@ class CORE_EXPORT QgsRasterInterface
                                 int sampleSize = 0 );
 
     //! Write base class members to xml.
-    virtual void writeXml( QDomDocument &doc, QDomElement &parentElem ) const { Q_UNUSED( doc ); Q_UNUSED( parentElem ); }
+    virtual void writeXml( QDomDocument &doc, QDomElement &parentElem ) const { Q_UNUSED( doc ) Q_UNUSED( parentElem ); }
     //! Sets base class members from xml. Usually called from create() methods of subclasses
-    virtual void readXml( const QDomElement &filterElem ) { Q_UNUSED( filterElem ); }
+    virtual void readXml( const QDomElement &filterElem ) { Q_UNUSED( filterElem ) }
 
   protected:
     // QgsRasterInterface used as input

@@ -19,6 +19,8 @@
  ***************************************************************************/
 #include "qgsbrowserdockwidget_p.h"
 
+#include <memory>
+
 #include <QAbstractTextDocumentLayout>
 #include <QHeaderView>
 #include <QTreeView>
@@ -35,7 +37,15 @@
 #include "qgsvectorlayer.h"
 #include "qgsproject.h"
 #include "qgssettings.h"
-
+#include "qgsmeshlayer.h"
+#include "qgsgui.h"
+#include "qgsnative.h"
+#include "qgsmaptoolpan.h"
+#include "qgsvectorlayercache.h"
+#include "qgsattributetablemodel.h"
+#include "qgsattributetablefiltermodel.h"
+#include "qgsapplication.h"
+#include <QDesktopServices>
 
 #include <QDragEnterEvent>
 
@@ -54,7 +64,7 @@ QgsBrowserPropertiesWrapLabel::QgsBrowserPropertiesWrapLabel( const QString &tex
   setPalette( pal );
   setLineWrapMode( QTextEdit::WidgetWidth );
   setWordWrapMode( QTextOption::WrapAnywhere );
-  connect( qobject_cast<QAbstractTextDocumentLayout *>( document()->documentLayout() ), &QAbstractTextDocumentLayout::documentSizeChanged,
+  connect( document()->documentLayout(), &QAbstractTextDocumentLayout::documentSizeChanged,
            this, &QgsBrowserPropertiesWrapLabel::adjustHeight );
   setMaximumHeight( 20 );
 }
@@ -111,9 +121,49 @@ QgsBrowserLayerProperties::QgsBrowserLayerProperties( QWidget *parent )
 {
   setupUi( this );
 
-  mUriLabel = new QgsBrowserPropertiesWrapLabel( QString(), this );
-  mHeaderGridLayout->addItem( new QWidgetItem( mUriLabel ), 1, 1 );
+  // we don't want links to open in the little widget, open them externally instead
+  mMetadataTextBrowser->setOpenLinks( false );
+  connect( mMetadataTextBrowser, &QTextBrowser::anchorClicked, this, &QgsBrowserLayerProperties::urlClicked );
+
+  mMapCanvas->setProperty( "browser_canvas", true );
+  mMapCanvas->setLayers( QList< QgsMapLayer * >() );
+  mMapCanvas->setMapTool( new QgsMapToolPan( mMapCanvas ) );
+  mMapCanvas->freeze( true );
+
+  connect( mTabWidget, &QTabWidget::currentChanged, this, [ = ]
+  {
+    if ( mTabWidget->currentWidget() == mPreviewTab && mMapCanvas->isFrozen() )
+    {
+      mMapCanvas->freeze( false );
+      mMapCanvas->refresh();
+    }
+    else if ( mTabWidget->currentWidget() == mAttributesTab )
+    {
+      if ( ! mAttributeTableFilterModel )
+        loadAttributeTable();
+    }
+  } );
 }
+
+class ProjectionSettingRestorer
+{
+  public:
+
+    ProjectionSettingRestorer()
+    {
+      QgsSettings settings;
+      previousSetting = settings.value( QStringLiteral( "/Projections/defaultBehavior" ) ).toString();
+      settings.setValue( QStringLiteral( "/Projections/defaultBehavior" ), QStringLiteral( "useProject" ) );
+    }
+
+    ~ProjectionSettingRestorer()
+    {
+      QgsSettings settings;
+      settings.setValue( QStringLiteral( "/Projections/defaultBehavior" ), previousSetting );
+    }
+
+    QString previousSetting;
+};
 
 void QgsBrowserLayerProperties::setItem( QgsDataItem *item )
 {
@@ -123,77 +173,91 @@ void QgsBrowserLayerProperties::setItem( QgsDataItem *item )
 
   mNoticeLabel->clear();
 
-  QgsMapLayer::LayerType type = layerItem->mapLayerType();
+  QgsMapLayerType type = layerItem->mapLayerType();
   QString layerMetadata = tr( "Error" );
   QgsCoordinateReferenceSystem layerCrs;
 
+  QString defaultProjectionOption = QgsSettings().value( QStringLiteral( "Projections/defaultBehavior" ), "prompt" ).toString();
   // temporarily override /Projections/defaultBehavior to avoid dialog prompt
-  QgsSettings settings;
-  QString defaultProjectionOption = settings.value( QStringLiteral( "Projections/defaultBehavior" ), "prompt" ).toString();
-  if ( settings.value( QStringLiteral( "Projections/defaultBehavior" ), "prompt" ).toString() == QLatin1String( "prompt" ) )
-  {
-    settings.setValue( QStringLiteral( "Projections/defaultBehavior" ), "useProject" );
-  }
+  // TODO - remove when there is a cleaner way to block the unknown projection dialog!
+  ProjectionSettingRestorer restorer;
+  ( void )restorer; // no warnings
+
+  mLayer.reset();
 
   // find root item
   // we need to create a temporary layer to get metadata
   // we could use a provider but the metadata is not as complete and "pretty"  and this is easier
-  QgsDebugMsg( QString( "creating temporary layer using path %1" ).arg( layerItem->path() ) );
-  if ( type == QgsMapLayer::RasterLayer )
+  QgsDebugMsg( QStringLiteral( "creating temporary layer using path %1" ).arg( layerItem->path() ) );
+  switch ( type )
   {
-    QgsDebugMsg( "creating raster layer" );
-    // should copy code from addLayer() to split uri ?
-    QgsRasterLayer *layer = new QgsRasterLayer( layerItem->uri(), layerItem->uri(), layerItem->providerKey() );
-    if ( layer )
+    case QgsMapLayerType::RasterLayer:
     {
-      if ( layer->isValid() )
-      {
-        layerCrs = layer->crs();
-        layerMetadata = layer->htmlMetadata();
-      }
-      delete layer;
+      QgsDebugMsg( QStringLiteral( "creating raster layer" ) );
+      // should copy code from addLayer() to split uri ?
+      mLayer = qgis::make_unique< QgsRasterLayer >( layerItem->uri(), layerItem->name(), layerItem->providerKey() );
+      break;
+    }
+
+    case QgsMapLayerType::MeshLayer:
+    {
+      QgsDebugMsg( QStringLiteral( "creating mesh layer" ) );
+      const QgsMeshLayer::LayerOptions options { QgsProject::instance()->transformContext() };
+      mLayer = qgis::make_unique < QgsMeshLayer >( layerItem->uri(), layerItem->name(), layerItem->providerKey(), options );
+      break;
+    }
+
+    case QgsMapLayerType::VectorLayer:
+    {
+      QgsDebugMsg( QStringLiteral( "creating vector layer" ) );
+      const QgsVectorLayer::LayerOptions options { QgsProject::instance()->transformContext() };
+      mLayer = qgis::make_unique < QgsVectorLayer>( layerItem->uri(), layerItem->name(), layerItem->providerKey(), options );
+      break;
+    }
+
+    case QgsMapLayerType::PluginLayer:
+    {
+      // TODO: support display of properties for plugin layers
+      return;
     }
   }
-  else if ( type == QgsMapLayer::VectorLayer )
+
+  mAttributeTable->setModel( nullptr );
+  if ( mAttributeTableFilterModel )
   {
-    QgsDebugMsg( "creating vector layer" );
-    QgsVectorLayer *layer = new QgsVectorLayer( layerItem->uri(), layerItem->name(), layerItem->providerKey() );
-    if ( layer )
+    // Cleanup
+    mAttributeTableFilterModel->deleteLater();
+    mAttributeTableFilterModel = nullptr;
+  }
+  if ( mLayer && mLayer->isValid() )
+  {
+    bool ok = false;
+    mLayer->loadDefaultMetadata( ok );
+    layerCrs = mLayer->crs();
+    layerMetadata = mLayer->htmlMetadata();
+
+    mMapCanvas->setDestinationCrs( mLayer->crs() );
+    mMapCanvas->setLayers( QList< QgsMapLayer * >() << mLayer.get() );
+    mMapCanvas->zoomToFullExtent();
+
+    if ( mAttributesTab && mLayer->type() != QgsMapLayerType::VectorLayer )
     {
-      if ( layer->isValid() )
-      {
-        layerCrs = layer->crs();
-        layerMetadata = layer->htmlMetadata();
-      }
-      delete layer;
+      mTabWidget->removeTab( mTabWidget->indexOf( mAttributesTab ) );
+      mAttributesTab = nullptr;
     }
   }
-  else if ( type == QgsMapLayer::PluginLayer )
-  {
-    // TODO: support display of properties for plugin layers
-    return;
-  }
 
-  // restore /Projections/defaultBehavior
-  if ( defaultProjectionOption == QLatin1String( "prompt" ) )
-  {
-    settings.setValue( QStringLiteral( "Projections/defaultBehavior" ), defaultProjectionOption );
-  }
-
-  mNameLabel->setText( layerItem->name() );
-  mUriLabel->setText( layerItem->uri() );
-  mProviderLabel->setText( layerItem->providerKey() );
   QString myStyle = QgsApplication::reportStyleSheet();
   mMetadataTextBrowser->document()->setDefaultStyleSheet( myStyle );
   mMetadataTextBrowser->setHtml( layerMetadata );
 
-  // report if layer was set to to project crs without prompt (may give a false positive)
+// report if layer was set to to project crs without prompt (may give a false positive)
   if ( defaultProjectionOption == QLatin1String( "prompt" ) )
   {
     QgsCoordinateReferenceSystem defaultCrs =
       QgsProject::instance()->crs();
     if ( layerCrs == defaultCrs )
-      mNoticeLabel->setText( "NOTICE: Layer srs set from project (" + defaultCrs.authid() + ')' );
+      mNoticeLabel->setText( "NOTICE: Layer CRS set from project (" + defaultCrs.authid() + ')' );
   }
 
   if ( mNoticeLabel->text().isEmpty() )
@@ -202,20 +266,51 @@ void QgsBrowserLayerProperties::setItem( QgsDataItem *item )
   }
 }
 
-void QgsBrowserLayerProperties::setCondensedMode( bool condensedMode )
+void QgsBrowserLayerProperties::setCondensedMode( bool )
 {
-  if ( condensedMode )
-  {
-    mUriLabel->setLineWrapMode( QTextEdit::NoWrap );
-    mUriLabel->setHorizontalScrollBarPolicy( Qt::ScrollBarAlwaysOff );
-    mUriLabel->setVerticalScrollBarPolicy( Qt::ScrollBarAlwaysOff );
-  }
+
+}
+
+void QgsBrowserLayerProperties::urlClicked( const QUrl &url )
+{
+  QFileInfo file( url.toLocalFile() );
+  if ( file.exists() && !file.isDir() )
+    QgsGui::instance()->nativePlatformInterface()->openFileExplorerAndSelectFile( url.toLocalFile() );
   else
-  {
-    mUriLabel->setLineWrapMode( QTextEdit::WidgetWidth );
-    mUriLabel->setHorizontalScrollBarPolicy( Qt::ScrollBarAsNeeded );
-    mUriLabel->setVerticalScrollBarPolicy( Qt::ScrollBarAsNeeded );
-  }
+    QDesktopServices::openUrl( url );
+}
+
+void QgsBrowserLayerProperties::loadAttributeTable()
+{
+  if ( !mLayer || !mLayer->isValid() || mLayer->type() != QgsMapLayerType::VectorLayer )
+    return;
+
+  // Initialize the cache
+  QgsVectorLayerCache *layerCache = new QgsVectorLayerCache( qobject_cast< QgsVectorLayer * >( mLayer.get() ), 1000, this );
+  layerCache->setCacheGeometry( false );
+  QgsAttributeTableModel *tableModel = new QgsAttributeTableModel( layerCache, this );
+  mAttributeTableFilterModel = new QgsAttributeTableFilterModel( nullptr, tableModel, this );
+  tableModel->setRequest( QgsFeatureRequest().setFlags( QgsFeatureRequest::NoGeometry ).setLimit( 100 ) );
+  layerCache->setParent( tableModel );
+  tableModel->setParent( mAttributeTableFilterModel );
+
+  mAttributeTable->setModel( mAttributeTableFilterModel );
+  tableModel->loadLayer();
+  QFont font = mAttributeTable->font();
+  int fontSize = font.pointSize();
+#ifdef Q_OS_WIN
+  fontSize = std::max( fontSize - 1, 8 ); // bit less on windows, due to poor rendering of small point sizes
+#else
+  fontSize = std::max( fontSize - 2, 6 );
+#endif
+  font.setPointSize( fontSize );
+  mAttributeTable->setFont( font );
+
+  // we can safely do this expensive operation here (unlike in the main attribute table), because at most we have only 100 rows...
+  mAttributeTable->resizeColumnsToContents();
+  mAttributeTable->resizeRowsToContents();
+  mAttributeTable->verticalHeader()->setVisible( false ); // maximize valuable table space
+  mAttributeTable->setAlternatingRowColors( true );
 }
 
 QgsBrowserDirectoryProperties::QgsBrowserDirectoryProperties( QWidget *parent )
@@ -244,14 +339,7 @@ QgsBrowserPropertiesDialog::QgsBrowserPropertiesDialog( const QString &settingsS
   , mSettingsSection( settingsSection )
 {
   setupUi( this );
-  QgsSettings settings;
-  restoreGeometry( settings.value( mSettingsSection + "/propertiesDialog/geometry" ).toByteArray() );
-}
-
-QgsBrowserPropertiesDialog::~QgsBrowserPropertiesDialog()
-{
-  QgsSettings settings;
-  settings.setValue( mSettingsSection + "/propertiesDialog/geometry", saveGeometry() );
+  QgsGui::instance()->enableAutoGeometryRestore( this );
 }
 
 void QgsBrowserPropertiesDialog::setItem( QgsDataItem *item )
@@ -329,156 +417,5 @@ void QgsDockBrowserTreeView::dropEvent( QDropEvent *e )
   setAction( e );
 }
 
-//
-// QgsBrowserTreeFilterProxyModel
-//
-
-QgsBrowserTreeFilterProxyModel::QgsBrowserTreeFilterProxyModel( QObject *parent )
-  : QSortFilterProxyModel( parent )
-  , mPatternSyntax( QStringLiteral( "normal" ) )
-  , mCaseSensitivity( Qt::CaseInsensitive )
-{
-  setDynamicSortFilter( true );
-  setSortRole( QgsBrowserModel::SortRole );
-  setSortCaseSensitivity( Qt::CaseInsensitive );
-  sort( 0 );
-}
-
-void QgsBrowserTreeFilterProxyModel::setBrowserModel( QgsBrowserModel *model )
-{
-  mModel = model;
-  setSourceModel( model );
-}
-
-void QgsBrowserTreeFilterProxyModel::setFilterSyntax( const QString &syntax )
-{
-  QgsDebugMsg( QString( "syntax = %1" ).arg( syntax ) );
-  if ( mPatternSyntax == syntax )
-    return;
-  mPatternSyntax = syntax;
-  updateFilter();
-}
-
-void QgsBrowserTreeFilterProxyModel::setFilter( const QString &filter )
-{
-  QgsDebugMsg( QString( "filter = %1" ).arg( mFilter ) );
-  if ( mFilter == filter )
-    return;
-  mFilter = filter;
-  updateFilter();
-}
-
-void QgsBrowserTreeFilterProxyModel::setCaseSensitive( bool caseSensitive )
-{
-  mCaseSensitivity = caseSensitive ? Qt::CaseSensitive : Qt::CaseInsensitive;
-  updateFilter();
-}
-
-void QgsBrowserTreeFilterProxyModel::updateFilter()
-{
-  QgsDebugMsg( QString( "filter = %1 syntax = %2" ).arg( mFilter, mPatternSyntax ) );
-  mREList.clear();
-  if ( mPatternSyntax == QLatin1String( "normal" ) )
-  {
-    Q_FOREACH ( const QString &f, mFilter.split( '|' ) )
-    {
-      QRegExp rx( QString( "*%1*" ).arg( f.trimmed() ) );
-      rx.setPatternSyntax( QRegExp::Wildcard );
-      rx.setCaseSensitivity( mCaseSensitivity );
-      mREList.append( rx );
-    }
-  }
-  else if ( mPatternSyntax == QLatin1String( "wildcard" ) )
-  {
-    Q_FOREACH ( const QString &f, mFilter.split( '|' ) )
-    {
-      QRegExp rx( f.trimmed() );
-      rx.setPatternSyntax( QRegExp::Wildcard );
-      rx.setCaseSensitivity( mCaseSensitivity );
-      mREList.append( rx );
-    }
-  }
-  else
-  {
-    QRegExp rx( mFilter.trimmed() );
-    rx.setPatternSyntax( QRegExp::RegExp );
-    rx.setCaseSensitivity( mCaseSensitivity );
-    mREList.append( rx );
-  }
-  invalidateFilter();
-}
-
-bool QgsBrowserTreeFilterProxyModel::filterAcceptsString( const QString &value ) const
-{
-  if ( mPatternSyntax == QLatin1String( "normal" ) || mPatternSyntax == QLatin1String( "wildcard" ) )
-  {
-    Q_FOREACH ( const QRegExp &rx, mREList )
-    {
-      QgsDebugMsg( QString( "value: [%1] rx: [%2] match: %3" ).arg( value, rx.pattern() ).arg( rx.exactMatch( value ) ) );
-      if ( rx.exactMatch( value ) )
-        return true;
-    }
-  }
-  else
-  {
-    Q_FOREACH ( const QRegExp &rx, mREList )
-    {
-      QgsDebugMsg( QString( "value: [%1] rx: [%2] match: %3" ).arg( value, rx.pattern() ).arg( rx.indexIn( value ) ) );
-      if ( rx.indexIn( value ) != -1 )
-        return true;
-    }
-  }
-  return false;
-}
-
-bool QgsBrowserTreeFilterProxyModel::filterAcceptsRow( int sourceRow, const QModelIndex &sourceParent ) const
-{
-  if ( mFilter.isEmpty() || !mModel )
-    return true;
-
-  QModelIndex sourceIndex = mModel->index( sourceRow, 0, sourceParent );
-  return filterAcceptsItem( sourceIndex ) || filterAcceptsAncestor( sourceIndex ) || filterAcceptsDescendant( sourceIndex );
-}
-
-bool QgsBrowserTreeFilterProxyModel::filterAcceptsAncestor( const QModelIndex &sourceIndex ) const
-{
-  if ( !mModel )
-    return true;
-
-  QModelIndex sourceParentIndex = mModel->parent( sourceIndex );
-  if ( !sourceParentIndex.isValid() )
-    return false;
-  if ( filterAcceptsItem( sourceParentIndex ) )
-    return true;
-
-  return filterAcceptsAncestor( sourceParentIndex );
-}
-
-bool QgsBrowserTreeFilterProxyModel::filterAcceptsDescendant( const QModelIndex &sourceIndex ) const
-{
-  if ( !mModel )
-    return true;
-
-  for ( int i = 0; i < mModel->rowCount( sourceIndex ); i++ )
-  {
-    QgsDebugMsg( QString( "i = %1" ).arg( i ) );
-    QModelIndex sourceChildIndex = mModel->index( i, 0, sourceIndex );
-    if ( filterAcceptsItem( sourceChildIndex ) )
-      return true;
-    if ( filterAcceptsDescendant( sourceChildIndex ) )
-      return true;
-  }
-  return false;
-}
-
-bool QgsBrowserTreeFilterProxyModel::filterAcceptsItem( const QModelIndex &sourceIndex ) const
-{
-  if ( !mModel )
-    return true;
-  //accept item if either displayed text or comment role matches string
-  QString comment = mModel->data( sourceIndex, QgsBrowserModel::CommentRole ).toString();
-  return ( filterAcceptsString( mModel->data( sourceIndex, Qt::DisplayRole ).toString() )
-           || ( !comment.isEmpty() && filterAcceptsString( comment ) ) );
-}
 
 ///@endcond

@@ -22,10 +22,11 @@
 #include "qgsattributetablemodel.h"
 #include "qgsattributetablefiltermodel.h"
 #include "qgsattributetableview.h"
-
+#include "qgsexpressioncontextutils.h"
 
 #include "qgsapplication.h"
 #include "qgsvectorlayer.h"
+#include "qgsvectorlayerutils.h"
 #include "qgsvectordataprovider.h"
 #include "qgsexpression.h"
 #include "qgsexpressionbuilderwidget.h"
@@ -50,6 +51,10 @@
 #include "qgseditorwidgetregistry.h"
 #include "qgsfieldproxymodel.h"
 #include "qgsgui.h"
+#include "qgsclipboard.h"
+#include "qgsfeaturestore.h"
+#include "qgsguiutils.h"
+#include "qgsproxyprogresstask.h"
 
 QgsExpressionContext QgsAttributeTableDialog::createExpressionContext() const
 {
@@ -108,7 +113,8 @@ QgsAttributeTableDialog::QgsAttributeTableDialog( QgsVectorLayer *layer, QgsAttr
   connect( mActionExpressionSelect, &QAction::triggered, this, &QgsAttributeTableDialog::mActionExpressionSelect_triggered );
   connect( mMainView, &QgsDualView::showContextMenuExternally, this, &QgsAttributeTableDialog::showContextMenu );
 
-  Q_FOREACH ( const QgsField &field, mLayer->fields() )
+  const QgsFields fields = mLayer->fields();
+  for ( const QgsField &field : fields )
   {
     mVisibleFields.append( field.name() );
   }
@@ -142,13 +148,13 @@ QgsAttributeTableDialog::QgsAttributeTableDialog( QgsVectorLayer *layer, QgsAttr
   // Initialize the window geometry
   restoreGeometry( settings.value( QStringLiteral( "Windows/BetterAttributeTable/geometry" ) ).toByteArray() );
 
-  myDa = new QgsDistanceArea();
+  QgsDistanceArea da;
+  da.setSourceCrs( mLayer->crs(), QgsProject::instance()->transformContext() );
+  da.setEllipsoid( QgsProject::instance()->ellipsoid() );
+  mEditorContext.setDistanceArea( da );
 
-  myDa->setSourceCrs( mLayer->crs(), QgsProject::instance()->transformContext() );
-  myDa->setEllipsoid( QgsProject::instance()->ellipsoid() );
-
-  mEditorContext.setDistanceArea( *myDa );
   mEditorContext.setVectorLayerTools( QgisApp::instance()->vectorLayerTools() );
+  mEditorContext.setMapCanvas( QgisApp::instance()->mapCanvas() );
 
   QgsFeatureRequest r;
   bool needsGeom = false;
@@ -187,6 +193,14 @@ QgsAttributeTableDialog::QgsAttributeTableDialog( QgsVectorLayer *layer, QgsAttr
   mActionVisibleFilter->setIcon( filterIcon );
   mActionEditedFilter->setIcon( filterIcon );
 
+  mActionFeatureActions = new QToolButton();
+  mActionFeatureActions->setAutoRaise( false );
+  mActionFeatureActions->setPopupMode( QToolButton::InstantPopup );
+  mActionFeatureActions->setIcon( QgsApplication::getThemeIcon( QStringLiteral( "/mAction.svg" ) ) );
+  mActionFeatureActions->setText( tr( "Actions" ) );
+  mActionFeatureActions->setToolTip( tr( "Actions" ) );
+  mToolbar->addWidget( mActionFeatureActions );
+
   // Connect filter signals
   connect( mActionAdvancedFilter, &QAction::triggered, this, &QgsAttributeTableDialog::filterExpressionBuilder );
   connect( mActionShowAllFilter, &QAction::triggered, this, &QgsAttributeTableDialog::filterShowAll );
@@ -205,6 +219,7 @@ QgsAttributeTableDialog::QgsAttributeTableDialog( QgsVectorLayer *layer, QgsAttr
   connect( mLayer, &QgsVectorLayer::selectionChanged, this, &QgsAttributeTableDialog::updateTitle );
   connect( mLayer, &QgsVectorLayer::featureAdded, this, &QgsAttributeTableDialog::updateTitle );
   connect( mLayer, &QgsVectorLayer::featuresDeleted, this, &QgsAttributeTableDialog::updateTitle );
+  connect( mLayer, &QgsVectorLayer::editingStopped, this, &QgsAttributeTableDialog::updateTitle );
   connect( mLayer, &QgsVectorLayer::attributeAdded, this, &QgsAttributeTableDialog::columnBoxInit );
   connect( mLayer, &QgsVectorLayer::attributeDeleted, this, &QgsAttributeTableDialog::columnBoxInit );
   connect( mLayer, &QgsVectorLayer::readOnlyChanged, this, &QgsAttributeTableDialog::editingToggled );
@@ -217,14 +232,17 @@ QgsAttributeTableDialog::QgsAttributeTableDialog( QgsVectorLayer *layer, QgsAttr
   // info from table to application
   connect( this, &QgsAttributeTableDialog::saveEdits, this, [ = ] { QgisApp::instance()->saveEdits(); } );
 
-  bool myDockFlag = settings.value( QStringLiteral( "qgis/dockAttributeTable" ), false ).toBool();
-  if ( myDockFlag )
+  const bool dockTable = settings.value( QStringLiteral( "qgis/dockAttributeTable" ), false ).toBool();
+  if ( dockTable )
   {
-    mDock = new QgsAttributeTableDock( tr( "%1 (%n Feature(s))", "feature count", mMainView->featureCount() ).arg( mLayer->name() ), QgisApp::instance() );
+    mDock = new QgsAttributeTableDock( QString(), QgisApp::instance() );
     mDock->setWidget( this );
     connect( this, &QObject::destroyed, mDock, &QWidget::close );
     QgisApp::instance()->addDockWidget( Qt::BottomDockWidgetArea, mDock );
   }
+  mActionDockUndock->setChecked( dockTable );
+  connect( mActionDockUndock, &QAction::toggled, this, &QgsAttributeTableDialog::toggleDockMode );
+  installEventFilter( this );
 
   columnBoxInit();
   updateTitle();
@@ -239,7 +257,7 @@ QgsAttributeTableDialog::QgsAttributeTableDialog( QgsVectorLayer *layer, QgsAttr
   mActionInvertSelection->setIcon( QgsApplication::getThemeIcon( QStringLiteral( "/mActionInvertSelection.svg" ) ) );
   mActionToggleEditing->setIcon( QgsApplication::getThemeIcon( QStringLiteral( "/mActionToggleEditing.svg" ) ) );
   mActionSaveEdits->setIcon( QgsApplication::getThemeIcon( QStringLiteral( "/mActionSaveEdits.svg" ) ) );
-  mActionDeleteSelected->setIcon( QgsApplication::getThemeIcon( QStringLiteral( "/mActionDeleteSelected.svg" ) ) );
+  mActionDeleteSelected->setIcon( QgsApplication::getThemeIcon( QStringLiteral( "/mActionDeleteSelectedFeatures.svg" ) ) );
   mActionOpenFieldCalculator->setIcon( QgsApplication::getThemeIcon( QStringLiteral( "/mActionCalculateField.svg" ) ) );
   mActionAddAttribute->setIcon( QgsApplication::getThemeIcon( QStringLiteral( "/mActionNewAttribute.svg" ) ) );
   mActionRemoveAttribute->setIcon( QgsApplication::getThemeIcon( QStringLiteral( "/mActionDeleteAttribute.svg" ) ) );
@@ -333,25 +351,6 @@ QgsAttributeTableDialog::QgsAttributeTableDialog( QgsVectorLayer *layer, QgsAttr
       mActionSearchForm->setToolTip( tr( "Search is not supported when using custom UI forms" ) );
     }
 
-    QList<QgsAction> actions = mLayer->actions()->actions( QStringLiteral( "Layer" ) );
-
-    if ( actions.isEmpty() )
-    {
-      mActionFeatureActions->setVisible( false );
-    }
-    else
-    {
-      QMenu *actionMenu = new QMenu();
-      Q_FOREACH ( const QgsAction &action, actions )
-      {
-        QAction *qAction = actionMenu->addAction( action.icon(), action.shortTitle() );
-        qAction->setToolTip( action.name() );
-        qAction->setData( QVariant::fromValue<QgsAction>( action ) );
-        connect( qAction, &QAction::triggered, this, &QgsAttributeTableDialog::layerActionTriggered );
-      }
-      mActionFeatureActions->setMenu( actionMenu );
-    }
-
     editingToggled();
     // Close and delete if the layer has been destroyed
     connect( mLayer, &QObject::destroyed, this, &QWidget::close );
@@ -362,18 +361,15 @@ QgsAttributeTableDialog::QgsAttributeTableDialog( QgsVectorLayer *layer, QgsAttr
   }
 }
 
-QgsAttributeTableDialog::~QgsAttributeTableDialog()
-{
-  delete myDa;
-}
-
 void QgsAttributeTableDialog::updateTitle()
 {
   if ( ! mLayer )
   {
     return;
   }
-  QWidget *w = mDock ? qobject_cast<QWidget *>( mDock ) : qobject_cast<QWidget *>( this );
+  QWidget *w = mDock ? qobject_cast<QWidget *>( mDock )
+               : mDialog ? qobject_cast<QWidget *>( mDialog )
+               : qobject_cast<QWidget *>( this );
   w->setWindowTitle( tr( " %1 :: Features Total: %2, Filtered: %3, Selected: %4" )
                      .arg( mLayer->name() )
                      .arg( std::max( static_cast< long >( mMainView->featureCount() ), mLayer->featureCount() ) ) // layer count may be estimated, so use larger of the two
@@ -396,19 +392,8 @@ void QgsAttributeTableDialog::updateTitle()
 
 void QgsAttributeTableDialog::updateButtonStatus( const QString &fieldName, bool isValid )
 {
-  Q_UNUSED( fieldName );
+  Q_UNUSED( fieldName )
   mRunFieldCalc->setEnabled( isValid );
-}
-
-void QgsAttributeTableDialog::closeEvent( QCloseEvent *event )
-{
-  QDialog::closeEvent( event );
-
-  if ( !mDock )
-  {
-    QgsSettings settings;
-    settings.setValue( QStringLiteral( "Windows/BetterAttributeTable/geometry" ), saveGeometry() );
-  }
 }
 
 void QgsAttributeTableDialog::keyPressEvent( QKeyEvent *event )
@@ -421,9 +406,24 @@ void QgsAttributeTableDialog::keyPressEvent( QKeyEvent *event )
   }
 }
 
+bool QgsAttributeTableDialog::eventFilter( QObject *object, QEvent *ev )
+{
+  if ( ev->type() == QEvent::Close && !mDock && ( !mDialog || mDialog == object ) )
+  {
+    if ( QWidget *w = qobject_cast< QWidget * >( object ) )
+    {
+      QgsSettings settings;
+      settings.setValue( QStringLiteral( "Windows/BetterAttributeTable/geometry" ), w->saveGeometry() );
+    }
+  }
+
+  return QDialog::eventFilter( object, ev );
+}
+
 void QgsAttributeTableDialog::columnBoxInit()
 {
-  Q_FOREACH ( QAction *a, mFilterColumnsMenu->actions() )
+  const auto constActions = mFilterColumnsMenu->actions();
+  for ( QAction *a : constActions )
   {
     mFilterColumnsMenu->removeAction( a );
     mFilterActionMapper->removeMappings( a );
@@ -443,7 +443,8 @@ void QgsAttributeTableDialog::columnBoxInit()
 
   const QList<QgsField> fields = mLayer->fields().toList();
 
-  Q_FOREACH ( const QgsField &field, fields )
+  const auto constFields = fields;
+  for ( const QgsField &field : constFields )
   {
     int idx = mLayer->fields().lookupField( field.name() );
     if ( idx < 0 )
@@ -477,9 +478,9 @@ void QgsAttributeTableDialog::updateFieldFromExpressionSelected()
   runFieldCalculation( mLayer, mFieldCombo->currentField(), mUpdateExpressionText->asExpression(), filteredIds );
 }
 
-void QgsAttributeTableDialog::viewModeChanged( QgsAttributeForm::Mode mode )
+void QgsAttributeTableDialog::viewModeChanged( QgsAttributeEditorContext::Mode mode )
 {
-  if ( mode != QgsAttributeForm::SearchMode )
+  if ( mode != QgsAttributeEditorContext::SearchMode )
     mActionSearchForm->setChecked( false );
 }
 
@@ -490,17 +491,26 @@ void QgsAttributeTableDialog::formFilterSet( const QString &filter, QgsAttribute
 
 void QgsAttributeTableDialog::runFieldCalculation( QgsVectorLayer *layer, const QString &fieldName, const QString &expression, const QgsFeatureIds &filteredIds )
 {
-  QApplication::setOverrideCursor( Qt::WaitCursor );
-
-  mLayer->beginEditCommand( QStringLiteral( "Field calculator" ) );
-
   int fieldindex = layer->fields().indexFromName( fieldName );
+  if ( fieldindex < 0 )
+  {
+    // this shouldn't happen... but it did. There's probably some deeper underlying issue
+    // but we may as well play it safe here.
+    QMessageBox::critical( nullptr, tr( "Update Attributes" ), tr( "An error occurred while trying to update the field %1" ).arg( fieldName ) );
+    return;
+  }
+
+  QgsTemporaryCursorOverride cursorOverride( Qt::WaitCursor );
+  mLayer->beginEditCommand( QStringLiteral( "Field calculator" ) );
 
   bool calculationSuccess = true;
   QString error;
 
   QgsExpression exp( expression );
-  exp.setGeomCalculator( myDa );
+  QgsDistanceArea da;
+  da.setSourceCrs( mLayer->crs(), QgsProject::instance()->transformContext() );
+  da.setEllipsoid( QgsProject::instance()->ellipsoid() );
+  exp.setGeomCalculator( &da );
   exp.setDistanceUnits( QgsProject::instance()->distanceUnits() );
   exp.setAreaUnits( QgsProject::instance()->areaUnits() );
   bool useGeometry = exp.needsGeometry();
@@ -516,8 +526,18 @@ void QgsAttributeTableDialog::runFieldCalculation( QgsVectorLayer *layer, const 
 
   QgsField fld = layer->fields().at( fieldindex );
 
+  QSet< QString >referencedColumns = exp.referencedColumns();
+  referencedColumns.insert( fld.name() ); // need existing column value to store old attribute when changing field values
+  request.setSubsetOfAttributes( referencedColumns, layer->fields() );
+
   //go through all the features and change the new attributes
   QgsFeatureIterator fit = layer->getFeatures( request );
+
+  std::unique_ptr< QgsScopedProxyProgressTask > task = qgis::make_unique< QgsScopedProxyProgressTask >( tr( "Calculating field" ) );
+
+  long long count = !filteredIds.isEmpty() ? filteredIds.size() : layer->featureCount();
+  long long i = 0;
+
   QgsFeature feature;
   while ( fit.nextFeature( feature ) )
   {
@@ -525,6 +545,9 @@ void QgsAttributeTableDialog::runFieldCalculation( QgsVectorLayer *layer, const 
     {
       continue;
     }
+
+    i++;
+    task->setProgress( i / static_cast< double >( count ) * 100 );
 
     context.setFeature( feature );
     context.lastScope()->addVariable( QgsExpressionContextScope::StaticVariable( QStringLiteral( "row_number" ), rownum, true ) );
@@ -547,7 +570,8 @@ void QgsAttributeTableDialog::runFieldCalculation( QgsVectorLayer *layer, const 
     rownum++;
   }
 
-  QApplication::restoreOverrideCursor();
+  cursorOverride.release();
+  task.reset();
 
   if ( !calculationSuccess )
   {
@@ -559,7 +583,7 @@ void QgsAttributeTableDialog::runFieldCalculation( QgsVectorLayer *layer, const 
     mLayer->endEditCommand();
 
     // refresh table with updated values
-    // fixes https://issues.qgis.org/issues/17312
+    // fixes https://github.com/qgis/QGIS/issues/25210
     QgsAttributeTableModel *masterModel = mMainView->masterModel();
     int modelColumn = masterModel->fieldCol( fieldindex );
     masterModel->reload( masterModel->index( 0, modelColumn ), masterModel->index( masterModel->rowCount() - 1, modelColumn ) );
@@ -735,6 +759,7 @@ void QgsAttributeTableDialog::mActionAddFeature_triggered()
 
   QgsFeature f;
   QgsFeatureAction action( tr( "Geometryless feature added" ), f, mLayer, QString(), -1, this );
+  action.setForceSuppressFormPopup( true ); // we're already showing the table, allowing users to enter the new feature's attributes directly
   if ( action.addFeature() )
   {
     masterModel->reload( masterModel->index( 0, 0 ), masterModel->index( masterModel->rowCount() - 1, masterModel->columnCount() - 1 ) );
@@ -744,6 +769,7 @@ void QgsAttributeTableDialog::mActionAddFeature_triggered()
 void QgsAttributeTableDialog::mActionExpressionSelect_triggered()
 {
   QgsExpressionSelectionDialog *dlg = new QgsExpressionSelectionDialog( mLayer );
+  dlg->setMessageBar( QgisApp::instance()->messageBar() );
   dlg->setAttribute( Qt::WA_DeleteOnClose );
   dlg->show();
 }
@@ -755,7 +781,46 @@ void QgsAttributeTableDialog::mActionCutSelectedRows_triggered()
 
 void QgsAttributeTableDialog::mActionCopySelectedRows_triggered()
 {
-  QgisApp::instance()->copySelectionToClipboard( mLayer );
+  if ( mMainView->view() == QgsDualView::AttributeTable )
+  {
+    const QList<QgsFeatureId> featureIds = mMainView->tableView()->selectedFeaturesIds();
+    QgsFeatureStore featureStore;
+    QgsFields fields = QgsFields( mLayer->fields() );
+    QStringList fieldNames;
+
+    const auto configs = mMainView->attributeTableConfig().columns();
+    for ( const QgsAttributeTableConfig::ColumnConfig &columnConfig : configs )
+    {
+      if ( columnConfig.hidden )
+      {
+        int fieldIndex = fields.lookupField( columnConfig.name );
+        fields.remove( fieldIndex );
+        continue;
+      }
+      fieldNames << columnConfig.name;
+    }
+    featureStore.setFields( fields );
+
+    QgsFeatureIterator it = mLayer->getFeatures( QgsFeatureRequest( featureIds.toSet() )
+                            .setSubsetOfAttributes( fieldNames, mLayer->fields() ) );
+    QgsFeatureMap featureMap;
+    QgsFeature feature;
+    while ( it.nextFeature( feature ) )
+    {
+      QgsVectorLayerUtils::matchAttributesToFields( feature, fields );
+      featureMap[feature.id()] = feature;
+    }
+    for ( const QgsFeatureId &id : featureIds )
+    {
+      featureStore.addFeature( featureMap[id] );
+    }
+
+    QgisApp::instance()->clipboard()->replaceWithCopyOf( featureStore );
+  }
+  else
+  {
+    QgisApp::instance()->copySelectionToClipboard( mLayer );
+  }
 }
 
 void QgsAttributeTableDialog::mActionPasteFeatures_triggered()
@@ -810,6 +875,12 @@ void QgsAttributeTableDialog::mActionToggleEditing_toggled( bool )
 {
   if ( !mLayer )
     return;
+
+  //this has to be done, because in case only one cell has been changed and is still enabled, the change
+  //would not be added to the mEditBuffer. By disabling, it looses focus and the change will be stored.
+  if ( mLayer->isEditable() && mMainView->tableView()->indexWidget( mMainView->tableView()->currentIndex() ) )
+    mMainView->tableView()->indexWidget( mMainView->tableView()->currentIndex() )->setEnabled( false );
+
   if ( !QgisApp::instance()->toggleEditing( mLayer ) )
   {
     // restore gui state if toggling was canceled or layer commit/rollback failed
@@ -850,6 +921,30 @@ void QgsAttributeTableDialog::editingToggled()
   }
   // not necessary to set table read only if layer is not editable
   // because model always reflects actual state when returning item flags
+
+  QList<QgsAction> actions = mLayer->actions()->actions( QStringLiteral( "Layer" ) );
+
+  if ( actions.isEmpty() )
+  {
+    mActionFeatureActions->setVisible( false );
+  }
+  else
+  {
+    QMenu *actionMenu = new QMenu();
+    const auto constActions = actions;
+    for ( const QgsAction &action : constActions )
+    {
+      if ( !mLayer->isEditable() && action.isEnabledOnlyWhenEditable() )
+        continue;
+
+      QAction *qAction = actionMenu->addAction( action.icon(), action.shortTitle() );
+      qAction->setToolTip( action.name() );
+      qAction->setData( QVariant::fromValue<QgsAction>( action ) );
+      connect( qAction, &QAction::triggered, this, &QgsAttributeTableDialog::layerActionTriggered );
+    }
+    mActionFeatureActions->setMenu( actionMenu );
+  }
+
 }
 
 void QgsAttributeTableDialog::mActionAddAttribute_triggered()
@@ -1029,6 +1124,11 @@ void QgsAttributeTableDialog::setFilterExpression( const QString &filterString, 
   {
     request.setFlags( QgsFeatureRequest::NoGeometry );
   }
+  else
+  {
+    // force geometry extraction if the filter requests it
+    request.setFlags( request.flags() & ~QgsFeatureRequest::NoGeometry );
+  }
   QgsFeatureIterator featIt = mLayer->getFeatures( request );
 
   QgsFeature f;
@@ -1061,7 +1161,7 @@ void QgsAttributeTableDialog::setFilterExpression( const QString &filterString, 
 
 void QgsAttributeTableDialog::deleteFeature( const QgsFeatureId fid )
 {
-  QgsDebugMsg( QString( "Delete %1" ).arg( fid ) );
+  QgsDebugMsg( QStringLiteral( "Delete %1" ).arg( fid ) );
   mLayer->deleteFeature( fid );
 }
 
@@ -1069,8 +1169,83 @@ void QgsAttributeTableDialog::showContextMenu( QgsActionMenu *menu, const QgsFea
 {
   if ( mLayer->isEditable() )
   {
-    QAction *qAction = menu->addAction( QgsApplication::getThemeIcon( QStringLiteral( "/mActionDeleteSelected.svg" ) ),  tr( "Delete feature" ) );
+    QAction *qAction = menu->addAction( QgsApplication::getThemeIcon( QStringLiteral( "/mActionDeleteSelectedFeatures.svg" ) ),  tr( "Delete Feature" ) );
     connect( qAction, &QAction::triggered, this, [this, fid]() { deleteFeature( fid ); } );
+  }
+}
+
+void QgsAttributeTableDialog::toggleDockMode( bool docked )
+{
+  if ( docked )
+  {
+    // going from window -> dock, so save current window geometry
+    QgsSettings().setValue( QStringLiteral( "Windows/BetterAttributeTable/geometry" ), mDialog ? mDialog->saveGeometry() : saveGeometry() );
+    if ( mDialog )
+    {
+      mDialog->removeEventFilter( this );
+      mDialog->setLayout( nullptr );
+      mDialog->deleteLater();
+      mDialog = nullptr;
+    }
+
+    mDock = new QgsAttributeTableDock( QString(), QgisApp::instance() );
+    mDock->setWidget( this );
+    connect( this, &QObject::destroyed, mDock, &QWidget::close );
+    QgisApp::instance()->addDockWidget( Qt::BottomDockWidgetArea, mDock );
+    updateTitle();
+
+    // To prevent "QAction::event: Ambiguous shortcut overload"
+    QgsDebugMsgLevel( QStringLiteral( "Remove shortcuts from attribute table already defined in main window" ), 2 );
+    mActionCopySelectedRows->setShortcut( QKeySequence() );
+    mActionPasteFeatures->setShortcut( QKeySequence() );
+    mActionCutSelectedRows->setShortcut( QKeySequence() );
+    mActionZoomMapToSelectedRows->setShortcut( QKeySequence() );
+    mActionRemoveSelection->setShortcut( QKeySequence() );
+    mActionSelectAll->setShortcut( QKeySequence() );
+    // duplicated on Main Window, with different semantics
+    mActionPanMapToSelectedRows->setShortcut( QKeySequence() );
+    mActionSearchForm->setShortcut( QKeySequence() );
+  }
+  else
+  {
+    // going from dock -> window
+
+    mDialog = new QDialog( QgisApp::instance(), Qt::Window );
+    mDialog->setAttribute( Qt::WA_DeleteOnClose );
+
+    QVBoxLayout *vl = new QVBoxLayout();
+    vl->setContentsMargins( 0, 0, 0, 0 );
+    vl->setMargin( 0 );
+    vl->addWidget( this );
+    mDialog->setLayout( vl );
+
+    if ( mDock )
+    {
+      mDock->setWidget( nullptr );
+      disconnect( this, &QObject::destroyed, mDock, &QWidget::close );
+      mDock->deleteLater();
+      mDock = nullptr;
+    }
+
+    // subscribe to close events, so that we can save window geometry
+    mDialog->installEventFilter( this );
+
+    updateTitle();
+    mDialog->restoreGeometry( QgsSettings().value( QStringLiteral( "Windows/BetterAttributeTable/geometry" ) ).toByteArray() );
+    mDialog->show();
+
+    // restore attribute table shortcuts in window mode
+    QgsDebugMsgLevel( QStringLiteral( "Restore attribute table dialog shortcuts in window mode" ), 2 );
+    // duplicated on Main Window
+    mActionCopySelectedRows->setShortcut( QKeySequence( QKeySequence::Copy ) );
+    mActionPasteFeatures->setShortcut( QKeySequence( QKeySequence::Paste ) );
+    mActionCutSelectedRows->setShortcut( QKeySequence( QKeySequence::Cut ) );
+    mActionZoomMapToSelectedRows->setShortcut( QStringLiteral( "Ctrl+J" ) );
+    mActionRemoveSelection->setShortcut( QStringLiteral( "Ctrl+Shift+A" ) );
+    mActionSelectAll->setShortcut( QStringLiteral( "Ctrl+A" ) );
+    // duplicated on Main Window, with different semantics
+    mActionPanMapToSelectedRows->setShortcut( QStringLiteral( "Ctrl+P" ) );
+    mActionSearchForm->setShortcut( QStringLiteral( "Ctrl+F" ) );
   }
 }
 
@@ -1086,6 +1261,6 @@ QgsAttributeTableDock::QgsAttributeTableDock( const QString &title, QWidget *par
 
 void QgsAttributeTableDock::closeEvent( QCloseEvent *ev )
 {
-  Q_UNUSED( ev );
+  Q_UNUSED( ev )
   deleteLater();
 }

@@ -15,12 +15,14 @@
  *                                                                         *
  ***************************************************************************/
 
+#include "qgsgeometrycheckcontext.h"
 #include "qgsgeometrycheckersetuptab.h"
 #include "qgsgeometrycheckerresulttab.h"
 #include "qgsgeometrychecker.h"
 #include "qgsgeometrycheckfactory.h"
 #include "qgsgeometrycheck.h"
 #include "qgsfeaturepool.h"
+#include "qgsvectordataproviderfeaturepool.h"
 
 #include "qgsfeatureiterator.h"
 #include "qgisinterface.h"
@@ -29,6 +31,7 @@
 #include "qgsmapcanvas.h"
 #include "qgsvectorfilewriter.h"
 #include "qgsvectordataprovider.h"
+#include "qgsapplication.h"
 
 #include <QAction>
 #include <QEventLoop>
@@ -160,7 +163,7 @@ QList<QgsVectorLayer *> QgsGeometryCheckerSetupTab::getSelectedLayers()
     if ( item->checkState() == Qt::Checked )
     {
       QString layerId = item->data( LayerIdRole ).toString();
-      QgsVectorLayer *layer = qobject_cast<QgsVectorLayer *>( QgsProject::instance()->mapLayer( layerId ) );
+      QgsVectorLayer *layer = QgsProject::instance()->mapLayer<QgsVectorLayer *>( layerId );
       if ( layer )
       {
         layers.append( layer );
@@ -236,7 +239,7 @@ void QgsGeometryCheckerSetupTab::selectOutputDirectory()
 void QgsGeometryCheckerSetupTab::runChecks()
 {
   // Get selected layer
-  QList<QgsVectorLayer *> layers = getSelectedLayers();
+  const QList<QgsVectorLayer *> layers = getSelectedLayers();
   if ( layers.isEmpty() )
     return;
 
@@ -246,16 +249,16 @@ void QgsGeometryCheckerSetupTab::runChecks()
     {
       if ( layer->dataProvider()->dataSourceUri().startsWith( ui.lineEditOutputDirectory->text() ) )
       {
-        QMessageBox::critical( this, tr( "Invalid Output Directory" ), tr( "The chosen output directory contains one or more input layers." ) );
+        QMessageBox::critical( this, tr( "Check Geometries" ), tr( "The chosen output directory contains one or more input layers." ) );
         return;
       }
     }
   }
-  QgsVectorLayer *lineLayerCheckLayer = ui.comboLineLayerIntersection->isEnabled() ? dynamic_cast<QgsVectorLayer *>( QgsProject::instance()->mapLayer( ui.comboLineLayerIntersection->currentData().toString() ) ) : nullptr;
-  QgsVectorLayer *followBoundaryCheckLayer = ui.comboBoxFollowBoundaries->isEnabled() ? dynamic_cast<QgsVectorLayer *>( QgsProject::instance()->mapLayer( ui.comboBoxFollowBoundaries->currentData().toString() ) ) : nullptr;
+  QgsVectorLayer *lineLayerCheckLayer = ui.comboLineLayerIntersection->isEnabled() ? QgsProject::instance()->mapLayer<QgsVectorLayer *>( ui.comboLineLayerIntersection->currentData().toString() ) : nullptr;
+  QgsVectorLayer *followBoundaryCheckLayer = ui.comboBoxFollowBoundaries->isEnabled() ? QgsProject::instance()->mapLayer<QgsVectorLayer *>( ui.comboBoxFollowBoundaries->currentData().toString() ) : nullptr;
   if ( layers.contains( lineLayerCheckLayer ) || layers.contains( followBoundaryCheckLayer ) )
   {
-    QMessageBox::critical( this, tr( "Error" ), tr( "The test layer set contains a layer selected for a topology check." ) );
+    QMessageBox::critical( this, tr( "Check Geometries" ), tr( "The selected input layers cannot contain a layer also selected for a topology check." ) );
     return;
   }
 
@@ -263,7 +266,7 @@ void QgsGeometryCheckerSetupTab::runChecks()
   {
     if ( layer->isEditable() )
     {
-      QMessageBox::critical( this, tr( "Editable Input Layer" ), tr( "Input layer '%1' is not allowed to be in editing mode." ).arg( layer->name() ) );
+      QMessageBox::critical( this, tr( "Check Geometries" ), tr( "Input layer '%1' is not allowed to be in editing mode." ).arg( layer->name() ) );
       return;
     }
   }
@@ -272,7 +275,7 @@ void QgsGeometryCheckerSetupTab::runChecks()
   // Set window busy
   setCursor( Qt::WaitCursor );
   mRunButton->setEnabled( false );
-  ui.labelStatus->setText( tr( "<b>Preparing output...</b>" ) );
+  ui.labelStatus->setText( tr( "<b>Preparing output…</b>" ) );
   ui.labelStatus->show();
   QApplication::processEvents( QEventLoop::ExcludeUserInputEvents );
 
@@ -285,7 +288,7 @@ void QgsGeometryCheckerSetupTab::runChecks()
     QgsVectorFileWriter::MetaData metadata;
     if ( !QgsVectorFileWriter::driverMetadata( outputDriverName, metadata ) )
     {
-      QMessageBox::critical( this, tr( "Unknown Output Format" ), tr( "The specified output format cannot be recognized." ) );
+      QMessageBox::critical( this, tr( "Check Geometries" ), tr( "The specified output format cannot be recognized." ) );
       mRunButton->setEnabled( true );
       ui.labelStatus->hide();
       unsetCursor();
@@ -319,8 +322,8 @@ void QgsGeometryCheckerSetupTab::runChecks()
         createErrors.append( errMsg );
         continue;
       }
-
-      QgsVectorLayer *newlayer = new QgsVectorLayer( outputPath, QFileInfo( outputPath ).completeBaseName(), QStringLiteral( "ogr" ) );
+      const QgsVectorLayer::LayerOptions options { QgsProject::instance()->transformContext() };
+      QgsVectorLayer *newlayer = new QgsVectorLayer( outputPath, QFileInfo( outputPath ).completeBaseName(), QStringLiteral( "ogr" ), options );
       if ( selectedOnly )
       {
         QgsFeature feature;
@@ -355,7 +358,7 @@ void QgsGeometryCheckerSetupTab::runChecks()
     // Error if an output layer could not be created
     if ( !createErrors.isEmpty() )
     {
-      QMessageBox::critical( this, tr( "Layer Creation Failed" ), tr( "Failed to create one or more output layers:\n%1" ).arg( createErrors.join( "\n" ) ) );
+      QMessageBox::critical( this, tr( "Check Geometries" ), tr( "Failed to create one or more output layers:\n%1" ).arg( createErrors.join( "\n" ) ) );
       mRunButton->setEnabled( true );
       ui.labelStatus->hide();
       unsetCursor();
@@ -383,7 +386,7 @@ void QgsGeometryCheckerSetupTab::runChecks()
     {
       nonEditableLayerNames.append( layer->name() );
     }
-    if ( QMessageBox::Yes != QMessageBox::question( this, tr( "Non-editable Output Layers" ), tr( "The following output layers are in a format that does not support editing features:\n%1\n\nThe geometry check can be performed, but it will not be possible to fix any errors. Do you want to continue?" ).arg( nonEditableLayerNames.join( "\n" ) ), QMessageBox::Yes, QMessageBox::No ) )
+    if ( QMessageBox::Yes != QMessageBox::question( this, tr( "Check Geometries" ), tr( "The following output layers are in a format that does not support editing features:\n%1\n\nThe geometry check can be performed, but it will not be possible to fix any errors. Do you want to continue?" ).arg( nonEditableLayerNames.join( "\n" ) ), QMessageBox::Yes, QMessageBox::No ) )
     {
       if ( ui.radioButtonOutputNew->isChecked() )
       {
@@ -409,26 +412,22 @@ void QgsGeometryCheckerSetupTab::runChecks()
   }
 
   // Setup checker
-  ui.labelStatus->setText( tr( "<b>Building spatial index...</b>" ) );
+  ui.labelStatus->setText( tr( "<b>Building spatial index…</b>" ) );
   QApplication::processEvents( QEventLoop::ExcludeUserInputEvents );
   QMap<QString, QgsFeaturePool *> featurePools;
   for ( QgsVectorLayer *layer : qgis::as_const( processLayers ) )
   {
-    double layerToMapUntis = mIface->mapCanvas()->mapSettings().layerToMapUnits( layer );
-    QgsCoordinateTransform layerToMapTransform( layer->crs(), QgsProject::instance()->crs(), QgsProject::instance() );
-    featurePools.insert( layer->id(), new QgsFeaturePool( layer, layerToMapUntis, layerToMapTransform, selectedOnly ) );
+    featurePools.insert( layer->id(), new QgsVectorDataProviderFeaturePool( layer, selectedOnly ) );
   }
   // LineLayerIntersection check is enabled, make sure there is also a feature pool for that layer
   if ( ui.checkLineLayerIntersection->isChecked() && !featurePools.keys().contains( ui.comboLineLayerIntersection->currentData().toString() ) )
   {
-    QgsVectorLayer *layer = dynamic_cast<QgsVectorLayer *>( QgsProject::instance()->mapLayer( ui.comboLineLayerIntersection->currentData().toString() ) );
+    QgsVectorLayer *layer = QgsProject::instance()->mapLayer<QgsVectorLayer *>( ui.comboLineLayerIntersection->currentData().toString() );
     Q_ASSERT( layer );
-    double layerToMapUntis = mIface->mapCanvas()->mapSettings().layerToMapUnits( layer );
-    QgsCoordinateTransform layerToMapTransform( layer->crs(), QgsProject::instance()->crs(), QgsProject::instance() );
-    featurePools.insert( layer->id(), new QgsFeaturePool( layer, layerToMapUntis, layerToMapTransform, selectedOnly ) );
+    featurePools.insert( layer->id(), new QgsVectorDataProviderFeaturePool( layer, selectedOnly ) );
   }
 
-  QgsGeometryCheckerContext *context = new QgsGeometryCheckerContext( ui.spinBoxTolerance->value(), QgsProject::instance()->crs(), featurePools );
+  QgsGeometryCheckContext *context = new QgsGeometryCheckContext( ui.spinBoxTolerance->value(), QgsProject::instance()->crs(), QgsProject::instance()->transformContext() );
 
   QList<QgsGeometryCheck *> checks;
   for ( const QgsGeometryCheckFactory *factory : QgsGeometryCheckFactoryRegistry::getCheckFactories() )
@@ -439,7 +438,7 @@ void QgsGeometryCheckerSetupTab::runChecks()
       checks.append( check );
     }
   }
-  QgsGeometryChecker *checker = new QgsGeometryChecker( checks, context );
+  QgsGeometryChecker *checker = new QgsGeometryChecker( checks, context, featurePools );
 
   emit checkerStarted( checker );
 
@@ -467,10 +466,14 @@ void QgsGeometryCheckerSetupTab::runChecks()
   connect( mAbortButton, &QAbstractButton::clicked, &futureWatcher, &QFutureWatcherBase::cancel );
   connect( mAbortButton, &QAbstractButton::clicked, this, &QgsGeometryCheckerSetupTab::showCancelFeedback );
 
+  mIsRunningInBackground = true;
+
   int maxSteps = 0;
   futureWatcher.setFuture( checker->execute( &maxSteps ) );
   ui.progressBar->setRange( 0, maxSteps );
   evLoop.exec();
+
+  mIsRunningInBackground = false;
 
   // Restore window
   unsetCursor();
@@ -489,7 +492,7 @@ void QgsGeometryCheckerSetupTab::runChecks()
 void QgsGeometryCheckerSetupTab::showCancelFeedback()
 {
   mAbortButton->setEnabled( false );
-  ui.labelStatus->setText( tr( "<b>Waiting for running checks to finish...</b>" ) );
+  ui.labelStatus->setText( tr( "<b>Waiting for running checks to finish…</b>" ) );
   ui.labelStatus->show();
   ui.progressBar->hide() ;
 }

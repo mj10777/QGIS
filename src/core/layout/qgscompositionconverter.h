@@ -20,7 +20,6 @@
 #include <QDomDocument>
 #include <QDomElement>
 
-#include "qgis.h"
 #include "qgis_sip.h"
 
 #define SIP_NO_FILE
@@ -44,13 +43,13 @@ class QgsLayoutItemScaleBar;
 class QgsLayoutItemLegend;
 class QgsLayoutItemHtml;
 class QgsLayoutItemAttributeTable;
-
+class QgsLayoutAtlas;
 
 /**
  * QgsCompositionConverter class converts a QGIS 2.x composition to a QGIS 3.x layout
- * \since QGIS 3.0
  * \note Not available in Python bindings.
  * \ingroup core
+ * \since QGIS 3.0
  */
 class CORE_EXPORT QgsCompositionConverter
 {
@@ -136,13 +135,31 @@ class CORE_EXPORT QgsCompositionConverter
      * \param layout where the items will be added
      * \param parentElement parent DOM element
      * \param position for pasting
-     * \param pasteInPlace if true element position is translated to \a position
+     * \param pasteInPlace if TRUE element position is translated to \a position
      * \return list of layout object items that have been added to the layout
      */
     static QList<QgsLayoutObject *> addItemsFromCompositionXml( QgsPrintLayout *layout,
         const QDomElement &parentElement,
         QPointF *position = nullptr,
         bool pasteInPlace = false );
+
+    /**
+     * Check if the given \a document is a composition template
+     * \return TRUE if the document is a composition template
+     * \since QGIS 3.0.1
+     */
+    static bool isCompositionTemplate( const QDomDocument &document );
+
+    /**
+     * Convert a composition template \a document to a layout template
+     * \param document containing a composition
+     * \param project
+     * \return dom document with the converted template
+     * \since QGIS 3.0.1
+     */
+    static QDomDocument convertCompositionTemplate( const QDomDocument
+        &document, QgsProject *project );
+
 
   private:
 
@@ -205,7 +222,7 @@ class CORE_EXPORT QgsCompositionConverter
     static void readOldDataDefinedPropertyMap( const QDomElement &itemElem,
         QgsPropertyCollection &dataDefinedProperties );
 
-    static QgsProperty readOldDataDefinedProperty( const DataDefinedProperty property, const QDomElement &ddElem );
+    static QgsProperty readOldDataDefinedProperty( DataDefinedProperty property, const QDomElement &ddElem );
 
     static void initPropertyDefinitions();
 
@@ -220,7 +237,7 @@ class CORE_EXPORT QgsCompositionConverter
     //! Restore general composer item properties
     static void restoreGeneralComposeItemProperties( QgsLayoutItem *layoutItem, const QDomElement &itemElem );
 
-    //! Get item position
+    //! Gets item position
     static QRectF itemPosition( QgsLayoutItem *layoutItem, const QDomElement &itemElem );
 
     //! Calculates the item minimum position from an xml string

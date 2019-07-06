@@ -14,25 +14,36 @@
  ***************************************************************************/
 
 #include "qgswfsdescribefeaturetype.h"
-#include "qgswfsutils.h"
+#include "qgsmessagelog.h"
 
-QgsWFSDescribeFeatureType::QgsWFSDescribeFeatureType( const QString &uri )
+QgsWFSDescribeFeatureType::QgsWFSDescribeFeatureType( QgsWFSDataSourceURI &uri )
   : QgsWfsRequest( uri )
 {
 }
 
 bool QgsWFSDescribeFeatureType::requestFeatureType( const QString &WFSVersion,
-    const QString &typeName, bool forceSingularTypeName )
+    const QString &typeName, const QgsWfsCapabilities::Capabilities &caps )
 {
-  QUrl url( baseURL() );
-  url.addQueryItem( QStringLiteral( "REQUEST" ), QStringLiteral( "DescribeFeatureType" ) );
+  QUrl url( mUri.requestUrl( QStringLiteral( "DescribeFeatureType" ) ) );
   url.addQueryItem( QStringLiteral( "VERSION" ), WFSVersion );
-  // The specs are not consistent: is it singular in 1.0.x and plural in 2.0.0?
-  // see http://docs.opengeospatial.org/is/09-025r2/09-025r2.html#147
-  if ( ! forceSingularTypeName )
-    url.addQueryItem( QgsWFSUtils::typeNameParameterForVersion( WFSVersion ).toUpper( ), typeName );
-  else
-    url.addQueryItem( QStringLiteral( "TYPENAME" ), typeName );
+
+  QString namespaceValue( caps.getNamespaceParameterValue( WFSVersion, typeName ) );
+
+  if ( WFSVersion.startsWith( QLatin1String( "2.0" ) ) )
+  {
+    url.addQueryItem( QStringLiteral( "TYPENAMES" ), typeName );
+    if ( !namespaceValue.isEmpty() )
+    {
+      url.addQueryItem( QStringLiteral( "NAMESPACES" ), namespaceValue );
+    }
+  }
+
+  url.addQueryItem( QStringLiteral( "TYPENAME" ), typeName );
+  if ( !namespaceValue.isEmpty() )
+  {
+    url.addQueryItem( QStringLiteral( "NAMESPACE" ), namespaceValue );
+  }
+
   return sendGET( url, true, false );
 }
 

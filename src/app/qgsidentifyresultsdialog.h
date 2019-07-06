@@ -26,6 +26,7 @@
 #include "qgsmaptoolidentify.h"
 #include "qgswebview.h"
 #include "qgsexpressioncontext.h"
+#include "qgsmaptoolselectionhandler.h"
 
 #include <QWidget>
 #include <QList>
@@ -44,6 +45,7 @@ class QgsVectorLayer;
 class QgsRasterLayer;
 class QgsHighlight;
 class QgsMapCanvas;
+class QgsMeshLayer;
 class QgsDockWidget;
 class QgsMapLayerAction;
 class QgsEditorWidgetSetup;
@@ -122,18 +124,21 @@ class APP_EXPORT QgsIdentifyResultsDialog: public QDialog, private Ui::QgsIdenti
 
   public:
 
-    //! Constructor - takes it own copy of the QgsAttributeAction so
-    // that it is independent of whoever created it.
+    /**
+     * Constructor -
+     * takes its own copy of the QgsAttributeAction so
+     * that it is independent of whoever created it.
+     */
     QgsIdentifyResultsDialog( QgsMapCanvas *canvas, QWidget *parent = nullptr, Qt::WindowFlags f = nullptr );
 
     ~QgsIdentifyResultsDialog() override;
 
-    //! Add add feature from vector layer
+    //! Adds feature from vector layer
     void addFeature( QgsVectorLayer *layer,
                      const QgsFeature &f,
                      const QMap< QString, QString > &derivedAttributes );
 
-    //! Add add feature from other layer
+    //! Adds feature from raster layer
     void addFeature( QgsRasterLayer *layer,
                      const QString &label,
                      const QMap< QString, QString > &attributes,
@@ -142,7 +147,16 @@ class APP_EXPORT QgsIdentifyResultsDialog: public QDialog, private Ui::QgsIdenti
                      const QgsFeature &feature = QgsFeature(),
                      const QMap<QString, QVariant> &params = ( QMap<QString, QVariant>() ) );
 
-    //! Add feature from identify results
+    /**
+     * Adds results from mesh layer
+     * \since QGIS 3.6
+     */
+    void addFeature( QgsMeshLayer *layer,
+                     const QString &label,
+                     const QMap< QString, QString > &attributes,
+                     const QMap< QString, QString > &derivedAttributes );
+
+    //! Adds feature from identify results
     void addFeature( const QgsMapToolIdentify::IdentifyResult &result );
 
     //! Map tool was deactivated
@@ -167,6 +181,8 @@ class APP_EXPORT QgsIdentifyResultsDialog: public QDialog, private Ui::QgsIdenti
      */
     QgsExpressionContextScope expressionContextScope() const;
 
+    QgsMapToolSelectionHandler::SelectionMode selectionMode() const;
+
   signals:
     void selectedFeatureChanged( QgsVectorLayer *, QgsFeatureId featureId );
 
@@ -176,6 +192,8 @@ class APP_EXPORT QgsIdentifyResultsDialog: public QDialog, private Ui::QgsIdenti
     void copyToClipboard( QgsFeatureStore &featureStore );
 
     void activateLayer( QgsMapLayer * );
+
+    void selectionModeChanged();
 
   public slots:
     //! Remove results
@@ -226,8 +244,8 @@ class APP_EXPORT QgsIdentifyResultsDialog: public QDialog, private Ui::QgsIdenti
 
     void cbxAutoFeatureForm_toggled( bool checked );
 
-    void mExpandAction_triggered( bool checked ) { Q_UNUSED( checked ); expandAll(); }
-    void mCollapseAction_triggered( bool checked ) { Q_UNUSED( checked ); collapseAll(); }
+    void mExpandAction_triggered( bool checked ) { Q_UNUSED( checked ) expandAll(); }
+    void mCollapseAction_triggered( bool checked ) { Q_UNUSED( checked ) collapseAll(); }
 
     void mActionCopy_triggered( bool checked );
 
@@ -251,13 +269,16 @@ class APP_EXPORT QgsIdentifyResultsDialog: public QDialog, private Ui::QgsIdenti
     QList<QgsFeature> mFeatures;
     QMap< QString, QMap< QString, QVariant > > mWidgetCaches;
     QgsExpressionContextScope mExpressionContextScope;
+    QToolButton *mSelectModeButton = nullptr;
 
     QgsMapLayer *layer( QTreeWidgetItem *item );
     QgsVectorLayer *vectorLayer( QTreeWidgetItem *item );
     QgsRasterLayer *rasterLayer( QTreeWidgetItem *item );
+    QgsMeshLayer *meshLayer( QTreeWidgetItem *item );
     QTreeWidgetItem *featureItem( QTreeWidgetItem *item );
     QTreeWidgetItem *layerItem( QTreeWidgetItem *item );
     QTreeWidgetItem *layerItem( QObject *layer );
+
 
     void highlightLayer( QTreeWidgetItem *object );
     void layerProperties( QTreeWidgetItem *object );
@@ -279,6 +300,12 @@ class APP_EXPORT QgsIdentifyResultsDialog: public QDialog, private Ui::QgsIdenti
     QVector<QgsIdentifyPlotCurve *> mPlotCurves;
 
     void showHelp();
+
+    QgsMapToolSelectionHandler::SelectionMode mSelectionMode = QgsMapToolSelectionHandler::SelectSimple;
+
+    void setSelectionMode();
+
+    void initSelectionModes();
 };
 
 class QgsIdentifyResultsDialogMapLayerAction : public QAction

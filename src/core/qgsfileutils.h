@@ -18,7 +18,8 @@
 #ifndef QGSFILEUTILS_H
 #define QGSFILEUTILS_H
 
-#include "qgis.h"
+#include "qgis_core.h"
+#include <QString>
 
 /**
  * \ingroup core
@@ -31,7 +32,7 @@ class CORE_EXPORT QgsFileUtils
   public:
 
     /**
-     * Return the human size from bytes
+     * Returns the human size from bytes
      */
     static QString representFileSize( qint64 bytes );
 
@@ -75,9 +76,17 @@ class CORE_EXPORT QgsFileUtils
      * Converts a \a string to a safe filename, replacing characters which are not safe
      * for filenames with an '_' character.
      *
-     * This method should be called with file names only, not complete paths.
+     * \warning This method strips slashes from the filename, so it is safe to call with file names only, not complete paths.
      */
     static QString stringToSafeFilename( const QString &string );
+
+    /**
+     * Returns the top-most existing folder from \a path. E.g. if \a path is "/home/user/projects/2018/P4343"
+     * and "/home/user/projects" exists but no "2018" subfolder exists, then the function will return "/home/user/projects".
+     *
+     * \since QGIS 3.2
+     */
+    static QString findClosestExistingPath( const QString &path );
 };
 
 #endif // QGSFILEUTILS_H

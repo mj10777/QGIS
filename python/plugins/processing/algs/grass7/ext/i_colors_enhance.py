@@ -21,19 +21,15 @@ __author__ = 'Médéric Ribreux'
 __date__ = 'March 2016'
 __copyright__ = '(C) 2016, Médéric Ribreux'
 
-# This will get replaced with a git SHA1 when you do a git archive
-
-__revision__ = '$Format:%H$'
-
 from .i import exportInputRasters
 
 
-def processCommand(alg, parameters, context):
+def processCommand(alg, parameters, context, feedback):
     # Temporary remove outputs:
-    alg.processCommand(parameters, context, True)
+    alg.processCommand(parameters, context, feedback, True)
 
 
-def processOutputs(alg, parameters, context):
+def processOutputs(alg, parameters, context, feedback):
     # Input rasters are output rasters
     rasterDic = {'red': 'redoutput', 'green': 'greenoutput', 'blue': 'blueoutput'}
     exportInputRasters(alg, parameters, context, rasterDic)

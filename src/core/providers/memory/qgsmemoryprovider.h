@@ -31,7 +31,7 @@ class QgsMemoryProvider : public QgsVectorDataProvider
     Q_OBJECT
 
   public:
-    explicit QgsMemoryProvider( const QString &uri = QString() );
+    explicit QgsMemoryProvider( const QString &uri, const QgsVectorDataProvider::ProviderOptions &coordinateTransformContext );
 
     ~QgsMemoryProvider() override;
 
@@ -40,7 +40,11 @@ class QgsMemoryProvider : public QgsVectorDataProvider
     //! Returns the memory provider description
     static QString providerDescription();
 
-    static QgsMemoryProvider *createProvider( const QString &uri );
+    /**
+     * Creates a new memory provider, with provider properties embedded within the given \a uri and \a options
+     * argument.
+     */
+    static QgsMemoryProvider *createProvider( const QString &uri, const QgsVectorDataProvider::ProviderOptions &coordinateTransformContext );
 
     /* Implementation of functions from QgsVectorDataProvider */
 
@@ -64,6 +68,7 @@ class QgsMemoryProvider : public QgsVectorDataProvider
     bool supportsSubsetString() const override { return true; }
     bool createSpatialIndex() override;
     QgsVectorDataProvider::Capabilities capabilities() const override;
+    bool truncate() override;
 
     /* Implementation of functions from QgsDataProvider */
 
@@ -73,6 +78,7 @@ class QgsMemoryProvider : public QgsVectorDataProvider
     void updateExtents() override;
     bool isValid() const override;
     QgsCoordinateReferenceSystem crs() const override;
+    void handlePostCloneOperations( QgsVectorDataProvider *source ) override;
 
   private:
     // Coordinate reference system

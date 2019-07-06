@@ -17,7 +17,6 @@
 #define QGSFEATUREFILTERMODEL_P_H
 
 #include <QThread>
-#include "qgsvectorlayer.h"
 #include "qgsfeaturefiltermodel.h"
 #include "qgslogger.h"
 #include "qgsvectorlayerfeatureiterator.h"
@@ -75,7 +74,7 @@ class QgsFieldExpressionValuesGatherer: public QThread
       mWasCanceled = true;
     }
 
-    //! Returns true if collection was canceled before completion
+    //! Returns TRUE if collection was canceled before completion
     bool wasCanceled() const { return mWasCanceled; }
 
     QVector<QgsFeatureFilterModel::Entry> entries() const

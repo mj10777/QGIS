@@ -13,12 +13,11 @@
  *                                                                         *
  ***************************************************************************/
 
-#ifndef QGSMARKERSYMBOLLAYERV2_H
-#define QGSMARKERSYMBOLLAYERV2_H
+#ifndef QGSMARKERSYMBOLLAYER_H
+#define QGSMARKERSYMBOLLAYER_H
 
 #include "qgis_core.h"
 #include "qgis_sip.h"
-#include "qgis.h"
 #include "qgssymbollayer.h"
 
 #define DEFAULT_SIMPLEMARKER_NAME         "circle"
@@ -77,9 +76,9 @@ class CORE_EXPORT QgsSimpleMarkerSymbolLayerBase : public QgsMarkerSymbolLayer
     static QList< QgsSimpleMarkerSymbolLayerBase::Shape > availableShapes();
 
     /**
-     * Returns true if a symbol shape has a fill.
+     * Returns TRUE if a symbol shape has a fill.
      * \param shape shape to test
-     * \returns true if shape uses a fill, or false if shape uses lines only
+     * \returns TRUE if shape uses a fill, or FALSE if shape uses lines only
      */
     static bool shapeIsFilled( QgsSimpleMarkerSymbolLayerBase::Shape shape );
 
@@ -112,7 +111,7 @@ class CORE_EXPORT QgsSimpleMarkerSymbolLayerBase : public QgsMarkerSymbolLayer
      * Attempts to decode a string representation of a shape name to the corresponding
      * shape.
      * \param name encoded shape name
-     * \param ok if specified, will be set to true if shape was successfully decoded
+     * \param ok if specified, will be set to TRUE if shape was successfully decoded
      * \returns decoded name
      * \see encodeShape()
      */
@@ -135,13 +134,11 @@ class CORE_EXPORT QgsSimpleMarkerSymbolLayerBase : public QgsMarkerSymbolLayer
 
     /**
      * Prepares the layer for drawing the specified shape (QPolygonF version)
-     * \note not available in Python bindings
      */
     bool prepareMarkerShape( Shape shape );
 
     /**
      * Prepares the layer for drawing the specified shape (QPainterPath version)
-     * \note not available in Python bindings
      */
     bool prepareMarkerPath( Shape symbol );
 
@@ -149,17 +146,15 @@ class CORE_EXPORT QgsSimpleMarkerSymbolLayerBase : public QgsMarkerSymbolLayer
      * Creates a polygon representing the specified shape.
      * \param shape shape to create
      * \param polygon destination polygon for shape
-     * \returns true if shape was successfully stored in polygon
-     * \note not available in Python bindings
+     * \returns TRUE if shape was successfully stored in polygon
      */
     bool shapeToPolygon( Shape shape, QPolygonF &polygon ) const;
 
     /**
      * Calculates the desired size of the marker, considering data defined size overrides.
      * \param context symbol render context
-     * \param hasDataDefinedSize will be set to true if marker uses data defined sizes
+     * \param hasDataDefinedSize will be set to TRUE if marker uses data defined sizes
      * \returns marker size, in original size units
-     * \note not available in Python bindings
      */
     double calculateSize( QgsSymbolRenderContext &context, bool &hasDataDefinedSize ) const;
 
@@ -167,10 +162,9 @@ class CORE_EXPORT QgsSimpleMarkerSymbolLayerBase : public QgsMarkerSymbolLayer
      * Calculates the marker offset and rotation.
      * \param context symbol render context
      * \param scaledSize size of symbol to render
-     * \param hasDataDefinedRotation will be set to true if marker has data defined rotation
+     * \param hasDataDefinedRotation will be set to TRUE if marker has data defined rotation
      * \param offset will be set to calculated marker offset (in painter units)
      * \param angle will be set to calculated marker angle
-     * \note not available in Python bindings
      */
     void calculateOffsetAndRotation( QgsSymbolRenderContext &context, double scaledSize, bool &hasDataDefinedRotation, QPointF &offset, double &angle ) const;
 
@@ -280,39 +274,39 @@ class CORE_EXPORT QgsSimpleMarkerSymbolLayer : public QgsSimpleMarkerSymbolLayer
 
     /**
      * Returns the marker's stroke style (e.g., solid, dashed, etc)
-     * \since QGIS 2.4
      * \see setStrokeStyle()
      * \see strokeColor()
      * \see penJoinStyle()
+     * \since QGIS 2.4
     */
     Qt::PenStyle strokeStyle() const { return mStrokeStyle; }
 
     /**
      * Sets the marker's stroke style (e.g., solid, dashed, etc)
      * \param strokeStyle style
-     * \since QGIS 2.4
      * \see strokeStyle()
      * \see setStrokeColor()
      * \see setPenJoinStyle()
+     * \since QGIS 2.4
     */
     void setStrokeStyle( Qt::PenStyle strokeStyle ) { mStrokeStyle = strokeStyle; }
 
     /**
      * Returns the marker's stroke join style (e.g., miter, bevel, etc).
-     * \since QGIS 2.16
      * \see setPenJoinStyle()
      * \see strokeColor()
      * \see strokeStyle()
+     * \since QGIS 2.16
     */
     Qt::PenJoinStyle penJoinStyle() const { return mPenJoinStyle; }
 
     /**
      * Sets the marker's stroke join style (e.g., miter, bevel, etc).
      * \param style join style
-     * \since QGIS 2.16
      * \see penJoinStyle()
      * \see setStrokeColor()
      * \see setStrokeStyle()
+     * \since QGIS 2.16
     */
     void setPenJoinStyle( Qt::PenJoinStyle style ) { mPenJoinStyle = style; }
 
@@ -379,7 +373,7 @@ class CORE_EXPORT QgsSimpleMarkerSymbolLayer : public QgsSimpleMarkerSymbolLayer
 
     /**
      * Prepares cache image
-     * \returns true in case of success, false if cache image size too large
+     * \returns TRUE in case of success, FALSE if cache image size too large
     */
     bool prepareCache( QgsSymbolRenderContext &context );
 
@@ -410,7 +404,7 @@ class CORE_EXPORT QgsSimpleMarkerSymbolLayer : public QgsSimpleMarkerSymbolLayer
     QImage mSelCache;
 
     /**
-     * True if using cached images of markers for drawing. This is faster, but cannot
+     * TRUE if using cached images of markers for drawing. This is faster, but cannot
      * be used when data defined properties are present
      */
     bool mUsingCache = false;
@@ -461,6 +455,7 @@ class CORE_EXPORT QgsFilledMarkerSymbolLayer : public QgsSimpleMarkerSymbolLayer
     bool setSubSymbol( QgsSymbol *symbol SIP_TRANSFER ) override;
     double estimateMaxBleed( const QgsRenderContext &context ) const override;
     QSet<QString> usedAttributes( const QgsRenderContext &context ) const override;
+    bool hasDataDefinedProperties() const override;
     void setColor( const QColor &c ) override;
     QColor color() const override;
 
@@ -548,7 +543,7 @@ class CORE_EXPORT QgsSvgMarkerSymbolLayer : public QgsMarkerSymbolLayer
     double updateDefaultAspectRatio();
 
     /**
-     * Returns the preserved aspect ratio value, true if fixed aspect ratio has been lower or equal to 0.
+     * Returns the preserved aspect ratio value, TRUE if fixed aspect ratio has been lower or equal to 0.
      * \see setPreservedAspectRatio()
      */
     bool preservedAspectRatio() const { return mFixedAspectRatio <= 0.0; }
@@ -556,7 +551,7 @@ class CORE_EXPORT QgsSvgMarkerSymbolLayer : public QgsMarkerSymbolLayer
     /**
      * Set preserved the marker aspect ratio between width and height.
      * \param par Preserved Aspect Ratio
-     * \returns the preserved aspect ratio value, true if fixed aspect ratio has been lower or equal to 0
+     * \returns the preserved aspect ratio value, TRUE if fixed aspect ratio has been lower or equal to 0
      * \see preservedAspectRatio()
      */
     bool setPreservedAspectRatio( bool par );
@@ -617,8 +612,7 @@ class CORE_EXPORT QgsSvgMarkerSymbolLayer : public QgsMarkerSymbolLayer
      * Calculates the marker aspect ratio between width and height.
      * \param context symbol render context
      * \param scaledSize size of symbol to render
-     * \param hasDataDefinedAspectRatio will be set to true if marker has data defined aspectRatio
-     * \note not available in Python bindings
+     * \param hasDataDefinedAspectRatio will be set to TRUE if marker has data defined aspectRatio
      */
     double calculateAspectRatio( QgsSymbolRenderContext &context, double scaledSize, bool &hasDataDefinedAspectRatio ) const;
 
@@ -644,6 +638,150 @@ class CORE_EXPORT QgsSvgMarkerSymbolLayer : public QgsMarkerSymbolLayer
 
 //////////
 
+#define DEFAULT_RASTERMARKER_SIZE         2*DEFAULT_POINT_SIZE
+#define DEFAULT_RASTERMARKER_ANGLE        0
+
+/**
+ * \ingroup core
+ * \class QgsRasterMarkerSymbolLayer
+ * \brief Raster marker symbol layer class.
+ * \since QGIS 3.6
+ */
+class CORE_EXPORT QgsRasterMarkerSymbolLayer : public QgsMarkerSymbolLayer
+{
+  public:
+    //! Constructs raster marker symbol layer with picture from given absolute path to a raster image file
+    QgsRasterMarkerSymbolLayer( const QString &path = QString(),
+                                double size = DEFAULT_SVGMARKER_SIZE,
+                                double angle = DEFAULT_SVGMARKER_ANGLE,
+                                QgsSymbol::ScaleMethod scaleMethod = DEFAULT_SCALE_METHOD );
+
+    // static stuff
+
+    /**
+     * Creates a raster marker symbol layer from a string map of properties.
+     * \param properties QgsStringMap properties object
+     */
+    static QgsSymbolLayer *create( const QgsStringMap &properties = QgsStringMap() ) SIP_FACTORY;
+
+    /**
+     * Turns relative paths in properties map to absolute when reading and vice versa when writing.
+     * Used internally when reading/writing symbols.
+     * \since QGIS 3.0
+     */
+    static void resolvePaths( QgsStringMap &properties, const QgsPathResolver &pathResolver, bool saving );
+
+    // implemented from base classes
+
+    QString layerType() const override;
+
+    void renderPoint( QPointF point, QgsSymbolRenderContext &context ) override;
+
+    QgsStringMap properties() const override;
+
+    QgsRasterMarkerSymbolLayer *clone() const override SIP_FACTORY;
+
+    /**
+     * Calculates the marker aspect ratio between width and height.
+     * \param context symbol render context
+     * \param scaledSize size of symbol to render
+     * \param hasDataDefinedAspectRatio will be set to TRUE if marker has data defined aspectRatio
+     */
+    double calculateAspectRatio( QgsSymbolRenderContext &context, double scaledSize, bool &hasDataDefinedAspectRatio ) const;
+
+    /**
+     * Returns the marker raster image path.
+     * \see setPath()
+     */
+    QString path() const { return mPath; }
+
+    /**
+     * Set the marker raster image path.
+     * \param path raster image path
+     * \see path()
+     */
+    void setPath( const QString &path );
+
+    /**
+     * Returns the marker opacity.
+     * \returns opacity value between 0 (fully transparent) and 1 (fully opaque)
+     * \see setOpacity()
+     */
+    double opacity() const { return mOpacity; }
+
+    /**
+     * Set the marker opacity.
+     * \param opacity opacity value between 0 (fully transparent) and 1 (fully opaque)
+     * \see opacity()
+     */
+    void setOpacity( double opacity ) { mOpacity = opacity; }
+
+    /**
+     * Returns the default marker aspect ratio between width and height, 0 if not yet calculated.
+     * \see updateDefaultAspectRatio()
+     */
+    double defaultAspectRatio() const { return mDefaultAspectRatio; }
+
+    /**
+     * Calculates the default marker aspect ratio between width and height.
+     * \returns the default aspect ratio value
+     * \see defaultAspectRatio()
+     */
+    double updateDefaultAspectRatio();
+
+    /**
+     * Returns the preserved aspect ratio value, TRUE if fixed aspect ratio has been lower or equal to 0.
+     * \see setPreservedAspectRatio()
+     */
+    bool preservedAspectRatio() const { return mFixedAspectRatio <= 0.0; }
+
+    /**
+     * Set preserved the marker aspect ratio between width and height.
+     * \param par Preserved Aspect Ratio
+     * \returns the preserved aspect ratio value, TRUE if fixed aspect ratio has been lower or equal to 0
+     * \see preservedAspectRatio()
+     */
+    bool setPreservedAspectRatio( bool par );
+
+    /**
+     * Returns the marker aspect ratio between width and height to be used in rendering,
+     * if the value set is lower or equal to 0 the aspect ratio will be preserved in rendering
+     * \see setFixedAspectRatio() QgsSvgCache
+     */
+    double fixedAspectRatio() const { return mFixedAspectRatio; }
+
+    /**
+     * Set the marker aspect ratio between width and height to be used in rendering,
+     * if the value set is lower or equal to 0 the aspect ratio will be preserved in rendering
+     * \param ratio Fixed Aspect Ratio
+     * \see fixedAspectRatio() QgsSvgCache
+     */
+    void setFixedAspectRatio( double ratio ) { mFixedAspectRatio = ratio; }
+
+    void setMapUnitScale( const QgsMapUnitScale &scale ) override;
+    QgsMapUnitScale mapUnitScale() const override;
+
+    QRectF bounds( QPointF point, QgsSymbolRenderContext &context ) override;
+
+  protected:
+
+    QString mPath;
+    //! The marker default opacity
+    double mOpacity = 1.0;
+    //! The marker default aspect ratio
+    double mDefaultAspectRatio = 0.0;
+    //! The marker fixed aspect ratio
+    double mFixedAspectRatio = 0.0;
+
+  private:
+    double calculateSize( QgsSymbolRenderContext &context, bool &hasDataDefinedSize ) const;
+    void calculateOffsetAndRotation( QgsSymbolRenderContext &context, double scaledWidth, double scaledHeight, QPointF &offset, double &angle ) const;
+
+};
+
+
+//////////
+
 #define POINT2MM(x) ( (x) * 25.4 / 72 ) // point is 1/72 of inch
 #define MM2POINT(x) ( (x) * 72 / 25.4 )
 
@@ -662,8 +800,10 @@ class CORE_EXPORT QgsSvgMarkerSymbolLayer : public QgsMarkerSymbolLayer
 class CORE_EXPORT QgsFontMarkerSymbolLayer : public QgsMarkerSymbolLayer
 {
   public:
+
+    //! Constructs a font marker symbol layer.
     QgsFontMarkerSymbolLayer( const QString &fontFamily = DEFAULT_FONTMARKER_FONT,
-                              QChar chr = DEFAULT_FONTMARKER_CHR,
+                              QString chr = DEFAULT_FONTMARKER_CHR,
                               double pointSize = DEFAULT_FONTMARKER_SIZE,
                               const QColor &color = DEFAULT_FONTMARKER_COLOR,
                               double angle = DEFAULT_FONTMARKER_ANGLE );
@@ -672,7 +812,14 @@ class CORE_EXPORT QgsFontMarkerSymbolLayer : public QgsMarkerSymbolLayer
 
     // static stuff
 
+    /**
+     * Creates a new QgsFontMarkerSymbolLayer from a property map (see properties())
+     */
     static QgsSymbolLayer *create( const QgsStringMap &properties = QgsStringMap() ) SIP_FACTORY;
+
+    /**
+     * Creates a new QgsFontMarkerSymbolLayer from an SLD XML \a element.
+     */
     static QgsSymbolLayer *createFromSld( QDomElement &element ) SIP_FACTORY;
 
     // implemented from base classes
@@ -693,53 +840,118 @@ class CORE_EXPORT QgsFontMarkerSymbolLayer : public QgsMarkerSymbolLayer
 
     // new methods
 
+    /**
+     * Returns the font family name for the associated font which will be used to render the point.
+     *
+     * \see setFontFamily()
+     */
     QString fontFamily() const { return mFontFamily; }
+
+    /**
+     * Sets the font \a family for the font which will be used to render the point.
+     *
+     * \see fontFamily()
+     */
     void setFontFamily( const QString &family ) { mFontFamily = family; }
 
-    QChar character() const { return mChr; }
-    void setCharacter( QChar ch ) { mChr = ch; }
+    /**
+     * Returns the character(s) used when rendering points.
+     *
+     * \see setCharacter()
+     */
+    QString character() const { return mString; }
+
+    /**
+     * Sets the character(s) used when rendering points.
+     *
+     * \see character()
+     */
+    void setCharacter( QString chr ) { mString = chr; }
 
     QColor strokeColor() const override { return mStrokeColor; }
     void setStrokeColor( const QColor &color ) override { mStrokeColor = color; }
 
     /**
-     * Get stroke width.
-     * \since QGIS 2.16 */
+     * Returns the marker's stroke width. Units are retrieved by strokeWidthUnit()
+     *
+     * \see setStrokeWidth()
+     * \see strokeWidthUnit()
+     * \see strokeWidthMapUnitScale()
+     *
+     * \since QGIS 2.16
+    */
     double strokeWidth() const { return mStrokeWidth; }
 
     /**
-     * Set stroke width.
-     * \since QGIS 2.16 */
+     * Set's the marker's stroke \a width. Units are set by setStrokeWidthUnit().
+     *
+     * \see strokeWidth()
+     * \see setStrokeWidthUnit()
+     * \see setStrokeWidthMapUnitScale()
+     *
+     * \since QGIS 2.16
+    */
     void setStrokeWidth( double width ) { mStrokeWidth = width; }
 
     /**
-     * Get stroke width unit.
-     * \since QGIS 2.16 */
+     * Returns the stroke width unit.
+     *
+     * \see setStrokeWidthUnit()
+     * \see strokeWidth()
+     * \see strokeWidthMapUnitScale()
+     *
+     * \since QGIS 2.16
+    */
     QgsUnitTypes::RenderUnit strokeWidthUnit() const { return mStrokeWidthUnit; }
 
     /**
-     * Set stroke width unit.
-     * \since QGIS 2.16 */
+     * Sets the stroke width \a unit.
+     *
+     * \see strokeWidthUnit()
+     * \see setStrokeWidth()
+     * \see setStrokeWidthMapUnitScale()
+     * \since QGIS 2.16
+    */
     void setStrokeWidthUnit( QgsUnitTypes::RenderUnit unit ) { mStrokeWidthUnit = unit; }
 
     /**
-     * Get stroke width map unit scale.
-     * \since QGIS 2.16 */
+     * Returns the stroke width map unit scale.
+     *
+     * \see setStrokeWidthMapUnitScale()
+     * \see strokeWidth()
+     * \see strokeWidthUnit()
+     *
+     * \since QGIS 2.16
+    */
     const QgsMapUnitScale &strokeWidthMapUnitScale() const { return mStrokeWidthMapUnitScale; }
 
     /**
-     * Set stroke width map unit scale.
-     * \since QGIS 2.16 */
+     * Sets the stroke width map unit \a scale.
+     *
+     * \see strokeWidthMapUnitScale()
+     * \see setStrokeWidth()
+     * \see setStrokeWidthUnit()
+     *
+     * \since QGIS 2.16
+     */
     void setStrokeWidthMapUnitScale( const QgsMapUnitScale &scale ) { mStrokeWidthMapUnitScale = scale; }
 
     /**
-     * Get stroke join style.
-     * \since QGIS 2.16 */
+     * Returns the stroke join style.
+     *
+     * \see setPenJoinStyle()
+     *
+     * \since QGIS 2.16
+    */
     Qt::PenJoinStyle penJoinStyle() const { return mPenJoinStyle; }
 
     /**
-     * Set stroke join style.
-     * \since QGIS 2.16 */
+     * Sets the stroke join \a style.
+     *
+     * \see penJoinStyle()
+     *
+     * \since QGIS 2.16
+    */
     void setPenJoinStyle( Qt::PenJoinStyle style ) { mPenJoinStyle = style; }
 
     QRectF bounds( QPointF point, QgsSymbolRenderContext &context ) override;
@@ -748,7 +960,7 @@ class CORE_EXPORT QgsFontMarkerSymbolLayer : public QgsMarkerSymbolLayer
 
     QString mFontFamily;
     QFontMetrics *mFontMetrics = nullptr;
-    QChar mChr;
+    QString mString;
 
     double mChrWidth = 0;
     QPointF mChrOffset;

@@ -111,24 +111,24 @@ void TestQgsAttributeForm::testFieldConstraint()
   // build a form for this feature
   QgsAttributeForm form2( layer );
   form2.setFeature( ft );
-  QSignalSpy spy( &form2, SIGNAL( attributeChanged( QString, QVariant ) ) );
+  QSignalSpy spy( &form2, SIGNAL( widgetValueChanged( QString, QVariant, bool ) ) );
   ww = qobject_cast<QgsEditorWidgetWrapper *>( form2.mWidgets[0] );
 
   // set value to 1
   ww->setValue( 1 );
-  QCOMPARE( spy.count(), 2 );
+  QCOMPARE( spy.count(), 1 );
   QCOMPARE( constraintsLabel( &form2, ww )->text(), validLabel );
 
   // set value to null
   spy.clear();
   ww->setValue( QVariant() );
-  QCOMPARE( spy.count(), 2 );
+  QCOMPARE( spy.count(), 1 );
   QCOMPARE( constraintsLabel( &form2, ww )->text(), invalidLabel );
 
   // set value to 1
   spy.clear();
   ww->setValue( 1 );
-  QCOMPARE( spy.count(), 2 );
+  QCOMPARE( spy.count(), 1 );
   QCOMPARE( constraintsLabel( &form2, ww )->text(), validLabel );
 
   // set a soft constraint
@@ -205,11 +205,11 @@ void TestQgsAttributeForm::testFieldMultiConstraints()
   ww1 = qobject_cast<QgsEditorWidgetWrapper *>( form2.mWidgets[1] );
   ww2 = qobject_cast<QgsEditorWidgetWrapper *>( form2.mWidgets[2] );
   ww3 = qobject_cast<QgsEditorWidgetWrapper *>( form2.mWidgets[3] );
-  QSignalSpy spy2( &form2, SIGNAL( attributeChanged( QString, QVariant ) ) );
+  QSignalSpy spy2( &form2, SIGNAL( widgetValueChanged( QString, QVariant, bool ) ) );
 
   // change value
   ww0->setValue( 2 ); // update col0
-  QCOMPARE( spy2.count(), 2 );
+  QCOMPARE( spy2.count(), 1 );
 
   QCOMPARE( constraintsLabel( &form2, ww0 )->text(), inv ); // 2 < ( 1 + 2 )
   QCOMPARE( constraintsLabel( &form2, ww1 )->text(), QString() );
@@ -219,7 +219,7 @@ void TestQgsAttributeForm::testFieldMultiConstraints()
   // change value
   spy2.clear();
   ww0->setValue( 1 ); // update col0
-  QCOMPARE( spy2.count(), 2 );
+  QCOMPARE( spy2.count(), 1 );
 
   QCOMPARE( constraintsLabel( &form2, ww0 )->text(), val ); // 1 < ( 1 + 2 )
   QCOMPARE( constraintsLabel( &form2, ww1 )->text(), QString() );
@@ -373,7 +373,7 @@ void TestQgsAttributeForm::testDynamicForm()
 
   // build a form with feature A
   QgsAttributeForm form( layerA );
-  form.setMode( QgsAttributeForm::AddFeatureMode );
+  form.setMode( QgsAttributeEditorContext::AddFeatureMode );
   form.setFeature( ftA );
 
   // test that there's no joined feature by default
@@ -487,7 +487,7 @@ void TestQgsAttributeForm::testConstraintsOnJoinedFields()
 
   // build a form for this feature
   QgsAttributeForm form( layerA );
-  form.setMode( QgsAttributeForm::AddFeatureMode );
+  form.setMode( QgsAttributeEditorContext::AddFeatureMode );
   form.setFeature( ftA );
 
   // change layerA join id field
@@ -568,7 +568,7 @@ void TestQgsAttributeForm::testEditableJoin()
   ftA = layerA->getFeature( 1 );
 
   QgsAttributeForm form( layerA );
-  form.setMode( QgsAttributeForm::SingleEditMode );
+  form.setMode( QgsAttributeEditorContext::SingleEditMode );
   form.setFeature( ftA );
 
   // change layerA join id field to join with layerB and layerC
@@ -692,7 +692,7 @@ void TestQgsAttributeForm::testUpsertOnEdit()
 
   // build a form with feature A
   QgsAttributeForm form( layerA );
-  form.setMode( QgsAttributeForm::AddFeatureMode );
+  form.setMode( QgsAttributeEditorContext::AddFeatureMode );
   form.setFeature( ft0A );
 
   // count features
@@ -725,7 +725,7 @@ void TestQgsAttributeForm::testUpsertOnEdit()
   // add a new feature with not null joined fields. Joined feature should be
   // added
   QgsAttributeForm form1( layerA );
-  form1.setMode( QgsAttributeForm::AddFeatureMode );
+  form1.setMode( QgsAttributeEditorContext::AddFeatureMode );
   form1.setFeature( ft0A );
 
   form1.changeAttribute( QStringLiteral( "id_a" ), QVariant( 34 ) );
@@ -760,7 +760,7 @@ void TestQgsAttributeForm::testUpsertOnEdit()
   // create a target feature but update a joined feature. A new feature should
   // be added in layerA and values in layerB should be updated
   QgsAttributeForm form2( layerA );
-  form2.setMode( QgsAttributeForm::AddFeatureMode );
+  form2.setMode( QgsAttributeEditorContext::AddFeatureMode );
   form2.setFeature( ft0A );
   form2.changeAttribute( QStringLiteral( "id_a" ), QVariant( 33 ) );
   form2.changeAttribute( QStringLiteral( "layerB_col0" ), QVariant( 3333 ) );
@@ -794,7 +794,7 @@ void TestQgsAttributeForm::testUpsertOnEdit()
   // update feature which does not exist in joined layer but with null joined
   // fields. A new feature should NOT be added in joined layer
   QgsAttributeForm form3( layerA );
-  form3.setMode( QgsAttributeForm::SingleEditMode );
+  form3.setMode( QgsAttributeEditorContext::SingleEditMode );
   form3.setFeature( ft0A );
   form3.changeAttribute( QStringLiteral( "id_a" ), QVariant( 31 ) );
   form3.changeAttribute( QStringLiteral( "layerB_col0" ), QVariant() );
@@ -819,7 +819,7 @@ void TestQgsAttributeForm::testUpsertOnEdit()
   // update feature which does not exist in joined layer with NOT null joined
   // fields. A new feature should be added in joined layer
   QgsAttributeForm form4( layerA );
-  form4.setMode( QgsAttributeForm::SingleEditMode );
+  form4.setMode( QgsAttributeEditorContext::SingleEditMode );
   form4.setFeature( ft0A );
   form4.changeAttribute( QStringLiteral( "id_a" ), QVariant( 31 ) );
   form4.changeAttribute( QStringLiteral( "layerB_col0" ), QVariant( 1111 ) );

@@ -19,7 +19,7 @@
 #define QGSFEATURESINK_H
 
 #include "qgis_core.h"
-#include "qgis.h"
+#include "qgis_sip.h"
 #include "qgsfeature.h"
 #include "qgsfeatureiterator.h"
 
@@ -33,6 +33,28 @@
 class CORE_EXPORT QgsFeatureSink
 {
   public:
+
+    /**
+     * Flags that can be set on a QgsFeatureSink. Not all sinks may implement all flags.
+     *
+     * \since QGIS 3.4
+     */
+    enum SinkFlag
+    {
+
+      /**
+       * This flag indicates, that a primary key field cannot be guaranteed to be unique and
+       * the sink should ignore it if somehow possible.
+       * This should for example be set for a geopackage file if the field "fid" has a risk
+       * to contain duplicate entries. In this case sinks like QgsVectorFileWriter or
+       * QgsVectorLayerExporter will prefer to regenerate the fid instead of trying to reuse
+       * the fids provided in addFeature calls.
+       *
+       * \since QGIS 3.4
+       */
+      RegeneratePrimaryKey = 1 << 1,
+    };
+    Q_DECLARE_FLAGS( SinkFlags, SinkFlag )
 
     //! Flags controlling how features are added to a sink.
     enum Flag
@@ -54,26 +76,26 @@ class CORE_EXPORT QgsFeatureSink
     /**
      * Adds a single \a feature to the sink. Feature addition behavior is controlled by the specified \a flags.
      * \see addFeatures()
-     * \returns true in case of success and false in case of failure
+     * \returns TRUE in case of success and FALSE in case of failure
      */
     virtual bool addFeature( QgsFeature &feature, QgsFeatureSink::Flags flags = nullptr );
 
     /**
      * Adds a list of \a features to the sink. Feature addition behavior is controlled by the specified \a flags.
      * \see addFeature()
-     * \returns true in case of success and false in case of failure
+     * \returns TRUE in case of success and FALSE in case of failure
      */
     virtual bool addFeatures( QgsFeatureList &features, QgsFeatureSink::Flags flags = nullptr ) = 0;
 
     /**
      * Adds all features from the specified \a iterator to the sink. Feature addition behavior is controlled by the specified \a flags.
-     * \returns true if all features were added successfully, or false if any feature could not be added
+     * \returns TRUE if all features were added successfully, or FALSE if any feature could not be added
      */
     virtual bool addFeatures( QgsFeatureIterator &iterator, QgsFeatureSink::Flags flags = nullptr );
 
     /**
      * Flushes any internal buffer which may exist in the sink, causing any buffered features to be added to the sink's destination.
-     * \returns false if any buffered features could not be added to the sink.
+     * \returns FALSE if any buffered features could not be added to the sink.
      */
     virtual bool flushBuffer() { return true; }
 };

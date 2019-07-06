@@ -17,10 +17,10 @@
 #define QGSBROWSERTREEVIEW_H
 
 #include <QTreeView>
-#include "qgis.h"
+#include "qgis_sip.h"
 #include "qgis_gui.h"
 
-class QgsBrowserModel;
+class QgsBrowserGuiModel;
 
 /**
  * \ingroup gui
@@ -38,10 +38,10 @@ class GUI_EXPORT QgsBrowserTreeView : public QTreeView
     QgsBrowserTreeView( QWidget *parent SIP_TRANSFERTHIS = nullptr );
 
     void setModel( QAbstractItemModel *model ) override;
-    //! Set the browser model
-    void setBrowserModel( QgsBrowserModel *model );
-    //! Return the browser model
-    QgsBrowserModel *browserModel() { return mBrowserModel; }
+    //! Sets the browser model
+    void setBrowserModel( QgsBrowserGuiModel *model );
+    //! Returns the browser model
+    QgsBrowserGuiModel *browserModel() { return mBrowserModel; }
     void showEvent( QShowEvent *e ) override;
     void hideEvent( QHideEvent *e ) override;
 
@@ -71,7 +71,7 @@ class GUI_EXPORT QgsBrowserTreeView : public QTreeView
 
     // returns true if expanded from root to item
     bool treeExpanded( const QModelIndex &index );
-    QgsBrowserModel *mBrowserModel = nullptr;
+    QgsBrowserGuiModel *mBrowserModel = nullptr;
 };
 
 #endif // QGSBROWSERTREEVIEW_H

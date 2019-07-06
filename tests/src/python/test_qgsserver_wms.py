@@ -13,10 +13,9 @@ the Free Software Foundation; either version 2 of the License, or
 __author__ = 'Alessandro Pasotti'
 __date__ = '25/05/2015'
 __copyright__ = 'Copyright 2015, The QGIS Project'
-# This will get replaced with a git SHA1 when you do a git archive
-__revision__ = '$Format:%H$'
 
 import os
+import json
 
 # Needed on Qt 5 so that the serialization of XML is consistent among all executions
 os.environ['QT_HASH_SEED'] = '1'
@@ -27,43 +26,70 @@ import urllib.parse
 import urllib.error
 
 from qgis.testing import unittest
-from qgis.PyQt.QtCore import QSize
 
 import osgeo.gdal  # NOQA
+
+from owslib.wms import WebMapService
 
 from test_qgsserver import QgsServerTestBase
 from qgis.core import QgsProject
 
 # Strip path and content length because path may vary
-RE_STRIP_UNCHECKABLE = b'MAP=[^"]+|Content-Length: \d+'
-RE_ATTRIBUTES = b'[^>\s]+=[^>\s]+'
+RE_STRIP_UNCHECKABLE = b'MAP=[^"]+|Content-Length: \\d+'
+RE_STRIP_EXTENTS = b'<(north|east|south|west)Bound(Lat|Long)itude>.*</(north|east|south|west)Bound(Lat|Long)itude>|<BoundingBox .*/>'
+RE_ATTRIBUTES = b'[^>\\s]+=[^>\\s]+'
 
 
-class TestQgsServerWMS(QgsServerTestBase):
+class TestQgsServerWMSTestBase(QgsServerTestBase):
 
     """QGIS Server WMS Tests"""
 
     # Set to True to re-generate reference files for this class
     regenerate_reference = False
 
-    def wms_request_compare(self, request, extra=None, reference_file=None, project='test_project.qgs'):
+    def wms_request(self, request, extra=None, project='test_project.qgs', version='1.3.0'):
         project = self.testdata_path + project
         assert os.path.exists(project), "Project file not found: " + project
-
-        query_string = 'https://www.qgis.org/?MAP=%s&SERVICE=WMS&VERSION=1.3&REQUEST=%s' % (urllib.parse.quote(project), request)
+        query_string = 'https://www.qgis.org/?MAP=%s&SERVICE=WMS&VERSION=%s&REQUEST=%s' % (urllib.parse.quote(project), version, request)
         if extra is not None:
             query_string += extra
         header, body = self._execute_request(query_string)
-        response = header + body
+        return (header, body, query_string)
+
+    def wms_request_compare(self, request, extra=None, reference_file=None, project='test_project.qgs', version='1.3.0', ignoreExtent=False, normalizeJson=False):
+        response_header, response_body, query_string = self.wms_request(request, extra, project, version)
+        response = response_header + response_body
         reference_path = self.testdata_path + (request.lower() if not reference_file else reference_file) + '.txt'
         self.store_reference(reference_path, response)
         f = open(reference_path, 'rb')
         expected = f.read()
+
+        def _n(r):
+            lines = r.split(b'\n')
+            b = lines[2:]
+            h = lines[:2]
+            try:
+                return b'\n'.join(h) + json.dumps(json.loads(b'\n'.join(b))).encode('utf8')
+            except:
+                return r
+
+        response = _n(response)
+        expected = _n(expected)
+
         f.close()
         response = re.sub(RE_STRIP_UNCHECKABLE, b'*****', response)
         expected = re.sub(RE_STRIP_UNCHECKABLE, b'*****', expected)
+        if ignoreExtent:
+            response = re.sub(RE_STRIP_EXTENTS, b'*****', response)
+            expected = re.sub(RE_STRIP_EXTENTS, b'*****', expected)
 
-        self.assertXMLEqual(response, expected, msg="request %s failed.\nQuery: %s\nExpected file: %s\nResponse:\n%s" % (query_string, request, reference_path, response.decode('utf-8')))
+        msg = "request %s failed.\nQuery: %s\nExpected file: %s\nResponse:\n%s" % (query_string, request, reference_path, response.decode('utf-8'))
+        self.assertXMLEqual(response, expected, msg=msg)
+
+
+class TestQgsServerWMS(TestQgsServerWMSTestBase):
+
+    """QGIS Server WMS Tests"""
 
     def test_getcapabilities(self):
         self.wms_request_compare('GetCapabilities')
@@ -74,163 +100,9 @@ class TestQgsServerWMS(QgsServerTestBase):
     def test_getcontext(self):
         self.wms_request_compare('GetContext')
 
-    def test_getfeatureinfo(self):
-        # Test getfeatureinfo response xml
-        self.wms_request_compare('GetFeatureInfo',
-                                 '&layers=testlayer%20%C3%A8%C3%A9&styles=&' +
-                                 'info_format=text%2Fxml&transparent=true&' +
-                                 'width=600&height=400&srs=EPSG%3A3857&bbox=913190.6389747962%2C' +
-                                 '5606005.488876367%2C913235.426296057%2C5606035.347090538&' +
-                                 'query_layers=testlayer%20%C3%A8%C3%A9&X=190&Y=320',
-                                 'wms_getfeatureinfo-text-xml')
-
-        self.wms_request_compare('GetFeatureInfo',
-                                 '&layers=&styles=&' +
-                                 'info_format=text%2Fxml&transparent=true&' +
-                                 'width=600&height=400&srs=EPSG%3A3857&bbox=913190.6389747962%2C' +
-                                 '5606005.488876367%2C913235.426296057%2C5606035.347090538&' +
-                                 'query_layers=testlayer%20%C3%A8%C3%A9&X=190&Y=320',
-                                 'wms_getfeatureinfo-text-xml')
-
-        # Test getfeatureinfo response html
-        self.wms_request_compare('GetFeatureInfo',
-                                 '&layers=testlayer%20%C3%A8%C3%A9&styles=&' +
-                                 'info_format=text%2Fhtml&transparent=true&' +
-                                 'width=600&height=400&srs=EPSG%3A3857&bbox=913190.6389747962%2C' +
-                                 '5606005.488876367%2C913235.426296057%2C5606035.347090538&' +
-                                 'query_layers=testlayer%20%C3%A8%C3%A9&X=190&Y=320',
-                                 'wms_getfeatureinfo-text-html')
-
-        #Test getfeatureinfo response html with geometry
-        self.wms_request_compare('GetFeatureInfo',
-                                 '&layers=testlayer%20%C3%A8%C3%A9&styles=&' +
-                                 'info_format=text%2Fhtml&transparent=true&' +
-                                 'width=600&height=400&srs=EPSG%3A3857&bbox=913190.6389747962%2C' +
-                                 '5606005.488876367%2C913235.426296057%2C5606035.347090538&' +
-                                 'query_layers=testlayer%20%C3%A8%C3%A9&X=190&Y=320&' +
-                                 'with_geometry=true',
-                                 'wms_getfeatureinfo-text-html-geometry')
-
-        #Test getfeatureinfo response html with maptip
-        self.wms_request_compare('GetFeatureInfo',
-                                 '&layers=testlayer%20%C3%A8%C3%A9&styles=&' +
-                                 'info_format=text%2Fhtml&transparent=true&' +
-                                 'width=600&height=400&srs=EPSG%3A3857&bbox=913190.6389747962%2C' +
-                                 '5606005.488876367%2C913235.426296057%2C5606035.347090538&' +
-                                 'query_layers=testlayer%20%C3%A8%C3%A9&X=190&Y=320&' +
-                                 'with_maptip=true',
-                                 'wms_getfeatureinfo-text-html-maptip')
-
-        # Test getfeatureinfo response text
-        self.wms_request_compare('GetFeatureInfo',
-                                 '&layers=testlayer%20%C3%A8%C3%A9&styles=&' +
-                                 'transparent=true&' +
-                                 'width=600&height=400&srs=EPSG%3A3857&bbox=913190.6389747962%2C' +
-                                 '5606005.488876367%2C913235.426296057%2C5606035.347090538&' +
-                                 'query_layers=testlayer%20%C3%A8%C3%A9&X=190&Y=320&' +
-                                 'info_format=text/plain',
-                                 'wms_getfeatureinfo-text-plain')
-
-        # Test getfeatureinfo default info_format
-        self.wms_request_compare('GetFeatureInfo',
-                                 '&layers=testlayer%20%C3%A8%C3%A9&styles=&' +
-                                 'transparent=true&' +
-                                 'width=600&height=400&srs=EPSG%3A3857&bbox=913190.6389747962%2C' +
-                                 '5606005.488876367%2C913235.426296057%2C5606035.347090538&' +
-                                 'query_layers=testlayer%20%C3%A8%C3%A9&X=190&Y=320',
-                                 'wms_getfeatureinfo-text-plain')
-
-        # Test getfeatureinfo invalid info_format
-        self.wms_request_compare('GetFeatureInfo',
-                                 '&layers=testlayer%20%C3%A8%C3%A9&styles=&' +
-                                 'transparent=true&' +
-                                 'width=600&height=400&srs=EPSG%3A3857&bbox=913190.6389747962%2C' +
-                                 '5606005.488876367%2C913235.426296057%2C5606035.347090538&' +
-                                 'query_layers=testlayer%20%C3%A8%C3%A9&X=190&Y=320&' +
-                                 'info_format=InvalidFormat',
-                                 'wms_getfeatureinfo-invalid-format')
-
-        # Regression for #8656
-        # Mind the gap! (the space in the FILTER expression)
-        self.wms_request_compare('GetFeatureInfo',
-                                 '&layers=testlayer%20%C3%A8%C3%A9&' +
-                                 'INFO_FORMAT=text%2Fxml&' +
-                                 'width=600&height=400&srs=EPSG%3A3857&' +
-                                 'query_layers=testlayer%20%C3%A8%C3%A9&' +
-                                 'FEATURE_COUNT=10&FILTER=testlayer%20%C3%A8%C3%A9' + urllib.parse.quote(':"NAME" = \'two\''),
-                                 'wms_getfeatureinfo_filter')
-
-        # Test a filter with NO condition results
-        self.wms_request_compare('GetFeatureInfo',
-                                 '&layers=testlayer%20%C3%A8%C3%A9&' +
-                                 'INFO_FORMAT=text%2Fxml&' +
-                                 'width=600&height=400&srs=EPSG%3A3857&' +
-                                 'query_layers=testlayer%20%C3%A8%C3%A9&' +
-                                 'FEATURE_COUNT=10&FILTER=testlayer%20%C3%A8%C3%A9' + urllib.parse.quote(':"NAME" = \'two\' AND "utf8nameè" = \'no-results\''),
-                                 'wms_getfeatureinfo_filter_no_results')
-
-        # Test a filter with OR condition results
-        self.wms_request_compare('GetFeatureInfo',
-                                 '&layers=testlayer%20%C3%A8%C3%A9&' +
-                                 'INFO_FORMAT=text%2Fxml&' +
-                                 'width=600&height=400&srs=EPSG%3A3857&' +
-                                 'query_layers=testlayer%20%C3%A8%C3%A9&' +
-                                 'FEATURE_COUNT=10&FILTER=testlayer%20%C3%A8%C3%A9' + urllib.parse.quote(':"NAME" = \'two\' OR "NAME" = \'three\''),
-                                 'wms_getfeatureinfo_filter_or')
-
-        # Test a filter with OR condition and UTF results
-        # Note that the layer name that contains utf-8 chars cannot be
-        # to upper case.
-        self.wms_request_compare('GetFeatureInfo',
-                                 '&layers=testlayer%20%C3%A8%C3%A9&' +
-                                 'INFO_FORMAT=text%2Fxml&' +
-                                 'width=600&height=400&srs=EPSG%3A3857&' +
-                                 'query_layers=testlayer%20%C3%A8%C3%A9&' +
-                                 'FEATURE_COUNT=10&FILTER=testlayer%20%C3%A8%C3%A9' + urllib.parse.quote(':"NAME" = \'two\' OR "utf8nameè" = \'three èé↓\''),
-                                 'wms_getfeatureinfo_filter_or_utf8')
-
-        # Test feature info request with filter geometry
-        self.wms_request_compare('GetFeatureInfo',
-                                 '&layers=testlayer%20%C3%A8%C3%A9&' +
-                                 'INFO_FORMAT=text%2Fxml&' +
-                                 'width=600&height=400&srs=EPSG%3A3857&' +
-                                 'query_layers=testlayer%20%C3%A8%C3%A9&' +
-                                 'FEATURE_COUNT=10&FILTER_GEOM=POLYGON((8.2035381 44.901459,8.2035562 44.901459,8.2035562 44.901418,8.2035381 44.901418,8.2035381 44.901459))',
-                                 'wms_getfeatureinfo_geometry_filter')
-
-        # Test feature info request with invalid query_layer
-        self.wms_request_compare('GetFeatureInfo',
-                                 '&layers=testlayer%20%C3%A8%C3%A9&' +
-                                 'INFO_FORMAT=text%2Fxml&' +
-                                 'width=600&height=400&srs=EPSG%3A3857&' +
-                                 'query_layers=InvalidLayer&' +
-                                 'FEATURE_COUNT=10&FILTER_GEOM=POLYGON((8.2035381 44.901459,8.2035562 44.901459,8.2035562 44.901418,8.2035381 44.901418,8.2035381 44.901459))',
-                                 'wms_getfeatureinfo_invalid_query_layers')
-
-        # Test feature info request with '+' instead of ' ' in layers and
-        # query_layers parameters
-        self.wms_request_compare('GetFeatureInfo',
-                                 '&layers=testlayer+%C3%A8%C3%A9&styles=&' +
-                                 'info_format=text%2Fxml&transparent=true&' +
-                                 'width=600&height=400&srs=EPSG%3A3857&bbox=913190.6389747962%2C' +
-                                 '5606005.488876367%2C913235.426296057%2C5606035.347090538&' +
-                                 'query_layers=testlayer+%C3%A8%C3%A9&X=190&Y=320',
-                                 'wms_getfeatureinfo-text-xml')
-
-        # layer1 is a clone of layer0 but with a scale visibility. Thus,
-        # GetFeatureInfo response contains only a feature for layer0 and layer1
-        # is ignored for the required bbox. Without the scale visibility option,
-        # the feature for layer1 would have been in the response too.
-        mypath = self.testdata_path + "test_project_scalevisibility.qgs"
-        self.wms_request_compare('GetFeatureInfo',
-                                 '&layers=layer0,layer1&styles=&' +
-                                 'VERSION=1.1.0&' +
-                                 'info_format=text%2Fxml&' +
-                                 'width=500&height=500&srs=EPSG%3A4326' +
-                                 '&bbox=8.1976,44.8998,8.2100,44.9027&' +
-                                 'query_layers=layer0,layer1&X=235&Y=243',
-                                 'wms_getfeatureinfo_notvisible',
-                                 'test_project_scalevisibility.qgs')
+    def test_operation_not_supported(self):
+        qs = '?MAP=%s&SERVICE=WMS&VERSION=1.3.0&REQUEST=NotAValidRequest' % urllib.parse.quote(self.projectPath)
+        self._assert_status_code(501, qs)
 
     def test_describelayer(self):
         # Test DescribeLayer
@@ -250,14 +122,14 @@ class TestQgsServerWMS(QgsServerTestBase):
                                  '',
                                  'getschemaextension')
 
-    def wms_request_compare_project(self, request, extra=None, reference_file=None):
-        projectPath = self.testdata_path + "test_project.qgs"
+    def wms_request_compare_project(self, request, extra=None, reference_file=None, project_name="test_project.qgs"):
+        projectPath = self.testdata_path + project_name
         assert os.path.exists(projectPath), "Project file not found: " + projectPath
 
         project = QgsProject()
         project.read(projectPath)
 
-        query_string = 'https://www.qgis.org/?SERVICE=WMS&VERSION=1.3&REQUEST=%s' % (request)
+        query_string = 'https://www.qgis.org/?SERVICE=WMS&VERSION=1.3.0&REQUEST=%s' % (request)
         if extra is not None:
             query_string += extra
         header, body = self._execute_request_project(query_string, project)
@@ -273,7 +145,13 @@ class TestQgsServerWMS(QgsServerTestBase):
         self.assertXMLEqual(response, expected, msg="request %s failed.\nQuery: %s\nExpected file: %s\nResponse:\n%s" % (query_string, request, reference_path, response.decode('utf-8')))
 
     def test_wms_getcapabilities_project(self):
+        """WMS GetCapabilities without map parameter"""
         self.wms_request_compare_project('GetCapabilities')
+        # reference_file='getcapabilities_without_map_param' could be the right response
+
+    def test_wms_getcapabilities_project_empty_layer(self):
+        """WMS GetCapabilities with empty layer different CRS: wrong bbox - Regression GH 30264"""
+        self.wms_request_compare_project('GetCapabilities', reference_file='wms_getcapabilities_empty_layer', project_name='bug_gh30264_empty_layer_wrong_bbox.qgs')
 
     def wms_inspire_request_compare(self, request):
         """WMS INSPIRE tests"""
@@ -297,6 +175,61 @@ class TestQgsServerWMS(QgsServerTestBase):
         for request in ('GetCapabilities',):
             self.wms_inspire_request_compare(request)
 
+    def test_wms_getcapabilities_without_title(self):
+        # Empty title in project leads to a Layer element without Name, Title
+        # and Abstract tags. However, it should still have a CRS and a BBOX
+        # according to OGC specifications tests.
+        self.wms_request_compare('GetCapabilities', reference_file='wms_getcapabilities_without_title', project='test_project_without_title.qgs')
+
+    def test_wms_getcapabilities_empty_spatial_layer(self):
+        # The project contains a spatial layer without feature and the WMS
+        # extent is not configured in the project.
+        self.wms_request_compare('GetCapabilities',
+                                 reference_file='wms_getcapabilities_empty_spatial_layer',
+                                 project='test_project_empty_spatial_layer.qgz',
+                                 ignoreExtent=True)
+
+    def test_wms_getcapabilities_versions(self):
+        # default version 1.3.0 when empty VERSION parameter
+        project = os.path.join(self.testdata_path, "test_project.qgs")
+        qs = "?" + "&".join(["%s=%s" % i for i in list({
+            "MAP": urllib.parse.quote(project),
+            "SERVICE": "WMS",
+            "REQUEST": "GetCapabilities",
+        }.items())])
+
+        self.wms_request_compare(qs, reference_file='wms_getcapabilities_1_3_0', version='')
+
+        # default version 1.3.0 when VERSION = 1.3.0 parameter
+        project = os.path.join(self.testdata_path, "test_project.qgs")
+        qs = "?" + "&".join(["%s=%s" % i for i in list({
+            "MAP": urllib.parse.quote(project),
+            "SERVICE": "WMS",
+            "REQUEST": "GetCapabilities",
+        }.items())])
+
+        self.wms_request_compare(qs, reference_file='wms_getcapabilities_1_3_0', version='1.3.0')
+
+        # version 1.1.1
+        project = os.path.join(self.testdata_path, "test_project.qgs")
+        qs = "?" + "&".join(["%s=%s" % i for i in list({
+            "MAP": urllib.parse.quote(project),
+            "SERVICE": "WMS",
+            "REQUEST": "GetCapabilities",
+        }.items())])
+
+        self.wms_request_compare(qs, reference_file='wms_getcapabilities_1_1_1', version='1.1.1')
+
+        # default version 1.3.0 when invalid VERSION parameter
+        project = os.path.join(self.testdata_path, "test_project.qgs")
+        qs = "?" + "&".join(["%s=%s" % i for i in list({
+            "MAP": urllib.parse.quote(project),
+            "SERVICE": "WMS",
+            "REQUEST": "GetCapabilities",
+        }.items())])
+
+        self.wms_request_compare(qs, reference_file='wms_getcapabilities_1_3_0', version='33.33.33')
+
     def test_wms_getcapabilities_url(self):
         # empty url in project
         project = os.path.join(self.testdata_path, "test_project_without_urls.qgs")
@@ -317,13 +250,14 @@ class TestQgsServerWMS(QgsServerTestBase):
                 item_found = True
         self.assertTrue(item_found)
 
-        # url passed in quesry string
+        # url passed in query string
+        # verify that GetCapabilities isn't put into the url for non-uppercase parameter names
         project = os.path.join(self.testdata_path, "test_project_without_urls.qgs")
         qs = "https://www.qgis-server.org?" + "&".join(["%s=%s" % i for i in list({
             "MAP": urllib.parse.quote(project),
-            "SERVICE": "WMS",
-            "VERSION": "1.3.0",
-            "REQUEST": "GetCapabilities",
+            "SeRvIcE": "WMS",
+            "VeRsIoN": "1.3.0",
+            "ReQuEsT": "GetCapabilities",
             "STYLES": ""
         }.items())])
 
@@ -333,6 +267,7 @@ class TestQgsServerWMS(QgsServerTestBase):
         for item in str(r).split("\\n"):
             if "OnlineResource" in item:
                 self.assertEqual("xlink:href=\"https://www.qgis-server.org?" in item, True)
+                self.assertEqual("GetCapabilities" in item, False)
                 item_found = True
         self.assertTrue(item_found)
 
@@ -368,6 +303,26 @@ class TestQgsServerWMS(QgsServerTestBase):
         self.assertTrue(xmlResult.find("<WMSBackgroundLayer>1</WMSBackgroundLayer>") != -1)
         self.assertTrue(xmlResult.find("<WMSDataSource>contextualWMSLegend=0&amp;crs=EPSG:21781&amp;dpiMode=7&amp;featureCount=10&amp;format=image/png&amp;layers=public_geo_gemeinden&amp;styles=&amp;url=https://qgiscloud.com/mhugent/qgis_unittest_wms/wms?</WMSDataSource>") != -1)
         self.assertTrue(xmlResult.find("<WMSPrintLayer>contextualWMSLegend=0&amp;amp;crs=EPSG:21781&amp;amp;dpiMode=7&amp;amp;featureCount=10&amp;amp;format=image/png&amp;amp;layers=public_geo_gemeinden&amp;amp;styles=&amp;amp;url=https://qgiscloud.com/mhugent/qgis_unittest_wms_print/wms?</WMSPrintLayer>") != -1)
+
+    def test_getcapabilities_owslib(self):
+
+        # read getcapabilities document
+        docPath = self.testdata_path + 'getcapabilities.txt'
+        f = open(docPath, 'r')
+        doc = f.read()
+        f.close()
+
+        # clean header in doc
+        doc = doc.replace('Content-Length: 6575\n', '')
+        doc = doc.replace('Content-Type: text/xml; charset=utf-8\n\n', '')
+        doc = doc.replace('<?xml version="1.0" encoding="utf-8"?>\n', '')
+
+        # read capabilities document with owslib
+        w = WebMapService(None, xml=doc, version='1.3.0')
+
+        # check content
+        rootLayerName = 'QGIS Test Project'
+        self.assertTrue(rootLayerName in w.contents.keys())
 
 
 if __name__ == '__main__':

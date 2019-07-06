@@ -52,7 +52,8 @@ bool QgsConditionalLayerStyles::writeXml( QDomNode &node, QDomDocument &doc, con
 {
   QDomElement stylesel = doc.createElement( QStringLiteral( "conditionalstyles" ) );
   QDomElement rowel = doc.createElement( QStringLiteral( "rowstyles" ) );
-  Q_FOREACH ( const QgsConditionalStyle &style, mRowStyles )
+  const auto constMRowStyles = mRowStyles;
+  for ( const QgsConditionalStyle &style : constMRowStyles )
   {
     style.writeXml( rowel, doc, context );
   }
@@ -66,7 +67,8 @@ bool QgsConditionalLayerStyles::writeXml( QDomNode &node, QDomDocument &doc, con
     QDomElement fieldel = doc.createElement( QStringLiteral( "fieldstyle" ) );
     fieldel.setAttribute( QStringLiteral( "fieldname" ), it.key() );
     QgsConditionalStyles styles = it.value();
-    Q_FOREACH ( const QgsConditionalStyle &style, styles )
+    const auto constStyles = styles;
+    for ( const QgsConditionalStyle &style : constStyles )
     {
       style.writeXml( fieldel, doc, context );
     }
@@ -233,7 +235,8 @@ bool QgsConditionalStyle::validTextColor() const
 QList<QgsConditionalStyle> QgsConditionalStyle::matchingConditionalStyles( const QList<QgsConditionalStyle> &styles, const QVariant &value, QgsExpressionContext &context )
 {
   QList<QgsConditionalStyle> matchingstyles;
-  Q_FOREACH ( const QgsConditionalStyle &style, styles )
+  const auto constStyles = styles;
+  for ( const QgsConditionalStyle &style : constStyles )
   {
     if ( style.matches( value, context ) )
       matchingstyles.append( style );
@@ -243,7 +246,8 @@ QList<QgsConditionalStyle> QgsConditionalStyle::matchingConditionalStyles( const
 
 QgsConditionalStyle QgsConditionalStyle::matchingConditionalStyle( const QList<QgsConditionalStyle> &styles, const QVariant &value,  QgsExpressionContext &context )
 {
-  Q_FOREACH ( const QgsConditionalStyle &style, styles )
+  const auto constStyles = styles;
+  for ( const QgsConditionalStyle &style : constStyles )
   {
     if ( style.matches( value, context ) )
       return style;
@@ -254,7 +258,8 @@ QgsConditionalStyle QgsConditionalStyle::matchingConditionalStyle( const QList<Q
 QgsConditionalStyle QgsConditionalStyle::compressStyles( const QList<QgsConditionalStyle> &styles )
 {
   QgsConditionalStyle style;
-  Q_FOREACH ( const QgsConditionalStyle &s, styles )
+  const auto constStyles = styles;
+  for ( const QgsConditionalStyle &s : constStyles )
   {
     style.setFont( s.font() );
     if ( s.backgroundColor().isValid() && s.backgroundColor().alpha() != 0 )
@@ -273,7 +278,9 @@ bool QgsConditionalStyle::writeXml( QDomNode &node, QDomDocument &doc, const Qgs
   stylesel.setAttribute( QStringLiteral( "rule" ), mRule );
   stylesel.setAttribute( QStringLiteral( "name" ), mName );
   stylesel.setAttribute( QStringLiteral( "background_color" ), mBackColor.name() );
+  stylesel.setAttribute( QStringLiteral( "background_color_alpha" ), mBackColor.alpha() );
   stylesel.setAttribute( QStringLiteral( "text_color" ), mTextColor.name() );
+  stylesel.setAttribute( QStringLiteral( "text_color_alpha" ), mTextColor.alpha() );
   QDomElement labelFontElem = QgsFontUtils::toXmlElement( mFont, doc, QStringLiteral( "font" ) );
   stylesel.appendChild( labelFontElem );
   if ( mSymbol )
@@ -290,8 +297,18 @@ bool QgsConditionalStyle::readXml( const QDomNode &node, const QgsReadWriteConte
   QDomElement styleElm = node.toElement();
   setRule( styleElm.attribute( QStringLiteral( "rule" ) ) );
   setName( styleElm.attribute( QStringLiteral( "name" ) ) );
-  setBackgroundColor( QColor( styleElm.attribute( QStringLiteral( "background_color" ) ) ) );
-  setTextColor( QColor( styleElm.attribute( QStringLiteral( "text_color" ) ) ) );
+  QColor bColor = QColor( styleElm.attribute( QStringLiteral( "background_color" ) ) );
+  if ( styleElm.hasAttribute( QStringLiteral( "background_color_alpha" ) ) )
+  {
+    bColor.setAlpha( styleElm.attribute( QStringLiteral( "background_color_alpha" ) ).toInt() );
+  }
+  setBackgroundColor( bColor );
+  QColor tColor = QColor( styleElm.attribute( QStringLiteral( "text_color" ) ) );
+  if ( styleElm.hasAttribute( QStringLiteral( "text_color_alpha" ) ) )
+  {
+    tColor.setAlpha( styleElm.attribute( QStringLiteral( "text_color_alpha" ) ).toInt() );
+  }
+  setTextColor( tColor );
   QgsFontUtils::setFromXmlChildNode( mFont, styleElm, QStringLiteral( "font" ) );
   QDomElement symbolElm = styleElm.firstChildElement( QStringLiteral( "symbol" ) );
   if ( !symbolElm.isNull() )

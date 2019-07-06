@@ -16,7 +16,7 @@
 #define QGSNULLSYMBOLRENDERERWIDGET_H
 
 #include "qgsrendererwidget.h"
-#include "qgis.h"
+#include "qgis_sip.h"
 #include "qgis_gui.h"
 
 class QgsNullSymbolRenderer;
@@ -26,7 +26,7 @@ class QMenu;
 /**
  * \ingroup gui
  * \class QgsNullSymbolRendererWidget
- * \brief Blank widget for customising QgsNullSymbolRenderer.
+ * \brief Blank widget for customizing QgsNullSymbolRenderer.
  * \since QGIS 2.16
  */
 

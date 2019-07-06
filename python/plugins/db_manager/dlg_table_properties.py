@@ -29,7 +29,7 @@ from qgis.PyQt.QtWidgets import QDialog, QMessageBox, QApplication
 from qgis.utils import OverrideCursor
 
 from .db_plugins.data_model import TableFieldsModel, TableConstraintsModel, TableIndexesModel
-from .db_plugins.plugin import BaseError
+from .db_plugins.plugin import BaseError, DbError
 from .dlg_db_error import DlgDbError
 
 from .dlg_field_properties import DlgFieldProperties
@@ -50,6 +50,10 @@ class DlgTableProperties(QDialog, Ui_Dialog):
 
         self.db = self.table.database()
 
+        supportCom = self.db.supportsComment()
+        if not supportCom:
+            self.tabs.removeTab(3)
+
         m = TableFieldsModel(self)
         self.viewFields.setModel(m)
 
@@ -58,6 +62,10 @@ class DlgTableProperties(QDialog, Ui_Dialog):
 
         m = TableIndexesModel(self)
         self.viewIndexes.setModel(m)
+
+        #Display comment in line edit
+        m = self.table.comment
+        self.viewComment.setText(m)
 
         self.btnAddColumn.clicked.connect(self.addColumn)
         self.btnAddGeometryColumn.clicked.connect(self.addGeometryColumn)
@@ -70,6 +78,11 @@ class DlgTableProperties(QDialog, Ui_Dialog):
         self.btnAddIndex.clicked.connect(self.createIndex)
         self.btnAddSpatialIndex.clicked.connect(self.createSpatialIndex)
         self.btnDeleteIndex.clicked.connect(self.deleteIndex)
+
+        #Connect button add Comment to function
+        self.btnAddComment.clicked.connect(self.createComment)
+        #Connect button delete Comment to function
+        self.btnDeleteComment.clicked.connect(self.deleteComment)
 
         self.refresh()
 
@@ -92,7 +105,6 @@ class DlgTableProperties(QDialog, Ui_Dialog):
 
     def populateFields(self):
         """ load field information from database """
-
         m = self.viewFields.model()
         m.clear()
 
@@ -153,7 +165,7 @@ class DlgTableProperties(QDialog, Ui_Dialog):
         with OverrideCursor(Qt.WaitCursor):
             self.aboutToChangeTable.emit()
             try:
-                fld.update(new_fld.name, new_fld.type2String(), new_fld.notNull, new_fld.default2String())
+                fld.update(new_fld.name, new_fld.type2String(), new_fld.notNull, new_fld.default2String(), new_fld.comment)
                 self.refresh()
             except BaseError as e:
                 DlgDbError.showError(e, self)
@@ -322,3 +334,32 @@ class DlgTableProperties(QDialog, Ui_Dialog):
                 self.refresh()
             except BaseError as e:
                 DlgDbError.showError(e, self)
+
+    def createComment(self):
+        """Adds a comment to the selected table"""
+        try:
+            schem = self.table.schema().name
+            tab = self.table.name
+            com = self.viewComment.text()
+            self.db.connector.commentTable(schem, tab, com)
+        except DbError as e:
+            DlgDbError.showError(e, self)
+            return
+        self.refresh()
+        #Display successful message
+        QMessageBox.information(self, self.tr("Add comment"), self.tr("Table successfully commented"))
+
+    def deleteComment(self):
+        """Drops the comment on the selected table"""
+        try:
+            schem = self.table.schema().name
+            tab = self.table.name
+            self.db.connector.commentTable(schem, tab)
+        except DbError as e:
+            DlgDbError.showError(e, self)
+            return
+        self.refresh()
+        #Refresh line edit, put a void comment
+        self.viewComment.setText('')
+        #Display successful message
+        QMessageBox.information(self, self.tr("Delete comment"), self.tr("Comment deleted"))

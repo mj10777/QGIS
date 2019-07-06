@@ -13,8 +13,8 @@
  *                                                                         *
  ***************************************************************************/
 
-#ifndef QGSLABELINGENGINEV2_H
-#define QGSLABELINGENGINEV2_H
+#ifndef QGSLABELINGENGINE_H
+#define QGSLABELINGENGINE_H
 
 #define SIP_NO_FILE
 
@@ -23,7 +23,7 @@
 
 #include "qgspallabeling.h"
 #include "qgslabelingenginesettings.h"
-
+#include "pal.h"
 
 class QgsLabelingEngine;
 
@@ -62,13 +62,13 @@ class CORE_EXPORT QgsAbstractLabelProvider
     };
     Q_DECLARE_FLAGS( Flags, Flag )
 
-    //! Return list of label features (they are owned by the provider and thus deleted on its destruction)
+    //! Returns list of label features (they are owned by the provider and thus deleted on its destruction)
     virtual QList<QgsLabelFeature *> labelFeatures( QgsRenderContext &context ) = 0;
 
     //! draw this label at the position determined by the labeling engine
     virtual void drawLabel( QgsRenderContext &context, pal::LabelPosition *label ) const = 0;
 
-    //! Return list of child providers - useful if the provider needs to put labels into more layers with different configuration
+    //! Returns list of child providers - useful if the provider needs to put labels into more layers with different configuration
     virtual QList<QgsAbstractLabelProvider *> subProviders() { return QList<QgsAbstractLabelProvider *>(); }
 
     //! Name of the layer (for statistics, debugging etc.) - does not need to be unique
@@ -77,7 +77,7 @@ class CORE_EXPORT QgsAbstractLabelProvider
     //! Returns ID of associated layer, or empty string if no layer is associated with the provider.
     QString layerId() const { return mLayerId; }
 
-    //! Returns the associated layer, or nullptr if no layer is associated with the provider.
+    //! Returns the associated layer, or NULLPTR if no layer is associated with the provider.
     QgsMapLayer *layer() const { return mLayer.data(); }
 
     /**
@@ -92,9 +92,6 @@ class CORE_EXPORT QgsAbstractLabelProvider
 
     //! What placement strategy to use for the labels
     QgsPalLayerSettings::Placement placement() const { return mPlacement; }
-
-    //! For layers with linestring geometries - extra placement flags (or-ed combination of QgsPalLayerSettings::LinePlacementFlags)
-    unsigned int linePlacementFlags() const { return mLinePlacementFlags; }
 
     //! Default priority of labels (may be overridden by individual labels)
     double priority() const { return mPriority; }
@@ -121,8 +118,6 @@ class CORE_EXPORT QgsAbstractLabelProvider
     Flags mFlags;
     //! Placement strategy
     QgsPalLayerSettings::Placement mPlacement;
-    //! Extra placement flags for linestring geometries
-    unsigned int mLinePlacementFlags;
     //! Default priority of labels
     double mPriority;
     //! Type of the obstacle of feature geometries
@@ -164,8 +159,8 @@ Q_DECLARE_OPERATORS_FOR_FLAGS( QgsAbstractLabelProvider::Flags )
  * (equivalent of pal::Layer) instead of subProviders(), label providers integrated
  * into feature loop vs providers with independent feature loop), split labeling
  * computation from drawing of labels, improved results class with label iterator).
- * \since QGIS 2.12
  * \note not available in Python bindings
+ * \since QGIS 2.12
  */
 class CORE_EXPORT QgsLabelingEngine
 {
@@ -181,11 +176,11 @@ class CORE_EXPORT QgsLabelingEngine
     QgsLabelingEngine &operator=( const QgsLabelingEngine &rh ) = delete;
 
     //! Associate map settings instance
-    void setMapSettings( const QgsMapSettings &mapSettings ) { mMapSettings = mapSettings; }
-    //! Get associated map settings
+    void setMapSettings( const QgsMapSettings &mapSettings );
+    //! Gets associated map settings
     const QgsMapSettings &mapSettings() const { return mMapSettings; }
 
-    //! Get associated labeling engine settings
+    //! Gets associated labeling engine settings
     const QgsLabelingEngineSettings &engineSettings() const { return mMapSettings.labelingEngineSettings(); }
 
     /**
@@ -203,7 +198,7 @@ class CORE_EXPORT QgsLabelingEngine
     //! compute the labeling with given map settings and providers
     void run( QgsRenderContext &context );
 
-    //! Return pointer to recently computed results and pass the ownership of results to the caller
+    //! Returns pointer to recently computed results and pass the ownership of results to the caller
     QgsLabelingResults *takeResults();
 
     //! For internal use by the providers
@@ -231,8 +226,8 @@ class CORE_EXPORT QgsLabelingEngine
  * \class QgsLabelingUtils
  * \brief Contains helper utilities for working with QGIS' labeling engine.
  * \note this class is not a part of public API yet. See notes in QgsLabelingEngine
- * \since QGIS 2.14
  * \note not available in Python bindings
+ * \since QGIS 2.14
  */
 
 class CORE_EXPORT QgsLabelingUtils
@@ -255,6 +250,18 @@ class CORE_EXPORT QgsLabelingUtils
      */
     static QVector< QgsPalLayerSettings::PredefinedPointPosition > decodePredefinedPositionOrder( const QString &positionString );
 
+    /**
+     * Encodes line placement \a flags to a string.
+     * \see decodeLinePlacementFlags()
+     */
+    static QString encodeLinePlacementFlags( pal::LineArrangementFlags flags );
+
+    /**
+     * Decodes a \a string to set of line placement flags.
+     * \see encodeLinePlacementFlags()
+     */
+    static pal::LineArrangementFlags decodeLinePlacementFlags( const QString &string );
+
 };
 
-#endif // QGSLABELINGENGINEV2_H
+#endif // QGSLABELINGENGINE_H

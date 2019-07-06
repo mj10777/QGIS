@@ -20,6 +20,7 @@
 #include "qgsdelimitedtextfile.h"
 #include "qgssettings.h"
 #include "qgsproviderregistry.h"
+#include "qgsgui.h"
 
 #include <QButtonGroup>
 #include <QFile>
@@ -40,11 +41,9 @@ QgsDelimitedTextSourceSelect::QgsDelimitedTextSourceSelect( QWidget *parent, Qt:
 {
 
   setupUi( this );
+  QgsGui::instance()->enableAutoGeometryRestore( this );
   setupButtons( buttonBox );
   connect( buttonBox, &QDialogButtonBox::helpRequested, this, &QgsDelimitedTextSourceSelect::showHelp );
-
-  QgsSettings settings;
-  restoreGeometry( settings.value( mPluginKey + "/geometry" ).toByteArray() );
 
   bgFileFormat = new QButtonGroup( this );
   bgFileFormat->addButton( delimiterCSV, swFileFormat->indexOf( swpCSVOptions ) );
@@ -92,6 +91,9 @@ QgsDelimitedTextSourceSelect::QgsDelimitedTextSourceSelect( QWidget *parent, Qt:
   connect( cbxPointIsComma, &QAbstractButton::toggled, this, &QgsDelimitedTextSourceSelect::updateFieldsAndEnable );
   connect( cbxXyDms, &QAbstractButton::toggled, this, &QgsDelimitedTextSourceSelect::updateFieldsAndEnable );
 
+  connect( crsGeometry, &QgsProjectionSelectionWidget::crsChanged, this, &QgsDelimitedTextSourceSelect::updateFieldsAndEnable );
+
+  QgsSettings settings;
   mFileWidget->setDialogTitle( tr( "Choose a Delimited Text File to Open" ) );
   mFileWidget->setFilter( tr( "Text files" ) + " (*.txt *.csv *.dat *.wkt);;" + tr( "All files" ) + " (* *.*)" );
   mFileWidget->setSelectedFilter( settings.value( mPluginKey + "/file_filter", "" ).toString() );
@@ -100,8 +102,6 @@ QgsDelimitedTextSourceSelect::QgsDelimitedTextSourceSelect( QWidget *parent, Qt:
 
 QgsDelimitedTextSourceSelect::~QgsDelimitedTextSourceSelect()
 {
-  QgsSettings settings;
-  settings.setValue( mPluginKey + "/geometry", saveGeometry() );
   delete mFile;
 }
 
@@ -143,6 +143,8 @@ void QgsDelimitedTextSourceSelect::addButtonClicked()
 
   QUrl url = mFile->url();
 
+  url.addQueryItem( QStringLiteral( "detectTypes" ), cbxDetectTypes->isChecked() ? QStringLiteral( "yes" ) : QStringLiteral( "no" ) );
+
   if ( cbxPointIsComma->isChecked() )
   {
     url.addQueryItem( QStringLiteral( "decimalPoint" ), QStringLiteral( "," ) );
@@ -152,6 +154,7 @@ void QgsDelimitedTextSourceSelect::addButtonClicked()
     url.addQueryItem( QStringLiteral( "xyDms" ), QStringLiteral( "yes" ) );
   }
 
+  bool haveGeom = true;
   if ( geomTypeXY->isChecked() )
   {
     if ( !cmbXField->currentText().isEmpty() && !cmbYField->currentText().isEmpty() )
@@ -176,12 +179,26 @@ void QgsDelimitedTextSourceSelect::addButtonClicked()
   }
   else
   {
+    haveGeom = false;
     url.addQueryItem( QStringLiteral( "geomType" ), QStringLiteral( "none" ) );
   }
+  if ( haveGeom )
+  {
+    QgsCoordinateReferenceSystem crs = crsGeometry->crs();
+    if ( crs.isValid() )
+    {
+      url.addQueryItem( QStringLiteral( "crs" ), crs.authid() );
+    }
 
-  if ( ! geomTypeNone->isChecked() ) url.addQueryItem( QStringLiteral( "spatialIndex" ), cbxSpatialIndex->isChecked() ? "yes" : "no" );
-  url.addQueryItem( QStringLiteral( "subsetIndex" ), cbxSubsetIndex->isChecked() ? "yes" : "no" );
-  url.addQueryItem( QStringLiteral( "watchFile" ), cbxWatchFile->isChecked() ? "yes" : "no" );
+  }
+
+  if ( ! geomTypeNone->isChecked() )
+  {
+    url.addQueryItem( QStringLiteral( "spatialIndex" ), cbxSpatialIndex->isChecked() ? QStringLiteral( "yes" ) : QStringLiteral( "no" ) );
+  }
+
+  url.addQueryItem( QStringLiteral( "subsetIndex" ), cbxSubsetIndex->isChecked() ? QStringLiteral( "yes" ) : QStringLiteral( "no" ) );
+  url.addQueryItem( QStringLiteral( "watchFile" ), cbxWatchFile->isChecked() ? QStringLiteral( "yes" ) : QStringLiteral( "no" ) );
 
   // store the settings
   saveSettings();
@@ -190,6 +207,12 @@ void QgsDelimitedTextSourceSelect::addButtonClicked()
 
   // add the layer to the map
   emit addVectorLayer( QString::fromLatin1( url.toEncoded() ), txtLayerName->text() );
+
+  // clear the file and layer name show something has happened, ready for another file
+
+  mFileWidget->setFilePath( QString() );
+  txtLayerName->setText( QString() );
+
   if ( widgetMode() == QgsProviderRegistry::WidgetMode::None )
   {
     accept();
@@ -265,6 +288,7 @@ void QgsDelimitedTextSourceSelect::loadSettings( const QString &subkey, bool loa
 
   rowCounter->setValue( settings.value( key + "/startFrom", 0 ).toInt() );
   cbxUseHeader->setChecked( settings.value( key + "/useHeader", "true" ) != "false" );
+  cbxDetectTypes->setChecked( settings.value( key + "/detectTypes", "true" ) != "false" );
   cbxTrimFields->setChecked( settings.value( key + "/trimFields", "false" ) == "true" );
   cbxSkipEmptyFields->setChecked( settings.value( key + "/skipEmptyFields", "false" ) == "true" );
   cbxPointIsComma->setChecked( settings.value( key + "/decimalPoint", "." ).toString().contains( ',' ) );
@@ -280,6 +304,12 @@ void QgsDelimitedTextSourceSelect::loadSettings( const QString &subkey, bool loa
     else geomTypeNone->setChecked( true );
     cbxXyDms->setChecked( settings.value( key + "/xyDms", "false" ) == "true" );
     swGeomType->setCurrentIndex( bgGeomType->checkedId() );
+    QString authid = settings.value( key + "/crs", "" ).toString();
+    QgsCoordinateReferenceSystem crs = QgsCoordinateReferenceSystem::fromOgcWmsCrs( authid );
+    if ( crs.isValid() )
+    {
+      crsGeometry->setCrs( crs );
+    }
   }
 
 }
@@ -304,6 +334,7 @@ void QgsDelimitedTextSourceSelect::saveSettings( const QString &subkey, bool sav
   settings.setValue( key + "/delimiterRegexp", txtDelimiterRegexp->text() );
   settings.setValue( key + "/startFrom", rowCounter->value() );
   settings.setValue( key + "/useHeader", cbxUseHeader->isChecked() ? "true" : "false" );
+  settings.setValue( key + "/detectTypes", cbxDetectTypes->isChecked() ? "true" : "false" );
   settings.setValue( key + "/trimFields", cbxTrimFields->isChecked() ? "true" : "false" );
   settings.setValue( key + "/skipEmptyFields", cbxSkipEmptyFields->isChecked() ? "true" : "false" );
   settings.setValue( key + "/decimalPoint", cbxPointIsComma->isChecked() ? "," : "." );
@@ -317,6 +348,10 @@ void QgsDelimitedTextSourceSelect::saveSettings( const QString &subkey, bool sav
     if ( geomTypeWKT->isChecked() ) geomColumnType = QStringLiteral( "wkt" );
     settings.setValue( key + "/geomColumnType", geomColumnType );
     settings.setValue( key + "/xyDms", cbxXyDms->isChecked() ? "true" : "false" );
+    if ( crsGeometry->crs().isValid() )
+    {
+      settings.setValue( key + "/crs", crsGeometry->crs().authid() );
+    }
   }
 
 }
@@ -366,7 +401,7 @@ bool QgsDelimitedTextSourceSelect::loadDelimitedFileDefinition()
 void QgsDelimitedTextSourceSelect::updateFieldLists()
 {
   // Update the x and y field drop-down boxes
-  QgsDebugMsg( "Updating field lists" );
+  QgsDebugMsg( QStringLiteral( "Updating field lists" ) );
 
   disconnect( cmbXField, static_cast<void ( QComboBox::* )( int )>( &QComboBox::currentIndexChanged ), this, &QgsDelimitedTextSourceSelect::enableAccept );
   disconnect( cmbYField, static_cast<void ( QComboBox::* )( int )>( &QComboBox::currentIndexChanged ), this, &QgsDelimitedTextSourceSelect::enableAccept );
@@ -433,7 +468,7 @@ void QgsDelimitedTextSourceSelect::updateFieldLists()
 
     for ( int i = 0; i < tblSample->columnCount(); i++ )
     {
-      QString value = i < nv ? values[i] : QLatin1String( "" );
+      QString value = i < nv ? values[i] : QString();
       if ( value.length() > MAX_SAMPLE_LENGTH )
         value = value.mid( 0, MAX_SAMPLE_LENGTH ) + QChar( 0x2026 );
       QTableWidgetItem *item = new QTableWidgetItem( value );
@@ -640,7 +675,7 @@ bool QgsDelimitedTextSourceSelect::validate()
 {
   // Check that input data is valid - provide a status message if not..
 
-  QString message( QLatin1String( "" ) );
+  QString message;
   bool enabled = false;
 
   if ( mFileWidget->filePath().trimmed().isEmpty() )
@@ -702,6 +737,10 @@ bool QgsDelimitedTextSourceSelect::validate()
   else if ( geomTypeWKT->isChecked() && cmbWktField->currentText().isEmpty() )
   {
     message = tr( "The WKT field name must be selected" );
+  }
+  else if ( ! geomTypeNone->isChecked() && ! crsGeometry->crs().isValid() )
+  {
+    message = tr( "The CRS must be selected" );
   }
   else
   {

@@ -18,9 +18,6 @@
 
 #include "qgsconfig.h"
 #include "qgis.h"
-#include "qgsmessagebar.h"
-#include "qgspoint.h"
-#include "qgsmapmouseevent.h"
 
 #include <QCursor>
 #include <QString>
@@ -35,11 +32,13 @@ class QgsRenderContext;
 class QKeyEvent;
 class QMouseEvent;
 class QWheelEvent;
+class QgsPoint;
 class QgsPointXY;
 class QgsRectangle;
 class QPoint;
 class QAction;
 class QAbstractButton;
+class QgsMapMouseEvent;
 
 #ifdef SIP_RUN
 % ModuleHeaderCode
@@ -135,18 +134,24 @@ class GUI_EXPORT QgsMapTool : public QObject
      * the previously used toolbutton to pop out. */
     void setAction( QAction *action );
 
-    //! Return associated action with map tool or NULL if no action is associated
+    //! Returns associated action with map tool or NULLPTR if no action is associated
     QAction *action();
+
+    /**
+     * Returns if the current map tool active on the map canvas
+     * \since QGIS 3.4
+     */
+    bool isActive() const;
 
     /**
      * Use this to associate a button to this maptool. It has the same meaning
      * as setAction() function except it works with a button instead of an QAction. */
     void setButton( QAbstractButton *button );
 
-    //! Return associated button with map tool or NULL if no button is associated
+    //! Returns associated button with map tool or NULLPTR if no button is associated
     QAbstractButton *button();
 
-    //! Set a user defined cursor
+    //! Sets a user defined cursor
     virtual void setCursor( const QCursor &cursor );
 
     //! called when set as currently active map tool
@@ -168,20 +173,20 @@ class GUI_EXPORT QgsMapTool : public QObject
     QString toolName() { return mToolName; }
 
     /**
-     * Get search radius in mm. Used by identify, tip etc.
+     * Gets search radius in mm. Used by identify, tip etc.
      *  The values is currently set in identify tool options (move somewhere else?)
      *  and defaults to Qgis::DEFAULT_SEARCH_RADIUS_MM.
      *  \since QGIS 2.3 */
     static double searchRadiusMM();
 
     /**
-     * Get search radius in map units for given context. Used by identify, tip etc.
+     * Gets search radius in map units for given context. Used by identify, tip etc.
      *  The values is calculated from searchRadiusMM().
      *  \since QGIS 2.3 */
     static double searchRadiusMU( const QgsRenderContext &context );
 
     /**
-     * Get search radius in map units for given canvas. Used by identify, tip etc.
+     * Gets search radius in map units for given canvas. Used by identify, tip etc.
      *  The values is calculated from searchRadiusMM().
      *  \since QGIS 2.3 */
     static double searchRadiusMU( QgsMapCanvas *canvas );

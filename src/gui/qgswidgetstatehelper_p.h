@@ -44,7 +44,7 @@ class QgsWidgetStateHelper : public QObject
      * Event filter to catch events from registered widgets.
      * \param object Object getting the event.
      * \param event Event sent from Qt.
-     * \return Always returns True so that widget still gets event.
+     * \return Always returns TRUE so that widget still gets event.
      */
     bool eventFilter( QObject *object, QEvent *event ) override;
 
@@ -60,9 +60,9 @@ class QgsWidgetStateHelper : public QObject
     QMap<QString, QString> mKeys;
 
     /**
-     * Return a non null safe name for the widget.
-     * @param widget The widget.
-     * @return A non null safe name for the widget.
+     * Returns a non null safe name for the widget.
+     * \param widget The widget.
+     * \return A non null safe name for the widget.
      */
     QString widgetSafeName( QWidget *widget );
 };

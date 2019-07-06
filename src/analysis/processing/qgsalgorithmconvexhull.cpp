@@ -69,16 +69,25 @@ QgsFields QgsConvexHullAlgorithm::outputFields( const QgsFields &inputFields ) c
   return fields;
 }
 
-QgsFeature QgsConvexHullAlgorithm::processFeature( const QgsFeature &feature, QgsProcessingContext &, QgsProcessingFeedback *feedback )
+QgsFeatureList QgsConvexHullAlgorithm::processFeature( const QgsFeature &feature, QgsProcessingContext &, QgsProcessingFeedback *feedback )
 {
   QgsFeature f = feature;
   if ( f.hasGeometry() )
   {
-    QgsGeometry outputGeometry = f.geometry().convexHull();
-    if ( !outputGeometry )
-      feedback->reportError( outputGeometry.lastError() );
-    f.setGeometry( outputGeometry );
-    if ( outputGeometry )
+    QgsGeometry outputGeometry;
+    if ( QgsWkbTypes::flatType( f.geometry().wkbType() ) == QgsWkbTypes::Point )
+    {
+      feedback->reportError( QObject::tr( "Cannot calculate convex hull for a single Point feature (try 'Minimum bounding geometry' algorithm instead)." ) );
+      f.clearGeometry();
+    }
+    else
+    {
+      outputGeometry = f.geometry().convexHull();
+      if ( outputGeometry.isNull() )
+        feedback->reportError( outputGeometry.lastError() );
+      f.setGeometry( outputGeometry );
+    }
+    if ( !outputGeometry.isNull() )
     {
       QgsAttributes attrs = f.attributes();
       attrs << outputGeometry.constGet()->area()
@@ -93,7 +102,7 @@ QgsFeature QgsConvexHullAlgorithm::processFeature( const QgsFeature &feature, Qg
       f.setAttributes( attrs );
     }
   }
-  return f;
+  return QgsFeatureList() << f;
 }
 
 ///@endcond

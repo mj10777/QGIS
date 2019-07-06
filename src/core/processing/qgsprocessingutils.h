@@ -21,15 +21,19 @@
 #include "qgis_core.h"
 
 #include "qgsrasterlayer.h"
-#include "qgsvectorlayer.h"
 #include "qgsmessagelog.h"
 #include "qgsspatialindex.h"
+#include "qgsprocessing.h"
+#include "qgsfeaturesink.h"
+#include "qgsfeaturesource.h"
 
+class QgsMeshLayer;
 class QgsProject;
 class QgsProcessingContext;
 class QgsMapLayerStore;
 class QgsProcessingFeedback;
 class QgsProcessingFeatureSource;
+class QgsProcessingAlgorithm;
 
 #include <QString>
 #include <QVariant>
@@ -42,16 +46,16 @@ class QgsProcessingFeatureSource;
  */
 class CORE_EXPORT QgsProcessingUtils
 {
-
   public:
 
     /**
      * Returns a list of raster layers from a \a project which are compatible with the processing
      * framework.
      *
-     * If the \a sort argument is true then the layers will be sorted by their QgsMapLayer::name()
+     * If the \a sort argument is TRUE then the layers will be sorted by their QgsMapLayer::name()
      * value.
      * \see compatibleVectorLayers()
+     * \see compatibleMeshLayers()
      * \see compatibleLayers()
      */
     static QList< QgsRasterLayer * > compatibleRasterLayers( QgsProject *project, bool sort = true );
@@ -60,24 +64,41 @@ class CORE_EXPORT QgsProcessingUtils
      * Returns a list of vector layers from a \a project which are compatible with the processing
      * framework.
      *
-     * If the \a geometryTypes list is non-empty then the layers will be sorted so that only
-     * layers with geometry types included in the list will be returned. Leaving the \a geometryTypes
+     * The \a sourceTypes list should be filled with a list of QgsProcessing::SourceType values.
+     * If the \a sourceTypes list is non-empty then the layers will be sorted so that only
+     * layers with the specified source type included in the list will be returned. Leaving the \a sourceTypes
      * list empty will cause all vector layers, regardless of their geometry type, to be returned.
      *
-     * If the \a sort argument is true then the layers will be sorted by their QgsMapLayer::name()
+     * If the \a sort argument is TRUE then the layers will be sorted by their QgsMapLayer::name()
      * value.
      * \see compatibleRasterLayers()
+     * \see compatibleMeshLayers()
      * \see compatibleLayers()
      */
     static QList< QgsVectorLayer * > compatibleVectorLayers( QgsProject *project,
-        const QList< QgsWkbTypes::GeometryType > &geometryTypes = QList< QgsWkbTypes::GeometryType >(),
+        const QList< int > &sourceTypes = QList< int >(),
         bool sort = true );
+
+    /**
+     * Returns a list of mesh layers from a \a project which are compatible with the processing
+     * framework.
+     *
+     * If the \a sort argument is TRUE then the layers will be sorted by their QgsMapLayer::name()
+     * value.
+     *
+     * \see compatibleRasterLayers()
+     * \see compatibleVectorLayers()
+     * \see compatibleLayers()
+     *
+     * \since QGIS 3.6
+     */
+    static QList<QgsMeshLayer *> compatibleMeshLayers( QgsProject *project, bool sort = true );
 
     /**
      * Returns a list of map layers from a \a project which are compatible with the processing
      * framework.
      *
-     * If the \a sort argument is true then the layers will be sorted by their QgsMapLayer::name()
+     * If the \a sort argument is TRUE then the layers will be sorted by their QgsMapLayer::name()
      * value.
      * \see compatibleRasterLayers()
      * \see compatibleVectorLayers()
@@ -85,16 +106,30 @@ class CORE_EXPORT QgsProcessingUtils
     static QList< QgsMapLayer * > compatibleLayers( QgsProject *project, bool sort = true );
 
     /**
+     * Layer type hints.
+     * \since QGIS 3.4
+     */
+    enum class LayerHint SIP_MONKEYPATCH_SCOPEENUM : int
+    {
+      UnknownType, //!< Unknown layer type
+      Vector, //!< Vector layer type
+      Raster, //!< Raster layer type
+      Mesh, //!< Mesh layer type  \since QGIS 3.6
+    };
+
+    /**
      * Interprets a string as a map layer within the supplied \a context.
      *
      * The method will attempt to
      * load a layer matching the passed \a string. E.g. if the string matches a layer ID or name
      * within the context's project or temporary layer store then this layer will be returned.
-     * If the string is a file path and \a allowLoadingNewLayers is true, then the layer at this
+     * If the string is a file path and \a allowLoadingNewLayers is TRUE, then the layer at this
      * file path will be loaded and added to the context's temporary layer store.
      * Ownership of the layer remains with the \a context or the context's current project.
+     *
+     * The \a typeHint can be used to dictate the type of map layer expected.
      */
-    static QgsMapLayer *mapLayerFromString( const QString &string, QgsProcessingContext &context, bool allowLoadingNewLayers = true );
+    static QgsMapLayer *mapLayerFromString( const QString &string, QgsProcessingContext &context, bool allowLoadingNewLayers = true, QgsProcessingUtils::LayerHint typeHint = QgsProcessingUtils::LayerHint::UnknownType );
 
     /**
      * Converts a variant \a value to a new feature source.
@@ -116,7 +151,17 @@ class CORE_EXPORT QgsProcessingUtils
     static QString normalizeLayerSource( const QString &source );
 
     /**
+     * Converts a variant to a Python literal.
+     *
+     * \see stringToPythonLiteral()
+     * \since QGSIS 3.6
+     */
+    static QString variantToPythonLiteral( const QVariant &value );
+
+    /**
      * Converts a string to a Python string literal. E.g. by replacing ' with \'.
+     *
+     * \see variantToPythonLiteral()
      */
     static QString stringToPythonLiteral( const QString &string );
 
@@ -138,13 +183,13 @@ class CORE_EXPORT QgsProcessingUtils
      * The caller takes responsibility for deleting the returned sink.
      */
 #ifndef SIP_RUN
-    static QgsFeatureSink *createFeatureSink(
-      QString &destination,
-      QgsProcessingContext &context,
-      const QgsFields &fields,
-      QgsWkbTypes::Type geometryType,
-      const QgsCoordinateReferenceSystem &crs,
-      const QVariantMap &createOptions = QVariantMap() ) SIP_FACTORY;
+    static QgsFeatureSink *createFeatureSink( QString &destination,
+        QgsProcessingContext &context,
+        const QgsFields &fields,
+        QgsWkbTypes::Type geometryType,
+        const QgsCoordinateReferenceSystem &crs,
+        const QVariantMap &createOptions = QVariantMap(),
+        QgsFeatureSink::SinkFlags sinkFlags = nullptr ) SIP_FACTORY;
 #endif
 
     /**
@@ -166,20 +211,23 @@ class CORE_EXPORT QgsProcessingUtils
      * SIP bindings. c++ code should call the other createFeatureSink() version.
      * \note available in Python bindings as createFeatureSink()
      */
-    static void createFeatureSinkPython(
-      QgsFeatureSink **sink SIP_OUT SIP_TRANSFERBACK,
-      QString &destination SIP_INOUT,
-      QgsProcessingContext &context,
-      const QgsFields &fields,
-      QgsWkbTypes::Type geometryType,
-      const QgsCoordinateReferenceSystem &crs,
-      const QVariantMap &createOptions = QVariantMap() ) SIP_PYNAME( createFeatureSink );
+    static void createFeatureSinkPython( QgsFeatureSink **sink SIP_OUT SIP_TRANSFERBACK, QString &destination SIP_INOUT, QgsProcessingContext &context, const QgsFields &fields, QgsWkbTypes::Type geometryType, const QgsCoordinateReferenceSystem &crs, const QVariantMap &createOptions = QVariantMap() ) SIP_THROW( QgsProcessingException ) SIP_PYNAME( createFeatureSink );
+
+
+    /**
+     * Combines the extent of several map \a layers. If specified, the target \a crs
+     * will be used to transform the layer's extent to the desired output reference system
+     * using the specified \a context.
+     * \since QGIS 3.8
+     */
+    static QgsRectangle combineLayerExtents( const QList<QgsMapLayer *> &layers, const QgsCoordinateReferenceSystem &crs, QgsProcessingContext &context );
 
     /**
      * Combines the extent of several map \a layers. If specified, the target \a crs
      * will be used to transform the layer's extent to the desired output reference system.
+     * \deprecated Use version with QgsProcessingContext argument instead
      */
-    static QgsRectangle combineLayerExtents( const QList<QgsMapLayer *> &layers, const QgsCoordinateReferenceSystem &crs = QgsCoordinateReferenceSystem() );
+    Q_DECL_DEPRECATED static QgsRectangle combineLayerExtents( const QList<QgsMapLayer *> &layers, const QgsCoordinateReferenceSystem &crs = QgsCoordinateReferenceSystem() ) SIP_DEPRECATED;
 
     /**
      * Converts an \a input parameter value for use in source iterating mode, where one individual sink
@@ -191,7 +239,7 @@ class CORE_EXPORT QgsProcessingUtils
 
     /**
      * Returns a session specific processing temporary folder for use in processing algorithms.
-     * \see generateTempFileName()
+     * \see generateTempFilename()
      */
     static QString tempFolder();
 
@@ -239,13 +287,26 @@ class CORE_EXPORT QgsProcessingUtils
      * length of field names, so be aware that the results of calling this method may
      * be truncated when saving to these formats.
      */
-    static QgsFields combineFields( const QgsFields &fieldsA, const QgsFields &fieldsB );
+    static QgsFields combineFields( const QgsFields &fieldsA, const QgsFields &fieldsB, const QString &fieldsBPrefix = QString() );
+
+    /**
+     * Returns a list of field indices parsed from the given list of field names. Unknown field names are ignored.
+     * If the list of field names is empty, it is assumed that all fields are required.
+     * \since QGIS 3.2
+     */
+    static QList<int> fieldNamesToIndices( const QStringList &fieldNames, const QgsFields &fields );
+
+    /**
+     * Returns a subset of fields based on the indices of desired fields.
+     * \since QGIS 3.2
+     */
+    static QgsFields indicesToFields( const QList<int> &indices, const QgsFields &fields );
 
   private:
-
     static bool canUseLayer( const QgsRasterLayer *layer );
+    static bool canUseLayer( const QgsMeshLayer *layer );
     static bool canUseLayer( const QgsVectorLayer *layer,
-                             const QList< QgsWkbTypes::GeometryType > &geometryTypes = QList< QgsWkbTypes::GeometryType >() );
+                             const QList< int > &sourceTypes = QList< int >() );
 
     /**
      * Interprets a \a string as a map layer from a store.
@@ -257,19 +318,34 @@ class CORE_EXPORT QgsProcessingUtils
      * returned.
      * \see mapLayerFromString()
      */
-    static QgsMapLayer *mapLayerFromStore( const QString &string, QgsMapLayerStore *store );
+    static QgsMapLayer *mapLayerFromStore( const QString &string, QgsMapLayerStore *store, QgsProcessingUtils::LayerHint typeHint = QgsProcessingUtils::LayerHint::UnknownType );
+
+    /**
+     * Interprets a string as a map layer. The method will attempt to
+     * load a layer matching the passed \a string using the given coordinate
+     * \a transformContext.
+     * E.g. if the string is a file path,
+     * then the layer at this file path will be loaded.
+     * The caller takes responsibility for deleting the returned map layer.
+     *
+     * \since QGIS 3.8
+     */
+    static QgsMapLayer *loadMapLayerFromString( const QString &string, const QgsCoordinateTransformContext &transformContext, LayerHint typeHint = LayerHint::UnknownType );
 
     /**
      * Interprets a string as a map layer. The method will attempt to
      * load a layer matching the passed \a string. E.g. if the string is a file path,
      * then the layer at this file path will be loaded.
      * The caller takes responsibility for deleting the returned map layer.
+     *
+     * \deprecated use mapLayerFromString() that takes QgsCoordinateTransformContext as an argument instead
      */
-    static QgsMapLayer *loadMapLayerFromString( const QString &string );
+    Q_DECL_DEPRECATED static QgsMapLayer *loadMapLayerFromString( const QString &string, LayerHint typeHint = LayerHint::UnknownType ) SIP_DEPRECATED ;
 
-    static void parseDestinationString( QString &destination, QString &providerKey, QString &uri, QString &layerName, QString &format, QMap<QString, QVariant> &options, bool &useWriter );
+    static void parseDestinationString( QString &destination, QString &providerKey, QString &uri, QString &layerName, QString &format, QMap<QString, QVariant> &options, bool &useWriter, QString &extension );
 
     friend class TestQgsProcessing;
+    friend class QgsProcessingProvider;
 
 };
 
@@ -294,9 +370,9 @@ class CORE_EXPORT QgsProcessingFeatureSource : public QgsFeatureSource
     /**
      * Constructor for QgsProcessingFeatureSource, accepting an original feature source \a originalSource
      * and processing \a context.
-     * Ownership of \a originalSource is dictated by \a ownsOriginalSource. If \a ownsOriginalSource is false,
+     * Ownership of \a originalSource is dictated by \a ownsOriginalSource. If \a ownsOriginalSource is FALSE,
      * ownership is not transferred, and callers must ensure that \a originalSource exists for the lifetime of this object.
-     * If \a ownsOriginalSource is true, then this object will take ownership of \a originalSource.
+     * If \a ownsOriginalSource is TRUE, then this object will take ownership of \a originalSource.
      */
     QgsProcessingFeatureSource( QgsFeatureSource *originalSource, const QgsProcessingContext &context, bool ownsOriginalSource = false );
 
@@ -308,6 +384,8 @@ class CORE_EXPORT QgsProcessingFeatureSource : public QgsFeatureSource
      * iterator, eg by restricting the returned attributes or geometry.
      */
     QgsFeatureIterator getFeatures( const QgsFeatureRequest &request, Flags flags ) const;
+
+    QgsFeatureSource::FeatureAvailability hasFeatures() const override;
 
     QgsFeatureIterator getFeatures( const QgsFeatureRequest &request = QgsFeatureRequest() ) const override;
     QgsCoordinateReferenceSystem sourceCrs() const override;
@@ -342,8 +420,8 @@ class CORE_EXPORT QgsProcessingFeatureSource : public QgsFeatureSource
  * \class QgsProcessingFeatureSink
  * \ingroup core
  * QgsProxyFeatureSink subclass which reports feature addition errors to a QgsProcessingContext.
- * \since QGIS 3.0
  * \note Not available in Python bindings.
+ * \since QGIS 3.0
  */
 class CORE_EXPORT QgsProcessingFeatureSink : public QgsProxyFeatureSink
 {
@@ -359,12 +437,12 @@ class CORE_EXPORT QgsProcessingFeatureSink : public QgsProxyFeatureSink
      *
      * The \a sinkName is used to identify the destination sink when reporting errors.
      *
-     * Ownership of \a originalSink is dictated by \a ownsOriginalSource. If \a ownsOriginalSink is false,
+     * Ownership of \a originalSink is dictated by \a ownsOriginalSource. If \a ownsOriginalSink is FALSE,
      * ownership is not transferred, and callers must ensure that \a originalSink exists for the lifetime of this object.
-     * If \a ownsOriginalSink is true, then this object will take ownership of \a originalSink.
+     * If \a ownsOriginalSink is TRUE, then this object will take ownership of \a originalSink.
      */
     QgsProcessingFeatureSink( QgsFeatureSink *originalSink, const QString &sinkName, QgsProcessingContext &context, bool ownsOriginalSink = false );
-    ~QgsProcessingFeatureSink();
+    ~QgsProcessingFeatureSink() override;
     bool addFeature( QgsFeature &feature, QgsFeatureSink::Flags flags = nullptr ) override;
     bool addFeatures( QgsFeatureList &features, QgsFeatureSink::Flags flags = nullptr ) override;
     bool addFeatures( QgsFeatureIterator &iterator, QgsFeatureSink::Flags flags = nullptr ) override;

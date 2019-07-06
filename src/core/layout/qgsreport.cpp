@@ -26,7 +26,7 @@ QgsReport::QgsReport( QgsProject *project )
 
 QIcon QgsReport::icon() const
 {
-  return QgsApplication::getThemeIcon( QStringLiteral( "processingResult.svg" ) );
+  return QgsApplication::getThemeIcon( QStringLiteral( "mIconReport.svg" ) );
 }
 
 QgsReport *QgsReport::clone() const
@@ -64,6 +64,11 @@ bool QgsReport::readLayoutXml( const QDomElement &layoutElement, const QDomDocum
 void QgsReport::updateSettings()
 {
   reloadSettings();
+}
+
+bool QgsReport::layoutAccept( QgsStyleEntityVisitorInterface *visitor ) const
+{
+  return accept( visitor );
 }
 
 QgsMasterLayoutInterface::Type QgsReport::layoutType() const

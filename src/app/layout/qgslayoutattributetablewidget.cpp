@@ -68,7 +68,7 @@ QgsLayoutAttributeTableWidget::QgsLayoutAttributeTableWidget( QgsLayoutFrame *fr
   connect( mEmptyFrameCheckBox, &QCheckBox::toggled, this, &QgsLayoutAttributeTableWidget::mEmptyFrameCheckBox_toggled );
   connect( mHideEmptyBgCheckBox, &QCheckBox::toggled, this, &QgsLayoutAttributeTableWidget::mHideEmptyBgCheckBox_toggled );
   connect( mWrapBehaviorComboBox, static_cast<void ( QComboBox::* )( int )>( &QComboBox::currentIndexChanged ), this, &QgsLayoutAttributeTableWidget::mWrapBehaviorComboBox_currentIndexChanged );
-  connect( mAdvancedCustomisationButton, &QPushButton::clicked, this, &QgsLayoutAttributeTableWidget::mAdvancedCustomisationButton_clicked );
+  connect( mAdvancedCustomizationButton, &QPushButton::clicked, this, &QgsLayoutAttributeTableWidget::mAdvancedCustomizationButton_clicked );
   setPanelTitle( tr( "Table Properties" ) );
 
   mContentFontToolButton->setMode( QgsFontButton::ModeQFont );
@@ -115,7 +115,7 @@ QgsLayoutAttributeTableWidget::QgsLayoutAttributeTableWidget( QgsLayoutFrame *fr
   mBackgroundColorButton->setAllowOpacity( true );
   mBackgroundColorButton->setContext( QStringLiteral( "composer" ) );
   mBackgroundColorButton->setShowNoColor( true );
-  mBackgroundColorButton->setNoColorString( tr( "No background" ) );
+  mBackgroundColorButton->setNoColorString( tr( "No Background" ) );
 
   updateGuiElements();
 
@@ -131,7 +131,11 @@ QgsLayoutAttributeTableWidget::QgsLayoutAttributeTableWidget( QgsLayoutFrame *fr
     {
       connect( atlas, &QgsLayoutAtlas::toggled, this, &QgsLayoutAttributeTableWidget::atlasToggled );
     }
+
+    mLayerSourceDDBtn->registerExpressionContextGenerator( mTable );
   }
+
+  registerDataDefinedButton( mLayerSourceDDBtn, QgsLayoutObject::AttributeTableSourceLayer );
 
   //embed widget for general options
   if ( mFrame )
@@ -200,7 +204,7 @@ void QgsLayoutAttributeTableWidget::mAttributesPushButton_clicked()
     return;
   }
 
-  //make deep copy of current columns, so we can restore them in case of cancelation
+  //make deep copy of current columns, so we can restore them in case of cancellation
   QVector<QgsLayoutTableColumn *> currentColumns;
   auto it = mTable->columns().constBegin();
   for ( ; it != mTable->columns().constEnd() ; ++it )
@@ -462,8 +466,8 @@ void QgsLayoutAttributeTableWidget::updateGuiElements()
   mFeatureFilterEdit->setEnabled( mTable->filterFeatures() );
   mFeatureFilterButton->setEnabled( mTable->filterFeatures() );
 
-  mHeaderHAlignmentComboBox->setCurrentIndex( ( int )mTable->headerHAlignment() );
-  mHeaderModeComboBox->setCurrentIndex( ( int )mTable->headerMode() );
+  mHeaderHAlignmentComboBox->setCurrentIndex( static_cast<int>( mTable->headerHAlignment() ) );
+  mHeaderModeComboBox->setCurrentIndex( static_cast<int>( mTable->headerMode() ) );
 
   mEmptyModeComboBox->setCurrentIndex( mEmptyModeComboBox->findData( mTable->emptyTableBehavior() ) );
   mEmptyMessageLineEdit->setText( mTable->emptyTableMessage() );
@@ -478,6 +482,8 @@ void QgsLayoutAttributeTableWidget::updateGuiElements()
 
   mEmptyFrameCheckBox->setChecked( mFrame->hidePageIfEmpty() );
   mHideEmptyBgCheckBox->setChecked( mFrame->hideBackgroundIfEmpty() );
+
+  updateDataDefinedButton( mLayerSourceDDBtn );
 
   toggleSourceControls();
 
@@ -883,7 +889,7 @@ void QgsLayoutAttributeTableWidget::mWrapBehaviorComboBox_currentIndexChanged( i
   mTable->endCommand();
 }
 
-void QgsLayoutAttributeTableWidget::mAdvancedCustomisationButton_clicked()
+void QgsLayoutAttributeTableWidget::mAdvancedCustomizationButton_clicked()
 {
   if ( !mTable )
   {
@@ -925,6 +931,7 @@ void QgsLayoutAttributeTableWidget::toggleSourceControls()
     case QgsLayoutItemAttributeTable::LayerAttributes:
       mLayerComboBox->setEnabled( true );
       mLayerComboBox->setVisible( true );
+      mLayerSourceDDBtn->setVisible( true );
       mLayerLabel->setVisible( true );
       mRelationsComboBox->setEnabled( false );
       mRelationsComboBox->setVisible( false );
@@ -938,6 +945,7 @@ void QgsLayoutAttributeTableWidget::toggleSourceControls()
     case QgsLayoutItemAttributeTable::AtlasFeature:
       mLayerComboBox->setEnabled( false );
       mLayerComboBox->setVisible( false );
+      mLayerSourceDDBtn->setVisible( false );
       mLayerLabel->setVisible( false );
       mRelationsComboBox->setEnabled( false );
       mRelationsComboBox->setVisible( false );
@@ -952,6 +960,7 @@ void QgsLayoutAttributeTableWidget::toggleSourceControls()
       mLayerComboBox->setEnabled( false );
       mLayerComboBox->setVisible( false );
       mLayerLabel->setVisible( false );
+      mLayerSourceDDBtn->setVisible( false );
       mRelationsComboBox->setEnabled( true );
       mRelationsComboBox->setVisible( true );
       mRelationLabel->setVisible( true );

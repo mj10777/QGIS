@@ -22,9 +22,6 @@ __author__ = 'Arnaud Morvan'
 __date__ = 'January 2015'
 __copyright__ = '(C) 2015, Arnaud Morvan'
 
-# This will get replaced with a git SHA1 when you do a git archive
-__revision__ = '$Format:%H$'
-
 from qgis.PyQt.QtCore import Qt
 from qgis.PyQt.QtWidgets import (
     QCheckBox,
@@ -107,9 +104,7 @@ class CheckboxesPanel(QWidget):
     def setValue(self, value):
         if self._multiple:
             for (v, button) in self._buttons:
-                if v in value:
-                    button.setChecked(True)
+                button.setChecked(v in value)
         else:
             for v, button in self._buttons:
-                if v == value:
-                    button.setChecked(True)
+                button.setChecked(v == value)

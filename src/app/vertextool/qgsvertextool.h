@@ -18,15 +18,19 @@
 
 #include <memory>
 
+#include <QPointer>
+
 #include "qgis_app.h"
 #include "qgsmaptooladvanceddigitizing.h"
 #include "qgsgeometry.h"
+#include "qgspointlocator.h"
+
 
 class QRubberBand;
 
 class QgsGeometryValidator;
 class QgsVertexEditor;
-class QgsSelectedFeature;
+class QgsLockedFeature;
 class QgsSnapIndicator;
 class QgsVertexMarker;
 
@@ -61,7 +65,15 @@ class APP_EXPORT QgsVertexTool : public QgsMapToolAdvancedDigitizing
 {
     Q_OBJECT
   public:
-    QgsVertexTool( QgsMapCanvas *canvas, QgsAdvancedDigitizingDockWidget *cadDock );
+
+    enum VertexToolMode
+    {
+      ActiveLayer,
+      AllLayers
+    };
+    Q_ENUM( VertexToolMode )
+
+    QgsVertexTool( QgsMapCanvas *canvas, QgsAdvancedDigitizingDockWidget *cadDock, VertexToolMode mode = QgsVertexTool::AllLayers );
 
     //! Cleanup canvas items we have created
     ~QgsVertexTool() override;
@@ -75,11 +87,19 @@ class APP_EXPORT QgsVertexTool : public QgsMapToolAdvancedDigitizing
     //! Start addition of a new vertex on double-click
     void canvasDoubleClickEvent( QgsMapMouseEvent *e ) override;
 
+    void activate() override;
+
     void deactivate() override;
 
     void keyPressEvent( QKeyEvent *e ) override;
 
     QgsGeometry cachedGeometry( const QgsVectorLayer *layer, QgsFeatureId fid );
+
+    //! Toggle the vertex editor
+    void showVertexEditor();  //#spellok
+
+    //! Update vertex editor to show feature from the given match
+    void updateVertexEditor( QgsVectorLayer *layer, QgsFeatureId fid );
 
   private slots:
     //! update geometry of our feature
@@ -87,7 +107,7 @@ class APP_EXPORT QgsVertexTool : public QgsMapToolAdvancedDigitizing
 
     void onCachedGeometryDeleted( QgsFeatureId fid );
 
-    void showVertexEditor();  //#spellok
+    void clearGeometryCache();
 
     void deleteVertexEditorSelection();
 
@@ -98,6 +118,8 @@ class APP_EXPORT QgsVertexTool : public QgsMapToolAdvancedDigitizing
     void startRangeVertexSelection();
 
     void cleanEditor( QgsFeatureId id );
+
+    void lockedFeatureSelectionChanged();
 
   private:
 
@@ -119,12 +141,42 @@ class APP_EXPORT QgsVertexTool : public QgsMapToolAdvancedDigitizing
 
     void removeTemporaryRubberBands();
 
+    void cleanupVertexEditor();
+
+    void cleanupLockedFeature();
+
     /**
      * Temporarily override snapping config and snap to vertices and edges
      of any editable vector layer, to allow selection of vertex for editing
      (if snapped to edge, it would offer creation of a new vertex there).
     */
     QgsPointLocator::Match snapToEditableLayer( QgsMapMouseEvent *e );
+
+    /**
+     * Tries to find a match in polygon interiors. This is useful for mouse move
+     * events to keep features highlighted to see their area.
+     */
+    QgsPointLocator::Match snapToPolygonInterior( QgsMapMouseEvent *e );
+
+    /**
+     * Returns a list of all matches at the given map point. That is a concatenation
+     * of all vertex, edge and area matches (vertex/edge matches using standard search tolerance).
+     * Layer is only searched if it is editable.
+     */
+    QList<QgsPointLocator::Match> findEditableLayerMatches( const QgsPointXY &mapPoint, QgsVectorLayer *layer );
+
+    /**
+     * Returns a set of all matches at the given map point from all editable layers (respecting the mode).
+     * The set does not contain only the closest match from each layer, but all matches in the standard
+     * vertex search tolerance. It also includes area matches.
+     */
+    QSet<QPair<QgsVectorLayer *, QgsFeatureId> > findAllEditableFeatures( const QgsPointXY &mapPoint );
+
+    /**
+     * Implements behavior for mouse right-click to select a feature for editing (and in case of multiple
+     * features in one place, repeated right-clicks will cycle through the features).
+     */
+    void tryToSelectFeature( QgsMapMouseEvent *e );
 
     //! check whether we are still close to the mEndpointMarker
     bool isNearEndpointMarker( const QgsPointXY &mapPoint );
@@ -141,8 +193,11 @@ class APP_EXPORT QgsVertexTool : public QgsMapToolAdvancedDigitizing
 
     void startDraggingMoveVertex( const QgsPointLocator::Match &m );
 
-    //! Get list of matches of all vertices of a layer exactly snapped to a map point
+    //! Gets list of matches of all vertices of a layer exactly snapped to a map point
     QList<QgsPointLocator::Match> layerVerticesSnappedToPoint( QgsVectorLayer *layer, const QgsPointXY &mapPoint );
+
+    //! Gets list of matches of all segments of a layer coincident with the given segment
+    QList<QgsPointLocator::Match> layerSegmentsSnappedToSegment( QgsVectorLayer *layer, const QgsPointXY &mapPoint1, const QgsPointXY &mapPoint2 );
 
     void startDraggingAddVertex( const QgsPointLocator::Match &m );
 
@@ -165,8 +220,24 @@ class APP_EXPORT QgsVertexTool : public QgsMapToolAdvancedDigitizing
 
     void addExtraVerticesToEdits( VertexEdits &edits, const QgsPointXY &mapPoint, QgsVectorLayer *dragLayer = nullptr, const QgsPointXY &layerPoint = QgsPointXY() );
 
+    void addExtraSegmentsToEdits( QgsVertexTool::VertexEdits &edits, const QgsPointXY &mapPoint, QgsVectorLayer *dragLayer, const QgsPointXY &layerPoint );
+
     void applyEditsToLayers( VertexEdits &edits );
 
+    /**
+     * For the given set of vertices (possibly from multiple layers) find any another vertices that are coincident with
+     * them and not yet included in the set. This is used for topological editing to find all vertices that should be moved.
+     */
+    QSet<Vertex> findCoincidentVertices( const QSet<Vertex> &vertices );
+
+    /**
+     * For the given set of vertices, prepare mDraggingExtraVertices and mDraggingExtraVerticesOffset arrays.
+     * The parameters anchorPoint and anchorLayer are used to calculate offsets.
+     */
+    void buildExtraVertices( const QSet<Vertex> &vertices, const QgsPointXY &anchorPoint, QgsVectorLayer *anchorLayer );
+
+    //! Returns a list of canvas layers filtered to just editable spatial vector layers
+    QList<QgsVectorLayer *> editableVectorLayers();
 
     enum HighlightMode
     {
@@ -186,13 +257,13 @@ class APP_EXPORT QgsVertexTool : public QgsMapToolAdvancedDigitizing
      * Initialize rectangle that is being dragged to select vertices.
      * Argument point0 is in screen coordinates.
      */
-    void startSelectionRect( const QPoint &point0 );
+    void startSelectionRect( QPoint point0 );
 
     /**
      * Update bottom-right corner of the existing selection rectangle.
      * Argument point1 is in screen coordinates.
      */
-    void updateSelectionRect( const QPoint &point1 );
+    void updateSelectionRect( QPoint point1 );
 
     void stopSelectionRect();
 
@@ -201,8 +272,6 @@ class APP_EXPORT QgsVertexTool : public QgsMapToolAdvancedDigitizing
      * center of the edge and whether we are close enough to the center
      */
     bool matchEdgeCenterTest( const QgsPointLocator::Match &m, const QgsPointXY &mapPoint, QgsPointXY *edgeCenterPtr = nullptr );
-
-    void cleanupVertexEditor();
 
     //! Run validation on a geometry (in a background thread)
     void validateGeometry( QgsVectorLayer *layer, QgsFeatureId featureId );
@@ -227,6 +296,9 @@ class APP_EXPORT QgsVertexTool : public QgsMapToolAdvancedDigitizing
 
     void stopRangeVertexSelection();
 
+    //! update the highlight of vertices from the locked feature
+    void updateLockedFeatureVertices();
+
   private:
 
     // members used for temporary highlight of stuff
@@ -241,7 +313,7 @@ class APP_EXPORT QgsVertexTool : public QgsMapToolAdvancedDigitizing
     QgsVertexMarker *mEdgeCenterMarker = nullptr;
     //! rubber band for highlight of a whole feature on mouse over and not dragging anything
     QgsRubberBand *mFeatureBand = nullptr;
-    //! rubber band for highlight of all vertices of a feature on mouse over and not dragging anything
+    //! rubber band for highlight of all vertices of a feature on mouse over and not dragging anything, also used for locked feature vertices
     QgsRubberBand *mFeatureBandMarkers = nullptr;
     //! source layer for mFeatureBand (null if mFeatureBand is null)
     const QgsVectorLayer *mFeatureBandLayer = nullptr;
@@ -251,6 +323,8 @@ class APP_EXPORT QgsVertexTool : public QgsMapToolAdvancedDigitizing
     QgsRubberBand *mVertexBand = nullptr;
     //! highlight of an edge while mouse pointer is close to an edge and not dragging anything
     QgsRubberBand *mEdgeBand = nullptr;
+    //! highlight of locked feature vertices (but not selected)
+    QList<QgsVertexMarker *> mLockedFeatureVerticesMarkers;
 
     // members for dragging operation
 
@@ -274,7 +348,7 @@ class APP_EXPORT QgsVertexTool : public QgsMapToolAdvancedDigitizing
      */
     QList<QgsVector> mDragPointMarkersOffset;
 
-    //! structure to keep information about a rubber band user for dragging of a straight line segment
+    //! structure to keep information about a rubber band used for dragging of a straight line segment
     struct StraightBand
     {
       QgsRubberBand *band = nullptr;       //!< Pointer to the actual rubber band
@@ -320,6 +394,12 @@ class APP_EXPORT QgsVertexTool : public QgsMapToolAdvancedDigitizing
      */
     QList<QgsVector> mDraggingExtraVerticesOffset;
 
+    /**
+     * list of Vertex instances identifying segments (by their first vertex index) that should
+     * also get a new vertex: this is used for topo editing when adding a vertex to existing segment
+     */
+    QList<Vertex> mDraggingExtraSegments;
+
     // members for selection handling
 
     //! list of Vertex instances of vertices that are selected
@@ -361,17 +441,30 @@ class APP_EXPORT QgsVertexTool : public QgsMapToolAdvancedDigitizing
      */
     std::unique_ptr<QgsPointLocator::Match> mNewVertexFromDoubleClick;
 
-    //! Geometry cache for fast access to geometries
+    //! Geometry cache for fast access to geometries (coordinates are in their layer's CRS)
     QHash<const QgsVectorLayer *, QHash<QgsFeatureId, QgsGeometry> > mCache;
 
     // support for vertex editor
 
-    //! most recent match when moving mouse
-    QgsPointLocator::Match mLastMouseMoveMatch;
-    //! Selected feature for the vertex editor
-    std::unique_ptr<QgsSelectedFeature> mSelectedFeature;
+    //! Locked feature for the vertex editor
+    std::unique_ptr<QgsLockedFeature> mLockedFeature;
     //! Dock widget which allows editing vertices
-    std::unique_ptr<QgsVertexEditor> mVertexEditor;
+    QPointer<QgsVertexEditor> mVertexEditor;
+
+    /**
+     * Data structure that stores alternative features to the currently selected (locked) feature.
+     * This is used when user clicks with right mouse button multiple times in one location
+     * to easily switch to the desired feature.
+     */
+    struct LockedFeatureAlternatives
+    {
+      QPoint screenPoint;
+      QList< QPair<QgsVectorLayer *, QgsFeatureId> > alternatives;
+      int index = -1;
+    };
+
+    //! Keeps information about other possible features to select with right click. Null if no info is currently held.
+    std::unique_ptr<LockedFeatureAlternatives> mLockedFeatureAlternatives;
 
     // support for validation of geometries
 
@@ -404,6 +497,8 @@ class APP_EXPORT QgsVertexTool : public QgsMapToolAdvancedDigitizing
 
     //! Starting vertex when using range selection (null if not yet selected)
     std::unique_ptr<Vertex> mRangeSelectionFirstVertex;
+
+    VertexToolMode mMode = AllLayers;
 };
 
 

@@ -28,6 +28,9 @@ email                : sherman at mrcc.com
 #include "qgsvectorlayer.h"
 #include "qgscolumntypethread.h"
 #include "qgssettings.h"
+#include "qgsproxyprogresstask.h"
+#include "qgsproject.h"
+#include "qgsgui.h"
 
 #include <QFileDialog>
 #include <QInputDialog>
@@ -40,7 +43,7 @@ email                : sherman at mrcc.com
 //! Used to create an editor for when the user tries to change the contents of a cell
 QWidget *QgsPgSourceSelectDelegate::createEditor( QWidget *parent, const QStyleOptionViewItem &option, const QModelIndex &index ) const
 {
-  Q_UNUSED( option );
+  Q_UNUSED( option )
 
   QString tableName = index.sibling( index.row(), QgsPgTableModel::DbtmTable ).data( Qt::DisplayRole ).toString();
   if ( tableName.isEmpty() )
@@ -81,7 +84,8 @@ QWidget *QgsPgSourceSelectDelegate::createEditor( QWidget *parent, const QStyleO
       QStandardItemModel *model = new QStandardItemModel( values.size(), 1, cb );
 
       int row = 0;
-      Q_FOREACH ( const QString &value, values )
+      const auto constValues = values;
+      for ( const QString &value : constValues )
       {
         QStandardItem *item = new QStandardItem( value );
         item->setFlags( Qt::ItemIsUserCheckable | Qt::ItemIsEnabled );
@@ -120,7 +124,8 @@ void QgsPgSourceSelectDelegate::setEditorData( QWidget *editor, const QModelInde
     {
       QStringList cols = index.data( Qt::UserRole + 2 ).toStringList();
 
-      Q_FOREACH ( const QString &col, cols )
+      const auto constCols = cols;
+      for ( const QString &col : constCols )
       {
         QStandardItemModel *cbm = qobject_cast<QStandardItemModel *>( cb->model() );
         for ( int idx = 0; idx < cbm->rowCount(); idx++ )
@@ -196,6 +201,8 @@ QgsPgSourceSelect::QgsPgSourceSelect( QWidget *parent, Qt::WindowFlags fl, QgsPr
   : QgsAbstractDataSourceWidget( parent, fl, theWidgetMode )
 {
   setupUi( this );
+  QgsGui::instance()->enableAutoGeometryRestore( this );
+
   connect( btnConnect, &QPushButton::clicked, this, &QgsPgSourceSelect::btnConnect_clicked );
   connect( cbxAllowGeometrylessTables, &QCheckBox::stateChanged, this, &QgsPgSourceSelect::cbxAllowGeometrylessTables_stateChanged );
   connect( btnNew, &QPushButton::clicked, this, &QgsPgSourceSelect::btnNew_clicked );
@@ -252,6 +259,11 @@ QgsPgSourceSelect::QgsPgSourceSelect( QWidget *parent, Qt::WindowFlags fl, QgsPr
   mProxyModel.setFilterCaseSensitivity( Qt::CaseInsensitive );
   mProxyModel.setSourceModel( &mTableModel );
 
+  // Do not do dynamic sorting - otherwise whenever user selects geometry type / srid / pk columns,
+  // that item suddenly jumps to the end of the list (because the item gets changed) which is very annoying.
+  // The list gets sorted in finishList() method when the listing of tables and views has finished.
+  mProxyModel.setDynamicSortFilter( false );
+
   mTablesTreeView->setModel( &mProxyModel );
   mTablesTreeView->setSortingEnabled( true );
   mTablesTreeView->setEditTriggers( QAbstractItemView::CurrentChanged );
@@ -268,7 +280,6 @@ QgsPgSourceSelect::QgsPgSourceSelect( QWidget *parent, Qt::WindowFlags fl, QgsPr
   //in search does not seem to work
   mSearchColumnComboBox->setCurrentIndex( 2 );
 
-  restoreGeometry( settings.value( QStringLiteral( "Windows/PgSourceSelect/geometry" ) ).toByteArray() );
   mHoldDialogOpen->setChecked( settings.value( QStringLiteral( "Windows/PgSourceSelect/HoldDialogOpen" ), false ).toBool() );
 
   for ( int i = 0; i < mTableModel.columnCount(); i++ )
@@ -321,7 +332,7 @@ void QgsPgSourceSelect::btnSave_clicked()
 void QgsPgSourceSelect::btnLoad_clicked()
 {
   QString fileName = QFileDialog::getOpenFileName( this, tr( "Load Connections" ), QDir::homePath(),
-                     tr( "XML files (*.xml *XML)" ) );
+                     tr( "XML files (*.xml *.XML)" ) );
   if ( fileName.isEmpty() )
   {
     return;
@@ -390,7 +401,7 @@ void QgsPgSourceSelect::mSearchGroupBox_toggled( bool checked )
   if ( mSearchTableEdit->text().isEmpty() )
     return;
 
-  mSearchTableEdit_textChanged( checked ? mSearchTableEdit->text() : QLatin1String( "" ) );
+  mSearchTableEdit_textChanged( checked ? mSearchTableEdit->text() : QString() );
 }
 
 void QgsPgSourceSelect::mSearchTableEdit_textChanged( const QString &text )
@@ -447,7 +458,7 @@ void QgsPgSourceSelect::mSearchColumnComboBox_currentIndexChanged( const QString
 
 void QgsPgSourceSelect::mSearchModeComboBox_currentIndexChanged( const QString &text )
 {
-  Q_UNUSED( text );
+  Q_UNUSED( text )
   mSearchTableEdit_textChanged( mSearchTableEdit->text() );
 }
 
@@ -466,7 +477,6 @@ QgsPgSourceSelect::~QgsPgSourceSelect()
   }
 
   QgsSettings settings;
-  settings.setValue( QStringLiteral( "Windows/PgSourceSelect/geometry" ), saveGeometry() );
   settings.setValue( QStringLiteral( "Windows/PgSourceSelect/HoldDialogOpen" ), mHoldDialogOpen->isChecked() );
 
   for ( int i = 0; i < mTableModel.columnCount(); i++ )
@@ -495,7 +505,8 @@ void QgsPgSourceSelect::addButtonClicked()
 {
   mSelectedTables.clear();
 
-  Q_FOREACH ( const QModelIndex &idx, mTablesTreeView->selectionModel()->selection().indexes() )
+  const auto constIndexes = mTablesTreeView->selectionModel()->selection().indexes();
+  for ( const QModelIndex &idx : constIndexes )
   {
     if ( idx.column() != QgsPgTableModel::DbtmTable )
       continue;
@@ -533,6 +544,7 @@ void QgsPgSourceSelect::btnConnect_clicked()
 
   QModelIndex rootItemIndex = mTableModel.indexFromItem( mTableModel.invisibleRootItem() );
   mTableModel.removeRows( 0, mTableModel.rowCount( rootItemIndex ), rootItemIndex );
+  mTableModel.setConnectionName( cmbConnections->currentText() );
 
   // populate the table list
   QgsDataSourceUri uri = QgsPostgresConn::connUri( cmbConnections->currentText() );
@@ -545,13 +557,18 @@ void QgsPgSourceSelect::btnConnect_clicked()
   QApplication::setOverrideCursor( Qt::BusyCursor );
 
   mColumnTypeThread = new QgsGeomColumnTypeThread( cmbConnections->currentText(), mUseEstimatedMetadata, cbxAllowGeometrylessTables->isChecked() );
+  mColumnTypeTask = new QgsProxyProgressTask( tr( "Scanning tables for %1" ).arg( cmbConnections->currentText() ) );
+  QgsApplication::taskManager()->addTask( mColumnTypeTask );
 
   connect( mColumnTypeThread, &QgsGeomColumnTypeThread::setLayerType,
            this, &QgsPgSourceSelect::setLayerType );
   connect( mColumnTypeThread, &QThread::finished,
            this, &QgsPgSourceSelect::columnThreadFinished );
   connect( mColumnTypeThread, &QgsGeomColumnTypeThread::progress,
-           this, &QgsPgSourceSelect::progress );
+           mColumnTypeTask, [ = ]( int i, int n )
+  {
+    mColumnTypeTask->setProxyProgress( 100.0 * static_cast< double >( i ) / n );
+  } );
   connect( mColumnTypeThread, &QgsGeomColumnTypeThread::progressMessage,
            this, &QgsPgSourceSelect::progressMessage );
 
@@ -572,6 +589,8 @@ void QgsPgSourceSelect::columnThreadFinished()
   delete mColumnTypeThread;
   mColumnTypeThread = nullptr;
   btnConnect->setText( tr( "Connect" ) );
+  mColumnTypeTask->finalize( true );
+  mColumnTypeTask = nullptr;
 
   finishList();
 }
@@ -600,7 +619,7 @@ void QgsPgSourceSelect::setSql( const QModelIndex &index )
 {
   if ( !index.parent().isValid() )
   {
-    QgsDebugMsg( "schema item found" );
+    QgsDebugMsg( QStringLiteral( "schema item found" ) );
     return;
   }
 
@@ -610,11 +629,12 @@ void QgsPgSourceSelect::setSql( const QModelIndex &index )
   QString uri = mTableModel.layerURI( idx, connectionInfo( false ), mUseEstimatedMetadata );
   if ( uri.isNull() )
   {
-    QgsDebugMsg( "no uri" );
+    QgsDebugMsg( QStringLiteral( "no uri" ) );
     return;
   }
 
-  QgsVectorLayer *vlayer = new QgsVectorLayer( uri, tableName, QStringLiteral( "postgres" ) );
+  const QgsVectorLayer::LayerOptions options { QgsProject::instance()->transformContext() };
+  QgsVectorLayer *vlayer = new QgsVectorLayer( uri, tableName, QStringLiteral( "postgres" ), options );
   if ( !vlayer->isValid() )
   {
     delete vlayer;
@@ -659,7 +679,7 @@ void QgsPgSourceSelect::setConnectionListPosition()
 
 void QgsPgSourceSelect::setSearchExpression( const QString &regexp )
 {
-  Q_UNUSED( regexp );
+  Q_UNUSED( regexp )
 }
 
 void QgsPgSourceSelect::treeWidgetSelectionChanged( const QItemSelection &selected, const QItemSelection &deselected )

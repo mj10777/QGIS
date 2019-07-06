@@ -21,16 +21,13 @@ __author__ = 'Victor Olaya'
 __date__ = 'August 2012'
 __copyright__ = '(C) 2012, Victor Olaya'
 
-# This will get replaced with a git SHA1 when you do a git archive
-
-__revision__ = '$Format:%H$'
-
 import os
 import random
 
 from qgis.PyQt.QtGui import QIcon
 
-from qgis.core import (QgsFeatureRequest,
+from qgis.core import (QgsApplication,
+                       QgsFeatureRequest,
                        QgsProcessingException,
                        QgsProcessingUtils,
                        QgsProcessingAlgorithm,
@@ -55,7 +52,10 @@ class RandomSelectionWithinSubsets(QgisAlgorithm):
     OUTPUT = 'OUTPUT'
 
     def icon(self):
-        return QIcon(os.path.join(pluginPath, 'images', 'ftools', 'sub_selection.png'))
+        return QgsApplication.getThemeIcon("/algorithms/mAlgorithmSelectRandom.svg")
+
+    def svgIconPath(self):
+        return QgsApplication.iconPath("/algorithms/mAlgorithmSelectRandom.svg")
 
     def group(self):
         return self.tr('Vector selection')
@@ -82,7 +82,7 @@ class RandomSelectionWithinSubsets(QgisAlgorithm):
         self.addParameter(QgsProcessingParameterNumber(self.NUMBER,
                                                        self.tr('Number/percentage of selected features'),
                                                        QgsProcessingParameterNumber.Integer,
-                                                       10, False, 0.0, 999999999999.0))
+                                                       10, False, 0.0))
         self.addOutput(QgsProcessingOutputVectorLayer(self.OUTPUT, self.tr('Selected (stratified random)')))
 
     def name(self):
@@ -125,15 +125,18 @@ class RandomSelectionWithinSubsets(QgisAlgorithm):
                 if feedback.isCanceled():
                     break
 
-                classes[feature.attributes()[index]].append(feature.id())
+                classes[feature[index]].append(feature.id())
                 feedback.setProgress(int(i * total))
 
             selran = []
-            for subset in classes.values():
+            for k, subset in classes.items():
                 if feedback.isCanceled():
                     break
 
                 selValue = value if method != 1 else int(round(value * len(subset), 0))
+                if selValue > len(subset):
+                    selValue = len(subset)
+                    feedback.reportError(self.tr('Subset "{}" is smaller than requested number of features.'.format(k)))
                 selran.extend(random.sample(subset, selValue))
 
             layer.selectByIds(selran)

@@ -24,11 +24,6 @@
 #
 ###############################################################################
 
-# avoid PendingDeprecationWarning from PyQt4.uic
-import warnings
-warnings.filterwarnings("ignore", category=PendingDeprecationWarning)
-
-import configparser
 from gettext import gettext, ngettext
 import logging
 import os
@@ -58,9 +53,6 @@ class StaticContext(object):
     def __init__(self):
         """init"""
         self.ppath = os.path.dirname(os.path.abspath(__file__))
-        self.metadata = configparser.ConfigParser()
-        with codecs.open(os.path.join(self.ppath, 'metadata.txt'), "r", "utf8") as f:
-            self.metadata.read_file(f)
 
 
 def get_ui_class(ui_file):
@@ -145,10 +137,10 @@ def get_help_url():
     else:
         version = '.'.join([major, minor])
 
-    path = '%s/%s/docs/user_manual/plugins/plugins_metasearch.html' % \
+    path = '%s/%s/docs/user_manual/plugins/core_plugins/plugins_metasearch.html' % \
            (version, locale_name)
 
-    return '/'.join(['http://docs.qgis.org', path])
+    return '/'.join(['https://docs.qgis.org', path])
 
 
 def open_url(url):

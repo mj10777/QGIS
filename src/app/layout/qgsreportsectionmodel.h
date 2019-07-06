@@ -2,7 +2,7 @@
     qgsreportsectionmodel.h
     ---------------------
     begin                : December 2017
-    copyright            : (C) 2017 by Nyall Dawso
+    copyright            : (C) 2017 by Nyall Dawson
     email                : nyall dot dawson at gmail dot com
  ***************************************************************************
  *                                                                         *
@@ -16,7 +16,7 @@
 #ifndef QGSREPORTSECTIONMODEL_H
 #define QGSREPORTSECTIONMODEL_H
 
-#include "qgis.h"
+#include "qgis_sip.h"
 #include "qgsreport.h"
 #include <QAbstractItemModel>
 
@@ -47,7 +47,6 @@ class QgsReportSectionModel : public QAbstractItemModel
 
     QModelIndex index( int row, int column, const QModelIndex &parent = QModelIndex() ) const override;
     QModelIndex parent( const QModelIndex &index ) const override;
-    bool setData( const QModelIndex &index, const QVariant &value, int role = Qt::EditRole ) override;
     bool removeRows( int row, int count, const QModelIndex &parent = QModelIndex() ) override;
 
     void addSection( const QModelIndex &parent, std::unique_ptr< QgsAbstractReportSection > section );

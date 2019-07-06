@@ -24,16 +24,14 @@ from builtins import str
 # this will disable the dbplugin if the connector raise an ImportError
 from .connector import SpatiaLiteDBConnector
 
-from qgis.PyQt.QtCore import Qt, QFileInfo
+from qgis.PyQt.QtCore import Qt, QFileInfo, QCoreApplication
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QApplication, QAction, QFileDialog
-from qgis.core import Qgis, QgsDataSourceUri, QgsSettings
+from qgis.core import Qgis, QgsApplication, QgsDataSourceUri, QgsSettings
 from qgis.gui import QgsMessageBar
 
 from ..plugin import DBPlugin, Database, Table, VectorTable, RasterTable, TableField, TableIndex, TableTrigger, \
     InvalidDataException
-
-from . import resources_rc  # NOQA
 
 
 def classFactory():
@@ -44,7 +42,7 @@ class SpatiaLiteDBPlugin(DBPlugin):
 
     @classmethod
     def icon(self):
-        return QIcon(":/db_manager/spatialite/icon")
+        return QgsApplication.getThemeIcon("/mIconSpatialite.svg")
 
     @classmethod
     def typeName(self):
@@ -52,7 +50,7 @@ class SpatiaLiteDBPlugin(DBPlugin):
 
     @classmethod
     def typeNameString(self):
-        return 'SpatiaLite'
+        return QCoreApplication.translate('db_manager', 'SpatiaLite')
 
     @classmethod
     def providerName(self):
@@ -130,6 +128,11 @@ class SLDatabase(Database):
 
         return SLSqlResultModel(self, sql, parent)
 
+    def sqlResultModelAsync(self, sql, parent):
+        from .data_model import SLSqlResultModelAsync
+
+        return SLSqlResultModelAsync(self, sql, parent)
+
     def registerDatabaseActions(self, mainWindow):
         action = QAction(self.tr("Run &Vacuum"), self)
         mainWindow.registerAction(action, self.tr("&Database"), self.runVacuumActionSlot)
@@ -171,6 +174,9 @@ class SLDatabase(Database):
 
     def spatialIndexClause(self, src_table, src_column, dest_table, dest_column):
         return u""" "%s".ROWID IN (\nSELECT ROWID FROM SpatialIndex WHERE f_table_name='%s' AND search_frame="%s"."%s") """ % (src_table, src_table, dest_table, dest_column)
+
+    def supportsComment(self):
+        return False
 
 
 class SLTable(Table):

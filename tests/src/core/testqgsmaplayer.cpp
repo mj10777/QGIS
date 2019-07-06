@@ -34,7 +34,7 @@ class TestSignalReceiver : public QObject
 
   public:
     TestSignalReceiver()
-      : QObject( 0 )
+      : QObject( nullptr )
     {}
     QPainter::CompositionMode blendMode =  QPainter::CompositionMode_SourceOver ;
   public slots:
@@ -72,6 +72,9 @@ class TestQgsMapLayer : public QObject
 
     void layerRef();
     void layerRefListUtils();
+    void layerRefResolveByIdOrNameOnly();
+
+    void styleCategories();
 
 
   private:
@@ -283,8 +286,38 @@ void TestQgsMapLayer::layerRefListUtils()
   QCOMPARE( refs.size(), 2 );
   QCOMPARE( refs.at( 0 ).get(), vlA );
   QCOMPARE( refs.at( 1 ).get(), vlC );
+}
 
+void TestQgsMapLayer::layerRefResolveByIdOrNameOnly()
+{
+  QgsVectorLayer *vlA = new QgsVectorLayer( QStringLiteral( "Point" ), QStringLiteral( "name" ), QStringLiteral( "memory" ) );
+  QgsVectorLayerRef ref;
+  QgsProject::instance()->addMapLayer( vlA );
+  ref.name = vlA->name();
+  QCOMPARE( ref.resolveByIdOrNameOnly( QgsProject::instance() ), vlA );
+  ref.layerId = vlA->id();
+  // Same name, different id
+  QgsVectorLayer *vlB = new QgsVectorLayer( QStringLiteral( "Point" ), QStringLiteral( "name" ), QStringLiteral( "memory" ) );
+  QgsProject::instance()->addMapLayer( vlB );
+  QCOMPARE( ref.resolveByIdOrNameOnly( QgsProject::instance() ), vlA );
+  // Remove layer A and check if B is returned (because they have the same name)
+  QgsProject::instance()->removeMapLayer( vlA );
+  QCOMPARE( ref.resolveByIdOrNameOnly( QgsProject::instance() ), vlB );
+  // Cleanup
+  QgsProject::instance()->removeAllMapLayers();
+}
 
+void TestQgsMapLayer::styleCategories()
+{
+  // control that AllStyleCategories is actually complete
+  QgsMapLayer::StyleCategories allStyleCategories = QgsMapLayer::AllStyleCategories;
+  for ( QgsMapLayer::StyleCategory category : qgsEnumMap<QgsMapLayer::StyleCategory>().keys() )
+  {
+    if ( category == QgsMapLayer::AllStyleCategories )
+      continue;
+
+    QVERIFY( allStyleCategories.testFlag( category ) );
+  }
 }
 
 QGSTEST_MAIN( TestQgsMapLayer )

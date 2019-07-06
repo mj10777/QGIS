@@ -1,4 +1,5 @@
 SET(MSSQL_SRCS
+  qgsmssqlconnection.cpp
   qgsmssqlprovider.cpp
   qgsmssqlgeometryparser.cpp
   qgsmssqltablemodel.cpp
@@ -17,10 +18,13 @@ SET(MSSQL_MOC_HDRS
 
 IF (WITH_GUI)
   SET(MSSQL_SRCS ${MSSQL_SRCS}
+    qgsmssqlprovidergui.cpp
+    qgsmssqldataitemguiprovider.cpp
     qgsmssqlsourceselect.cpp
     qgsmssqlnewconnection.cpp
   )
   SET(MSSQL_MOC_HDRS ${MSSQL_MOC_HDRS}
+    qgsmssqldataitemguiprovider.h
     qgsmssqlsourceselect.h
     qgsmssqlnewconnection.h
   )
@@ -41,6 +45,7 @@ INCLUDE_DIRECTORIES(
   ${CMAKE_SOURCE_DIR}/src/core/geometry
   ${CMAKE_SOURCE_DIR}/src/core/metadata
   ${CMAKE_SOURCE_DIR}/src/gui
+  ${CMAKE_SOURCE_DIR}/external
 
   ${CMAKE_BINARY_DIR}/src/core
   ${CMAKE_BINARY_DIR}/src/gui
@@ -48,9 +53,7 @@ INCLUDE_DIRECTORIES(
 )
 INCLUDE_DIRECTORIES(SYSTEM
   ${GDAL_INCLUDE_DIR}
-  ${GEOS_INCLUDE_DIR}
   ${QT_INCLUDE_DIR}
-  ${PROJ_INCLUDE_DIR}
 )
 
 IF (WITH_GUI)

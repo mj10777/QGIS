@@ -14,6 +14,7 @@
  ***************************************************************************/
 
 #include "qgsarrowsymbollayer.h"
+#include "qgssymbollayerutils.h"
 
 QgsArrowSymbolLayer::QgsArrowSymbolLayer()
 {
@@ -96,6 +97,9 @@ QgsSymbolLayer *QgsArrowSymbolLayer::create( const QgsStringMap &props )
   if ( props.contains( QStringLiteral( "offset_unit_scale" ) ) )
     l->setOffsetMapUnitScale( QgsSymbolLayerUtils::decodeMapUnitScale( props[QStringLiteral( "offset_unit_scale" )] ) );
 
+  if ( props.contains( QStringLiteral( "ring_filter" ) ) )
+    l->setRingFilter( static_cast< RenderRingFilter>( props[QStringLiteral( "ring_filter" )].toInt() ) );
+
   l->restoreOldDataDefinedProperties( props );
 
   l->setSubSymbol( QgsFillSymbol::createSimple( props ) );
@@ -147,6 +151,8 @@ QgsStringMap QgsArrowSymbolLayer::properties() const
   map[QStringLiteral( "offset_unit" )] = QgsUnitTypes::encodeUnit( offsetUnit() );
   map[QStringLiteral( "offset_unit_scale" )] = QgsSymbolLayerUtils::encodeMapUnitScale( offsetMapUnitScale() );
 
+  map[QStringLiteral( "ring_filter" )] = QString::number( static_cast< int >( mRingFilter ) );
+
   return map;
 }
 
@@ -159,6 +165,14 @@ QSet<QString> QgsArrowSymbolLayer::usedAttributes( const QgsRenderContext &conte
   return attributes;
 }
 
+bool QgsArrowSymbolLayer::hasDataDefinedProperties() const
+{
+  if ( QgsSymbolLayer::hasDataDefinedProperties() )
+    return true;
+  if ( mSymbol && mSymbol->hasDataDefinedProperties() )
+    return true;
+  return false;
+}
 
 void QgsArrowSymbolLayer::startRender( QgsSymbolRenderContext &context )
 {
@@ -320,7 +334,7 @@ inline qreal clampAngle( qreal a )
 
 /**
  * Compute the circumscribed circle from three points
- * @return false if the three points are colinear
+ * \return false if the three points are colinear
  */
 bool pointsToCircle( QPointF a, QPointF b, QPointF c, QPointF &center, qreal &radius )
 {
@@ -648,10 +662,10 @@ void QgsArrowSymbolLayer::_resolveDataDefined( QgsSymbolRenderContext &context )
   {
     context.setOriginalValueVariable( headType() );
     exprVal = mDataDefinedProperties.value( QgsSymbolLayer::PropertyArrowHeadType, context.renderContext().expressionContext() );
-    int h = exprVal.toInt( &ok );
+    HeadType h = QgsSymbolLayerUtils::decodeArrowHeadType( exprVal, &ok );
     if ( ok )
     {
-      mComputedHeadType = static_cast<HeadType>( h );
+      mComputedHeadType = h;
     }
   }
 
@@ -659,17 +673,17 @@ void QgsArrowSymbolLayer::_resolveDataDefined( QgsSymbolRenderContext &context )
   {
     context.setOriginalValueVariable( arrowType() );
     exprVal = mDataDefinedProperties.value( QgsSymbolLayer::PropertyArrowType, context.renderContext().expressionContext() );
-    int h = exprVal.toInt( &ok );
+    ArrowType h = QgsSymbolLayerUtils::decodeArrowType( exprVal, &ok );
     if ( ok )
     {
-      mComputedArrowType = static_cast<ArrowType>( h );
+      mComputedArrowType = h;
     }
   }
 }
 
 void QgsArrowSymbolLayer::renderPolyline( const QPolygonF &points, QgsSymbolRenderContext &context )
 {
-  Q_UNUSED( points );
+  Q_UNUSED( points )
 
   if ( !context.renderContext().painter() )
   {
@@ -713,6 +727,9 @@ void QgsArrowSymbolLayer::renderPolyline( const QPolygonF &points, QgsSymbolRend
     {
       for ( int pIdx = 0; pIdx < points.size() - 1; pIdx += 2 )
       {
+        if ( context.renderContext().renderingStopped() )
+          break;
+
         mExpressionScope->addVariable( QgsExpressionContextScope::StaticVariable( QgsExpressionContext::EXPR_GEOMETRY_POINT_NUM, pIdx + 1, true ) );
         _resolveDataDefined( context );
 
@@ -764,6 +781,9 @@ void QgsArrowSymbolLayer::renderPolyline( const QPolygonF &points, QgsSymbolRend
       // only straight arrows
       for ( int pIdx = 0; pIdx < points.size() - 1; pIdx++ )
       {
+        if ( context.renderContext().renderingStopped() )
+          break;
+
         mExpressionScope->addVariable( QgsExpressionContextScope::StaticVariable( QgsExpressionContext::EXPR_GEOMETRY_POINT_NUM, pIdx + 1, true ) );
         _resolveDataDefined( context );
 

@@ -236,6 +236,46 @@ QgsCircle QgsCircle::minimalCircleFrom3Points( const QgsPoint &pt1, const QgsPoi
     return QgsCircle().from3Points( pt1, pt2, pt3, epsilon );
 }
 
+int QgsCircle::intersections( const QgsCircle &other, QgsPoint &intersection1, QgsPoint &intersection2, bool useZ ) const
+{
+  if ( useZ && mCenter.is3D() && other.center().is3D() && !qgsDoubleNear( mCenter.z(), other.center().z() ) )
+    return 0;
+
+  QgsPointXY int1, int2;
+
+  int res = QgsGeometryUtils::circleCircleIntersections( QgsPointXY( mCenter ), radius(),
+            QgsPointXY( other.center() ), other.radius(),
+            int1, int2 );
+  if ( res == 0 )
+    return 0;
+
+  intersection1 = QgsPoint( int1 );
+  intersection2 = QgsPoint( int2 );
+  if ( useZ && mCenter.is3D() )
+  {
+    intersection1.addZValue( mCenter.z() );
+    intersection2.addZValue( mCenter.z() );
+  }
+  return res;
+}
+
+bool QgsCircle::tangentToPoint( const QgsPointXY &p, QgsPointXY &pt1, QgsPointXY &pt2 ) const
+{
+  return QgsGeometryUtils::tangentPointAndCircle( QgsPointXY( mCenter ), radius(), p, pt1, pt2 );
+}
+
+int QgsCircle::outerTangents( const QgsCircle &other, QgsPointXY &line1P1, QgsPointXY &line1P2, QgsPointXY &line2P1, QgsPointXY &line2P2 ) const
+{
+  return QgsGeometryUtils::circleCircleOuterTangents( QgsPointXY( mCenter ), radius(),
+         QgsPointXY( other.center() ), other.radius(), line1P1, line1P2, line2P1, line2P2 );
+}
+
+int QgsCircle::innerTangents( const QgsCircle &other, QgsPointXY &line1P1, QgsPointXY &line1P2, QgsPointXY &line2P1, QgsPointXY &line2P2 ) const
+{
+  return QgsGeometryUtils::circleCircleInnerTangents( QgsPointXY( mCenter ), radius(),
+         QgsPointXY( other.center() ), other.radius(), line1P1, line1P2, line2P1, line2P2 );
+}
+
 QgsCircle QgsCircle::fromExtent( const QgsPoint &pt1, const QgsPoint &pt2 )
 {
   double delta_x = std::fabs( pt1.x() - pt2.x() );

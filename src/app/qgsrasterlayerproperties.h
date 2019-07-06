@@ -47,13 +47,18 @@ class APP_EXPORT QgsRasterLayerProperties : public QgsOptionsDialogBase, private
 
   public:
 
+    enum StyleType
+    {
+      QML,
+      SLD
+    };
+    Q_ENUM( StyleType )
+
     /**
      * \brief Constructor
      * \param ml Map layer for which properties will be displayed
      */
     QgsRasterLayerProperties( QgsMapLayer *lyr, QgsMapCanvas *canvas, QWidget *parent = nullptr, Qt::WindowFlags = QgsGuiUtils::ModalDialogFlags );
-
-    ~QgsRasterLayerProperties() override;
 
     //! Synchronize state with associated raster layer
     void sync();
@@ -139,9 +144,7 @@ class APP_EXPORT QgsRasterLayerProperties : public QgsOptionsDialogBase, private
     //! Make GUI reflect the layer's state
     void syncToLayer();
 
-  signals:
-    //! Emitted when changes to layer were saved to update legend
-    void refreshLegend( const QString &layerID, bool expandItem );
+    void urlClicked( const QUrl &url );
 
   private:
     QPushButton *mBtnStyle = nullptr;
@@ -223,5 +226,7 @@ class APP_EXPORT QgsRasterLayerProperties : public QgsOptionsDialogBase, private
     bool mDisableRenderTypeComboBoxCurrentIndexChanged = false;
 
     bool mMetadataFilled;
+
+    friend class QgsAppScreenShots;
 };
 #endif

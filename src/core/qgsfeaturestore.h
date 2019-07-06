@@ -16,7 +16,7 @@
 #define QGSFEATURESTORE_H
 
 #include "qgis_core.h"
-#include "qgis.h"
+#include "qgis_sip.h"
 #include "qgsfeature.h"
 #include "qgsfields.h"
 #include "qgsfeaturesink.h"
@@ -78,6 +78,12 @@ class CORE_EXPORT QgsFeatureStore : public QgsFeatureSink
     int __len__() const;
     % MethodCode
     sipRes = sipCpp->count();
+    % End
+
+    //! Ensures that bool(obj) returns TRUE (otherwise __len__() would be used)
+    int __bool__() const;
+    % MethodCode
+    sipRes = true;
     % End
 #endif
 

@@ -21,10 +21,6 @@ __author__ = 'Victor Olaya'
 __date__ = 'August 2012'
 __copyright__ = '(C) 2012, Victor Olaya'
 
-# This will get replaced with a git SHA1 when you do a git archive
-
-__revision__ = '$Format:%H$'
-
 import os
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtCore import QCoreApplication
@@ -42,6 +38,8 @@ from . import SagaUtils
 
 pluginPath = os.path.normpath(os.path.join(
     os.path.split(os.path.dirname(__file__))[0], os.pardir))
+
+REQUIRED_VERSION = '2.3.'
 
 
 class SagaAlgorithmProvider(QgsProcessingProvider):
@@ -78,6 +76,12 @@ class SagaAlgorithmProvider(QgsProcessingProvider):
     def setActive(self, active):
         ProcessingConfig.setSettingValue('ACTIVATE_SAGA', active)
 
+    def canBeActivated(self):
+        version = SagaUtils.getInstalledVersion(True)
+        if version is not None and version.startswith(REQUIRED_VERSION):
+            return True
+        return False
+
     def loadAlgorithms(self):
         version = SagaUtils.getInstalledVersion(True)
         if version is None:
@@ -85,8 +89,8 @@ class SagaAlgorithmProvider(QgsProcessingProvider):
                                      self.tr('Processing'), Qgis.Critical)
             return
 
-        if not version.startswith('2.3.'):
-            QgsMessageLog.logMessage(self.tr('Problem with SAGA installation: unsupported SAGA version found.'),
+        if not version.startswith(REQUIRED_VERSION):
+            QgsMessageLog.logMessage(self.tr('Problem with SAGA installation: unsupported SAGA version (found: {}, required: {}).').format(version, REQUIRED_VERSION),
                                      self.tr('Processing'),
                                      Qgis.Critical)
             return
@@ -121,10 +125,16 @@ class SagaAlgorithmProvider(QgsProcessingProvider):
         return 'saga'
 
     def defaultVectorFileExtension(self, hasGeometry=True):
-        return 'shp'
+        return 'shp' if hasGeometry else 'dbf'
 
     def defaultRasterFileExtension(self):
         return 'sdat'
+
+    def supportedOutputRasterLayerExtensions(self):
+        return ['sdat']
+
+    def supportedOutputVectorLayerExtensions(self):
+        return ['shp', 'dbf']
 
     def supportedOutputTableExtensions(self):
         return ['dbf']

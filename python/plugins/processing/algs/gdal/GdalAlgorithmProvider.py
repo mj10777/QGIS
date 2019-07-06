@@ -21,10 +21,6 @@ __author__ = 'Victor Olaya'
 __date__ = 'August 2012'
 __copyright__ = '(C) 2012, Victor Olaya'
 
-# This will get replaced with a git SHA1 when you do a git archive
-
-__revision__ = '$Format:%H$'
-
 import os
 
 from qgis.PyQt.QtCore import QCoreApplication
@@ -45,6 +41,7 @@ from .gdalinfo import gdalinfo
 from .gdal2tiles import gdal2tiles
 from .gdal2xyz import gdal2xyz
 from .gdaladdo import gdaladdo
+from .gdalcalc import gdalcalc
 from .gdaltindex import gdaltindex
 from .GridAverage import GridAverage
 from .GridDataMetrics import GridDataMetrics
@@ -59,6 +56,7 @@ from .pct2rgb import pct2rgb
 from .polygonize import polygonize
 from .proximity import proximity
 from .rasterize import rasterize
+from .rearrange_bands import rearrange_bands
 from .retile import retile
 from .rgb2pct import rgb2pct
 from .roughness import roughness
@@ -68,9 +66,9 @@ from .translate import translate
 from .tpi import tpi
 from .tri import tri
 from .warp import warp
+from .pansharp import pansharp
 
-# from .extractprojection import ExtractProjection
-# from .gdalcalc import gdalcalc
+from .extractprojection import ExtractProjection
 # from .rasterize_over import rasterize_over
 
 from .Buffer import Buffer
@@ -102,18 +100,12 @@ class GdalAlgorithmProvider(QgsProcessingProvider):
         ProcessingConfig.settingIcons[self.name()] = self.icon()
         ProcessingConfig.addSetting(Setting(self.name(), 'ACTIVATE_GDAL',
                                             self.tr('Activate'), True))
-        ProcessingConfig.addSetting(Setting(
-            self.name(),
-            GdalUtils.GDAL_HELP_PATH,
-            self.tr('Location of GDAL docs'),
-            GdalUtils.gdalHelpPath()))
         ProcessingConfig.readSettings()
         self.refreshAlgorithms()
         return True
 
     def unload(self):
         ProcessingConfig.removeSetting('ACTIVATE_GDAL')
-        ProcessingConfig.removeSetting(GdalUtils.GDAL_HELP_PATH)
 
     def isActive(self):
         return ProcessingConfig.getSetting('ACTIVATE_GDAL')
@@ -129,6 +121,9 @@ class GdalAlgorithmProvider(QgsProcessingProvider):
         return 'GDAL ({})'.format(version)
 
     def id(self):
+        return 'gdal'
+
+    def helpId(self):
         return 'gdal'
 
     def icon(self):
@@ -151,6 +146,7 @@ class GdalAlgorithmProvider(QgsProcessingProvider):
             gdal2tiles(),
             gdal2xyz(),
             gdaladdo(),
+            gdalcalc(),
             gdaltindex(),
             GridAverage(),
             GridDataMetrics(),
@@ -165,6 +161,7 @@ class GdalAlgorithmProvider(QgsProcessingProvider):
             polygonize(),
             proximity(),
             rasterize(),
+            rearrange_bands(),
             retile(),
             rgb2pct(),
             roughness(),
@@ -174,9 +171,9 @@ class GdalAlgorithmProvider(QgsProcessingProvider):
             tpi(),
             tri(),
             warp(),
+            pansharp(),
             # rasterize(),
-            # ExtractProjection(),
-            # gdalcalc(),
+            ExtractProjection(),
             # rasterize_over(),
             # ----- OGR tools -----
             Buffer(),

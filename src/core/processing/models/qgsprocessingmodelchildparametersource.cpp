@@ -16,6 +16,8 @@
  ***************************************************************************/
 
 #include "qgsprocessingmodelchildparametersource.h"
+#include "qgsprocessingparameters.h"
+#include "qgsprocessingcontext.h"
 
 ///@cond NOT_STABLE
 
@@ -34,6 +36,8 @@ bool QgsProcessingModelChildParameterSource::operator==( const QgsProcessingMode
       return mParameterName == other.mParameterName;
     case Expression:
       return mExpression == other.mExpression;
+    case ExpressionText:
+      return mExpressionText == other.mExpressionText;
   }
   return false;
 }
@@ -71,6 +75,14 @@ QgsProcessingModelChildParameterSource QgsProcessingModelChildParameterSource::f
   return src;
 }
 
+QgsProcessingModelChildParameterSource QgsProcessingModelChildParameterSource::fromExpressionText( const QString &text )
+{
+  QgsProcessingModelChildParameterSource src;
+  src.mSource = ExpressionText;
+  src.mExpressionText = text;
+  return src;
+}
+
 QgsProcessingModelChildParameterSource::Source QgsProcessingModelChildParameterSource::source() const
 {
   return mSource;
@@ -98,6 +110,10 @@ QVariant QgsProcessingModelChildParameterSource::toVariant() const
     case Expression:
       map.insert( QStringLiteral( "expression" ), mExpression );
       break;
+
+    case ExpressionText:
+      map.insert( QStringLiteral( "expression_text" ), mExpressionText );
+      break;
   }
   return map;
 }
@@ -123,11 +139,15 @@ bool QgsProcessingModelChildParameterSource::loadVariant( const QVariantMap &map
     case Expression:
       mExpression = map.value( QStringLiteral( "expression" ) ).toString();
       break;
+
+    case ExpressionText:
+      mExpressionText = map.value( QStringLiteral( "expression_text" ) ).toString();
+      break;
   }
   return true;
 }
 
-QString QgsProcessingModelChildParameterSource::asPythonCode() const
+QString QgsProcessingModelChildParameterSource::asPythonCode( const QgsProcessing::PythonOutputType, const QgsProcessingParameterDefinition *definition, const QMap< QString, QString > &friendlydChildNames ) const
 {
   switch ( mSource )
   {
@@ -135,13 +155,24 @@ QString QgsProcessingModelChildParameterSource::asPythonCode() const
       return QStringLiteral( "parameters['%1']" ).arg( mParameterName );
 
     case ChildOutput:
-      return QStringLiteral( "outputs['%1']['%2']" ).arg( mChildId, mOutputName );
+      return QStringLiteral( "outputs['%1']['%2']" ).arg( friendlydChildNames.value( mChildId, mChildId ), mOutputName );
 
     case StaticValue:
-      return mStaticValue.toString();
+      if ( definition )
+      {
+        QgsProcessingContext c;
+        return definition->valueAsPythonString( mStaticValue, c );
+      }
+      else
+      {
+        return QgsProcessingUtils::variantToPythonLiteral( mStaticValue );
+      }
 
     case Expression:
       return QStringLiteral( "QgsExpression('%1').evaluate()" ).arg( mExpression );
+
+    case ExpressionText:
+      return mExpressionText;
   }
   return QString();
 }

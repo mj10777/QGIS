@@ -10,8 +10,11 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.    **
 ******************************************************************************/
 
+// uncomment to get detailed debug output on DWG read. Caution: this option makes DWG import super-slow!
+// #define DWGDEBUG 1
 
 #include "libdxfrw.h"
+
 #include <fstream>
 #include <algorithm>
 #include <sstream>
@@ -24,10 +27,19 @@
 
 #include "qgslogger.h"
 
+#ifndef DWGDEBUG
+#undef QgsDebugCall
+#undef QgsDebugMsg
+#undef QgsDebugMsgLevel
+#define QgsDebugCall
+#define QgsDebugMsg(str)
+#define QgsDebugMsgLevel(str, level)
+#endif
+
 #if __cplusplus >= 201500
 #define FALLTHROUGH [[fallthrough]];
 #elif defined(__clang__)
-#define FALLTHROUGH //[[clang::fallthrough]]
+#define FALLTHROUGH [[clang::fallthrough]];
 #elif defined(__GNUC__) && __GNUC__ >= 7
 #define FALLTHROUGH [[gnu::fallthrough]];
 #else
@@ -62,7 +74,7 @@ dxfRW::dxfRW( const char *name )
   , elParts( 128 )  //parts number when convert ellipse to polyline
   , currHandle( 0 )
 {
-  DRW_DBGSL( DRW_dbg::NONE );
+  DRW_DBGSL( DRW_dbg::none );
 }
 
 dxfRW::~dxfRW()
@@ -79,11 +91,11 @@ void dxfRW::setDebug( DRW::DBG_LEVEL lvl )
 {
   switch ( lvl )
   {
-    case DRW::DEBUG:
-      DRW_DBGSL( DRW_dbg::DEBUG );
+    case DRW::debug:
+      DRW_DBGSL( DRW_dbg::debug );
       break;
     default:
-      DRW_DBGSL( DRW_dbg::NONE );
+      DRW_DBGSL( DRW_dbg::none );
   }
 }
 
@@ -2314,7 +2326,6 @@ bool dxfRW::processTables()
 bool dxfRW::processLType()
 {
   QgsDebugMsg( "Entering." );
-
   int code;
   std::string sectionstr;
   bool reading = false;
@@ -3398,7 +3409,8 @@ bool dxfRW::processImageDef()
   return true;
 }
 
-/** Utility function
+/**
+ * Utility function
  * convert a int to string in hex
  **/
 std::string dxfRW::toHexStr( int n )

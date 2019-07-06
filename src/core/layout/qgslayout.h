@@ -104,7 +104,7 @@ class CORE_EXPORT QgsLayout : public QGraphicsScene, public QgsExpressionContext
 
     /**
      * The project associated with the layout. Used to get access to layers, map themes,
-     * relations and various other bits. It is never null.
+     * relations and various other bits. It is never NULLPTR.
      *
      */
     QgsProject *project() const;
@@ -163,10 +163,10 @@ class CORE_EXPORT QgsLayout : public QGraphicsScene, public QgsExpressionContext
     /**
      * Returns list of selected layout items.
      *
-     * If \a includeLockedItems is set to true, then locked items will also be included
+     * If \a includeLockedItems is set to TRUE, then locked items will also be included
      * in the returned list.
      */
-    QList<QgsLayoutItem *> selectedLayoutItems( const bool includeLockedItems = true );
+    QList<QgsLayoutItem *> selectedLayoutItems( bool includeLockedItems = true );
 
     /**
      * Clears any selected items and sets \a item as the current selection.
@@ -183,9 +183,9 @@ class CORE_EXPORT QgsLayout : public QGraphicsScene, public QgsExpressionContext
 
     /**
      * Raises an \a item up the z-order.
-     * Returns true if the item was successfully raised.
+     * Returns TRUE if the item was successfully raised.
      *
-     * If \a deferUpdate is true, the scene will not be visibly updated
+     * If \a deferUpdate is TRUE, the scene will not be visibly updated
      * to reflect the new stacking order. This allows multiple
      * raiseItem() calls to be made in sequence without the cost of
      * updating the scene for each one.
@@ -197,9 +197,9 @@ class CORE_EXPORT QgsLayout : public QGraphicsScene, public QgsExpressionContext
 
     /**
      * Lowers an \a item down the z-order.
-     * Returns true if the item was successfully lowered.
+     * Returns TRUE if the item was successfully lowered.
      *
-     * If \a deferUpdate is true, the scene will not be visibly updated
+     * If \a deferUpdate is TRUE, the scene will not be visibly updated
      * to reflect the new stacking order. This allows multiple
      * raiseItem() calls to be made in sequence without the cost of
      * updating the scene for each one.
@@ -211,9 +211,9 @@ class CORE_EXPORT QgsLayout : public QGraphicsScene, public QgsExpressionContext
 
     /**
      * Raises an \a item up to the top of the z-order.
-     * Returns true if the item was successfully raised.
+     * Returns TRUE if the item was successfully raised.
      *
-     * If \a deferUpdate is true, the scene will not be visibly updated
+     * If \a deferUpdate is TRUE, the scene will not be visibly updated
      * to reflect the new stacking order. This allows multiple
      * raiseItem() calls to be made in sequence without the cost of
      * updating the scene for each one.
@@ -225,8 +225,8 @@ class CORE_EXPORT QgsLayout : public QGraphicsScene, public QgsExpressionContext
 
     /**
      * Lowers an \a item down to the bottom of the z-order.
-     * Returns true if the item was successfully lowered.
-     * If \a deferUpdate is true, the scene will not be visibly updated
+     * Returns TRUE if the item was successfully lowered.
+     * If \a deferUpdate is TRUE, the scene will not be visibly updated
      * to reflect the new stacking order. This allows multiple
      * raiseItem() calls to be made in sequence without the cost of
      * updating the scene for each one.
@@ -241,13 +241,13 @@ class CORE_EXPORT QgsLayout : public QGraphicsScene, public QgsExpressionContext
      * z order list. This should be called after any stacking changes
      * which deferred z-order updates.
      */
-    void updateZValues( const bool addUndoCommands = true );
+    void updateZValues( bool addUndoCommands = true );
 
     /**
-     * Returns the layout item with matching \a uuid unique identifier, or a nullptr
+     * Returns the layout item with matching \a uuid unique identifier, or NULLPTR
      * if a matching item could not be found.
      *
-     * If \a includeTemplateUuids is true, then item's template UUID
+     * If \a includeTemplateUuids is TRUE, then item's template UUID
      * will also be tested when trying to match the uuid. This may differ from the item's UUID
      * for items which have been added to an existing layout from a template. In this case
      * the template UUID returns the original item UUID at the time the template was created,
@@ -261,7 +261,7 @@ class CORE_EXPORT QgsLayout : public QGraphicsScene, public QgsExpressionContext
     QgsLayoutItem *itemByUuid( const QString &uuid, bool includeTemplateUuids = false ) const;
 
     /**
-     * Returns the layout item with matching template \a uuid unique identifier, or a nullptr
+     * Returns the layout item with matching template \a uuid unique identifier, or NULLPTR
      * if a matching item could not be found. Unlike itemByUuid(), this method ONLY checks
      * template UUIDs for a match.
      *
@@ -286,10 +286,10 @@ class CORE_EXPORT QgsLayout : public QGraphicsScene, public QgsExpressionContext
     QgsLayoutItem *itemById( const QString &id ) const;
 
     /**
-     * Returns the layout multiframe with matching \a uuid unique identifier, or a nullptr
+     * Returns the layout multiframe with matching \a uuid unique identifier, or NULLPTR
      * if a matching multiframe could not be found.
      *
-     * If \a includeTemplateUuids is true, then the multiframe's QgsLayoutMultiFrame::templateUuid()
+     * If \a includeTemplateUuids is TRUE, then the multiframe's QgsLayoutMultiFrame::templateUuid()
      * will also be tested when trying to match the uuid. Template UUIDs are valid only for items
      * which have been added to an existing layout from a template. In this case
      * the template UUID is the original item UUID at the time the template was created,
@@ -302,15 +302,15 @@ class CORE_EXPORT QgsLayout : public QGraphicsScene, public QgsExpressionContext
 
     /**
      * Returns the topmost layout item at a specified \a position. Ignores paper items.
-     * If \a ignoreLocked is set to true any locked items will be ignored.
+     * If \a ignoreLocked is set to TRUE any locked items will be ignored.
      */
-    QgsLayoutItem *layoutItemAt( QPointF position, const bool ignoreLocked = false ) const;
+    QgsLayoutItem *layoutItemAt( QPointF position, bool ignoreLocked = false ) const;
 
     /**
      * Returns the topmost layout item at a specified \a position which is below a specified \a item. Ignores paper items.
-     * If \a ignoreLocked is set to true any locked items will be ignored.
+     * If \a ignoreLocked is set to TRUE any locked items will be ignored.
      */
-    QgsLayoutItem *layoutItemAt( QPointF position, const QgsLayoutItem *belowItem, const bool ignoreLocked = false ) const;
+    QgsLayoutItem *layoutItemAt( QPointF position, const QgsLayoutItem *belowItem, bool ignoreLocked = false ) const;
 
     /**
      * Sets the native measurement \a units for the layout. These also form the default unit
@@ -333,7 +333,7 @@ class CORE_EXPORT QgsLayout : public QGraphicsScene, public QgsExpressionContext
      * \see convertFromLayoutUnits()
      * \see units()
     */
-    double convertToLayoutUnits( const QgsLayoutMeasurement &measurement ) const;
+    double convertToLayoutUnits( QgsLayoutMeasurement measurement ) const;
 
     /**
      * Converts a size into the layout's native units.
@@ -357,7 +357,7 @@ class CORE_EXPORT QgsLayout : public QGraphicsScene, public QgsExpressionContext
      * \see convertToLayoutUnits()
      * \see units()
     */
-    QgsLayoutMeasurement convertFromLayoutUnits( const double length, const QgsUnitTypes::LayoutUnit unit ) const;
+    QgsLayoutMeasurement convertFromLayoutUnits( double length, QgsUnitTypes::LayoutUnit unit ) const;
 
     /**
      * Converts a \a size from the layout's native units to a specified target \a unit.
@@ -365,7 +365,7 @@ class CORE_EXPORT QgsLayout : public QGraphicsScene, public QgsExpressionContext
      * \see convertToLayoutUnits()
      * \see units()
     */
-    QgsLayoutSize convertFromLayoutUnits( const QSizeF &size, const QgsUnitTypes::LayoutUnit unit ) const;
+    QgsLayoutSize convertFromLayoutUnits( QSizeF size, QgsUnitTypes::LayoutUnit unit ) const;
 
     /**
      * Converts a \a point from the layout's native units to a specified target \a unit.
@@ -373,7 +373,7 @@ class CORE_EXPORT QgsLayout : public QGraphicsScene, public QgsExpressionContext
      * \see convertToLayoutUnits()
      * \see units()
     */
-    QgsLayoutPoint convertFromLayoutUnits( const QPointF &point, const QgsUnitTypes::LayoutUnit unit ) const;
+    QgsLayoutPoint convertFromLayoutUnits( QPointF point, QgsUnitTypes::LayoutUnit unit ) const;
 
     /**
      * Returns a reference to the layout's render context, which stores information relating to the
@@ -475,7 +475,7 @@ class CORE_EXPORT QgsLayout : public QGraphicsScene, public QgsExpressionContext
     void removeCustomProperty( const QString &key );
 
     /**
-     * Return list of keys stored in custom properties for the layout.
+     * Returns list of keys stored in custom properties for the layout.
      * \see setCustomProperty()
      * \see customProperty()
      * \see removeCustomProperty()
@@ -485,9 +485,8 @@ class CORE_EXPORT QgsLayout : public QGraphicsScene, public QgsExpressionContext
     /**
      * Returns the map item which will be used to generate corresponding world files when the
      * layout is exported. If no map was explicitly set via setReferenceMap(), the largest
-     * map in the layout will be returned (or nullptr if there are no maps in the layout).
+     * map in the layout will be returned (or NULLPTR if there are no maps in the layout).
      * \see setReferenceMap()
-     * \see generateWorldFile()
      */
     QgsLayoutItemMap *referenceMap() const;
 
@@ -495,7 +494,6 @@ class CORE_EXPORT QgsLayout : public QGraphicsScene, public QgsExpressionContext
      * Sets the \a map item which will be used to generate corresponding world files when the
      * layout is exported.
      * \see referenceMap()
-     * \see setGenerateWorldFile()
      */
     void setReferenceMap( QgsLayoutItemMap *map );
 
@@ -514,7 +512,7 @@ class CORE_EXPORT QgsLayout : public QGraphicsScene, public QgsExpressionContext
     /**
      * Calculates the bounds of all non-gui items in the layout. Ignores snap lines, mouse handles
      * and other cosmetic items.
-     * \param ignorePages set to true to ignore page items
+     * \param ignorePages set to TRUE to ignore page items
      * \param margin optional marginal (in percent, e.g., 0.05 = 5% ) to add around items
      * \returns layout bounds, in layout units.
      *
@@ -526,7 +524,7 @@ class CORE_EXPORT QgsLayout : public QGraphicsScene, public QgsExpressionContext
      * Returns the bounding box of the items contained on a specified \a page.
      * A page number of 0 represents the first page in the layout.
      *
-     * Set \a visibleOnly to true to only include visible items.
+     * Set \a visibleOnly to TRUE to only include visible items.
      *
      * The returned bounds are in layout units.
      *
@@ -570,7 +568,7 @@ class CORE_EXPORT QgsLayout : public QGraphicsScene, public QgsExpressionContext
 
     /**
      * Saves the layout as a template at the given file \a path.
-     * Returns true if save was successful.
+     * Returns TRUE if save was successful.
      * \see loadFromTemplate()
      */
     bool saveAsTemplate( const QString &path, const QgsReadWriteContext &context ) const;
@@ -579,10 +577,10 @@ class CORE_EXPORT QgsLayout : public QGraphicsScene, public QgsExpressionContext
      * Load a layout template \a document.
      *
      * By default this method will clear all items from the existing layout and real all layout
-     * settings from the template. Setting \a clearExisting to false will only add new items
+     * settings from the template. Setting \a clearExisting to FALSE will only add new items
      * from the template, without overwriting the existing items or layout settings.
      *
-     * If \a ok is specified, it will be set to true if the load was successful.
+     * If \a ok is specified, it will be set to TRUE if the load was successful.
      *
      * Returns a list of loaded items.
      */
@@ -632,7 +630,7 @@ class CORE_EXPORT QgsLayout : public QGraphicsScene, public QgsExpressionContext
 
     /**
      * Creates a new group from a list of layout \a items and adds the group to the layout.
-     * If grouping was not possible, a nullptr will be returned.
+     * If grouping was not possible, NULLPTR will be returned.
      * \see ungroupItems()
      */
     QgsLayoutItemGroup *groupItems( const QList<QgsLayoutItem *> &items );
@@ -647,6 +645,17 @@ class CORE_EXPORT QgsLayout : public QGraphicsScene, public QgsExpressionContext
      * \see groupItems()
      */
     QList<QgsLayoutItem *> ungroupItems( QgsLayoutItemGroup *group );
+
+    /**
+     * Accepts the specified style entity \a visitor, causing it to visit all style entities associated
+     * with the layout.
+     *
+     * Returns TRUE if the visitor should continue visiting other objects, or FALSE if visiting
+     * should be canceled.
+     *
+     * \since QGIS 3.10
+     */
+    bool accept( QgsStyleEntityVisitorInterface *visitor ) const;
 
   public slots:
 
@@ -668,7 +677,7 @@ class CORE_EXPORT QgsLayout : public QGraphicsScene, public QgsExpressionContext
   signals:
 
     /**
-     * Is emitted when properties of the layout change. This signal is only
+     * Emitted when properties of the layout change. This signal is only
      * emitted for settings directly managed by the layout, and is not emitted
      * when child items change.
      */
@@ -681,12 +690,12 @@ class CORE_EXPORT QgsLayout : public QGraphicsScene, public QgsExpressionContext
 
     /**
      * Emitted whenever the selected item changes.
-     * If nullptr, no item is selected.
+     * If NULLPTR, no item is selected.
      */
     void selectedItemChanged( QgsLayoutItem *selected );
 
     /**
-     * Is emitted when the layout has been refreshed and items should also be refreshed
+     * Emitted when the layout has been refreshed and items should also be refreshed
      * and updated.
      */
     void refreshed();

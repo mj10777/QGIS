@@ -19,6 +19,7 @@
 #include "qgsanimatedicon.h"
 #include "qgsfilterlineedit.h"
 #include "qgslogger.h"
+#include "qgsapplication.h"
 
 #include <QCompleter>
 #include <QLineEdit>
@@ -46,12 +47,15 @@ QgsFeatureListComboBox::QgsFeatureListComboBox( QWidget *parent )
   connect( mCompleter, static_cast<void( QCompleter::* )( const QModelIndex & )>( &QCompleter::activated ), this, &QgsFeatureListComboBox::onActivated );
   connect( mModel, &QgsFeatureFilterModel::beginUpdate, this, &QgsFeatureListComboBox::storeLineEditState );
   connect( mModel, &QgsFeatureFilterModel::endUpdate, this, &QgsFeatureListComboBox::restoreLineEditState );
+  connect( mModel, &QgsFeatureFilterModel::endUpdate, this, &QgsFeatureListComboBox::modelUpdated );
   connect( mModel, &QgsFeatureFilterModel::dataChanged, this, &QgsFeatureListComboBox::onDataChanged );
 
   connect( this, static_cast<void( QgsFeatureListComboBox::* )( int )>( &QgsFeatureListComboBox::currentIndexChanged ), this, &QgsFeatureListComboBox::onCurrentIndexChanged );
 
-  mLineEdit = new QgsFilterLineEdit();
+  mLineEdit = new QgsFilterLineEdit( nullptr, QgsApplication::nullRepresentation() );
   mLineEdit->setSelectOnFocus( true );
+  mLineEdit->setShowClearButton( true );
+
   setEditable( true );
   setLineEdit( mLineEdit );
   setModel( mModel );
@@ -108,7 +112,8 @@ void QgsFeatureListComboBox::onItemSelected( const QModelIndex &index )
 
 void QgsFeatureListComboBox::onCurrentIndexChanged( int i )
 {
-  mIsCurrentlyEdited = false;
+  if ( !mHasStoredEditState )
+    mIsCurrentlyEdited = false;
   QModelIndex modelIndex = mModel->index( i, 0, QModelIndex() );
   mModel->setExtraIdentifierValue( mModel->data( modelIndex, QgsFeatureFilterModel::IdentifierValueRole ) );
   mLineEdit->setText( mModel->data( modelIndex, QgsFeatureFilterModel::ValueRole ).toString() );
@@ -127,13 +132,31 @@ void QgsFeatureListComboBox::onActivated( QModelIndex modelIndex )
 void QgsFeatureListComboBox::storeLineEditState()
 {
   if ( mIsCurrentlyEdited )
+  {
+    mHasStoredEditState = true;
     mLineEditState.store( mLineEdit );
+  }
 }
 
 void QgsFeatureListComboBox::restoreLineEditState()
 {
   if ( mIsCurrentlyEdited )
+  {
+    mHasStoredEditState = false;
     mLineEditState.restore( mLineEdit );
+  }
+}
+
+int QgsFeatureListComboBox::nullIndex() const
+{
+  int index = -1;
+
+  if ( allowNull() )
+  {
+    index = findText( QgsApplication::nullRepresentation( ) );
+  }
+
+  return index;
 }
 
 void QgsFeatureListComboBox::onDataChanged( const QModelIndex &topLeft, const QModelIndex &bottomRight, const QVector<int> &roles )

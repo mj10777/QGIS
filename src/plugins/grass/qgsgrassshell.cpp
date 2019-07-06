@@ -12,9 +12,11 @@
  *   (at your option) any later version.                                   *
  *                                                                         *
  ***************************************************************************/
+#include <QEvent>
 #include <QTabWidget>
 #include <QVBoxLayout>
 #include <QShortcut>
+#include <QKeyEvent>
 #include <QKeySequence>
 
 #include "qgslogger.h"
@@ -36,7 +38,7 @@ QgsGrassShell::QgsGrassShell( QgsGrassTools *tools, QTabWidget *parent, const ch
   , mTools( tools )
   , mTabWidget( parent )
 {
-  Q_UNUSED( name );
+  Q_UNUSED( name )
   QVBoxLayout *mainLayout = new QVBoxLayout( this );
   mTerminal = new QTermWidget( 0, this );
   initTerminal( mTerminal );
@@ -73,6 +75,27 @@ QgsGrassShell::QgsGrassShell( QgsGrassTools *tools, QTabWidget *parent, const ch
   mTerminal->setStyleSheet( QStringLiteral( "font-family: Monospace; font-size: 10pt;" ) );
 }
 
+bool QgsGrassShell::event( QEvent *e )
+{
+  // We have to accept simple shortcuts, QGIS defines shortcuts without Ctrl/Shift for map tools,
+  // for example S for Enable Snapping. See #18262.
+  // See also QWidgetLineControl::processShortcutOverrideEvent and TerminalDisplay::handleShortcutOverrideEvent
+  if ( e->type() == QEvent::ShortcutOverride )
+  {
+    QKeyEvent *ke = static_cast<QKeyEvent *>( e );
+    if ( ke->modifiers() == Qt::NoModifier || ke->modifiers() == Qt::ShiftModifier
+         || ke->modifiers() == Qt::KeypadModifier )
+    {
+      if ( ke->key() < Qt::Key_Escape )
+      {
+        ke->accept();
+        return true;
+      }
+    }
+  }
+  return QFrame::event( e );
+}
+
 void QgsGrassShell::closeShell()
 {
   int index = mTabWidget->indexOf( this );
@@ -92,8 +115,8 @@ void QgsGrassShell::closeShell()
 
 void QgsGrassShell::initTerminal( QTermWidget *terminal )
 {
-  QStringList env( QLatin1String( "" ) );
-  QStringList args( QLatin1String( "" ) );
+  QStringList env( ( QString() ) );
+  QStringList args( ( QString() ) );
 
   // GRASS Init.sh should not be started here, it is either run when GRASS is started if QGIS is run from GRASS shell or everything (set environment variables and lock mapset) is done in QgsGrass::openMapset
   //QString shellProgram = QString( "%1/etc/Init.sh" ).arg( ::getenv( "GISBASE" ) );

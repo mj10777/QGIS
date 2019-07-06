@@ -16,6 +16,7 @@
  ***************************************************************************/
 
 #include "qgsalgorithmdropgeometry.h"
+#include "qgsvectorlayer.h"
 
 ///@cond PRIVATE
 
@@ -64,9 +65,19 @@ QgsCoordinateReferenceSystem QgsDropGeometryAlgorithm::outputCrs( const QgsCoord
   return QgsCoordinateReferenceSystem();
 }
 
+bool QgsDropGeometryAlgorithm::supportInPlaceEdit( const QgsMapLayer *l ) const
+{
+  return qobject_cast< const QgsVectorLayer * >( l );
+}
+
 QgsWkbTypes::Type QgsDropGeometryAlgorithm::outputWkbType( QgsWkbTypes::Type ) const
 {
   return QgsWkbTypes::NoGeometry;
+}
+
+QgsProcessingFeatureSource::Flag QgsDropGeometryAlgorithm::sourceFlags() const
+{
+  return QgsProcessingFeatureSource::FlagSkipGeometryValidityChecks;
 }
 
 QgsFeatureRequest QgsDropGeometryAlgorithm::request() const
@@ -74,11 +85,11 @@ QgsFeatureRequest QgsDropGeometryAlgorithm::request() const
   return QgsFeatureRequest().setFlags( QgsFeatureRequest::NoGeometry );
 }
 
-QgsFeature QgsDropGeometryAlgorithm::processFeature( const QgsFeature &feature, QgsProcessingContext &, QgsProcessingFeedback * )
+QgsFeatureList QgsDropGeometryAlgorithm::processFeature( const QgsFeature &feature, QgsProcessingContext &, QgsProcessingFeedback * )
 {
   QgsFeature f = feature;
   f.clearGeometry();
-  return f;
+  return QgsFeatureList() << f;
 }
 
 ///@endcond

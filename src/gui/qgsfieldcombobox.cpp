@@ -77,7 +77,7 @@ QString QgsFieldComboBox::currentField() const
   const QModelIndex proxyIndex = mFieldProxyModel->index( i, 0 );
   if ( !proxyIndex.isValid() )
   {
-    return QLatin1String( "" );
+    return QString();
   }
 
   QString name = mFieldProxyModel->data( proxyIndex, QgsFieldModel::FieldNameRole ).toString();
@@ -86,7 +86,7 @@ QString QgsFieldComboBox::currentField() const
 
 void QgsFieldComboBox::indexChanged( int i )
 {
-  Q_UNUSED( i );
+  Q_UNUSED( i )
   QString name = currentField();
   emit fieldChanged( name );
 }

@@ -20,6 +20,9 @@
 #include "qgswfsrequest.h"
 #include "qgswfscapabilities.h"
 #include "qgsogcutils.h"
+#include "qgssqliteutils.h"
+
+#include <map>
 
 /**
  * This class holds data, and logic, shared between QgsWFSProvider, QgsWFSFeatureIterator
@@ -55,7 +58,7 @@ class QgsWFSSharedData : public QObject
     /**
      * Used by a QgsWFSFeatureIterator to start a downloader and get the
         generation counter. */
-    int registerToCache( QgsWFSFeatureIterator *iterator, const QgsRectangle &rect = QgsRectangle() );
+    int registerToCache( QgsWFSFeatureIterator *iterator, int limit, const QgsRectangle &rect = QgsRectangle() );
 
     /**
      * Used by the rewind() method of an iterator so as to get the up-to-date
@@ -78,6 +81,9 @@ class QgsWFSSharedData : public QObject
     //! Give a feature id, find the correspond fid/gml.id. Used by WFS-T
     QString findGmlId( QgsFeatureId fid );
 
+    //! Retrieve the dbId from the qgisId
+    QgsFeatureIds dbIdsFromQgisIds( const QgsFeatureIds &qgisIds );
+
     //! Delete from the on-disk cache the features of given fid. Used by WFS-T
     bool deleteFeatures( const QgsFeatureIds &fidlist );
 
@@ -90,26 +96,29 @@ class QgsWFSSharedData : public QObject
     //! Force an update of the feature count
     void setFeatureCount( int featureCount );
 
-    //! Return layer feature count. Might issue a GetFeature resultType=hits request
+    //! Returns layer feature count. Might issue a GetFeature resultType=hits request
     int getFeatureCount( bool issueRequestIfNeeded = true );
 
-    //! Return whether the feature count is exact, or approximate/transient
+    //! Returns whether the feature count is exact, or approximate/transient
     bool isFeatureCountExact() const { return mFeatureCountExact; }
 
-    //! Return whether the server support RESULTTYPE=hits
+    //! Returns whether the server support RESULTTYPE=hits
     bool supportsHits() const { return mCaps.supportsHits; }
 
     //! Compute WFS filter from the sql or filter in the URI
     bool computeFilter( QString &errorMsg );
 
-    //! Return extent computed from currently downloaded features
+    //! Returns extent computed from currently downloaded features
     QgsRectangle computedExtent();
 
-    //! Return srsName
+    //! Returns srsName
     QString srsName() const;
 
-    //! Return whether the feature download is finished
+    //! Returns whether the feature download is finished
     bool downloadFinished() const { return mDownloadFinished; }
+
+    //! Returns maximum number of features to download, or 0 if unlimited
+    int requestLimit() const { return mRequestLimit; }
 
   signals:
 
@@ -152,11 +161,14 @@ class QgsWFSSharedData : public QObject
     //! Current BBOX used by the downloader
     QgsRectangle mRect;
 
-    //! Server-side or user-side limit of downloaded features (in a single GetFeature()). Valid if > 0
+    //! Server-side or user-side limit of downloaded features (including with paging). Valid if > 0
     int mMaxFeatures;
 
-    //! Whether mMaxFeatures was set to a non 0 value for the purpose of paging
-    bool mMaxFeaturesWasSetFromDefaultForPaging;
+    //! Page size for WFS 2.0. 0 = disabled
+    int mPageSize;
+
+    //! Limit of retrieved number of features for the current request
+    int mRequestLimit;
 
     //! Server capabilities
     QgsWfsCapabilities::Capabilities mCaps;
@@ -180,6 +192,9 @@ class QgsWFSSharedData : public QObject
      * If the server (typically MapServer WFS 1.1) honours EPSG axis order, but returns
         EPSG:XXXX srsName and not EPSG urns */
     bool mGetFeatureEPSGDotHonoursEPSGOrder;
+
+    //! Geometry type of the features in this layer
+    QgsWkbTypes::Type mWKBType = QgsWkbTypes::Unknown;
 
   private:
 
@@ -227,6 +242,10 @@ class QgsWFSSharedData : public QObject
     //! Tablename of the on-disk cache
     QString mCacheTablename;
 
+    //! Map each GML field name to the column name in the spatialite DB cache
+    // This is useful when there are GML fields with same name, but different case
+    std::map<QString, QString> mMapGMLFieldNameToSQLiteColumnName;
+
     //! Spatial index of requested cached regions
     QgsSpatialIndex mCachedRegions;
 
@@ -241,6 +260,15 @@ class QgsWFSSharedData : public QObject
 
     //! Whether we have already tried fetching one feature after realizing that the capabilities extent is wrong
     bool mTryFetchingOneFeature;
+
+    //! Name of the gmlid, spatialite_id, qgis_id cache. This cache persists even after a layer reload so as to ensure feature id stability.
+    QString mCacheIdDbname;
+
+    //! Connection to mCacheIdDbname
+    sqlite3_database_unique_ptr mCacheIdDb;
+
+    //! Next value for qgisId column
+    QgsFeatureId mNextCachedIdQgisId = 1;
 
     /**
      * Returns the set of gmlIds that have already been downloaded and
@@ -266,8 +294,8 @@ class QgsWFSFeatureHitsRequest: public QgsWfsRequest
   public:
     explicit QgsWFSFeatureHitsRequest( QgsWFSDataSourceURI &uri );
 
-    //! Return the feature count, or -1 in case of error
-    int getFeatureCount( const QString &WFSVersion, const QString &filter );
+    //! Returns the feature count, or -1 in case of error
+    int getFeatureCount( const QString &WFSVersion, const QString &filter, const QgsWfsCapabilities::Capabilities &caps );
 
   protected:
     QString errorMessageWithReason( const QString &reason ) override;
@@ -282,7 +310,7 @@ class QgsWFSSingleFeatureRequest: public QgsWfsRequest
   public:
     explicit QgsWFSSingleFeatureRequest( QgsWFSSharedData *shared );
 
-    //! Return the feature  extent of the single feature requested
+    //! Returns the feature  extent of the single feature requested
     QgsRectangle getExtent();
 
   protected:

@@ -21,10 +21,6 @@ __author__ = 'Victor Olaya'
 __date__ = 'January 2013'
 __copyright__ = '(C) 2013, Victor Olaya'
 
-# This will get replaced with a git SHA1 when you do a git archive
-
-__revision__ = '$Format:%H$'
-
 import codecs
 
 from qgis.core import (QgsRectangle,
@@ -32,7 +28,6 @@ from qgis.core import (QgsRectangle,
                        QgsProcessingParameterRasterLayer,
                        QgsProcessingParameterBand,
                        QgsProcessingParameterFileDestination,
-                       QgsProcessingOutputHtml,
                        QgsProcessingOutputNumber)
 from processing.algs.qgis.QgisAlgorithm import QgisAlgorithm
 
@@ -68,7 +63,6 @@ class RasterLayerStatistics(QgisAlgorithm):
                                                      1,
                                                      self.INPUT))
         self.addParameter(QgsProcessingParameterFileDestination(self.OUTPUT_HTML_FILE, self.tr('Statistics'), self.tr('HTML files (*.html)'), None, True))
-        self.addOutput(QgsProcessingOutputHtml(self.OUTPUT_HTML_FILE, self.tr('Statistics')))
 
         self.addOutput(QgsProcessingOutputNumber(self.MIN, self.tr('Minimum value')))
         self.addOutput(QgsProcessingOutputNumber(self.MAX, self.tr('Maximum value')))

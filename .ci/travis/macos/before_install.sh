@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 ###########################################################################
 #    before_install.sh
 #    ---------------------
@@ -13,7 +14,7 @@
 #                                                                         #
 ###########################################################################
 
-echo `date +%s` > /tmp/travis_timestamp
+date +%s > /tmp/travis_timestamp
 
 brew tap osgeo/osgeo4mac
 brew update
@@ -27,7 +28,8 @@ pip3 install \
     pyyaml \
     mock \
     future \
-    termcolor
+    termcolor \
+    oauthlib
 
 brew install \
     qscintilla2 \
@@ -56,5 +58,5 @@ brew install \
     libzip
 
 
-mkdir -p ${HOME}/Library/Python/3.6/lib/python/site-packages
-echo 'import site; site.addsitedir("/usr/local/opt/gdal2-python/lib/python3.6/site-packages")'  >> ${HOME}/Library/Python/3.6/lib/python/site-packages/gdal2.pth
+mkdir -p "${HOME}/Library/Python/3.6/lib/python/site-packages"
+echo 'import site; site.addsitedir("/usr/local/opt/gdal2-python/lib/python3.6/site-packages")'  >> "${HOME}/Library/Python/3.6/lib/python/site-packages/gdal2.pth"

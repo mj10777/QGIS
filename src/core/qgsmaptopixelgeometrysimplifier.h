@@ -18,9 +18,10 @@
 #define QGSMAPTOPIXELGEOMETRYSIMPLIFIER_H
 
 #include "qgis_core.h"
-#include "qgis.h"
+#include "qgis_sip.h"
 #include "qgsgeometrysimplifier.h"
 #include <QPolygonF>
+#include <memory>
 
 class QgsAbstractGeometry;
 class QgsWkbPtr;
@@ -58,7 +59,7 @@ class CORE_EXPORT QgsMapToPixelSimplifier : public QgsAbstractGeometrySimplifier
 
   private:
     //! Simplify the geometry using the specified tolerance
-    static QgsGeometry simplifyGeometry( int simplifyFlags, SimplifyAlgorithm simplifyAlgorithm, QgsWkbTypes::Type wkbType, const QgsAbstractGeometry &geometry, const QgsRectangle &envelope, double map2pixelTol, bool isaLinearRing );
+    static std::unique_ptr<QgsAbstractGeometry> simplifyGeometry( int simplifyFlags, SimplifyAlgorithm simplifyAlgorithm, const QgsAbstractGeometry &geometry, double map2pixelTol, bool isaLinearRing );
 
   protected:
     //! Current simplification flags

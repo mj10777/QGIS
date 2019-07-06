@@ -17,12 +17,13 @@
 #define QGSACTIONMENU_H
 
 #include <QMenu>
-#include "qgis.h"
+#include "qgis_sip.h"
 #include <QSignalMapper>
 
 #include "qgsfeature.h"
 #include "qgsaction.h"
 #include "qgis_gui.h"
+#include "qgsattributeform.h"
 
 class QgsMapLayer;
 class QgsMapLayerAction;
@@ -81,7 +82,7 @@ class GUI_EXPORT QgsActionMenu : public QMenu
      * \param parent   The usual QWidget parent.
      * \param actionScope The action scope this menu will run in
      */
-    explicit QgsActionMenu( QgsVectorLayer *layer, const QgsFeatureId fid, const QString &actionScope, QWidget *parent SIP_TRANSFERTHIS = nullptr );
+    explicit QgsActionMenu( QgsVectorLayer *layer, QgsFeatureId fid, const QString &actionScope, QWidget *parent SIP_TRANSFERTHIS = nullptr );
 
     /**
      * Change the feature on which actions are performed
@@ -90,6 +91,13 @@ class GUI_EXPORT QgsActionMenu : public QMenu
      *                 as long as the menu is displayed and the action is running.
      */
     void setFeature( const QgsFeature &feature );
+
+    /**
+     * Change the mode of the actions
+     *
+     * \param mode The mode of the attribute form
+     */
+    void setMode( QgsAttributeEditorContext::Mode mode );
 
     /**
      * Sets an expression context scope used to resolve underlying actions.
@@ -111,6 +119,7 @@ class GUI_EXPORT QgsActionMenu : public QMenu
   private slots:
     void triggerAction();
     void reloadActions();
+    void layerWillBeDeleted();
 
   private:
     void init();
@@ -122,6 +131,7 @@ class GUI_EXPORT QgsActionMenu : public QMenu
     QgsFeatureId mFeatureId;
     QString mActionScope;
     QgsExpressionContextScope mExpressionContextScope;
+    QgsAttributeEditorContext::Mode mMode;
 };
 
 

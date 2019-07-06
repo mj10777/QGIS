@@ -54,8 +54,8 @@ class TestQgsVectorDataProvider : public QObject
 
 void TestQgsVectorDataProvider::initTestCase()
 {
-  vlayerPoints = 0;
-  vlayerLines = 0;
+  vlayerPoints = nullptr;
+  vlayerLines = nullptr;
 
   // load QGIS
   QgsApplication::init();
@@ -65,12 +65,12 @@ void TestQgsVectorDataProvider::initTestCase()
   QString layerLinesUrl = QStringLiteral( TEST_DATA_DIR ) + "/lines.shp";
 
   // load layers
-
-  vlayerPoints = new QgsVectorLayer( layerPointsUrl, QStringLiteral( "testlayer" ), QStringLiteral( "ogr" ) );
+  const QgsVectorLayer::LayerOptions options { QgsCoordinateTransformContext() };
+  vlayerPoints = new QgsVectorLayer( layerPointsUrl, QStringLiteral( "testlayer" ), QStringLiteral( "ogr" ), options );
   QVERIFY( vlayerPoints );
   QVERIFY( vlayerPoints->isValid() );
 
-  vlayerLines = new QgsVectorLayer( layerLinesUrl, QStringLiteral( "testlayer" ), QStringLiteral( "ogr" ) );
+  vlayerLines = new QgsVectorLayer( layerLinesUrl, QStringLiteral( "testlayer" ), QStringLiteral( "ogr" ), options );
   QVERIFY( vlayerLines );
   QVERIFY( vlayerLines->isValid() );
 }

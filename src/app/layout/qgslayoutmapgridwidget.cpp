@@ -26,6 +26,7 @@
 #include "qgslayout.h"
 #include "qgsmapsettings.h"
 #include "qgsexpressionbuilderdialog.h"
+#include "qgsvectorlayer.h"
 
 QgsLayoutMapGridWidget::QgsLayoutMapGridWidget( QgsLayoutItemMapGrid *mapGrid, QgsLayoutItemMap *map )
   : QgsLayoutItemBaseWidget( nullptr, mapGrid )
@@ -33,13 +34,27 @@ QgsLayoutMapGridWidget::QgsLayoutMapGridWidget( QgsLayoutItemMapGrid *mapGrid, Q
   , mMapGrid( mapGrid )
 {
   setupUi( this );
+
+  mFrameStyleComboBox->addItem( tr( "No Frame" ), QgsLayoutItemMapGrid::NoFrame );
+  mFrameStyleComboBox->addItem( tr( "Zebra" ), QgsLayoutItemMapGrid::Zebra );
+  mFrameStyleComboBox->addItem( tr( "Zebra (Nautical)" ), QgsLayoutItemMapGrid::ZebraNautical );
+  mFrameStyleComboBox->addItem( tr( "Interior Ticks" ), QgsLayoutItemMapGrid::InteriorTicks );
+  mFrameStyleComboBox->addItem( tr( "Exterior Ticks" ), QgsLayoutItemMapGrid::ExteriorTicks );
+  mFrameStyleComboBox->addItem( tr( "Interior and Exterior Ticks" ), QgsLayoutItemMapGrid::InteriorExteriorTicks );
+  mFrameStyleComboBox->addItem( tr( "Line Border" ), QgsLayoutItemMapGrid::LineBorder );
+  mFrameStyleComboBox->addItem( tr( "Line Border (Nautical)" ), QgsLayoutItemMapGrid::LineBorderNautical );
+
+  mGridFrameMarginSpinBox->setShowClearButton( true );
+  mGridFrameMarginSpinBox->setClearValue( 0 );
+
   connect( mIntervalXSpinBox, &QgsDoubleSpinBox::editingFinished, this, &QgsLayoutMapGridWidget::mIntervalXSpinBox_editingFinished );
   connect( mIntervalYSpinBox, &QgsDoubleSpinBox::editingFinished, this, &QgsLayoutMapGridWidget::mIntervalYSpinBox_editingFinished );
   connect( mOffsetXSpinBox, static_cast < void ( QDoubleSpinBox::* )( double ) > ( &QDoubleSpinBox::valueChanged ), this, &QgsLayoutMapGridWidget::mOffsetXSpinBox_valueChanged );
   connect( mOffsetYSpinBox, static_cast < void ( QDoubleSpinBox::* )( double ) > ( &QDoubleSpinBox::valueChanged ), this, &QgsLayoutMapGridWidget::mOffsetYSpinBox_valueChanged );
   connect( mCrossWidthSpinBox, static_cast < void ( QDoubleSpinBox::* )( double ) > ( &QDoubleSpinBox::valueChanged ), this, &QgsLayoutMapGridWidget::mCrossWidthSpinBox_valueChanged );
   connect( mFrameWidthSpinBox, static_cast < void ( QDoubleSpinBox::* )( double ) > ( &QDoubleSpinBox::valueChanged ), this, &QgsLayoutMapGridWidget::mFrameWidthSpinBox_valueChanged );
-  connect( mFrameStyleComboBox, static_cast<void ( QComboBox::* )( const QString & )>( &QComboBox::currentIndexChanged ), this, &QgsLayoutMapGridWidget::mFrameStyleComboBox_currentIndexChanged );
+  connect( mGridFrameMarginSpinBox, static_cast < void ( QDoubleSpinBox::* )( double ) > ( &QDoubleSpinBox::valueChanged ), this, &QgsLayoutMapGridWidget::mGridFrameMarginSpinBox_valueChanged );
+  connect( mFrameStyleComboBox, static_cast<void ( QComboBox::* )( int )>( &QComboBox::currentIndexChanged ), this, &QgsLayoutMapGridWidget::mFrameStyleComboBox_currentIndexChanged );
   connect( mGridFramePenSizeSpinBox, static_cast < void ( QDoubleSpinBox::* )( double ) > ( &QDoubleSpinBox::valueChanged ), this, &QgsLayoutMapGridWidget::mGridFramePenSizeSpinBox_valueChanged );
   connect( mGridFramePenColorButton, &QgsColorButton::colorChanged, this, &QgsLayoutMapGridWidget::mGridFramePenColorButton_colorChanged );
   connect( mGridFrameFill1ColorButton, &QgsColorButton::colorChanged, this, &QgsLayoutMapGridWidget::mGridFrameFill1ColorButton_colorChanged );
@@ -122,19 +137,19 @@ QgsLayoutMapGridWidget::QgsLayoutMapGridWidget( QgsLayoutItemMapGrid *mapGrid, Q
   mGridFramePenColorButton->setColorDialogTitle( tr( "Select Grid Frame Color" ) );
   mGridFramePenColorButton->setAllowOpacity( true );
   mGridFramePenColorButton->setContext( QStringLiteral( "composer" ) );
-  mGridFramePenColorButton->setNoColorString( tr( "Transparent frame" ) );
+  mGridFramePenColorButton->setNoColorString( tr( "Transparent Frame" ) );
   mGridFramePenColorButton->setShowNoColor( true );
 
   mGridFrameFill1ColorButton->setColorDialogTitle( tr( "Select Grid Frame Fill Color" ) );
   mGridFrameFill1ColorButton->setAllowOpacity( true );
   mGridFrameFill1ColorButton->setContext( QStringLiteral( "composer" ) );
-  mGridFrameFill1ColorButton->setNoColorString( tr( "Transparent fill" ) );
+  mGridFrameFill1ColorButton->setNoColorString( tr( "Transparent Fill" ) );
   mGridFrameFill1ColorButton->setShowNoColor( true );
 
   mGridFrameFill2ColorButton->setColorDialogTitle( tr( "Select Grid Frame Fill Color" ) );
   mGridFrameFill2ColorButton->setAllowOpacity( true );
   mGridFrameFill2ColorButton->setContext( QStringLiteral( "composer" ) );
-  mGridFrameFill2ColorButton->setNoColorString( tr( "Transparent fill" ) );
+  mGridFrameFill2ColorButton->setNoColorString( tr( "Transparent Fill" ) );
   mGridFrameFill2ColorButton->setShowNoColor( true );
 
   mGridLineStyleButton->setSymbolType( QgsSymbol::Line );
@@ -196,6 +211,7 @@ void QgsLayoutMapGridWidget::blockAllSignals( bool block )
   mCrossWidthSpinBox->blockSignals( block );
   mFrameStyleComboBox->blockSignals( block );
   mFrameWidthSpinBox->blockSignals( block );
+  mGridFrameMarginSpinBox->blockSignals( block );
   mGridLineStyleButton->blockSignals( block );
   mMapGridUnitComboBox->blockSignals( block );
   mGridFramePenSizeSpinBox->blockSignals( block );
@@ -281,11 +297,13 @@ void QgsLayoutMapGridWidget::toggleFrameControls( bool frameEnabled, bool frameF
 {
   //set status of frame controls
   mFrameWidthSpinBox->setEnabled( frameSizeEnabled );
+  mGridFrameMarginSpinBox->setEnabled( frameEnabled );
   mGridFramePenSizeSpinBox->setEnabled( frameEnabled );
   mGridFramePenColorButton->setEnabled( frameEnabled );
   mGridFrameFill1ColorButton->setEnabled( frameFillEnabled );
   mGridFrameFill2ColorButton->setEnabled( frameFillEnabled );
   mFrameWidthLabel->setEnabled( frameSizeEnabled );
+  mFrameMarginLabel->setEnabled( frameEnabled );
   mFramePenLabel->setEnabled( frameEnabled );
   mFrameFillLabel->setEnabled( frameFillEnabled );
   mCheckGridLeftSide->setEnabled( frameEnabled );
@@ -458,6 +476,7 @@ void QgsLayoutMapGridWidget::setGridItems()
   mOffsetYSpinBox->setValue( mMapGrid->offsetY() );
   mCrossWidthSpinBox->setValue( mMapGrid->crossLength() );
   mFrameWidthSpinBox->setValue( mMapGrid->frameWidth() );
+  mGridFrameMarginSpinBox->setValue( mMapGrid->frameMargin() );
   mGridFramePenSizeSpinBox->setValue( mMapGrid->framePenSize() );
   mGridFramePenColorButton->setColor( mMapGrid->framePenColor() );
   mGridFrameFill1ColorButton->setColor( mMapGrid->frameFillColor1() );
@@ -514,31 +533,25 @@ void QgsLayoutMapGridWidget::setGridItems()
 
   //grid frame
   mFrameWidthSpinBox->setValue( mMapGrid->frameWidth() );
+  mGridFrameMarginSpinBox->setValue( mMapGrid->frameMargin() );
   QgsLayoutItemMapGrid::FrameStyle gridFrameStyle = mMapGrid->frameStyle();
+  mFrameStyleComboBox->setCurrentIndex( mFrameStyleComboBox->findData( gridFrameStyle ) );
   switch ( gridFrameStyle )
   {
     case QgsLayoutItemMapGrid::Zebra:
-      mFrameStyleComboBox->setCurrentIndex( 1 );
+    case QgsLayoutItemMapGrid::ZebraNautical:
       toggleFrameControls( true, true, true );
       break;
     case QgsLayoutItemMapGrid::InteriorTicks:
-      mFrameStyleComboBox->setCurrentIndex( 2 );
-      toggleFrameControls( true, false, true );
-      break;
     case QgsLayoutItemMapGrid::ExteriorTicks:
-      mFrameStyleComboBox->setCurrentIndex( 3 );
-      toggleFrameControls( true, false, true );
-      break;
     case QgsLayoutItemMapGrid::InteriorExteriorTicks:
-      mFrameStyleComboBox->setCurrentIndex( 4 );
       toggleFrameControls( true, false, true );
       break;
     case QgsLayoutItemMapGrid::LineBorder:
-      mFrameStyleComboBox->setCurrentIndex( 5 );
+    case QgsLayoutItemMapGrid::LineBorderNautical:
       toggleFrameControls( true, false, false );
       break;
-    default:
-      mFrameStyleComboBox->setCurrentIndex( 0 );
+    case QgsLayoutItemMapGrid::NoFrame:
       toggleFrameControls( false, false, false );
       break;
   }
@@ -688,6 +701,20 @@ void QgsLayoutMapGridWidget::mFrameWidthSpinBox_valueChanged( double val )
   mMap->endCommand();
 }
 
+void QgsLayoutMapGridWidget::mGridFrameMarginSpinBox_valueChanged( double val )
+{
+  if ( !mMapGrid || !mMap )
+  {
+    return;
+  }
+
+  mMap->beginCommand( tr( "Change Grid Frame Margin" ) );
+  mMapGrid->setFrameMargin( val );
+  mMap->updateBoundingRect();
+  mMap->update();
+  mMap->endCommand();
+}
+
 void QgsLayoutMapGridWidget::mCheckGridLeftSide_toggled( bool checked )
 {
   if ( !mMapGrid || !mMap )
@@ -746,22 +773,22 @@ void QgsLayoutMapGridWidget::mCheckGridBottomSide_toggled( bool checked )
 
 void QgsLayoutMapGridWidget::mFrameDivisionsLeftComboBox_currentIndexChanged( int index )
 {
-  handleChangedFrameDisplay( QgsLayoutItemMapGrid::Left, ( QgsLayoutItemMapGrid::DisplayMode ) mFrameDivisionsLeftComboBox->itemData( index ).toInt() );
+  handleChangedFrameDisplay( QgsLayoutItemMapGrid::Left, static_cast< QgsLayoutItemMapGrid::DisplayMode >( mFrameDivisionsLeftComboBox->itemData( index ).toInt() ) );
 }
 
 void QgsLayoutMapGridWidget::mFrameDivisionsRightComboBox_currentIndexChanged( int index )
 {
-  handleChangedFrameDisplay( QgsLayoutItemMapGrid::Right, ( QgsLayoutItemMapGrid::DisplayMode ) mFrameDivisionsRightComboBox->itemData( index ).toInt() );
+  handleChangedFrameDisplay( QgsLayoutItemMapGrid::Right, static_cast< QgsLayoutItemMapGrid::DisplayMode >( mFrameDivisionsRightComboBox->itemData( index ).toInt() ) );
 }
 
 void QgsLayoutMapGridWidget::mFrameDivisionsTopComboBox_currentIndexChanged( int index )
 {
-  handleChangedFrameDisplay( QgsLayoutItemMapGrid::Top, ( QgsLayoutItemMapGrid::DisplayMode ) mFrameDivisionsTopComboBox->itemData( index ).toInt() );
+  handleChangedFrameDisplay( QgsLayoutItemMapGrid::Top, static_cast< QgsLayoutItemMapGrid::DisplayMode >( mFrameDivisionsTopComboBox->itemData( index ).toInt() ) );
 }
 
 void QgsLayoutMapGridWidget::mFrameDivisionsBottomComboBox_currentIndexChanged( int index )
 {
-  handleChangedFrameDisplay( QgsLayoutItemMapGrid::Bottom, ( QgsLayoutItemMapGrid::DisplayMode ) mFrameDivisionsBottomComboBox->itemData( index ).toInt() );
+  handleChangedFrameDisplay( QgsLayoutItemMapGrid::Bottom, static_cast< QgsLayoutItemMapGrid::DisplayMode >( mFrameDivisionsBottomComboBox->itemData( index ).toInt() ) );
 }
 
 void QgsLayoutMapGridWidget::mGridFramePenSizeSpinBox_valueChanged( double d )
@@ -817,43 +844,34 @@ void QgsLayoutMapGridWidget::mGridFrameFill2ColorButton_colorChanged( const QCol
   mMap->endCommand();
 }
 
-void QgsLayoutMapGridWidget::mFrameStyleComboBox_currentIndexChanged( const QString &text )
+void QgsLayoutMapGridWidget::mFrameStyleComboBox_currentIndexChanged( int )
 {
   if ( !mMapGrid || !mMap )
   {
     return;
   }
 
+  QgsLayoutItemMapGrid::FrameStyle style = static_cast< QgsLayoutItemMapGrid::FrameStyle >( mFrameStyleComboBox->currentData().toInt() );
   mMap->beginCommand( tr( "Change Frame Style" ) );
-  if ( text == tr( "Zebra" ) )
+  mMapGrid->setFrameStyle( style );
+  switch ( style )
   {
-    mMapGrid->setFrameStyle( QgsLayoutItemMapGrid::Zebra );
-    toggleFrameControls( true, true, true );
-  }
-  else if ( text == tr( "Interior ticks" ) )
-  {
-    mMapGrid->setFrameStyle( QgsLayoutItemMapGrid::InteriorTicks );
-    toggleFrameControls( true, false, true );
-  }
-  else if ( text == tr( "Exterior ticks" ) )
-  {
-    mMapGrid->setFrameStyle( QgsLayoutItemMapGrid::ExteriorTicks );
-    toggleFrameControls( true, false, true );
-  }
-  else if ( text == tr( "Interior and exterior ticks" ) )
-  {
-    mMapGrid->setFrameStyle( QgsLayoutItemMapGrid::InteriorExteriorTicks );
-    toggleFrameControls( true, false, true );
-  }
-  else if ( text == tr( "Line border" ) )
-  {
-    mMapGrid->setFrameStyle( QgsLayoutItemMapGrid::LineBorder );
-    toggleFrameControls( true, false, false );
-  }
-  else //no frame
-  {
-    mMapGrid->setFrameStyle( QgsLayoutItemMapGrid::NoFrame );
-    toggleFrameControls( false, false, false );
+    case QgsLayoutItemMapGrid::Zebra:
+    case QgsLayoutItemMapGrid::ZebraNautical:
+      toggleFrameControls( true, true, true );
+      break;
+    case QgsLayoutItemMapGrid::InteriorTicks:
+    case QgsLayoutItemMapGrid::ExteriorTicks:
+    case QgsLayoutItemMapGrid::InteriorExteriorTicks:
+      toggleFrameControls( true, false, true );
+      break;
+    case QgsLayoutItemMapGrid::LineBorder:
+    case QgsLayoutItemMapGrid::LineBorderNautical:
+      toggleFrameControls( true, false, false );
+      break;
+    case QgsLayoutItemMapGrid::NoFrame:
+      toggleFrameControls( false, false, false );
+      break;
   }
   mMap->updateBoundingRect();
   mMap->update();
@@ -887,7 +905,7 @@ void QgsLayoutMapGridWidget::mMapGridUnitComboBox_currentIndexChanged( const QSt
 
 void QgsLayoutMapGridWidget::mGridBlendComboBox_currentIndexChanged( int index )
 {
-  Q_UNUSED( index );
+  Q_UNUSED( index )
   if ( mMapGrid )
   {
     mMap->beginCommand( tr( "Change Grid Blend Mode" ) );
@@ -1003,6 +1021,7 @@ void QgsLayoutMapGridWidget::mAnnotationFormatButton_clicked()
   }
 
   QgsExpressionContext expressionContext = mMapGrid->createExpressionContext();
+  expressionContext.setHighlightedFunctions( QStringList() << QStringLiteral( "to_dms" ) << QStringLiteral( "to_dm" ) );
 
   QgsExpressionBuilderDialog exprDlg( nullptr, mMapGrid->annotationExpression(), this, QStringLiteral( "generic" ), expressionContext );
   exprDlg.setWindowTitle( tr( "Expression Based Annotation" ) );
@@ -1060,22 +1079,22 @@ void QgsLayoutMapGridWidget::mAnnotationPositionBottomComboBox_currentIndexChang
 
 void QgsLayoutMapGridWidget::mAnnotationDirectionComboBoxLeft_currentIndexChanged( int index )
 {
-  handleChangedAnnotationDirection( QgsLayoutItemMapGrid::Left, ( QgsLayoutItemMapGrid::AnnotationDirection ) mAnnotationDirectionComboBoxLeft->itemData( index ).toInt() );
+  handleChangedAnnotationDirection( QgsLayoutItemMapGrid::Left, static_cast< QgsLayoutItemMapGrid::AnnotationDirection >( mAnnotationDirectionComboBoxLeft->itemData( index ).toInt() ) );
 }
 
 void QgsLayoutMapGridWidget::mAnnotationDirectionComboBoxRight_currentIndexChanged( int index )
 {
-  handleChangedAnnotationDirection( QgsLayoutItemMapGrid::Right, ( QgsLayoutItemMapGrid::AnnotationDirection ) mAnnotationDirectionComboBoxRight->itemData( index ).toInt() );
+  handleChangedAnnotationDirection( QgsLayoutItemMapGrid::Right, static_cast< QgsLayoutItemMapGrid::AnnotationDirection >( mAnnotationDirectionComboBoxRight->itemData( index ).toInt() ) );
 }
 
 void QgsLayoutMapGridWidget::mAnnotationDirectionComboBoxTop_currentIndexChanged( int index )
 {
-  handleChangedAnnotationDirection( QgsLayoutItemMapGrid::Top, ( QgsLayoutItemMapGrid::AnnotationDirection ) mAnnotationDirectionComboBoxTop->itemData( index ).toInt() );
+  handleChangedAnnotationDirection( QgsLayoutItemMapGrid::Top, static_cast< QgsLayoutItemMapGrid::AnnotationDirection >( mAnnotationDirectionComboBoxTop->itemData( index ).toInt() ) );
 }
 
 void QgsLayoutMapGridWidget::mAnnotationDirectionComboBoxBottom_currentIndexChanged( int index )
 {
-  handleChangedAnnotationDirection( QgsLayoutItemMapGrid::Bottom, ( QgsLayoutItemMapGrid::AnnotationDirection ) mAnnotationDirectionComboBoxBottom->itemData( index ).toInt() );
+  handleChangedAnnotationDirection( QgsLayoutItemMapGrid::Bottom, static_cast< QgsLayoutItemMapGrid::AnnotationDirection >( mAnnotationDirectionComboBoxBottom->itemData( index ).toInt() ) );
 }
 
 void QgsLayoutMapGridWidget::mDistanceToMapFrameSpinBox_valueChanged( double d )
@@ -1154,7 +1173,7 @@ void QgsLayoutMapGridWidget::mAnnotationFormatComboBox_currentIndexChanged( int 
 
   mMap->beginCommand( tr( "Change Annotation Format" ) );
 
-  mMapGrid->setAnnotationFormat( ( QgsLayoutItemMapGrid::AnnotationFormat )mAnnotationFormatComboBox->itemData( index ).toInt() );
+  mMapGrid->setAnnotationFormat( static_cast< QgsLayoutItemMapGrid::AnnotationFormat >( mAnnotationFormatComboBox->itemData( index ).toInt() ) );
   mAnnotationFormatButton->setEnabled( mMapGrid->annotationFormat() == QgsLayoutItemMapGrid::CustomFormat );
 
   mMap->updateBoundingRect();

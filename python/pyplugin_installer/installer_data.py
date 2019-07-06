@@ -28,22 +28,14 @@ from qgis.PyQt.QtCore import (pyqtSignal, QObject, QCoreApplication, QFile,
                               QLocale, QByteArray)
 from qgis.PyQt.QtXml import QDomDocument
 from qgis.PyQt.QtNetwork import QNetworkRequest, QNetworkReply
-from qgis.core import QgsSettings
+from qgis.core import Qgis, QgsSettings, QgsNetworkRequestParameters
 import sys
 import os
 import codecs
 import re
-try:
-    import configparser
-except ImportError:
-    import configparser as configparser
-try:
-    from importlib import reload
-except ImportError:
-    from imp import reload
+import configparser
 import qgis.utils
 from qgis.core import QgsNetworkAccessManager, QgsApplication
-from qgis.gui import QgsMessageBar
 from qgis.utils import iface, plugin_paths
 from .version_compare import pyQgisVersion, compareVersions, normalizeVersion, isCompatible
 
@@ -93,6 +85,7 @@ mPlugins = dict of dicts {id : {
     "downloads" unicode,                        # number of downloads
     "average_vote" unicode,                     # average vote
     "rating_votes" unicode,                     # number of votes
+    "plugin_dependencies" unicode,              # PIP-style comma separated list of plugin dependencies
 }}
 """
 
@@ -214,7 +207,7 @@ class Repositories(QObject):
     def urlParams(self):
         """ return GET parameters to be added to every request """
         # Strip down the point release segment from the version string
-        return "?qgis=%s" % re.sub('\.\d*$', '', pyQgisVersion())
+        return "?qgis={}".format(re.sub(r'\.\d*$', '', pyQgisVersion()))
 
     # ----------------------------------------- #
     def setRepositoryData(self, reposName, key, value):
@@ -330,6 +323,7 @@ class Repositories(QObject):
         # url.addQueryItem('qgis', '.'.join([str(int(s)) for s in [v[0], v[1:3]]]) ) # don't include the bugfix version!
 
         self.mRepositories[key]["QRequest"] = QNetworkRequest(url)
+        self.mRepositories[key]["QRequest"].setAttribute(QNetworkRequest.Attribute(QgsNetworkRequestParameters.AttributeInitiatorClass), "Relay")
         authcfg = self.mRepositories[key]["authcfg"]
         if authcfg and isinstance(authcfg, str):
             if not QgsApplication.authManager().updateNetworkRequest(
@@ -346,7 +340,7 @@ class Repositories(QObject):
         self.mRepositories[key]["xmlData"].setProperty('reposName', key)
         self.mRepositories[key]["xmlData"].setProperty('redirectionCounter', redirectionCounter)
         self.mRepositories[key]["xmlData"].downloadProgress.connect(self.mRepositories[key]["Relay"].dataReadProgress)
-        self.mRepositories[key]["xmlData"].finished.connect(self.xmlDownloaded)
+        self.mRepositories[key]["xmlDataFinished"] = self.mRepositories[key]["xmlData"].finished.connect(self.xmlDownloaded)
 
     # ----------------------------------------- #
     def fetchingInProgress(self):
@@ -360,7 +354,7 @@ class Repositories(QObject):
     def killConnection(self, key):
         """ kill the fetching on demand """
         if self.mRepositories[key]["state"] == 1 and self.mRepositories[key]["xmlData"] and self.mRepositories[key]["xmlData"].isRunning():
-            self.mRepositories[key]["xmlData"].finished.disconnect()
+            self.mRepositories[key]["xmlData"].finished.disconnect(self.mRepositories[key]["xmlDataFinished"])
             self.mRepositories[key]["xmlData"].abort()
 
     # ----------------------------------------- #
@@ -414,7 +408,7 @@ class Repositories(QObject):
                         trusted = True
                     icon = pluginNodes.item(i).firstChildElement("icon").text().strip()
                     if icon and not icon.startswith("http"):
-                        icon = "http://%s/%s" % (QUrl(self.mRepositories[reposName]["url"]).host(), icon)
+                        icon = "http://{}/{}".format(QUrl(self.mRepositories[reposName]["url"]).host(), icon)
 
                     if pluginNodes.item(i).toElement().hasAttribute("plugin_id"):
                         plugin_id = pluginNodes.item(i).toElement().attribute("plugin_id")
@@ -453,7 +447,8 @@ class Repositories(QObject):
                         "version_installed": "",
                         "zip_repository": reposName,
                         "library": "",
-                        "readonly": False
+                        "readonly": False,
+                        "plugin_dependencies": pluginNodes.item(i).firstChildElement("plugin_dependencies").text().strip(),
                     }
                     qgisMinimumVersion = pluginNodes.item(i).firstChildElement("qgis_minimum_version").text().strip()
                     if not qgisMinimumVersion:
@@ -473,7 +468,7 @@ class Repositories(QObject):
                 if reply.attribute(QNetworkRequest.HttpStatusCodeAttribute) == 200:
                     self.mRepositories[reposName]["error"] = QCoreApplication.translate("QgsPluginInstaller", "Server response is 200 OK, but doesn't contain plugin metatada. This is most likely caused by a proxy or a wrong repository URL. You can configure proxy settings in QGIS options.")
                 else:
-                    self.mRepositories[reposName]["error"] = QCoreApplication.translate("QgsPluginInstaller", "Status code:") + " %d %s" % (
+                    self.mRepositories[reposName]["error"] = QCoreApplication.translate("QgsPluginInstaller", "Status code:") + " {} {}".format(
                         reply.attribute(QNetworkRequest.HttpStatusCodeAttribute),
                         reply.attribute(QNetworkRequest.HttpReasonPhraseAttribute)
                     )
@@ -565,7 +560,7 @@ class Plugins(QObject):
         """ get the metadata of an installed plugin """
         def metadataParser(fct):
             """ plugin metadata parser reimplemented from qgis.utils
-                for better control on wchich module is examined
+                for better control of which module is examined
                 in case there is an installed plugin masking a core one """
             global errorDetails
             cp = configparser.ConfigParser()
@@ -583,10 +578,10 @@ class Plugins(QObject):
                 If failed, fallbacks to the standard metadata """
             locale = QLocale.system().name()
             if locale and fct in translatableAttributes:
-                value = metadataParser("%s[%s]" % (fct, locale))
+                value = metadataParser("{}[{}]".format(fct, locale))
                 if value:
                     return value
-                value = metadataParser("%s[%s]" % (fct, locale.split("_")[0]))
+                value = metadataParser("{}[{}]".format(fct, locale.split("_")[0]))
                 if value:
                     return value
             return metadataParser(fct)
@@ -599,6 +594,10 @@ class Plugins(QObject):
         error = ""
         errorDetails = ""
         version = None
+
+        if not os.path.exists(os.path.join(path, '__init__.py')):
+            error = "broken"
+            errorDetails = QCoreApplication.translate("QgsPluginInstaller", "Missing __init__.py")
 
         metadataFile = os.path.join(path, 'metadata.txt')
         if os.path.exists(metadataFile):
@@ -614,14 +613,14 @@ class Plugins(QObject):
             # if compatible, add the plugin to the list
             if not isCompatible(pyQgisVersion(), qgisMinimumVersion, qgisMaximumVersion):
                 error = "incompatible"
-                errorDetails = "%s - %s" % (qgisMinimumVersion, qgisMaximumVersion)
+                errorDetails = "{} - {}".format(qgisMinimumVersion, qgisMaximumVersion)
         elif not os.path.exists(metadataFile):
             error = "broken"
             errorDetails = QCoreApplication.translate("QgsPluginInstaller", "Missing metadata file")
         else:
             error = "broken"
             e = errorDetails
-            errorDetails = QCoreApplication.translate("QgsPluginInstaller", u"Error reading metadata")
+            errorDetails = QCoreApplication.translate("QgsPluginInstaller", "Error reading metadata")
             if e:
                 errorDetails += ": " + e
 
@@ -677,7 +676,9 @@ class Plugins(QObject):
             "status": "orphan",  # Will be overwritten, if any available version found.
             "error": error,
             "error_details": errorDetails,
-            "readonly": readOnly}
+            "readonly": readOnly,
+            "plugin_dependencies": pluginMetadata("plugin_dependencies"),
+        }
         return plugin
 
     # ----------------------------------------- #
@@ -690,7 +691,7 @@ class Plugins(QObject):
         pluginPaths.reverse()
 
         for pluginsPath in pluginPaths:
-            isTheSystemDir = (pluginPaths.index(pluginsPath) == 0)  # The curent dir is the system plugins dir
+            isTheSystemDir = (pluginPaths.index(pluginsPath) == 0)  # The current dir is the system plugins dir
             if isTheSystemDir:
                 # temporarily add the system path as the first element to force loading the readonly plugins, even if masked by user ones.
                 sys.path = [pluginsPath] + sys.path
@@ -749,9 +750,9 @@ class Plugins(QObject):
                         # other remote metadata is preferred:
                         for attrib in ["name", "plugin_id", "description", "about", "category", "tags", "changelog", "author_name", "author_email", "homepage",
                                        "tracker", "code_repository", "experimental", "deprecated", "version_available", "zip_repository",
-                                       "download_url", "filename", "downloads", "average_vote", "rating_votes", "trusted"]:
+                                       "download_url", "filename", "downloads", "average_vote", "rating_votes", "trusted", "plugin_dependencies"]:
                             if attrib not in translatableAttributes or attrib == "name":  # include name!
-                                if plugin[attrib]:
+                                if plugin.get(attrib, False):
                                     self.mPlugins[key][attrib] = plugin[attrib]
                     # set status
                     #

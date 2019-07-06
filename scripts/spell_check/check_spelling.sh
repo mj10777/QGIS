@@ -23,7 +23,7 @@
 # fi
 
 # extensions or files that should be excluded from file list if :% is appended in the spelling.dat file
-EXCLUDE_SCRIPT_LIST='(\.(xml|svg|sip|t2t|pl|sh|qgs|badquote|cmake(\.in)?)|^(debian/copyright|cmake_templates/.*|INSTALL|NEWS|tests/testdata/labeling/README.rst|tests/testdata/font/QGIS-Vera/COPYRIGHT.TXT|doc/(news|INSTALL)\.html))$'
+EXCLUDE_SCRIPT_LIST='(\.(xml|svg|sip|t2t|pl|sh|qgs|badquote|cmake(\.in)?)|^(debian/copyright|cmake_templates/.*|INSTALL|NEWS|tests/testdata/labeling/README.rst|tests/testdata/font/QGIS-Vera/COPYRIGHT.TXT|doc/(news|INSTALL)\.html|debian/build/))$'
 
 DIR=$(git rev-parse --show-toplevel)/scripts/spell_check
 
@@ -56,11 +56,11 @@ while getopts ":rdl:" opt; do
       ;;
   esac
 done
-shift $(expr $OPTIND - 1)
+shift $((OPTIND - 1))
 
 if [ $# -ne 0 ]; then
   EXCLUDE=$(${GP}sed -e 's/\s*#.*$//' -e '/^\s*$/d' $AGIGNORE | tr '\n' '|' | ${GP}sed -e 's/|$//')
-  INPUTFILES=$(echo $@ | tr -s '[[:blank:]]' '\n' | ${GP}egrep -iv "$EXCLUDE" | tr '\n' ' ' )
+  INPUTFILES=$(echo "$@" | tr -s '[[:blank:]]' '\n' | ${GP}egrep -iv "$EXCLUDE" | tr '\n' ' ' )
   if [[ -z $INPUTFILES  ]]; then
     exit 0
   fi
@@ -84,8 +84,8 @@ declare -A GLOBREP_IGNORE=()
 
 ERRORFOUND=NO
 
-for I in $(seq -f '%02g' 0  $(($SPLIT-1)) ) ; do
-  ( [[ "$INTERACTIVE" =~ YES ]] || [[ "$TRAVIS" =~ true ]] ) && printf "Progress: %d/%d\r" $(( I + 1 )) $SPLIT
+for I in $(seq -f '%02g' 0  $((SPLIT-1)) ) ; do
+  { [[ "$INTERACTIVE" =~ YES ]] || [[ "$TRAVIS" =~ true ]]; } && printf "Progress: %d/%d\r" $(( I + 1 )) $SPLIT
   SPELLFILE=spelling$I~
   ${GP}sed -i '/^#/d' $SPELLFILE
 
@@ -136,10 +136,10 @@ for I in $(seq -f '%02g' 0  $(($SPLIT-1)) ) ; do
   RUN_IGNORECASE=OFF
   RUN_CASEMATCH=OFF
 
-  if [[ ! -z "${IGNORECASE}" ]]; then
+  if [[ -n "${IGNORECASE}" ]]; then
     RUN_IGNORECASE=ON
   fi
-  if [[ ! -z "${CASEMATCH}"  ]]; then
+  if [[ -n "${CASEMATCH}"  ]]; then
     RUN_CASEMATCH=ON
   fi
 
@@ -180,13 +180,13 @@ for I in $(seq -f '%02g' 0  $(($SPLIT-1)) ) ; do
         # also make error small case and escape special chars: () |
         ERRORSMALLCASE=$(echo ${ERRORNOCOLOR,,} |${GP}sed -r 's/\(/\\(/g' | ${GP}sed -r 's/\)/\\)/g' | ${GP}sed -r 's/\|/\\|/g' )
         if [[ ! "${ERRORSMALLCASE}" =~ $IGNORECASE_INWORD ]]; then
-         if [[ -n $(ag --nonumbers --case-sensitive "^${ERRORSMALLCASE:1:-1}${ERRORSMALLCASE: -1}?:" scripts/spell_check/spelling.dat) ]]; then
+         if [[ -n $(ag --noaffinity --nonumbers --case-sensitive "^${ERRORSMALLCASE:1:-1}${ERRORSMALLCASE: -1}?:" scripts/spell_check/spelling.dat) ]]; then
            PREVCHAR=${ERROR::1}
            # remove first character
            ERRORSMALLCASE=${ERRORSMALLCASE#?}
            ERROR=${ERROR#?}
          fi
-         if [[ -n $(ag --nonumbers --case-sensitive "^${ERRORSMALLCASE::-1}:" scripts/spell_check/spelling.dat) ]]; then
+         if [[ -n $(ag --noaffinity --nonumbers --case-sensitive "^${ERRORSMALLCASE::-1}:" scripts/spell_check/spelling.dat) ]]; then
            NEXTCHAR=${ERROR:${#ERROR}-1:1}
            # remove last character
            ERRORSMALLCASE=${ERRORSMALLCASE::-1}
@@ -196,9 +196,9 @@ for I in $(seq -f '%02g' 0  $(($SPLIT-1)) ) ; do
         ERRORSMALLCASE=$(${GP}sed -r 's/\./\\./g' <<< $ERRORSMALLCASE)
 
         # get correction from spelling.dat
-        CORRECTION=$(ag --nonumbers --case-sensitive "^${ERRORSMALLCASE}:" ${DIR}/spelling.dat | cut -d: -f2)
+        CORRECTION=$(ag --noaffinity --nonumbers --case-sensitive "^${ERRORSMALLCASE}:" ${DIR}/spelling.dat | cut -d: -f2)
         # exclude script files
-        if [[ "$(ag --nonumbers --case-sensitive "^${ERRORSMALLCASE}:" ${DIR}/spelling.dat | cut -d: -f3)" =~ "%" ]]; then
+        if [[ "$(ag --noaffinity --nonumbers --case-sensitive "^${ERRORSMALLCASE}:" ${DIR}/spelling.dat | cut -d: -f3)" =~ "%" ]]; then
           if [[ "$FILE" =~ $EXCLUDE_SCRIPT_LIST ]]; then
             echo "skipping script file for $(${GP}sed -r 's/\\//g' <<< $ERRORSMALLCASE)"
             continue
@@ -208,7 +208,7 @@ for I in $(seq -f '%02g' 0  $(($SPLIT-1)) ) ; do
         if [[ -z "$CORRECTION" ]]; then
           CORRECTION=$(perl -e "use strict; use warnings; while(<>) { chop; my(\$a,\$b) = split /:/; \$a = qr(\$a); if( my @matches = '${ERRORSMALLCASE}' =~ /^\$a\$/i ) { print sprintf(\$b, @matches); last; }}" ${DIR}/spelling.dat )
           # exclude script files
-          if [[ "$(ag --nonumbers --case-sensitive ":${CORRECTION}" ${DIR}/spelling.dat | cut -d: -f3)" =~ "%" ]]; then
+          if [[ "$(ag --noaffinity --nonumbers --case-sensitive ":${CORRECTION}" ${DIR}/spelling.dat | cut -d: -f3)" =~ "%" ]]; then
             if [[ "$FILE" =~ $EXCLUDE_SCRIPT_LIST ]]; then
               echo "skipping script file for $(${GP}sed -r 's/\\//g' <<< $ERRORSMALLCASE)"
               continue
@@ -223,7 +223,7 @@ for I in $(seq -f '%02g' 0  $(($SPLIT-1)) ) ; do
         else
           # Match case
           MATCHCASE="$ERROR:$CORRECTION"
-          CORRECTIONCASE=$(echo "$MATCHCASE" | ${GP}sed -r 's/([A-Z]+):(.*)/\1:\U\2/; s/([A-Z][a-z]+):([a-z])/\1:\U\2\L/' | cut -d: -f2)
+          CORRECTIONCASE=$(echo "$MATCHCASE" | ${GP}sed -r 's/([A-Z]+):(.*)/\1:\U\2/; s/([A-Z][a-z]+):([a-z])/\1:\U\2\L/; s/\*?$//;' | cut -d: -f2)
 
           if [[ -n $OUTPUTLOG ]]; then
             echo "$FILE $NUMBER $ERROR $CORRECTIONCASE" >> $OUTPUTLOG
@@ -336,7 +336,7 @@ for I in $(seq -f '%02g' 0  $(($SPLIT-1)) ) ; do
 
 done
 
-( [[ "$INTERACTIVE" =~ YES ]] || [[ "$TRAVIS" =~ true ]] ) && echo
+{ [[ "$INTERACTIVE" =~ YES ]] || [[ "$TRAVIS" =~ true ]]; } && echo
 
 if [[ "$ERRORFOUND" =~ YES ]]; then
   echo -e "\x1B[1msome errors have been found.\x1B[0m" >&2

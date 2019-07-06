@@ -9,8 +9,6 @@ the Free Software Foundation; either version 2 of the License, or
 __author__ = 'Nyall Dawson'
 __date__ = '2016-09'
 __copyright__ = 'Copyright 2016, The QGIS Project'
-# This will get replaced with a git SHA1 when you do a git archive
-__revision__ = '$Format:%H$'
 
 import qgis  # NOQA
 import os
@@ -28,10 +26,12 @@ from qgis.core import (QgsTextBufferSettings,
                        QgsRenderContext,
                        QgsRectangle,
                        QgsRenderChecker,
-                       QgsBlurEffect)
-from qgis.PyQt.QtGui import (QColor, QPainter, QFont, QImage, QBrush, QPen)
-from qgis.PyQt.QtCore import (Qt, QSizeF, QPointF, QRectF, QDir)
+                       QgsBlurEffect,
+                       QgsMarkerSymbol)
+from qgis.PyQt.QtGui import (QColor, QPainter, QFont, QImage, QBrush, QPen, QFontMetricsF)
+from qgis.PyQt.QtCore import (Qt, QSizeF, QPointF, QRectF, QDir, QSize)
 from qgis.PyQt.QtXml import QDomDocument
+from PyQt5.QtSvg import QSvgGenerator
 from qgis.testing import unittest, start_app
 from utilities import getTestFont, svgSymbolsPath
 
@@ -136,6 +136,11 @@ class PyQgsTextRenderer(unittest.TestCase):
         s.setStrokeWidth(7)
         s.setStrokeWidthUnit(QgsUnitTypes.RenderPoints)
         s.setStrokeWidthMapUnitScale(QgsMapUnitScale(QgsMapUnitScale(25, 26)))
+
+        marker = QgsMarkerSymbol()
+        marker.setColor(QColor(100, 112, 134))
+        s.setMarkerSymbol(marker)
+
         return s
 
     def checkBackgroundSettings(self, s):
@@ -163,6 +168,7 @@ class PyQgsTextRenderer(unittest.TestCase):
         self.assertEqual(s.strokeWidth(), 7)
         self.assertEqual(s.strokeWidthUnit(), QgsUnitTypes.RenderPoints)
         self.assertEqual(s.strokeWidthMapUnitScale(), QgsMapUnitScale(25, 26))
+        self.assertEqual(s.markerSymbol().color().name(), '#647086')
 
     def testBackgroundGettersSetters(self):
         s = self.createBackgroundSettings()
@@ -282,6 +288,7 @@ class PyQgsTextRenderer(unittest.TestCase):
         s.setOpacity(0.5)
         s.setBlendMode(QPainter.CompositionMode_DestinationAtop)
         s.setLineHeight(5)
+        s.setPreviewBackgroundColor(QColor(100, 150, 200))
         return s
 
     def checkTextFormat(self, s):
@@ -301,6 +308,7 @@ class PyQgsTextRenderer(unittest.TestCase):
         self.assertEqual(s.opacity(), 0.5)
         self.assertEqual(s.blendMode(), QPainter.CompositionMode_DestinationAtop)
         self.assertEqual(s.lineHeight(), 5)
+        self.assertEqual(s.previewBackgroundColor().name(), '#6496c8')
 
     def testFormatGettersSetters(self):
         s = self.createFormatSettings()
@@ -391,6 +399,74 @@ class PyQgsTextRenderer(unittest.TestCase):
         elem.setAttribute('fontFamily', font.family())
         f.readXml(parent, QgsReadWriteContext())
         self.assertTrue(f.fontFound())
+
+    def testFromQFont(self):
+        qfont = getTestFont()
+        qfont.setPointSizeF(16.5)
+        qfont.setLetterSpacing(QFont.AbsoluteSpacing, 3)
+
+        format = QgsTextFormat.fromQFont(qfont)
+        self.assertEqual(format.font().family(), qfont.family())
+        self.assertEqual(format.font().letterSpacing(), 3.0)
+        self.assertEqual(format.size(), 16.5)
+        self.assertEqual(format.sizeUnit(), QgsUnitTypes.RenderPoints)
+
+        qfont.setPixelSize(12)
+        format = QgsTextFormat.fromQFont(qfont)
+        self.assertEqual(format.size(), 12.0)
+        self.assertEqual(format.sizeUnit(), QgsUnitTypes.RenderPixels)
+
+    def testToQFont(self):
+        s = QgsTextFormat()
+        f = getTestFont()
+        f.setLetterSpacing(QFont.AbsoluteSpacing, 3)
+        s.setFont(f)
+        s.setNamedStyle('Italic')
+        s.setSize(5.5)
+        s.setSizeUnit(QgsUnitTypes.RenderPoints)
+
+        qfont = s.toQFont()
+        self.assertEqual(qfont.family(), f.family())
+        self.assertEqual(qfont.pointSizeF(), 5.5)
+        self.assertEqual(qfont.letterSpacing(), 3.0)
+
+        s.setSize(5)
+        s.setSizeUnit(QgsUnitTypes.RenderPixels)
+        qfont = s.toQFont()
+        self.assertEqual(qfont.pixelSize(), 5)
+
+        s.setSize(5)
+        s.setSizeUnit(QgsUnitTypes.RenderMillimeters)
+        qfont = s.toQFont()
+        self.assertAlmostEqual(qfont.pointSizeF(), 14.17, 2)
+
+        s.setSizeUnit(QgsUnitTypes.RenderInches)
+        qfont = s.toQFont()
+        self.assertAlmostEqual(qfont.pointSizeF(), 360.0, 2)
+
+    def testFontMetrics(self):
+        """
+        Test calculating font metrics from scaled text formats
+        """
+        s = QgsTextFormat()
+        f = getTestFont()
+        s.setFont(f)
+        s.setSize(12)
+        s.setSizeUnit(QgsUnitTypes.RenderPoints)
+
+        string = 'xxxxxxxxxxxxxxxxxxxxxx'
+
+        image = QImage(400, 400, QImage.Format_RGB32)
+        painter = QPainter(image)
+        context = QgsRenderContext.fromQPainter(painter)
+        context.setScaleFactor(1)
+        metrics = QgsTextRenderer.fontMetrics(context, s)
+        context.setScaleFactor(2)
+        metrics2 = QgsTextRenderer.fontMetrics(context, s)
+        painter.end()
+
+        self.assertAlmostEqual(metrics.width(string), 51.9, 1)
+        self.assertAlmostEqual(metrics2.width(string), 104.15, 1)
 
     def imageCheck(self, name, reference_image, image):
         self.report += "<h2>Render {}</h2>\n".format(name)
@@ -858,6 +934,75 @@ class PyQgsTextRenderer(unittest.TestCase):
         format.background().setSizeType(QgsTextBackgroundSettings.SizeBuffer)
         format.background().setSizeUnit(QgsUnitTypes.RenderMillimeters)
         assert self.checkRender(format, 'background_svg_buffer_mm', QgsTextRenderer.Background,
+                                rect=QRectF(100, 100, 100, 100))
+
+    def testDrawBackgroundMarkerFixedPixels(self):
+        format = QgsTextFormat()
+        format.setFont(getTestFont('bold'))
+        format.background().setEnabled(True)
+        format.background().setMarkerSymbol(QgsMarkerSymbol.createSimple({'color': '#ffffff', 'size': '3', 'outline_color': 'red', 'outline_width': '3'}))
+        format.background().setType(QgsTextBackgroundSettings.ShapeMarkerSymbol)
+        format.background().setSize(QSizeF(60, 80))
+        format.background().setSizeType(QgsTextBackgroundSettings.SizeFixed)
+        format.background().setSizeUnit(QgsUnitTypes.RenderPixels)
+        assert self.checkRender(format, 'background_marker_fixed_pixels', QgsTextRenderer.Background)
+
+    def testDrawBackgroundMarkerFixedMapUnits(self):
+        format = QgsTextFormat()
+        format.setFont(getTestFont('bold'))
+        format.background().setEnabled(True)
+        format.background().setMarkerSymbol(QgsMarkerSymbol.createSimple({'color': '#ffffff', 'size': '3', 'outline_color': 'red', 'outline_width': '3'}))
+        format.background().setType(QgsTextBackgroundSettings.ShapeMarkerSymbol)
+        format.background().setSize(QSizeF(20, 20))
+        format.background().setSizeType(QgsTextBackgroundSettings.SizeFixed)
+        format.background().setSizeUnit(QgsUnitTypes.RenderMapUnits)
+        assert self.checkRender(format, 'background_marker_fixed_mapunits', QgsTextRenderer.Background)
+
+    def testDrawBackgroundMarkerFixedMM(self):
+        format = QgsTextFormat()
+        format.setFont(getTestFont('bold'))
+        format.background().setEnabled(True)
+        format.background().setMarkerSymbol(QgsMarkerSymbol.createSimple({'color': '#ffffff', 'size': '3', 'outline_color': 'red', 'outline_width': '3'}))
+        format.background().setType(QgsTextBackgroundSettings.ShapeMarkerSymbol)
+        format.background().setSize(QSizeF(30, 30))
+        format.background().setSizeType(QgsTextBackgroundSettings.SizeFixed)
+        format.background().setSizeUnit(QgsUnitTypes.RenderMillimeters)
+        assert self.checkRender(format, 'background_marker_fixed_mm', QgsTextRenderer.Background)
+
+    def testDrawBackgroundMarkerBufferPixels(self):
+        format = QgsTextFormat()
+        format.setFont(getTestFont('bold'))
+        format.background().setEnabled(True)
+        format.background().setMarkerSymbol(QgsMarkerSymbol.createSimple({'color': '#ffffff', 'size': '3', 'outline_color': 'red', 'outline_width': '3'}))
+        format.background().setType(QgsTextBackgroundSettings.ShapeMarkerSymbol)
+        format.background().setSize(QSizeF(30, 30))
+        format.background().setSizeType(QgsTextBackgroundSettings.SizeBuffer)
+        format.background().setSizeUnit(QgsUnitTypes.RenderPixels)
+        assert self.checkRender(format, 'background_marker_buffer_pixels', QgsTextRenderer.Background,
+                                rect=QRectF(100, 100, 100, 100))
+
+    def testDrawBackgroundMarkerBufferMapUnits(self):
+        format = QgsTextFormat()
+        format.setFont(getTestFont('bold'))
+        format.background().setEnabled(True)
+        format.background().setMarkerSymbol(QgsMarkerSymbol.createSimple({'color': '#ffffff', 'size': '3', 'outline_color': 'red', 'outline_width': '3'}))
+        format.background().setType(QgsTextBackgroundSettings.ShapeMarkerSymbol)
+        format.background().setSize(QSizeF(4, 4))
+        format.background().setSizeType(QgsTextBackgroundSettings.SizeBuffer)
+        format.background().setSizeUnit(QgsUnitTypes.RenderMapUnits)
+        assert self.checkRender(format, 'background_marker_buffer_mapunits', QgsTextRenderer.Background,
+                                rect=QRectF(100, 100, 100, 100))
+
+    def testDrawBackgroundMarkerBufferMM(self):
+        format = QgsTextFormat()
+        format.setFont(getTestFont('bold'))
+        format.background().setEnabled(True)
+        format.background().setMarkerSymbol(QgsMarkerSymbol.createSimple({'color': '#ffffff', 'size': '3', 'outline_color': 'red', 'outline_width': '3'}))
+        format.background().setType(QgsTextBackgroundSettings.ShapeMarkerSymbol)
+        format.background().setSize(QSizeF(10, 10))
+        format.background().setSizeType(QgsTextBackgroundSettings.SizeBuffer)
+        format.background().setSizeUnit(QgsUnitTypes.RenderMillimeters)
+        assert self.checkRender(format, 'background_marker_buffer_mm', QgsTextRenderer.Background,
                                 rect=QRectF(100, 100, 100, 100))
 
     def testDrawBackgroundRotationFixed(self):
@@ -1587,6 +1732,84 @@ class PyQgsTextRenderer(unittest.TestCase):
         format.setSizeUnit(QgsUnitTypes.RenderPoints)
         assert self.checkRenderPoint(format, 'text_point_center_aligned', text=['test'],
                                      alignment=QgsTextRenderer.AlignCenter, point=QPointF(200, 200))
+
+    def testTextRenderFormat(self):
+        format = QgsTextFormat()
+        format.setFont(getTestFont('bold'))
+        format.setSize(30)
+        format.setSizeUnit(QgsUnitTypes.RenderPoints)
+
+        filename = '{}/test_render_text.svg'.format(QDir.tempPath())
+        svg = QSvgGenerator()
+        svg.setFileName(filename)
+        svg.setSize(QSize(400, 400))
+        svg.setResolution(600)
+
+        ms = QgsMapSettings()
+        ms.setExtent(QgsRectangle(0, 0, 50, 50))
+        ms.setOutputSize(QSize(400, 400))
+        context = QgsRenderContext.fromMapSettings(ms)
+
+        # test with ALWAYS TEXT mode
+        context.setTextRenderFormat(QgsRenderContext.TextFormatAlwaysText)
+        painter = QPainter()
+        context.setPainter(painter)
+
+        context.setScaleFactor(96 / 25.4)  # 96 DPI
+
+        painter.begin(svg)
+
+        painter.setBrush(QBrush(QColor(182, 239, 255)))
+        painter.setPen(Qt.NoPen)
+
+        QgsTextRenderer.drawText(QPointF(0, 30),
+                                 0,
+                                 QgsTextRenderer.AlignLeft,
+                                 ['my test text'],
+                                 context,
+                                 format)
+
+        painter.end()
+
+        # expect svg to contain a text object with the label
+        with open(filename, 'r') as f:
+            lines = ''.join(f.readlines())
+        self.assertIn('<text', lines)
+        self.assertIn('>my test text<', lines)
+
+        os.unlink(filename)
+
+        # test with ALWAYS CURVES mode
+        context = QgsRenderContext.fromMapSettings(ms)
+        context.setTextRenderFormat(QgsRenderContext.TextFormatAlwaysOutlines)
+        painter = QPainter()
+        context.setPainter(painter)
+
+        context.setScaleFactor(96 / 25.4)  # 96 DPI
+
+        svg = QSvgGenerator()
+        svg.setFileName(filename)
+        svg.setSize(QSize(400, 400))
+        svg.setResolution(600)
+        painter.begin(svg)
+
+        painter.setBrush(QBrush(QColor(182, 239, 255)))
+        painter.setPen(Qt.NoPen)
+
+        QgsTextRenderer.drawText(QPointF(0, 30),
+                                 0,
+                                 QgsTextRenderer.AlignLeft,
+                                 ['my test text'],
+                                 context,
+                                 format)
+
+        painter.end()
+
+        # expect svg to contain a text object with the label
+        with open(filename, 'r') as f:
+            lines = ''.join(f.readlines())
+        self.assertNotIn('<text', lines)
+        self.assertNotIn('>my test text<', lines)
 
 
 if __name__ == '__main__':

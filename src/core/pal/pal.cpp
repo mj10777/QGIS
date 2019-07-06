@@ -45,11 +45,6 @@
 
 using namespace pal;
 
-GEOSContextHandle_t pal::geosContext()
-{
-  return QgsGeometry::getGEOSHandler();
-}
-
 Pal::Pal()
 {
   // do not init and exit GEOS - we do it inside QGIS
@@ -252,8 +247,8 @@ std::unique_ptr<Problem> Pal::extract( const QgsRectangle &extent, const QgsGeom
   FeatCallBackCtx context;
 
   // prepare map boundary
-  geos::unique_ptr mapBoundaryGeos( mapBoundary.exportToGeos() );
-  geos::prepared_unique_ptr mapBoundaryPrepared( GEOSPrepare_r( geosContext(), mapBoundaryGeos.get() ) );
+  geos::unique_ptr mapBoundaryGeos( QgsGeos::asGeos( mapBoundary ) );
+  geos::prepared_unique_ptr mapBoundaryPrepared( GEOSPrepare_r( QgsGeos::getGEOSHandler(), mapBoundaryGeos.get() ) );
 
   context.fFeats = fFeats;
   context.obstacles = obstacles;
@@ -272,7 +267,8 @@ std::unique_ptr<Problem> Pal::extract( const QgsRectangle &extent, const QgsGeom
   QStringList layersWithFeaturesInBBox;
 
   mMutex.lock();
-  Q_FOREACH ( Layer *layer, mLayers )
+  const auto constMLayers = mLayers;
+  for ( Layer *layer : constMLayers )
   {
     if ( !layer )
     {
@@ -328,8 +324,8 @@ std::unique_ptr<Problem> Pal::extract( const QgsRectangle &extent, const QgsGeom
   Feats *feat = nullptr;
 
   // Filtering label positions against obstacles
-  amin[0] = amin[1] = -DBL_MAX;
-  amax[0] = amax[1] = DBL_MAX;
+  amin[0] = amin[1] = std::numeric_limits<double>::lowest();
+  amax[0] = amax[1] = std::numeric_limits<double>::max();
   FilterContext filterCtx;
   filterCtx.cdtsIndex = prob->candidates;
   filterCtx.pal = this;
@@ -337,7 +333,8 @@ std::unique_ptr<Problem> Pal::extract( const QgsRectangle &extent, const QgsGeom
 
   if ( isCanceled() )
   {
-    Q_FOREACH ( Feats *feat, *fFeats )
+    const auto constFFeats = *fFeats;
+    for ( Feats *feat : constFFeats )
     {
       qDeleteAll( feat->lPos );
       feat->lPos.clear();
@@ -401,7 +398,8 @@ std::unique_ptr<Problem> Pal::extract( const QgsRectangle &extent, const QgsGeom
   {
     if ( isCanceled() )
     {
-      Q_FOREACH ( Feats *feat, *fFeats )
+      const auto constFFeats = *fFeats;
+      for ( Feats *feat : constFFeats )
       {
         qDeleteAll( feat->lPos );
         feat->lPos.clear();
@@ -446,7 +444,7 @@ std::unique_ptr<Problem> Pal::extract( const QgsRectangle &extent, const QgsGeom
   return prob;
 }
 
-void Pal::registerCancelationCallback( Pal::FnIsCanceled fnCanceled, void *context )
+void Pal::registerCancellationCallback( Pal::FnIsCanceled fnCanceled, void *context )
 {
   fnIsCanceled = fnCanceled;
   fnIsCanceledContext = context;
@@ -473,7 +471,7 @@ QList<LabelPosition *> Pal::solveProblem( Problem *prob, bool displayAll )
     else
       prob->popmusic();
   }
-  catch ( InternalException::Empty )
+  catch ( InternalException::Empty & )
   {
     return QList<LabelPosition *>();
   }

@@ -19,7 +19,7 @@
 #define QGSFEATUREFILTERPROVIDER_H
 
 #include <QtGlobal>
-#include "qgis.h"
+#include "qgis_sip.h"
 
 #include "qgis_core.h"
 
@@ -35,7 +35,7 @@ class QgsFeatureRequest;
  * A QgsFeatureFilterProvider provides a method for modifying a QgsFeatureRequest in place to apply
  * additional filters to the request.
  * \since QGIS 2.14
- **/
+ */
 
 class CORE_EXPORT QgsFeatureFilterProvider
 {

@@ -25,15 +25,19 @@ QgsRelationManager::QgsRelationManager( QgsProject *project )
   : QObject( project )
   , mProject( project )
 {
-  connect( project, &QgsProject::readProject, this, &QgsRelationManager::readProject );
-  connect( project, &QgsProject::writeProject, this, &QgsRelationManager::writeProject );
-  connect( project, &QgsProject::layersRemoved, this, &QgsRelationManager::layersRemoved );
+  if ( mProject )
+  {
+    connect( project, &QgsProject::readProjectWithContext, this, &QgsRelationManager::readProject );
+    connect( project, &QgsProject::writeProject, this, &QgsRelationManager::writeProject );
+    connect( project, &QgsProject::layersRemoved, this, &QgsRelationManager::layersRemoved );
+  }
 }
 
 void QgsRelationManager::setRelations( const QList<QgsRelation> &relations )
 {
   mRelations.clear();
-  Q_FOREACH ( const QgsRelation &rel, relations )
+  const auto constRelations = relations;
+  for ( const QgsRelation &rel : constRelations )
   {
     addRelation( rel );
   }
@@ -47,7 +51,8 @@ QMap<QString, QgsRelation> QgsRelationManager::relations() const
 
 void QgsRelationManager::addRelation( const QgsRelation &relation )
 {
-  if ( !relation.isValid() )
+  // Do not add relations to layers that do not exist
+  if ( !( relation.referencingLayer() && relation.referencedLayer() ) )
     return;
 
   mRelations.insert( relation.id(), relation );
@@ -56,6 +61,16 @@ void QgsRelationManager::addRelation( const QgsRelation &relation )
     mProject->setDirty( true );
   emit changed();
 }
+
+
+void QgsRelationManager::updateRelationsStatus()
+{
+  for ( auto relation : mRelations )
+  {
+    relation.updateRelationStatus();
+  }
+}
+
 
 void QgsRelationManager::removeRelation( const QString &id )
 {
@@ -78,7 +93,8 @@ QList<QgsRelation> QgsRelationManager::relationsByName( const QString &name ) co
 {
   QList<QgsRelation> relations;
 
-  Q_FOREACH ( const QgsRelation &rel, mRelations )
+  const auto constMRelations = mRelations;
+  for ( const QgsRelation &rel : constMRelations )
   {
     if ( QString::compare( rel.name(), name, Qt::CaseInsensitive ) == 0 )
       relations << rel;
@@ -102,14 +118,16 @@ QList<QgsRelation> QgsRelationManager::referencingRelations( const QgsVectorLaye
 
   QList<QgsRelation> relations;
 
-  Q_FOREACH ( const QgsRelation &rel, mRelations )
+  const auto constMRelations = mRelations;
+  for ( const QgsRelation &rel : constMRelations )
   {
     if ( rel.referencingLayer() == layer )
     {
       if ( fieldIdx != -2 )
       {
         bool containsField = false;
-        Q_FOREACH ( const QgsRelation::FieldPair &fp, rel.fieldPairs() )
+        const auto constFieldPairs = rel.fieldPairs();
+        for ( const QgsRelation::FieldPair &fp : constFieldPairs )
         {
           if ( fieldIdx == layer->fields().lookupField( fp.referencingField() ) )
           {
@@ -139,7 +157,8 @@ QList<QgsRelation> QgsRelationManager::referencedRelations( QgsVectorLayer *laye
 
   QList<QgsRelation> relations;
 
-  Q_FOREACH ( const QgsRelation &rel, mRelations )
+  const auto constMRelations = mRelations;
+  for ( const QgsRelation &rel : constMRelations )
   {
     if ( rel.referencedLayer() == layer )
     {
@@ -150,7 +169,7 @@ QList<QgsRelation> QgsRelationManager::referencedRelations( QgsVectorLayer *laye
   return relations;
 }
 
-void QgsRelationManager::readProject( const QDomDocument &doc )
+void QgsRelationManager::readProject( const QDomDocument &doc, QgsReadWriteContext &context )
 {
   mRelations.clear();
 
@@ -162,12 +181,12 @@ void QgsRelationManager::readProject( const QDomDocument &doc )
     int relCount = relationNodes.count();
     for ( int i = 0; i < relCount; ++i )
     {
-      addRelation( QgsRelation::createFromXml( relationNodes.at( i ) ) );
+      addRelation( QgsRelation::createFromXml( relationNodes.at( i ), context ) );
     }
   }
   else
   {
-    QgsDebugMsg( "No relations data present in this document" );
+    QgsDebugMsg( QStringLiteral( "No relations data present in this document" ) );
   }
 
   emit relationsLoaded();
@@ -179,7 +198,7 @@ void QgsRelationManager::writeProject( QDomDocument &doc )
   QDomNodeList nl = doc.elementsByTagName( QStringLiteral( "qgis" ) );
   if ( !nl.count() )
   {
-    QgsDebugMsg( "Unable to find qgis element in project file" );
+    QgsDebugMsg( QStringLiteral( "Unable to find qgis element in project file" ) );
     return;
   }
   QDomNode qgisNode = nl.item( 0 );  // there should only be one
@@ -187,7 +206,8 @@ void QgsRelationManager::writeProject( QDomDocument &doc )
   QDomElement relationsNode = doc.createElement( QStringLiteral( "relations" ) );
   qgisNode.appendChild( relationsNode );
 
-  Q_FOREACH ( const QgsRelation &relation, mRelations )
+  const auto constMRelations = mRelations;
+  for ( const QgsRelation &relation : constMRelations )
   {
     relation.writeXml( relationsNode, doc );
   }
@@ -196,7 +216,8 @@ void QgsRelationManager::writeProject( QDomDocument &doc )
 void QgsRelationManager::layersRemoved( const QStringList &layers )
 {
   bool relationsChanged = false;
-  Q_FOREACH ( const QString &layer, layers )
+  const auto constLayers = layers;
+  for ( const QString &layer : constLayers )
   {
     QMapIterator<QString, QgsRelation> it( mRelations );
 
@@ -220,7 +241,8 @@ void QgsRelationManager::layersRemoved( const QStringList &layers )
 
 static bool hasRelationWithEqualDefinition( const QList<QgsRelation> &existingRelations, const QgsRelation &relation )
 {
-  Q_FOREACH ( const QgsRelation &cur, existingRelations )
+  const auto constExistingRelations = existingRelations;
+  for ( const QgsRelation &cur : constExistingRelations )
   {
     if ( cur.hasEqualDefinition( relation ) ) return true;
   }
@@ -230,9 +252,11 @@ static bool hasRelationWithEqualDefinition( const QList<QgsRelation> &existingRe
 QList<QgsRelation> QgsRelationManager::discoverRelations( const QList<QgsRelation> &existingRelations, const QList<QgsVectorLayer *> &layers )
 {
   QList<QgsRelation> result;
-  Q_FOREACH ( const QgsVectorLayer *layer, layers )
+  const auto constLayers = layers;
+  for ( const QgsVectorLayer *layer : constLayers )
   {
-    Q_FOREACH ( const QgsRelation &relation, layer->dataProvider()->discoverRelations( layer, layers ) )
+    const auto constDiscoverRelations = layer->dataProvider()->discoverRelations( layer, layers );
+    for ( const QgsRelation &relation : constDiscoverRelations )
     {
       if ( !hasRelationWithEqualDefinition( existingRelations, relation ) )
       {

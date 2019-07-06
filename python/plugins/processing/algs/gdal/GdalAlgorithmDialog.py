@@ -21,10 +21,6 @@ __author__ = 'Victor Olaya'
 __date__ = 'May 2015'
 __copyright__ = '(C) 2015, Victor Olaya'
 
-# This will get replaced with a git SHA1 when you do a git archive
-
-__revision__ = '$Format:%H$'
-
 from qgis.PyQt.QtCore import QCoreApplication
 from qgis.PyQt.QtWidgets import (QWidget,
                                  QVBoxLayout,
@@ -48,13 +44,15 @@ from processing.gui.AlgorithmDialogBase import AlgorithmDialogBase
 from processing.gui.ParametersPanel import ParametersPanel
 from processing.gui.MultipleInputPanel import MultipleInputPanel
 from processing.gui.NumberInputPanel import NumberInputPanel
+from processing.gui.DestinationSelectionPanel import DestinationSelectionPanel
+from processing.gui.wrappers import WidgetWrapper
 from processing.tools.dataobjects import createContext
 
 
 class GdalAlgorithmDialog(AlgorithmDialog):
 
-    def __init__(self, alg):
-        super().__init__(alg)
+    def __init__(self, alg, parent=None):
+        super().__init__(alg, parent=parent)
         self.mainWidget().parametersHaveChanged()
 
     def getParametersPanel(self, alg, parent):
@@ -84,10 +82,25 @@ class GdalParametersPanel(ParametersPanel):
 
     def connectParameterSignals(self):
         for wrapper in list(self.wrappers.values()):
-            w = wrapper.widget
+            wrapper.widgetValueHasChanged.connect(self.parametersHaveChanged)
+
+            # TODO - remove when all wrappers correctly emit widgetValueHasChanged!
+
+            # For compatibility with 3.x API, we need to check whether the wrapper is
+            # the deprecated WidgetWrapper class. If not, it's the newer
+            # QgsAbstractProcessingParameterWidgetWrapper class
+            # TODO QGIS 4.0 - remove
+            if issubclass(wrapper.__class__, WidgetWrapper):
+                w = wrapper.widget
+            else:
+                w = wrapper.wrappedWidget()
+
             self.connectWidgetChangedSignals(w)
             for c in w.findChildren(QWidget):
                 self.connectWidgetChangedSignals(c)
+
+        for output_widget in self.outputWidgets.values():
+            self.connectWidgetChangedSignals(output_widget)
 
     def connectWidgetChangedSignals(self, w):
         if isinstance(w, QLineEdit):
@@ -102,6 +115,8 @@ class GdalParametersPanel(ParametersPanel):
             w.selectionChanged.connect(self.parametersHaveChanged)
         elif isinstance(w, NumberInputPanel):
             w.hasChanged.connect(self.parametersHaveChanged)
+        elif isinstance(w, DestinationSelectionPanel):
+            w.destinationChanged.connect(self.parametersHaveChanged)
 
     def parametersHaveChanged(self):
         context = createContext()
@@ -113,7 +128,7 @@ class GdalParametersPanel(ParametersPanel):
                     parameters[output.name()] = self.tr("[temporary file]")
             for p in self.alg.parameterDefinitions():
                 if (not p.name() in parameters and not p.flags() & QgsProcessingParameterDefinition.FlagOptional) \
-                        or (not p.checkValueIsAcceptable(parameters[p.name()], context)):
+                        or (not p.checkValueIsAcceptable(parameters[p.name()])):
                     # not ready yet
                     self.text.setPlainText('')
                     return
@@ -123,3 +138,5 @@ class GdalParametersPanel(ParametersPanel):
             self.text.setPlainText(" ".join(commands))
         except AlgorithmDialogBase.InvalidParameterValue as e:
             self.text.setPlainText(self.tr("Invalid value for parameter '{0}'").format(e.parameter.description()))
+        except AlgorithmDialogBase.InvalidOutputExtension as e:
+            self.text.setPlainText(e.message)

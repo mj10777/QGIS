@@ -17,6 +17,7 @@
 #include "qgsvectorlayer.h"
 #include "qgsvectordataprovider.h"
 #include "qgsfields.h"
+#include "qgsapplication.h"
 
 #include <QWidget>
 
@@ -52,15 +53,15 @@ QString QgsSearchWidgetWrapper::toString( QgsSearchWidgetWrapper::FilterFlag fla
     case EqualTo:
       return QObject::tr( "Equal to (=)" );
     case NotEqualTo:
-      return QObject::tr( "Not equal to (!=)" );
+      return QObject::tr( "Not equal to (≠)" );
     case GreaterThan:
       return QObject::tr( "Greater than (>)" );
     case LessThan:
       return QObject::tr( "Less than (<)" );
     case GreaterThanOrEqualTo:
-      return QObject::tr( "Greater than or equal to (>=)" );
+      return QObject::tr( "Greater than or equal to (≥)" );
     case LessThanOrEqualTo:
-      return QObject::tr( "Less than or equal to (<=)" );
+      return QObject::tr( "Less than or equal to (≤)" );
     case Between:
       return QObject::tr( "Between (inclusive)" );
     case IsNotBetween:

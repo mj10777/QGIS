@@ -21,17 +21,16 @@ __author__ = 'Nyall Dawson'
 __date__ = 'October 2016'
 __copyright__ = '(C) 2016, Nyall Dawson'
 
-# This will get replaced with a git SHA1 when you do a git archive323
-
-__revision__ = '$Format:%H$'
-
 from qgis.core import (QgsWkbTypes,
                        QgsExpression,
                        QgsGeometry,
+                       QgsProcessing,
+                       QgsProcessingAlgorithm,
                        QgsProcessingException,
                        QgsProcessingParameterBoolean,
                        QgsProcessingParameterEnum,
-                       QgsProcessingParameterExpression)
+                       QgsProcessingParameterExpression,
+                       QgsProcessingFeatureSource)
 
 from processing.algs.qgis.QgisAlgorithm import QgisFeatureBasedAlgorithm
 
@@ -48,6 +47,9 @@ class GeometryByExpression(QgisFeatureBasedAlgorithm):
 
     def groupId(self):
         return 'vectorgeometry'
+
+    def flags(self):
+        return super().flags() & ~QgsProcessingAlgorithm.FlagSupportsInPlaceEdits
 
     def __init__(self):
         super().__init__()
@@ -86,9 +88,9 @@ class GeometryByExpression(QgisFeatureBasedAlgorithm):
             self.wkb_type = QgsWkbTypes.LineString
         else:
             self.wkb_type = QgsWkbTypes.Point
-        if self.parameterAsBool(parameters, self.WITH_Z, context):
+        if self.parameterAsBoolean(parameters, self.WITH_Z, context):
             self.wkb_type = QgsWkbTypes.addZ(self.wkb_type)
-        if self.parameterAsBool(parameters, self.WITH_M, context):
+        if self.parameterAsBoolean(parameters, self.WITH_M, context):
             self.wkb_type = QgsWkbTypes.addM(self.wkb_type)
 
         self.expression = QgsExpression(self.parameterAsString(parameters, self.EXPRESSION, context))
@@ -104,6 +106,12 @@ class GeometryByExpression(QgisFeatureBasedAlgorithm):
     def outputWkbType(self, input_wkb_type):
         return self.wkb_type
 
+    def inputLayerTypes(self):
+        return [QgsProcessing.TypeVector]
+
+    def sourceFlags(self):
+        return QgsProcessingFeatureSource.FlagSkipGeometryValidityChecks
+
     def processFeature(self, feature, context, feedback):
         self.expression_context.setFeature(feature)
         value = self.expression.evaluate(self.expression_context)
@@ -118,4 +126,4 @@ class GeometryByExpression(QgisFeatureBasedAlgorithm):
                 raise QgsProcessingException(
                     self.tr('{} is not a geometry').format(value))
             feature.setGeometry(value)
-        return feature
+        return [feature]

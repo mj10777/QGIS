@@ -17,27 +17,33 @@
 #include <QStandardItem>
 #include "qgsmaplayer.h"
 #include "qgsmaplayermodel.h"
+#include "qgsmaplayerproxymodel.h"
 #include "qgssettings.h"
+#include "qgsgui.h"
 
 QgsLayoutLegendLayersDialog::QgsLayoutLegendLayersDialog( QWidget *parent )
   : QDialog( parent )
 {
   setupUi( this );
-  QgsSettings settings;
-  restoreGeometry( settings.value( QStringLiteral( "Windows/LayoutLegendLayers/geometry" ) ).toByteArray() );
+  QgsGui::enableAutoGeometryRestore( this );
 
-  mModel = new QgsMapLayerModel( listMapLayers );
+  mFilterLineEdit->setShowClearButton( true );
+  mFilterLineEdit->setShowSearchIcon( true );
+
+  mModel = new QgsMapLayerProxyModel( listMapLayers );
   listMapLayers->setModel( mModel );
   QModelIndex firstLayer = mModel->index( 0, 0 );
   listMapLayers->selectionModel()->select( firstLayer, QItemSelectionModel::Select );
 
   connect( listMapLayers, &QListView::doubleClicked, this, &QgsLayoutLegendLayersDialog::accept );
+
+  connect( mFilterLineEdit, &QLineEdit::textChanged, mModel, &QgsMapLayerProxyModel::setFilterString );
+  connect( mCheckBoxVisibleLayers, &QCheckBox::toggled, this, &QgsLayoutLegendLayersDialog::filterVisible );
 }
 
-QgsLayoutLegendLayersDialog::~QgsLayoutLegendLayersDialog()
+void QgsLayoutLegendLayersDialog::setVisibleLayers( const QList<QgsMapLayer *> &layers )
 {
-  QgsSettings settings;
-  settings.setValue( QStringLiteral( "Windows/LayoutLegendLayers/geometry" ), saveGeometry() );
+  mVisibleLayers = layers;
 }
 
 QList< QgsMapLayer *> QgsLayoutLegendLayersDialog::selectedLayers() const
@@ -47,9 +53,23 @@ QList< QgsMapLayer *> QgsLayoutLegendLayersDialog::selectedLayers() const
   const QModelIndexList selection = listMapLayers->selectionModel()->selectedIndexes();
   for ( const QModelIndex &index : selection )
   {
-    QgsMapLayer *layer = mModel->layerFromIndex( index );
+    const QModelIndex sourceIndex = mModel->mapToSource( index );
+    if ( !sourceIndex.isValid() )
+    {
+      continue;
+    }
+
+    QgsMapLayer *layer = mModel->sourceLayerModel()->layerFromIndex( sourceIndex );
     if ( layer )
       layers << layer;
   }
   return layers;
+}
+
+void QgsLayoutLegendLayersDialog::filterVisible( bool enabled )
+{
+  if ( enabled )
+    mModel->setLayerWhitelist( mVisibleLayers );
+  else
+    mModel->setLayerWhitelist( QList< QgsMapLayer * >() );
 }

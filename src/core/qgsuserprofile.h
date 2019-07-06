@@ -63,7 +63,7 @@ class CORE_EXPORT QgsUserProfile
     void initSettings() const;
 
     /**
-     * Return the alias for the user profile.
+     * Returns the alias for the user profile.
      * \return If no alias is set name() is returned.
      */
     const QString alias() const;
@@ -71,7 +71,7 @@ class CORE_EXPORT QgsUserProfile
     /**
      * Set the alias of the profile. The alias is a user friendly name.
      * \param alias A user friendly name for the profile.
-     * \return True of setting the alias was successful.
+     * \return TRUE of setting the alias was successful.
      */
     QgsError setAlias( const QString &alias );
 

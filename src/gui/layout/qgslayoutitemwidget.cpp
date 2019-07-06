@@ -20,6 +20,10 @@
 #include "qgslayoutundostack.h"
 #include "qgsprintlayout.h"
 #include "qgslayoutatlas.h"
+#include "qgsexpressioncontextutils.h"
+#include "qgslayoutframe.h"
+
+#include <QButtonGroup>
 
 //
 // QgsLayoutConfigObject
@@ -79,7 +83,7 @@ void QgsLayoutConfigObject::initializeDataDefinedButton( QgsPropertyOverrideButt
 {
   button->blockSignals( true );
   button->init( key, mLayoutObject->dataDefinedProperties(), QgsLayoutObject::propertyDefinitions(), coverageLayer() );
-  connect( button, &QgsPropertyOverrideButton::changed, this, &QgsLayoutConfigObject::updateDataDefinedProperty );
+  connect( button, &QgsPropertyOverrideButton::changed, this, &QgsLayoutConfigObject::updateDataDefinedProperty, Qt::UniqueConnection );
   button->registerExpressionContextGenerator( mLayoutObject );
   button->blockSignals( false );
 }
@@ -94,6 +98,10 @@ void QgsLayoutConfigObject::updateDataDefinedButton( QgsPropertyOverrideButton *
 
   QgsLayoutObject::DataDefinedProperty key = static_cast< QgsLayoutObject::DataDefinedProperty >( button->propertyKey() );
   whileBlocking( button )->setToProperty( mLayoutObject->dataDefinedProperties().property( key ) );
+
+  // In case the button was initialized to a different config object, we need to reconnect to it here (see https://github.com/qgis/QGIS/issues/26582 )
+  connect( button, &QgsPropertyOverrideButton::changed, this, &QgsLayoutConfigObject::updateDataDefinedProperty, Qt::UniqueConnection );
+  button->registerExpressionContextGenerator( mLayoutObject );
 }
 
 QgsLayoutAtlas *QgsLayoutConfigObject::layoutAtlas() const
@@ -111,6 +119,11 @@ QgsLayoutAtlas *QgsLayoutConfigObject::layoutAtlas() const
   }
 
   return printLayout->atlas();
+}
+
+void QgsLayoutConfigObject::setObject( QgsLayoutObject *object )
+{
+  mLayoutObject = object;
 }
 
 QgsVectorLayer *QgsLayoutConfigObject::coverageLayer() const
@@ -145,17 +158,33 @@ QgsLayoutObject *QgsLayoutItemBaseWidget::layoutObject()
 
 bool QgsLayoutItemBaseWidget::setItem( QgsLayoutItem *item )
 {
+  QgsLayoutObject *oldObject = mObject;
+  QgsLayoutConfigObject *oldConfigObject = mConfigObject;
+  // have to set new mObject/mConfigObject here, because setNewItem methods require access to them
+  mObject = item;
+  mConfigObject = new QgsLayoutConfigObject( this, mObject );
   if ( setNewItem( item ) )
   {
-    mObject = item;
+    oldConfigObject->deleteLater();
     return true;
   }
-
-  return false;
+  else
+  {
+    // revert object change since it was unsuccessful
+    mObject = oldObject;
+    mConfigObject->deleteLater();
+    mConfigObject = oldConfigObject;
+    return false;
+  }
 }
 
 void QgsLayoutItemBaseWidget::setReportTypeString( const QString & )
 {
+}
+
+void QgsLayoutItemBaseWidget::setDesignerInterface( QgsLayoutDesignerInterface * )
+{
+
 }
 
 void QgsLayoutItemBaseWidget::registerDataDefinedButton( QgsPropertyOverrideButton *button, QgsLayoutObject::DataDefinedProperty property )
@@ -193,11 +222,20 @@ void QgsLayoutItemPropertiesWidget::updateVariables()
   if ( !mItem )
     return;
 
+  mBlockVariableUpdates = true;
   QgsExpressionContext context = mItem->createExpressionContext();
   mVariableEditor->setContext( &context );
-  int editableIndex = context.indexOfScope( tr( "Layout Item" ) );
-  if ( editableIndex >= 0 )
-    mVariableEditor->setEditableScopeIndex( editableIndex );
+
+  // here, we prefer to make the multiframe's scope the editable one. That's because most expressions are evaluated
+  // on the multiframe subclass level, not on a frame-by-frame basis. Ideally both would be editable, but for now let's go
+  // with the most useful one.
+  const int multiFrameScopeIndex = context.indexOfScope( tr( "Multiframe Item" ) );
+  const int itemScopeIndex = context.indexOfScope( tr( "Layout Item" ) );
+  if ( multiFrameScopeIndex >= 0 )
+    mVariableEditor->setEditableScopeIndex( multiFrameScopeIndex );
+  else if ( itemScopeIndex >= 0 )
+    mVariableEditor->setEditableScopeIndex( itemScopeIndex );
+  mBlockVariableUpdates = false;
 }
 
 QgsLayoutItemPropertiesWidget::QgsLayoutItemPropertiesWidget( QWidget *parent, QgsLayoutItem *item )
@@ -205,6 +243,8 @@ QgsLayoutItemPropertiesWidget::QgsLayoutItemPropertiesWidget( QWidget *parent, Q
   , mConfigObject( new QgsLayoutConfigObject( this, item ) )
 {
   setupUi( this );
+
+  mVariableEditor->setMinimumHeight( mVariableEditor->fontMetrics().height() * 15 );
 
   mItemRotationSpinBox->setClearValue( 0 );
   mStrokeUnitsComboBox->linkToWidget( mStrokeWidthSpinBox );
@@ -222,6 +262,9 @@ QgsLayoutItemPropertiesWidget::QgsLayoutItemPropertiesWidget( QWidget *parent, Q
   mPosLockAspectRatio->setHeightSpinBox( mYPosSpin );
   mSizeLockAspectRatio->setWidthSpinBox( mWidthSpin );
   mSizeLockAspectRatio->setHeightSpinBox( mHeightSpin );
+
+  mItemFrameColorDDBtn->registerLinkedWidget( mFrameColorButton );
+  mItemBackgroundColorDDBtn->registerLinkedWidget( mBackgroundColorButton );
 
   connect( mFrameColorButton, &QgsColorButton::colorChanged, this, &QgsLayoutItemPropertiesWidget::mFrameColorButton_colorChanged );
   connect( mBackgroundColorButton, &QgsColorButton::colorChanged, this, &QgsLayoutItemPropertiesWidget::mBackgroundColorButton_colorChanged );
@@ -271,7 +314,11 @@ QgsLayoutItemPropertiesWidget::QgsLayoutItemPropertiesWidget( QWidget *parent, Q
   connect( mOpacityWidget, &QgsOpacityWidget::opacityChanged, this, &QgsLayoutItemPropertiesWidget::opacityChanged );
 
   updateVariables();
-  connect( mVariableEditor, &QgsVariableEditorWidget::scopeChanged, this, &QgsLayoutItemPropertiesWidget::variablesChanged );
+  connect( mVariableEditor, &QgsVariableEditorWidget::scopeChanged, this, [ = ]
+  {
+    if ( !mBlockVariableUpdates )
+      QgsLayoutItemPropertiesWidget::variablesChanged();
+  } );
   // listen out for variable edits
   connect( QgsApplication::instance(), &QgsApplication::customVariablesChanged, this, &QgsLayoutItemPropertiesWidget::updateVariables );
   connect( item->layout()->project(), &QgsProject::customVariablesChanged, this, &QgsLayoutItemPropertiesWidget::updateVariables );
@@ -303,6 +350,8 @@ void QgsLayoutItemPropertiesWidget::setItem( QgsLayoutItem *item )
     connect( mItem, &QgsLayoutItem::sizePositionChanged, this, &QgsLayoutItemPropertiesWidget::setValuesForGuiPositionElements );
     connect( mItem, &QgsLayoutObject::changed, this, &QgsLayoutItemPropertiesWidget::setValuesForGuiNonPositionElements );
   }
+
+  mConfigObject->setObject( mItem );
 
   setValuesForGuiElements();
 }
@@ -374,7 +423,17 @@ void QgsLayoutItemPropertiesWidget::variablesChanged()
   if ( !mItem )
     return;
 
-  QgsExpressionContextUtils::setLayoutItemVariables( mItem, mVariableEditor->variablesInActiveScope() );
+  if ( QgsLayoutFrame *frame = qobject_cast< QgsLayoutFrame * >( mItem ) )
+  {
+    if ( QgsLayoutMultiFrame *mf = frame->multiFrame() )
+    {
+      QgsExpressionContextUtils::setLayoutMultiFrameVariables( mf, mVariableEditor->variablesInActiveScope() );
+    }
+  }
+  else
+  {
+    QgsExpressionContextUtils::setLayoutItemVariables( mItem, mVariableEditor->variablesInActiveScope() );
+  }
 }
 
 QgsLayoutItem::ReferencePoint QgsLayoutItemPropertiesWidget::positionMode() const
@@ -444,7 +503,7 @@ void QgsLayoutItemPropertiesWidget::strokeUnitChanged( QgsUnitTypes::LayoutUnit 
 
 void QgsLayoutItemPropertiesWidget::mFrameJoinStyleCombo_currentIndexChanged( int index )
 {
-  Q_UNUSED( index );
+  Q_UNUSED( index )
   if ( !mItem )
   {
     return;
@@ -672,11 +731,13 @@ void QgsLayoutItemPropertiesWidget::setValuesForGuiElements()
   setValuesForGuiPositionElements();
   setValuesForGuiNonPositionElements();
   populateDataDefinedButtons();
+
+  updateVariables();
 }
 
 void QgsLayoutItemPropertiesWidget::mBlendModeCombo_currentIndexChanged( int index )
 {
-  Q_UNUSED( index );
+  Q_UNUSED( index )
   if ( mItem )
   {
     mItem->layout()->undoStack()->beginCommand( mItem, tr( "Change Blend Mode" ) );

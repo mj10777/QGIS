@@ -21,10 +21,6 @@ __author__ = 'Victor Olaya'
 __date__ = 'August 2012'
 __copyright__ = '(C) 2012, Victor Olaya'
 
-# This will get replaced with a git SHA1 when you do a git archive
-
-__revision__ = '$Format:%H$'
-
 import os
 import codecs
 import datetime
@@ -38,7 +34,6 @@ LOG_SEPARATOR = '|~|'
 class ProcessingLog:
 
     DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
-    recentAlgs = []
 
     @staticmethod
     def logFilename():
@@ -63,14 +58,6 @@ class ProcessingLog:
             with codecs.open(ProcessingLog.logFilename(), 'a',
                              encoding='utf-8') as logfile:
                 logfile.write(line)
-            algname = msg[len('processing.run("'):]
-            algname = algname[:algname.index('"')]
-            if algname not in ProcessingLog.recentAlgs:
-                ProcessingLog.recentAlgs.append(algname)
-                recentAlgsString = ';'.join(ProcessingLog.recentAlgs[-6:])
-                ProcessingConfig.setSettingValue(
-                    ProcessingConfig.RECENT_ALGORITHMS,
-                    recentAlgsString)
         except:
             pass
 
@@ -94,16 +81,6 @@ class ProcessingLog:
                 entries.append(LogEntry(tokens[1], tokens[2]))
 
         return entries
-
-    @staticmethod
-    def getRecentAlgorithms():
-        recentAlgsSetting = ProcessingConfig.getSetting(
-            ProcessingConfig.RECENT_ALGORITHMS)
-        try:
-            ProcessingLog.recentAlgs = recentAlgsSetting.split(';')
-        except:
-            pass
-        return ProcessingLog.recentAlgs
 
     @staticmethod
     def clearLog():

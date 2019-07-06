@@ -44,6 +44,7 @@
 #include <QToolButton>
 #include <QFile>
 #include <QLabel>
+#include <QMenu>
 
 static const QString sName = QObject::tr( "Coordinate Capture" );
 static const QString sDescription = QObject::tr( "Capture mouse coordinates in different CRS" );
@@ -58,11 +59,7 @@ static const QgisPlugin::PluginType sPluginType = QgisPlugin::UI;
 //
 //////////////////////////////////////////////////////////////////////
 
-/**
- * Constructor for the plugin. The plugin is passed a pointer
- * an interface object that provides access to exposed functions in QGIS.
- * @param theQGisInterface - Pointer to the QGIS interface object
- */
+
 CoordinateCapture::CoordinateCapture( QgisInterface *qgisInterface )
   : QgisPlugin( sName, sDescription, sCategory, sPluginVersion, sPluginType )
   , mCanvasDisplayPrecision( 5 )
@@ -101,7 +98,7 @@ void CoordinateCapture::initGui()
   mQActionPointer->setWhatsThis( tr( "Click on the map to view coordinates and capture to clipboard." ) );
   // Connect the action to the run
   connect( mQActionPointer, &QAction::triggered, this, &CoordinateCapture::showOrHide );
-  mQGisIface->addPluginToVectorMenu( tr( "&Coordinate Capture" ), mQActionPointer );
+  mQGisIface->addPluginToVectorMenu( QString(), mQActionPointer );
   mQGisIface->addVectorToolBarIcon( mQActionPointer );
 
   // create our map tool
@@ -131,7 +128,7 @@ void CoordinateCapture::initGui()
   mpCanvasEdit->setToolTip( tr( "Coordinate in map canvas coordinate reference system (lat,lon or east,north)" ) );
 
   QPushButton *mypCopyButton = new QPushButton( mypWidget );
-  mypCopyButton->setText( tr( "Copy to clipboard" ) );
+  mypCopyButton->setText( tr( "Copy to Clipboard" ) );
   connect( mypCopyButton, &QAbstractButton::clicked, this, &CoordinateCapture::copy );
 
   mpTrackMouseButton = new QToolButton( mypWidget );
@@ -141,14 +138,14 @@ void CoordinateCapture::initGui()
 
   // Create the action for tool
   mpCaptureButton = new QPushButton( mypWidget );
-  mpCaptureButton->setText( tr( "Start capture" ) );
+  mpCaptureButton->setText( tr( "Start Capture" ) );
   mpCaptureButton->setToolTip( tr( "Click to enable coordinate capture" ) );
   mpCaptureButton->setIcon( QIcon( ":/coordinate_capture/coordinate_capture.png" ) );
   mpCaptureButton->setWhatsThis( tr( "Click on the map to view coordinates and capture to clipboard." ) );
   connect( mpCaptureButton, &QAbstractButton::clicked, this, &CoordinateCapture::run );
 
   // Set the icons
-  setCurrentTheme( QLatin1String( "" ) );
+  setCurrentTheme( QString() );
 
   mypLayout->addWidget( mypUserCrsToolButton, 0, 0 );
   mypLayout->addWidget( mpUserCrsEdit, 0, 1 );
@@ -253,7 +250,7 @@ void CoordinateCapture::showOrHide()
 void CoordinateCapture::unload()
 {
   // remove the GUI
-  mQGisIface->removePluginVectorMenu( tr( "&Coordinate Capture" ), mQActionPointer );
+  mQGisIface->vectorMenu()->removeAction( mQActionPointer );
   mQGisIface->removeVectorToolBarIcon( mQActionPointer );
   mpMapTool->deactivate();
   delete mpMapTool;
@@ -267,7 +264,7 @@ void CoordinateCapture::unload()
 // Set icons to the current theme
 void CoordinateCapture::setCurrentTheme( const QString &themeName )
 {
-  Q_UNUSED( themeName );
+  Q_UNUSED( themeName )
   if ( mQActionPointer )
     mQActionPointer->setIcon( QIcon( getIconPath( "coordinate_capture.png" ) ) );
   if ( mpDockWidget )
@@ -299,7 +296,7 @@ QString CoordinateCapture::getIconPath( const QString &name )
   }
   else
   {
-    return QLatin1String( "" );
+    return QString();
   }
 }
 

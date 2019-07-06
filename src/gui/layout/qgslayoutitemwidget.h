@@ -23,8 +23,9 @@
 #include <QObject>
 #include <QPointer>
 
-
+class QgsLayoutDesignerInterface;
 class QgsPropertyOverrideButton;
+class QgsLayoutAtlas;
 
 // NOTE - the inheritance here is tricky, as we need to avoid the multiple inheritance
 // diamond problem and the ideal base object (QgsLayoutConfigObject) MUST be a QObject
@@ -86,6 +87,15 @@ class GUI_EXPORT QgsLayoutConfigObject: public QObject
     //! Returns the atlas for the layout, if available
     QgsLayoutAtlas *layoutAtlas() const;
 
+    /**
+     * Links a new layout \a object to this QgsLayoutConfigObject. The object must be the same type as the existing
+     * object.
+     *
+     * \note Not available in Python bindings
+     * \since QGIS 3.4
+     */
+    void setObject( QgsLayoutObject *object ) SIP_SKIP;
+
   private slots:
     //! Must be called when a data defined button changes
     void updateDataDefinedProperty();
@@ -125,11 +135,11 @@ class GUI_EXPORT QgsLayoutItemBaseWidget: public QgsPanelWidget
     QgsLayoutObject *layoutObject();
 
     /**
-     * Sets the current \a item to show in the widget. If true is returned, \a item
+     * Sets the current \a item to show in the widget. If TRUE is returned, \a item
      * was an acceptable type for display in this widget and the widget has been
      * updated to match \a item's properties.
      *
-     * If false is returned, then the widget could not be successfully updated
+     * If FALSE is returned, then the widget could not be successfully updated
      * to show the properties of \a item.
      */
     bool setItem( QgsLayoutItem *item );
@@ -141,6 +151,14 @@ class GUI_EXPORT QgsLayoutItemBaseWidget: public QgsPanelWidget
      * and update their widget labels accordingly.
      */
     virtual void setReportTypeString( const QString &string );
+
+    /**
+     * Sets the the layout designer interface in which the widget is
+     * being shown.
+     *
+     * \since QGIS 3.6
+     */
+    virtual void setDesignerInterface( QgsLayoutDesignerInterface *iface );
 
   protected:
 
@@ -166,7 +184,7 @@ class GUI_EXPORT QgsLayoutItemBaseWidget: public QgsPanelWidget
      *
      * Subclasses can override this if they support changing items in place.
      *
-     * Implementations must return true if the item was accepted and
+     * Implementations must return TRUE if the item was accepted and
      * the widget was updated.
      */
     virtual bool setNewItem( QgsLayoutItem *item );
@@ -193,14 +211,22 @@ class GUI_EXPORT QgsLayoutItemPropertiesWidget: public QWidget, private Ui::QgsL
 {
     Q_OBJECT
   public:
+
+    /**
+     * Constructs a QgsLayoutItemPropertiesWidget with a \a parent and for the given layout \a item.
+     */
     QgsLayoutItemPropertiesWidget( QWidget *parent, QgsLayoutItem *item );
 
+    //! Returns the position mode
     QgsLayoutItem::ReferencePoint positionMode() const;
 
+    //! Determines if the background of the group box shall be shown
     void showBackgroundGroup( bool showGroup );
 
+    //! Determines if the frame of the group box shall be shown
     void showFrameGroup( bool showGroup );
 
+    //! Sets the layout item
     void setItem( QgsLayoutItem *item );
 
   protected slots:
@@ -273,7 +299,7 @@ class GUI_EXPORT QgsLayoutItemPropertiesWidget: public QWidget, private Ui::QgsL
     bool mFreezeWidthSpin = false;
     bool mFreezeHeightSpin = false;
     bool mFreezePageSpin = false;
-
+    bool mBlockVariableUpdates = false;
 //    void changeItemTransparency( int value );
     void changeItemPosition();
     void changeItemReference( QgsLayoutItem::ReferencePoint point );

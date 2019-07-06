@@ -20,13 +20,14 @@
 
 #include "qgsrectangle.h"
 #include "qgswfsrequest.h"
+#include "qgsdataprovider.h"
 
 //! Manages the GetCapabilities request
 class QgsWfsCapabilities : public QgsWfsRequest
 {
     Q_OBJECT
   public:
-    explicit QgsWfsCapabilities( const QString &uri );
+    explicit QgsWfsCapabilities( const QString &uri, const QgsDataProvider::ProviderOptions &options = QgsDataProvider::ProviderOptions() );
 
     //! start network connection to get capabilities
     bool requestCapabilities( bool synchronous, bool forceRefresh );
@@ -66,7 +67,7 @@ class QgsWfsCapabilities : public QgsWfsRequest
     {
       //! name
       QString name;
-      //! return type, or empty if unknown
+      //! Returns type, or empty if unknown
       QString returnType;
       //! minimum number of argument (or -1 if unknown)
       int minArgs = -1;
@@ -98,6 +99,8 @@ class QgsWfsCapabilities : public QgsWfsRequest
       QList<Function> functionList;
       bool useEPSGColumnFormat; // whether to use EPSG:XXXX srsname
       QList< QString > outputFormats;
+      QgsStringMap operationGetEndpoints;
+      QgsStringMap operationPostEndpoints;
 
       QSet< QString > setAllTypenames;
       QMap< QString, QString> mapUnprefixedTypenameToPrefixedTypename;
@@ -105,9 +108,11 @@ class QgsWfsCapabilities : public QgsWfsRequest
 
       void clear();
       QString addPrefixIfNeeded( const QString &name ) const;
+      QString getNamespaceForTypename( const QString &name ) const;
+      QString getNamespaceParameterValue( const QString &WFSVersion, const QString &typeName ) const;
     };
 
-    //! return parsed capabilities - requestCapabilities() must be called before
+    //! Returns parsed capabilities - requestCapabilities() must be called before
     const Capabilities &capabilities() const { return mCaps; }
 
   signals:
@@ -123,6 +128,8 @@ class QgsWfsCapabilities : public QgsWfsRequest
 
   private:
     Capabilities mCaps;
+
+    QgsDataProvider::ProviderOptions mOptions;
 
     //! Takes <Operations> element and updates the capabilities
     void parseSupportedOperations( const QDomElement &operationsElem,

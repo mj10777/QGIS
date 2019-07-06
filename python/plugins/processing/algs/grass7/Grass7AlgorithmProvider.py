@@ -21,10 +21,6 @@ __author__ = 'Victor Olaya'
 __date__ = 'April 2014'
 __copyright__ = '(C) 2014, Victor Olaya'
 
-# This will get replaced with a git SHA1 when you do a git archive
-
-__revision__ = '$Format:%H$'
-
 import os
 from qgis.PyQt.QtCore import QCoreApplication
 from qgis.core import (Qgis,
@@ -44,15 +40,19 @@ pluginPath = os.path.normpath(os.path.join(
 
 class Grass7AlgorithmProvider(QgsProcessingProvider):
 
+    descriptionFolder = Grass7Utils.grassDescriptionPath()
+    activateSetting = "ACTIVATE_GRASS7"
+
     def __init__(self):
         super().__init__()
         self.algs = []
 
     def load(self):
         ProcessingConfig.settingIcons[self.name()] = self.icon()
-        ProcessingConfig.addSetting(Setting(self.name(), 'ACTIVATE_GRASS7',
-                                            self.tr('Activate'), True))
-        if isWindows() or isMac():
+        if self.activateSetting:
+            ProcessingConfig.addSetting(Setting(self.name(), self.activateSetting,
+                                                self.tr('Activate'), True))
+        if isMac():
             ProcessingConfig.addSetting(Setting(
                 self.name(),
                 Grass7Utils.GRASS_FOLDER, self.tr('GRASS7 folder'),
@@ -83,8 +83,9 @@ class Grass7AlgorithmProvider(QgsProcessingProvider):
         return True
 
     def unload(self):
-        ProcessingConfig.removeSetting('ACTIVATE_GRASS7')
-        if isWindows() or isMac():
+        if self.activateSetting:
+            ProcessingConfig.removeSetting(self.activateSetting)
+        if isMac():
             ProcessingConfig.removeSetting(Grass7Utils.GRASS_FOLDER)
         ProcessingConfig.removeSetting(Grass7Utils.GRASS_LOG_COMMANDS)
         ProcessingConfig.removeSetting(Grass7Utils.GRASS_LOG_CONSOLE)
@@ -92,14 +93,17 @@ class Grass7AlgorithmProvider(QgsProcessingProvider):
         ProcessingConfig.removeSetting(Grass7Utils.GRASS_USE_VEXTERNAL)
 
     def isActive(self):
-        return ProcessingConfig.getSetting('ACTIVATE_GRASS7')
+        if self.activateSetting:
+            return ProcessingConfig.getSetting(self.activateSetting)
+        return True
 
     def setActive(self, active):
-        ProcessingConfig.setSettingValue('ACTIVATE_GRASS7', active)
+        if self.activateSetting:
+            ProcessingConfig.setSettingValue(self.activateSetting, active)
 
     def createAlgsList(self):
         algs = []
-        folder = Grass7Utils.grassDescriptionPath()
+        folder = self.descriptionFolder
         for descriptionFile in os.listdir(folder):
             if descriptionFile.endswith('txt'):
                 try:
@@ -128,11 +132,23 @@ class Grass7AlgorithmProvider(QgsProcessingProvider):
     def id(self):
         return 'grass7'
 
+    def helpId(self):
+        return 'grass7'
+
     def icon(self):
         return QgsApplication.getThemeIcon("/providerGrass.svg")
 
     def svgIconPath(self):
-        return QgsApplication.iconPath("providerGrass.svg")
+        return QgsApplication.iconPath("/providerGrass.svg")
+
+    def defaultVectorFileExtension(self, hasGeometry=True):
+        # By default,'gpkg', but if OGR has not been compiled with sqlite3, then
+        # we take "SHP"
+        if 'GPKG' in [o.driverName for o in
+                      QgsVectorFileWriter.ogrDriverList()]:
+            return 'gpkg'
+        else:
+            return 'shp' if hasGeometry else 'dbf'
 
     def supportsNonFileBasedOutput(self):
         """
@@ -151,7 +167,7 @@ class Grass7AlgorithmProvider(QgsProcessingProvider):
         return Grass7Utils.getSupportedOutputRasterExtensions()
 
     def canBeActivated(self):
-        return not bool(Grass7Utils.checkGrass7IsInstalled())
+        return not bool(Grass7Utils.checkGrassIsInstalled())
 
     def tr(self, string, context=''):
         if context == '':

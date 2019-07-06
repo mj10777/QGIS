@@ -32,7 +32,7 @@ class CORE_EXPORT QgsNmeaConnection: public QgsGpsConnection
   public:
 
     /**
-     * @brief Constructs a QgsNmeaConnection with given \a device.
+     * \brief Constructs a QgsNmeaConnection with given \a device.
      */
     QgsNmeaConnection( QIODevice *device );
 
@@ -56,6 +56,9 @@ class CORE_EXPORT QgsNmeaConnection: public QgsGpsConnection
     void processVtgSentence( const char *data, int len );
     //! process GSA sentence
     void processGsaSentence( const char *data, int len );
+    //! process GST sentence
+    void processGstSentence( const char *data, int len );
+
 };
 
 #endif // QGSNMEACONNECTION_H

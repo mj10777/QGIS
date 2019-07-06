@@ -112,10 +112,10 @@
          </item>
          <item>
           <property name="text">
-           <string>Style</string>
+           <string>Symbology</string>
           </property>
           <property name="toolTip">
-           <string>Style</string>
+           <string>Symbology</string>
           </property>
           <property name="icon">
            <iconset resource="../../images/images.qrc">
@@ -131,7 +131,7 @@
           </property>
           <property name="icon">
            <iconset resource="../../images/images.qrc">
-            <normaloff>:/images/themes/default/propertyicons/transparency.png</normaloff>:/images/themes/default/propertyicons/transparency.png</iconset>
+            <normaloff>:/images/themes/default/propertyicons/transparency.svg</normaloff>:/images/themes/default/propertyicons/transparency.svg</iconset>
           </property>
          </item>
          <item>
@@ -143,7 +143,7 @@
           </property>
           <property name="icon">
            <iconset resource="../../images/images.qrc">
-            <normaloff>:/images/themes/default/propertyicons/histogram.png</normaloff>:/images/themes/default/propertyicons/histogram.png</iconset>
+            <normaloff>:/images/themes/default/propertyicons/histogram.svg</normaloff>:/images/themes/default/propertyicons/histogram.svg</iconset>
           </property>
          </item>
          <item>
@@ -167,7 +167,7 @@
           </property>
           <property name="icon">
            <iconset resource="../../images/images.qrc">
-            <normaloff>:/images/themes/default/propertyicons/pyramids.png</normaloff>:/images/themes/default/propertyicons/pyramids.png</iconset>
+            <normaloff>:/images/themes/default/propertyicons/pyramids.svg</normaloff>:/images/themes/default/propertyicons/pyramids.svg</iconset>
           </property>
          </item>
          <item>
@@ -197,7 +197,7 @@
           </property>
           <property name="icon">
            <iconset resource="../../images/images.qrc">
-            <normaloff>:/images/themes/default/propertyicons/overlay.png</normaloff>:/images/themes/default/propertyicons/overlay.png</iconset>
+            <normaloff>:/images/themes/default/propertyicons/overlay.svg</normaloff>:/images/themes/default/propertyicons/overlay.svg</iconset>
           </property>
          </item>
         </widget>
@@ -239,7 +239,7 @@
           </sizepolicy>
          </property>
          <property name="currentIndex">
-          <number>9</number>
+          <number>2</number>
          </property>
          <widget class="QWidget" name="mOptsPage_Information">
           <layout class="QVBoxLayout" name="verticalLayout_20">
@@ -275,8 +275,8 @@
                <rect>
                 <x>0</x>
                 <y>0</y>
-                <width>314</width>
-                <height>98</height>
+                <width>643</width>
+                <height>729</height>
                </rect>
               </property>
               <layout class="QVBoxLayout" name="verticalLayout_7">
@@ -381,8 +381,8 @@ border-radius: 2px;</string>
                <rect>
                 <x>0</x>
                 <y>0</y>
-                <width>533</width>
-                <height>497</height>
+                <width>643</width>
+                <height>729</height>
                </rect>
               </property>
               <layout class="QVBoxLayout" name="verticalLayout_10">
@@ -395,69 +395,26 @@ border-radius: 2px;</string>
                   </sizepolicy>
                  </property>
                  <property name="title">
-                  <string>Band rendering</string>
+                  <string>Band Rendering</string>
                  </property>
                  <property name="syncGroup" stdset="0">
                   <string notr="true">rasterstyle</string>
                  </property>
-                 <layout class="QVBoxLayout" name="verticalLayout_21">
-                  <property name="leftMargin">
-                   <number>0</number>
-                  </property>
-                  <property name="topMargin">
-                   <number>12</number>
-                  </property>
-                  <property name="rightMargin">
-                   <number>0</number>
-                  </property>
-                  <property name="bottomMargin">
-                   <number>0</number>
-                  </property>
-                  <item>
+                 <layout class="QGridLayout" name="gridLayout_14">
+                  <item row="0" column="0">
                    <layout class="QHBoxLayout" name="horizontalLayout_2">
-                    <property name="leftMargin">
-                     <number>12</number>
+                    <property name="rightMargin">
+                     <number>0</number>
                     </property>
                     <item>
                      <widget class="QLabel" name="mRenderTypeLabel">
-                      <property name="sizePolicy">
-                       <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-                        <horstretch>0</horstretch>
-                        <verstretch>0</verstretch>
-                       </sizepolicy>
-                      </property>
-                      <property name="maximumSize">
-                       <size>
-                        <width>32767</width>
-                        <height>22</height>
-                       </size>
-                      </property>
                       <property name="text">
                        <string>Render type</string>
                       </property>
                      </widget>
                     </item>
                     <item>
-                     <widget class="QComboBox" name="mRenderTypeComboBox">
-                      <property name="sizePolicy">
-                       <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                        <horstretch>0</horstretch>
-                        <verstretch>0</verstretch>
-                       </sizepolicy>
-                      </property>
-                      <property name="minimumSize">
-                       <size>
-                        <width>0</width>
-                        <height>26</height>
-                       </size>
-                      </property>
-                      <property name="maximumSize">
-                       <size>
-                        <width>32767</width>
-                        <height>22</height>
-                       </size>
-                      </property>
-                     </widget>
+                     <widget class="QComboBox" name="mRenderTypeComboBox"/>
                     </item>
                     <item>
                      <spacer name="horizontalSpacer_2">
@@ -474,7 +431,7 @@ border-radius: 2px;</string>
                     </item>
                    </layout>
                   </item>
-                  <item>
+                  <item row="1" column="0">
                    <widget class="QStackedWidget" name="mRendererStackedWidget"/>
                   </item>
                  </layout>
@@ -483,16 +440,16 @@ border-radius: 2px;</string>
                <item>
                 <widget class="QgsCollapsibleGroupBox" name="mColorRenderingGrpBox">
                  <property name="title">
-                  <string>Color rendering</string>
+                  <string>Color Rendering</string>
                  </property>
                  <property name="collapsed" stdset="0">
                   <bool>false</bool>
                  </property>
-                 <property name="saveCollapsedState" stdset="0">
-                  <bool>true</bool>
-                 </property>
                  <property name="syncGroup" stdset="0">
                   <string notr="true">rasterstyle</string>
+                 </property>
+                 <property name="saveCollapsedState" stdset="0">
+                  <bool>true</bool>
                  </property>
                  <layout class="QGridLayout" name="gridLayout_2">
                   <item row="2" column="0">
@@ -682,7 +639,7 @@ border-radius: 2px;</string>
                         <height>16777215</height>
                        </size>
                       </property>
-                      <property name="text">
+                      <property name="text" stdset="0">
                        <string/>
                       </property>
                      </widget>
@@ -790,11 +747,11 @@ border-radius: 2px;</string>
                  <property name="collapsed" stdset="0">
                   <bool>false</bool>
                  </property>
-                 <property name="saveCollapsedState" stdset="0">
-                  <bool>true</bool>
-                 </property>
                  <property name="syncGroup" stdset="0">
                   <string notr="true">rasterstyle</string>
+                 </property>
+                 <property name="saveCollapsedState" stdset="0">
+                  <bool>true</bool>
                  </property>
                  <layout class="QHBoxLayout" name="horizontalLayout">
                   <item>
@@ -1012,8 +969,8 @@ border-radius: 2px;</string>
                <rect>
                 <x>0</x>
                 <y>0</y>
-                <width>361</width>
-                <height>445</height>
+                <width>348</width>
+                <height>446</height>
                </rect>
               </property>
               <layout class="QVBoxLayout" name="verticalLayout_5">
@@ -1026,7 +983,7 @@ border-radius: 2px;</string>
                <item>
                 <widget class="QgsCollapsibleGroupBox" name="gboxNoDataValue_2">
                  <property name="title">
-                  <string>Global opacity</string>
+                  <string>Global Opacity</string>
                  </property>
                  <property name="syncGroup" stdset="0">
                   <string notr="true">rastertransp</string>
@@ -1045,7 +1002,7 @@ border-radius: 2px;</string>
                <item>
                 <widget class="QgsCollapsibleGroupBox" name="gboxNoDataValue">
                  <property name="title">
-                  <string>No data value</string>
+                  <string>No Data Value</string>
                  </property>
                  <property name="syncGroup" stdset="0">
                   <string notr="true">rastertransp</string>
@@ -1117,7 +1074,7 @@ border-radius: 2px;</string>
                   </sizepolicy>
                  </property>
                  <property name="title">
-                  <string>Custom transparency options</string>
+                  <string>Custom Transparency Options</string>
                  </property>
                  <property name="syncGroup" stdset="0">
                   <string notr="true">rastertransp</string>
@@ -1359,8 +1316,8 @@ border-radius: 2px;</string>
                <rect>
                 <x>0</x>
                 <y>0</y>
-                <width>84</width>
-                <height>36</height>
+                <width>86</width>
+                <height>42</height>
                </rect>
               </property>
               <layout class="QVBoxLayout" name="verticalLayout_16">
@@ -1396,7 +1353,7 @@ border-radius: 2px;</string>
            <item>
             <widget class="QgsCollapsibleGroupBox" name="chkUseScaleDependentRendering">
              <property name="title">
-              <string>Scale dependent visibility</string>
+              <string>Scale Dependent Visibility</string>
              </property>
              <property name="checkable">
               <bool>true</bool>
@@ -1524,8 +1481,8 @@ border-radius: 2px;</string>
                <rect>
                 <x>0</x>
                 <y>0</y>
-                <width>608</width>
-                <height>205</height>
+                <width>553</width>
+                <height>193</height>
                </rect>
               </property>
               <layout class="QVBoxLayout" name="verticalLayout_12">
@@ -1588,7 +1545,7 @@ border-radius: 2px;</string>
                        <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
 &lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
 p, li { white-space: pre-wrap; }
-&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Noto Sans'; font-size:12pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Sans Serif'; font-size:9pt; font-weight:400; font-style:normal;&quot;&gt;
 &lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Cantarell'; font-size:11pt;&quot;&gt;&lt;br /&gt;&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                       </property>
                      </widget>
@@ -1601,7 +1558,7 @@ p, li { white-space: pre-wrap; }
                      <bool>false</bool>
                     </property>
                     <property name="text">
-                     <string>Build pyramids</string>
+                     <string>Build Pyramids</string>
                     </property>
                    </widget>
                   </item>
@@ -1724,8 +1681,8 @@ p, li { white-space: pre-wrap; }
                <rect>
                 <x>0</x>
                 <y>0</y>
-                <width>641</width>
-                <height>726</height>
+                <width>643</width>
+                <height>729</height>
                </rect>
               </property>
               <layout class="QGridLayout" name="gridLayout_12">
@@ -1757,10 +1714,10 @@ p, li { white-space: pre-wrap; }
                     <item>
                      <widget class="QLineEdit" name="mLayerDataUrlLineEdit">
                       <property name="toolTip">
-                       <string>An URL of the data presentation.</string>
+                       <string>A URL of the data presentation.</string>
                       </property>
                       <property name="placeholderText">
-                       <string>An URL of the data presentation.</string>
+                       <string>A URL of the data presentation.</string>
                       </property>
                      </widget>
                     </item>
@@ -2027,10 +1984,10 @@ p, li { white-space: pre-wrap; }
                     <item>
                      <widget class="QLineEdit" name="mLayerLegendUrlLineEdit">
                       <property name="toolTip">
-                       <string>An URL of the legend image.</string>
+                       <string>A URL of the legend image.</string>
                       </property>
                       <property name="placeholderText">
-                       <string>An URL of the legend image.</string>
+                       <string>A URL of the legend image.</string>
                       </property>
                      </widget>
                     </item>
@@ -2060,11 +2017,6 @@ p, li { white-space: pre-wrap; }
                       <item>
                        <property name="text">
                         <string notr="true">image/jpeg</string>
-                       </property>
-                      </item>
-                      <item>
-                       <property name="text">
-                        <string notr="true">image/jpg</string>
                        </property>
                       </item>
                      </widget>
@@ -2169,9 +2121,9 @@ p, li { white-space: pre-wrap; }
  </widget>
  <customwidgets>
   <customwidget>
-   <class>QgsScrollArea</class>
-   <extends>QScrollArea</extends>
-   <header>qgsscrollarea.h</header>
+   <class>QgsColorButton</class>
+   <extends>QFrame</extends>
+   <header>qgscolorbutton.h</header>
    <container>1</container>
   </customwidget>
   <customwidget>
@@ -2181,26 +2133,26 @@ p, li { white-space: pre-wrap; }
    <container>1</container>
   </customwidget>
   <customwidget>
+   <class>QgsFilterLineEdit</class>
+   <extends>QLineEdit</extends>
+   <header>qgsfilterlineedit.h</header>
+  </customwidget>
+  <customwidget>
    <class>QgsProjectionSelectionWidget</class>
    <extends>QWidget</extends>
    <header>qgsprojectionselectionwidget.h</header>
    <container>1</container>
   </customwidget>
   <customwidget>
-   <class>QgsColorButton</class>
-   <extends>QToolButton</extends>
-   <header>qgscolorbutton.h</header>
-   <container>1</container>
-  </customwidget>
-  <customwidget>
-   <class>QgsFilterLineEdit</class>
-   <extends>QLineEdit</extends>
-   <header>qgsfilterlineedit.h</header>
-  </customwidget>
-  <customwidget>
    <class>QgsScaleRangeWidget</class>
    <extends>QWidget</extends>
    <header>qgsscalerangewidget.h</header>
+  </customwidget>
+  <customwidget>
+   <class>QgsScrollArea</class>
+   <extends>QScrollArea</extends>
+   <header>qgsscrollarea.h</header>
+   <container>1</container>
   </customwidget>
   <customwidget>
    <class>QgsLayerTreeEmbeddedConfigWidget</class>
@@ -2292,6 +2244,34 @@ p, li { white-space: pre-wrap; }
   <tabstop>mBackgroundLayerCheckBox</tabstop>
  </tabstops>
  <resources>
+  <include location="../../images/images.qrc"/>
+  <include location="../../images/images.qrc"/>
+  <include location="../../images/images.qrc"/>
+  <include location="../../images/images.qrc"/>
+  <include location="../../images/images.qrc"/>
+  <include location="../../images/images.qrc"/>
+  <include location="../../images/images.qrc"/>
+  <include location="../../images/images.qrc"/>
+  <include location="../../images/images.qrc"/>
+  <include location="../../images/images.qrc"/>
+  <include location="../../images/images.qrc"/>
+  <include location="../../images/images.qrc"/>
+  <include location="../../images/images.qrc"/>
+  <include location="../../images/images.qrc"/>
+  <include location="../../images/images.qrc"/>
+  <include location="../../images/images.qrc"/>
+  <include location="../../images/images.qrc"/>
+  <include location="../../images/images.qrc"/>
+  <include location="../../images/images.qrc"/>
+  <include location="../../images/images.qrc"/>
+  <include location="../../images/images.qrc"/>
+  <include location="../../images/images.qrc"/>
+  <include location="../../images/images.qrc"/>
+  <include location="../../images/images.qrc"/>
+  <include location="../../images/images.qrc"/>
+  <include location="../../images/images.qrc"/>
+  <include location="../../images/images.qrc"/>
+  <include location="../../images/images.qrc"/>
   <include location="../../images/images.qrc"/>
  </resources>
  <connections>

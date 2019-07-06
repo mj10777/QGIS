@@ -23,7 +23,6 @@
 #include <QPair>
 
 #include "qgis_core.h"
-#include "qextserialport.h"
 
 class QgsGpsConnection;
 struct QgsGpsInformation;
@@ -54,7 +53,7 @@ class CORE_EXPORT QgsGpsDetector : public QObject
     int mPortIndex;
     int mBaudIndex;
     QList< QPair< QString, QString > > mPortList;
-    QList<BaudRateType> mBaudList;
+    QList<qint32> mBaudList;
 
     QgsGpsConnection *mConn = nullptr;
 };

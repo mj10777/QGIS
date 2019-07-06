@@ -21,12 +21,8 @@ __author__ = 'Médéric Ribreux'
 __date__ = 'February 2016'
 __copyright__ = '(C) 2016, Médéric Ribreux'
 
-# This will get replaced with a git SHA1 when you do a git archive
 
-__revision__ = '$Format:%H$'
-
-
-def processInputs(alg, parameters, context):
+def processInputs(alg, parameters, context, feedback):
     # We need to import all the bands and color tables of the input rasters
     alg.loadRasterLayerFromParameter('shade', parameters, context,
                                      False, None)
@@ -34,6 +30,6 @@ def processInputs(alg, parameters, context):
                                      False, None)
 
 
-def processOutputs(alg, parameters, context):
+def processOutputs(alg, parameters, context, feedback):
     # Keep color table
     alg.exportRasterLayerFromParameter('output', parameters, context, True)

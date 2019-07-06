@@ -87,7 +87,7 @@ QgsPropertyDefinition::QgsPropertyDefinition( const QString &name, const QString
 
     case ColorWithAlpha:
       mTypes = DataTypeString;
-      mHelpText = QObject::tr( "string [<b>r,g,b,a</b>] as int 0-255 or #<b>RRGGBBAA</b> as hex or <b>color</b> as color's name" );
+      mHelpText = QObject::tr( "string [<b>r,g,b,a</b>] as int 0-255 or #<b>AARRGGBB</b> as hex or <b>color</b> as color's name" );
       break;
 
     case ColorNoAlpha:
@@ -418,6 +418,13 @@ QSet<QString> QgsProperty::referencedFields( const QgsExpressionContext &context
   return QSet<QString>();
 }
 
+bool QgsProperty::isProjectColor() const
+{
+  QRegularExpression rx( QStringLiteral( "^project_color\\('.*'\\)$" ) );
+  return d->type == QgsProperty::ExpressionBasedProperty && !d->expressionString.isEmpty()
+         && rx.match( d->expressionString ).hasMatch();
+}
+
 QVariant QgsProperty::propertyValue( const QgsExpressionContext &context, const QVariant &defaultValue, bool *ok ) const
 {
   if ( ok )
@@ -708,8 +715,7 @@ bool QgsProperty::loadVariant( const QVariant &property )
   }
 
   //restore transformer if present
-  if ( d->transformer )
-    delete d->transformer;
+  delete d->transformer;
   d->transformer = nullptr;
 
 

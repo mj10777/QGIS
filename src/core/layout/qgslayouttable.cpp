@@ -31,7 +31,7 @@
 
 bool QgsLayoutTableStyle::writeXml( QDomElement &styleElem, QDomDocument &doc ) const
 {
-  Q_UNUSED( doc );
+  Q_UNUSED( doc )
   styleElem.setAttribute( QStringLiteral( "cellBackgroundColor" ), QgsSymbolLayerUtils::encodeColor( cellBackgroundColor ) );
   styleElem.setAttribute( QStringLiteral( "enabled" ), enabled );
   return true;
@@ -128,14 +128,14 @@ bool QgsLayoutTable::readPropertiesFromElement( const QDomElement &itemElem, con
   mShowEmptyRows = itemElem.attribute( QStringLiteral( "showEmptyRows" ), QStringLiteral( "0" ) ).toInt();
   if ( !QgsFontUtils::setFromXmlChildNode( mHeaderFont, itemElem, QStringLiteral( "headerFontProperties" ) ) )
   {
-    mHeaderFont.fromString( itemElem.attribute( QStringLiteral( "headerFont" ), QLatin1String( "" ) ) );
+    mHeaderFont.fromString( itemElem.attribute( QStringLiteral( "headerFont" ), QString() ) );
   }
   mHeaderFontColor = QgsSymbolLayerUtils::decodeColor( itemElem.attribute( QStringLiteral( "headerFontColor" ), QStringLiteral( "0,0,0,255" ) ) );
   mHeaderHAlignment = QgsLayoutTable::HeaderHAlignment( itemElem.attribute( QStringLiteral( "headerHAlignment" ), QStringLiteral( "0" ) ).toInt() );
   mHeaderMode = QgsLayoutTable::HeaderMode( itemElem.attribute( QStringLiteral( "headerMode" ), QStringLiteral( "0" ) ).toInt() );
   if ( !QgsFontUtils::setFromXmlChildNode( mContentFont, itemElem, QStringLiteral( "contentFontProperties" ) ) )
   {
-    mContentFont.fromString( itemElem.attribute( QStringLiteral( "contentFont" ), QLatin1String( "" ) ) );
+    mContentFont.fromString( itemElem.attribute( QStringLiteral( "contentFont" ), QString() ) );
   }
   mContentFontColor = QgsSymbolLayerUtils::decodeColor( itemElem.attribute( QStringLiteral( "contentFontColor" ), QStringLiteral( "0,0,0,255" ) ) );
   mCellMargin = itemElem.attribute( QStringLiteral( "cellMargin" ), QStringLiteral( "1.0" ) ).toDouble();
@@ -196,6 +196,7 @@ QSizeF QgsLayoutTable::totalSize() const
 
 void QgsLayoutTable::refresh()
 {
+  QgsLayoutMultiFrame::refresh();
   refreshAttributes();
 }
 
@@ -468,7 +469,7 @@ void QgsLayoutTable::render( QgsLayoutItemRenderContext &context, const QRectF &
       {
         for ( QgsLayoutTableColumn *column : qgis::as_const( mColumns ) )
         {
-          Q_UNUSED( column );
+          Q_UNUSED( column )
 
           //draw background
 
@@ -791,7 +792,7 @@ QMap<int, QString> QgsLayoutTable::headerLabels() const
 
 QSizeF QgsLayoutTable::fixedFrameSize( const int frameIndex ) const
 {
-  Q_UNUSED( frameIndex );
+  Q_UNUSED( frameIndex )
   return QSizeF( mTableSize.width(), 0 );
 }
 
@@ -894,7 +895,8 @@ bool QgsLayoutTable::calculateMaxColumnWidths()
         //column width set to automatic, so check content size
         QStringList multiLineSplit = ( *colIt ).toString().split( '\n' );
         currentCellTextWidth = 0;
-        Q_FOREACH ( const QString &line, multiLineSplit )
+        const auto constMultiLineSplit = multiLineSplit;
+        for ( const QString &line : constMultiLineSplit )
         {
           currentCellTextWidth = std::max( currentCellTextWidth, QgsLayoutUtils::textWidthMM( mContentFont, line ) );
         }
@@ -1110,7 +1112,8 @@ bool QgsLayoutTable::textRequiresWrapping( const QString &text, double columnWid
 
   QStringList multiLineSplit = text.split( '\n' );
   double currentTextWidth = 0;
-  Q_FOREACH ( const QString &line, multiLineSplit )
+  const auto constMultiLineSplit = multiLineSplit;
+  for ( const QString &line : constMultiLineSplit )
   {
     currentTextWidth = std::max( currentTextWidth, QgsLayoutUtils::textWidthMM( font, line ) );
   }
@@ -1122,7 +1125,8 @@ QString QgsLayoutTable::wrappedText( const QString &value, double columnWidth, c
 {
   QStringList lines = value.split( '\n' );
   QStringList outLines;
-  Q_FOREACH ( const QString &line, lines )
+  const auto constLines = lines;
+  for ( const QString &line : constLines )
   {
     if ( textRequiresWrapping( line, columnWidth, font ) )
     {
@@ -1130,7 +1134,8 @@ QString QgsLayoutTable::wrappedText( const QString &value, double columnWidth, c
       QStringList words = line.split( ' ' );
       QStringList linesToProcess;
       QString wordsInCurrentLine;
-      Q_FOREACH ( const QString &word, words )
+      const auto constWords = words;
+      for ( const QString &word : constWords )
       {
         if ( textRequiresWrapping( word, columnWidth, font ) )
         {
@@ -1150,12 +1155,19 @@ QString QgsLayoutTable::wrappedText( const QString &value, double columnWidth, c
       if ( !wordsInCurrentLine.isEmpty() )
         linesToProcess << wordsInCurrentLine;
 
-      Q_FOREACH ( const QString &line, linesToProcess )
+      const auto constLinesToProcess = linesToProcess;
+      for ( const QString &line : constLinesToProcess )
       {
         QString remainingText = line;
         int lastPos = remainingText.lastIndexOf( ' ' );
         while ( lastPos > -1 )
         {
+          //check if remaining text is short enough to go in one line
+          if ( !textRequiresWrapping( remainingText, columnWidth, font ) )
+          {
+            break;
+          }
+
           if ( !textRequiresWrapping( remainingText.left( lastPos ), columnWidth, font ) )
           {
             outLines << remainingText.left( lastPos );

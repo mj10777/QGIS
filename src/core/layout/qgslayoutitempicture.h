@@ -1,10 +1,10 @@
 /***************************************************************************
-                             qgslayoutitempicture.h
-                             -------------------
-    begin                : October 2017
-    copyright            : (C) 2017 by Nyall Dawson
-    email                : nyall dot dawson at gmail dot com
- ***************************************************************************/
+                         qgslayoutitempicture.h
+                         -------------------
+begin                : October 2017
+copyright            : (C) 2017 by Nyall Dawson
+email                : nyall dot dawson at gmail dot com
+***************************************************************************/
 
 /***************************************************************************
  *                                                                         *
@@ -93,8 +93,8 @@ class CORE_EXPORT QgsLayoutItemPicture: public QgsLayoutItem
      * Returns the path of the source image. Data defined picture source may override
      * this value. The path can either be a local path or a remote (http) path.
      * \returns path for the source image
-     * \see usePictureExpression()
      * \see setPicturePath()
+     * \see evaluatedPath()
      */
     QString picturePath() const;
 
@@ -102,7 +102,7 @@ class CORE_EXPORT QgsLayoutItemPicture: public QgsLayoutItem
      * Returns the rotation used for drawing the picture within the item's frame,
      * in degrees clockwise.
      * \see setPictureRotation()
-     * \see rotationMap()
+     * \see linkedMap()
      */
     double pictureRotation() const { return mPictureRotation; }
 
@@ -119,7 +119,7 @@ class CORE_EXPORT QgsLayoutItemPicture: public QgsLayoutItem
     void setLinkedMap( QgsLayoutItemMap *map );
 
     /**
-     * Returns the linked rotation map, if set. An nullptr means map rotation is
+     * Returns the linked rotation map, if set. An NULLPTR means map rotation is
      * disabled.  If this is set then the picture is rotated by the same amount
      * as the specified map object.
      * \see setLinkedMap()
@@ -203,7 +203,7 @@ class CORE_EXPORT QgsLayoutItemPicture: public QgsLayoutItem
      * \param color stroke color.
      * \note This setting only has an effect on parametrized SVG files, and is ignored for
      * non-parametrized SVG files.
-     * \see svgStrokelColor()
+     * \see svgStrokeColor()
      * \see setSvgFillColor()
      */
     void setSvgStrokeColor( const QColor &color );
@@ -230,6 +230,23 @@ class CORE_EXPORT QgsLayoutItemPicture: public QgsLayoutItem
     Format mode() const { return mMode; }
 
     void finalizeRestoreFromXml() override;
+
+    /**
+     * Returns TRUE if the source image is missing and the picture
+     * cannot be rendered.
+     *
+     * \since QGIS 3.6
+     */
+    bool isMissingImage() const;
+
+    /**
+     * Returns the current evaluated picture path, which includes
+     * the result of data defined path overrides.
+     *
+     * \see picturePath()
+     * \since QGIS 3.6
+     */
+    QString evaluatedPath() const;
 
   public slots:
 
@@ -259,17 +276,16 @@ class CORE_EXPORT QgsLayoutItemPicture: public QgsLayoutItem
      */
     void recalculateSize();
 
-    void refreshDataDefinedProperty( const QgsLayoutObject::DataDefinedProperty property = QgsLayoutObject::AllProperties ) override;
-    bool containsAdvancedEffects() const override;
+    void refreshDataDefinedProperty( QgsLayoutObject::DataDefinedProperty property = QgsLayoutObject::AllProperties ) override;
 
   signals:
-    //! Is emitted on picture rotation change
+    //! Emitted on picture rotation change
     void pictureRotationChanged( double newRotation );
 
   protected:
 
     void draw( QgsLayoutItemRenderContext &context ) override;
-    QSizeF applyItemSizeConstraint( const QSizeF &targetSize ) override;
+    QSizeF applyItemSizeConstraint( QSizeF targetSize ) override;
     bool writePropertiesToElement( QDomElement &element, QDomDocument &document, const QgsReadWriteContext &context ) const override;
     bool readPropertiesFromElement( const QDomElement &element, const QDomDocument &document, const QgsReadWriteContext &context ) override;
 
@@ -297,7 +313,7 @@ class CORE_EXPORT QgsLayoutItemPicture: public QgsLayoutItem
     double mPictureRotation = 0;
 
     QString mRotationMapUuid;
-    //! Map that sets the rotation (or nullptr if this picture uses map independent rotation)
+    //! Map that sets the rotation (or NULLPTR if this picture uses map independent rotation)
     QPointer< QgsLayoutItemMap > mRotationMap;
 
     //! Mode used to align to North
@@ -320,6 +336,8 @@ class CORE_EXPORT QgsLayoutItemPicture: public QgsLayoutItem
     bool mHasExpressionError = false;
     bool mLoaded = false;
     bool mLoadingSvg = false;
+    bool mIsMissingImage = false;
+    QString mEvaluatedPath;
 
     //! Loads an image file into the picture item and redraws the item
     void loadPicture( const QString &path );

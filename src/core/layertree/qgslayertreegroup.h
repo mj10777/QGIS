@@ -17,7 +17,7 @@
 #define QGSLAYERTREEGROUP_H
 
 #include "qgis_core.h"
-#include "qgis.h"
+#include "qgis_sip.h"
 #include "qgslayertreenode.h"
 
 class QgsMapLayer;
@@ -142,13 +142,18 @@ class CORE_EXPORT QgsLayerTreeGroup : public QgsLayerTreeNode
     QgsLayerTreeGroup *findGroup( const QString &name );
 
     /**
-     * Read group (tree) from XML element <layer-tree-group> and return the newly created group (or null on error).
+     * Find all group layer nodes
+    */
+    QList<QgsLayerTreeGroup *> findGroups() const;
+
+    /**
+     * Read group (tree) from XML element <layer-tree-group> and return the newly created group (or NULLPTR on error).
      * Does not resolve textual references to layers. Call resolveReferences() afterwards to do it.
      */
     static QgsLayerTreeGroup *readXml( QDomElement &element, const QgsReadWriteContext &context ) SIP_FACTORY;
 
     /**
-     * Read group (tree) from XML element <layer-tree-group> and return the newly created group (or null on error).
+     * Read group (tree) from XML element <layer-tree-group> and return the newly created group (or NULLPTR on error).
      * Also resolves textual references to layers from the project (calls resolveReferences() internally).
      * \since QGIS 3.0
      */
@@ -166,12 +171,12 @@ class CORE_EXPORT QgsLayerTreeGroup : public QgsLayerTreeNode
     void readChildrenFromXml( QDomElement &element, const QgsReadWriteContext &context );
 
     /**
-     * Return text representation of the tree. For debugging purposes only.
+     * Returns text representation of the tree. For debugging purposes only.
      */
     QString dump() const override;
 
     /**
-     * Return a clone of the group. The children are cloned too.
+     * Returns a clone of the group. The children are cloned too.
      */
     QgsLayerTreeGroup *clone() const override SIP_FACTORY;
 
@@ -187,7 +192,7 @@ class CORE_EXPORT QgsLayerTreeGroup : public QgsLayerTreeNode
     void setItemVisibilityCheckedRecursive( bool checked ) override;
 
     /**
-     * Return whether the group is mutually exclusive (only one child can be checked at a time)
+     * Returns whether the group is mutually exclusive (only one child can be checked at a time)
      * \since QGIS 2.12
      */
     bool isMutuallyExclusive() const;

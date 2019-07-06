@@ -24,6 +24,8 @@
 
 #include "qgscoordinatereferencesystem.h"
 #include "qgsmaplayerref.h"
+#include "qgsphongmaterialsettings.h"
+#include "qgspointlightsettings.h"
 #include "qgsterraingenerator.h"
 #include "qgsvector3d.h"
 
@@ -110,8 +112,8 @@ class _3D_EXPORT Qgs3DMapSettings : public QObject
      * Returns the path resolver for conversion between relative and absolute paths
      * during rendering operations, e.g. for resolving relative symbol paths.
      *
-     * \since QGIS 3.0
      * \see setPathResolver()
+     * \since QGIS 3.0
      */
     const QgsPathResolver &pathResolver() const { return mPathResolver; }
 
@@ -119,10 +121,25 @@ class _3D_EXPORT Qgs3DMapSettings : public QObject
      * Sets the path \a resolver for conversion between relative and absolute paths
      * during rendering operations, e.g. for resolving relative symbol paths.
      *
-     * \since QGIS 3.0
      * \see pathResolver()
+     * \since QGIS 3.0
      */
     void setPathResolver( const QgsPathResolver &resolver ) { mPathResolver = resolver; }
+
+    /**
+     * Returns pointer to the collection of map themes. Normally this would be QgsProject::mapThemeCollection()
+     * of the currently used project. Without a valid map theme collection object it is not possible
+     * to resolve map themes from their names.
+     * \since QGIS 3.6
+     */
+    QgsMapThemeCollection *mapThemeCollection() const { return mMapThemes; }
+
+    /**
+     * Sets pointer to the collection of map themes.
+     * \see mapThemeCollection()
+     * \since QGIS 3.6
+     */
+    void setMapThemeCollection( QgsMapThemeCollection *mapThemes ) { mMapThemes = mapThemes; }
 
     //! Sets background color of the 3D map view
     void setBackgroundColor( const QColor &color );
@@ -146,14 +163,21 @@ class _3D_EXPORT Qgs3DMapSettings : public QObject
     //! Returns vertical scale (exaggeration) of terrain
     double terrainVerticalScale() const;
 
-    //! Sets the list of map layers to be rendered as a texture of the terrain
+    /**
+     * Sets the list of map layers to be rendered as a texture of the terrain
+     * \note If terrain map theme is set, it has a priority over the list of layers specified here.
+     */
     void setLayers( const QList<QgsMapLayer *> &layers );
-    //! Returns the list of map layers to be rendered as a texture of the terrain
+
+    /**
+     * Returns the list of map layers to be rendered as a texture of the terrain
+     * \note If terrain map theme is set, it has a priority over the list of layers specified here.
+     */
     QList<QgsMapLayer *> layers() const;
 
     /**
      * Sets resolution (in pixels) of the texture of a terrain tile
-     * \sa mapTileResolution()
+     * \see mapTileResolution()
      */
     void setMapTileResolution( int res );
 
@@ -165,7 +189,7 @@ class _3D_EXPORT Qgs3DMapSettings : public QObject
 
     /**
      * Sets maximum allowed screen error of terrain tiles in pixels.
-     * \sa maxTerrainScreenError()
+     * \see maxTerrainScreenError()
      */
     void setMaxTerrainScreenError( float error );
 
@@ -180,7 +204,7 @@ class _3D_EXPORT Qgs3DMapSettings : public QObject
 
     /**
      * Returns maximum ground error of terrain tiles in world units.
-     * \sa maxTerrainGroundError()
+     * \see maxTerrainGroundError()
      */
     void setMaxTerrainGroundError( float error );
 
@@ -199,6 +223,54 @@ class _3D_EXPORT Qgs3DMapSettings : public QObject
     void setTerrainGenerator( QgsTerrainGenerator *gen SIP_TRANSFER );
     //! Returns terrain generator. It takes care of producing terrain tiles from the input data.
     QgsTerrainGenerator *terrainGenerator() const { return mTerrainGenerator.get(); }
+
+    /**
+     * Sets whether terrain shading is enabled.
+     * \see isTerrainShadingEnabled()
+     * \since QGIS 3.6
+     */
+    void setTerrainShadingEnabled( bool enabled );
+
+    /**
+     * Returns whether terrain shading is enabled. When enabled, in addition to the terrain texture
+     * generated from the map, the terrain rendering will take into account position of the lights,
+     * terrain normals and terrain shading material (ambient and specular colors, shininess).
+     * \since QGIS 3.6
+     */
+    bool isTerrainShadingEnabled() const { return mTerrainShadingEnabled; }
+
+    /**
+     * Sets terrain shading material.
+     * \see terrainShadingMaterial()
+     * \since QGIS 3.6
+     */
+    void setTerrainShadingMaterial( const QgsPhongMaterialSettings &material );
+
+    /**
+     * Returns terrain shading material. Diffuse color component is ignored since the diffuse component
+     * is provided by 2D rendered map texture. Only used when isTerrainShadingEnabled() is TRUE.
+     * \since QGIS 3.6
+     */
+    QgsPhongMaterialSettings terrainShadingMaterial() const { return mTerrainShadingMaterial; }
+
+    /**
+     * Sets name of the map theme.
+     * \see terrainMapTheme()
+     * \since QGIS 3.6
+     */
+    void setTerrainMapTheme( const QString &theme );
+
+    /**
+     * Returns name of the map theme (from the active project) that will be used for terrain's texture.
+     * Empty map theme name means that the map theme is not overridden and the current map theme will be used.
+     * \note Support for map themes only works if mapThemeCollection() is a valid object (otherwise it is not possible to resolve map themes from names)
+     * \since QGIS 3.6
+     */
+    QString terrainMapTheme() const { return mTerrainMapTheme; }
+
+    //
+    // misc configuration
+    //
 
     //! Sets list of extra 3D renderers to use in the scene. Takes ownership of the objects.
     void setRenderers( const QList<QgsAbstract3DRenderer *> &renderers SIP_TRANSFER );
@@ -227,10 +299,46 @@ class _3D_EXPORT Qgs3DMapSettings : public QObject
     void setShowTerrainTilesInfo( bool enabled );
     //! Returns whether to display extra tile info on top of terrain tiles (for debugging)
     bool showTerrainTilesInfo() const { return mShowTerrainTileInfo; }
+
+    /**
+     * Sets whether to show camera's view center as a sphere (for debugging)
+     * \since QGIS 3.4
+     */
+    void setShowCameraViewCenter( bool enabled );
+
+    /**
+     * Returns whether to show camera's view center as a sphere (for debugging)
+     * \since QGIS 3.4
+     */
+    bool showCameraViewCenter() const { return mShowCameraViewCenter; }
     //! Sets whether to display labels on terrain tiles
     void setShowLabels( bool enabled );
     //! Returns whether to display labels on terrain tiles
     bool showLabels() const { return mShowLabels; }
+
+    /**
+     * Returns list of point lights defined in the scene
+     * \since QGIS 3.6
+     */
+    QList<QgsPointLightSettings> pointLights() const { return mPointLights; }
+
+    /**
+     * Sets list of point lights defined in the scene
+     * \since QGIS 3.6
+     */
+    void setPointLights( const QList<QgsPointLightSettings> &pointLights );
+
+    /**
+     * Returns the camera lens' field of view
+     * \since QGIS 3.8
+     */
+    float fieldOfView() const { return mFieldOfView; }
+
+    /**
+     * Sets the camera lens' field of view
+     * \since QGIS 3.8
+     */
+    void setFieldOfView( const float fieldOfView );
 
   signals:
     //! Emitted when the background color has changed
@@ -249,12 +357,42 @@ class _3D_EXPORT Qgs3DMapSettings : public QObject
     void maxTerrainScreenErrorChanged();
     //! Emitted when the maximum terrain ground error has changed
     void maxTerrainGroundErrorChanged();
+
+    /**
+     * Emitted when terrain shading enabled flag or terrain shading material has changed
+     * \since QGIS 3.6
+     */
+    void terrainShadingChanged();
+
+    /**
+     * Emitted when terrain's map theme has changed
+     * \since QGIS 3.6
+     */
+    void terrainMapThemeChanged();
     //! Emitted when the flag whether terrain's bounding boxes are shown has changed
     void showTerrainBoundingBoxesChanged();
     //! Emitted when the flag whether terrain's tile info is shown has changed
     void showTerrainTilesInfoChanged();
+
+    /**
+     * Emitted when the flag whether camera's view center is shown has changed
+     * \since QGIS 3.4
+     */
+    void showCameraViewCenterChanged();
     //! Emitted when the flag whether labels are displayed on terrain tiles has changed
     void showLabelsChanged();
+
+    /**
+     * Emitted when the list of point lights changes
+     * \since QGIS 3.6
+     */
+    void pointLightsChanged();
+
+    /**
+     * Emitted when the camer lens field of view changes
+     * \since QGIS 3.8
+     */
+    void fieldOfViewChanged();
 
   private:
     //! Offset in map CRS coordinates at which our 3D world has origin (0,0,0)
@@ -267,9 +405,15 @@ class _3D_EXPORT Qgs3DMapSettings : public QObject
     int mMapTileResolution = 512;   //!< Size of map textures of tiles in pixels (width/height)
     float mMaxTerrainScreenError = 3.f;   //!< Maximum allowed terrain error in pixels (determines when tiles are switched to more detailed ones)
     float mMaxTerrainGroundError = 1.f;  //!< Maximum allowed horizontal map error in map units (determines how many zoom levels will be used)
+    bool mTerrainShadingEnabled = false;   //!< Whether terrain should be shaded taking lights into account
+    QgsPhongMaterialSettings mTerrainShadingMaterial;  //!< Material to use for the terrain (if shading is enabled). Diffuse color is ignored.
+    QString mTerrainMapTheme;  //!< Name of map theme used for terrain's texture (empty means use the current map theme)
     bool mShowTerrainBoundingBoxes = false;  //!< Whether to show bounding boxes of entities - useful for debugging
     bool mShowTerrainTileInfo = false;  //!< Whether to draw extra information about terrain tiles to the textures - useful for debugging
+    bool mShowCameraViewCenter = false;  //!< Whether to show camera view center as a sphere - useful for debugging
     bool mShowLabels = false; //!< Whether to display labels on terrain tiles
+    QList<QgsPointLightSettings> mPointLights;  //!< List of lights defined for the scene
+    float mFieldOfView = 45.0f; //<! Camera lens field of view value
     QList<QgsMapLayerRef> mLayers;   //!< Layers to be rendered
     QList<QgsAbstract3DRenderer *> mRenderers;  //!< Extra stuff to render as 3D object
     bool mSkyboxEnabled = false;  //!< Whether to render skybox
@@ -278,6 +422,7 @@ class _3D_EXPORT Qgs3DMapSettings : public QObject
     //! Coordinate transform context
     QgsCoordinateTransformContext mTransformContext;
     QgsPathResolver mPathResolver;
+    QgsMapThemeCollection *mMapThemes = nullptr;   //!< Pointer to map themes (e.g. from the current project) to resolve map theme content from the name
 };
 
 

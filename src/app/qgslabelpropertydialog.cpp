@@ -26,6 +26,8 @@
 #include "qgsvectorlayerlabeling.h"
 #include "qgsproperty.h"
 #include "qgssettings.h"
+#include "qgsexpressioncontextutils.h"
+#include "qgsgui.h"
 
 #include <QColorDialog>
 #include <QFontDatabase>
@@ -36,6 +38,8 @@ QgsLabelPropertyDialog::QgsLabelPropertyDialog( const QString &layerId, const QS
   QDialog( parent, f ), mLabelFont( labelFont ), mCurLabelField( -1 )
 {
   setupUi( this );
+  QgsGui::instance()->enableAutoGeometryRestore( this );
+
   connect( buttonBox, &QDialogButtonBox::clicked, this, &QgsLabelPropertyDialog::buttonBox_clicked );
   connect( mShowLabelChkbx, &QCheckBox::toggled, this, &QgsLabelPropertyDialog::mShowLabelChkbx_toggled );
   connect( mAlwaysShowChkbx, &QCheckBox::toggled, this, &QgsLabelPropertyDialog::mAlwaysShowChkbx_toggled );
@@ -62,16 +66,8 @@ QgsLabelPropertyDialog::QgsLabelPropertyDialog( const QString &layerId, const QS
 
   init( layerId, providerId, featureId, labelText );
 
-  QgsSettings settings;
-  restoreGeometry( settings.value( QStringLiteral( "Windows/ChangeLabelProps/geometry" ) ).toByteArray() );
   connect( mMinScaleWidget, &QgsScaleWidget::scaleChanged, this, &QgsLabelPropertyDialog::minScaleChanged );
   connect( mMaxScaleWidget, &QgsScaleWidget::scaleChanged, this, &QgsLabelPropertyDialog::maxScaleChanged );
-}
-
-QgsLabelPropertyDialog::~QgsLabelPropertyDialog()
-{
-  QgsSettings settings;
-  settings.setValue( QStringLiteral( "Windows/ChangeLabelProps/geometry" ), saveGeometry() );
 }
 
 void QgsLabelPropertyDialog::setMapCanvas( QgsMapCanvas *canvas )
@@ -93,7 +89,7 @@ void QgsLabelPropertyDialog::buttonBox_clicked( QAbstractButton *button )
 void QgsLabelPropertyDialog::init( const QString &layerId, const QString &providerId, int featureId, const QString &labelText )
 {
   //get feature attributes
-  QgsVectorLayer *vlayer = dynamic_cast<QgsVectorLayer *>( QgsProject::instance()->mapLayer( layerId ) );
+  QgsVectorLayer *vlayer = QgsProject::instance()->mapLayer<QgsVectorLayer *>( layerId );
   if ( !vlayer )
   {
     return;
@@ -260,7 +256,8 @@ void QgsLabelPropertyDialog::setDataDefinedValues( QgsVectorLayer *vlayer )
           << QgsExpressionContextUtils::layerScope( vlayer );
   context.setFeature( mCurLabelFeat );
 
-  Q_FOREACH ( int key, mDataDefinedProperties.propertyKeys() )
+  const auto constPropertyKeys = mDataDefinedProperties.propertyKeys();
+  for ( int key : constPropertyKeys )
   {
     if ( !mDataDefinedProperties.isActive( key ) )
       continue;
@@ -384,7 +381,8 @@ void QgsLabelPropertyDialog::enableDataDefinedWidgets( QgsVectorLayer *vlayer )
 {
   //loop through data defined properties, this time setting whether or not the widgets are enabled
   //this can only be done for properties which are assigned to fields
-  Q_FOREACH ( int key, mDataDefinedProperties.propertyKeys() )
+  const auto constPropertyKeys = mDataDefinedProperties.propertyKeys();
+  for ( int key : constPropertyKeys )
   {
     QgsProperty prop = mDataDefinedProperties.property( key );
     if ( !prop || !prop.isActive() || prop.propertyType() != QgsProperty::FieldBasedProperty )
@@ -404,7 +402,7 @@ void QgsLabelPropertyDialog::enableDataDefinedWidgets( QgsVectorLayer *vlayer )
       continue;
     }
 
-    QgsDebugMsg( QString( "ddField: %1" ).arg( ddField ) );
+    QgsDebugMsg( QStringLiteral( "ddField: %1" ).arg( ddField ) );
 
     switch ( key )
     {
@@ -499,7 +497,8 @@ void QgsLabelPropertyDialog::updateFont( const QFont &font, bool block )
 void QgsLabelPropertyDialog::populateFontStyleComboBox()
 {
   mFontStyleCmbBx->clear();
-  Q_FOREACH ( const QString &style, mFontDB.styles( mLabelFont.family() ) )
+  const auto constFamily = mFontDB.styles( mLabelFont.family() );
+  for ( const QString &style : constFamily )
   {
     mFontStyleCmbBx->addItem( style );
   }

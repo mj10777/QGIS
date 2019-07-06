@@ -20,7 +20,7 @@
 #include <QString>
 // qscintilla includes
 #include <Qsci/qsciapis.h>
-#include "qgis.h"
+#include "qgis_sip.h"
 #include "qgis_gui.h"
 
 
@@ -32,8 +32,8 @@ class QWidget;
 /**
  * \ingroup gui
  * A text editor based on QScintilla2.
- * \since QGIS 2.6
  * \note may not be available in Python bindings, depending on platform support
+ * \since QGIS 2.6
  */
 class GUI_EXPORT QgsCodeEditor : public QsciScintilla
 {
@@ -46,8 +46,8 @@ class GUI_EXPORT QgsCodeEditor : public QsciScintilla
      *
      * \param parent The parent QWidget
      * \param title The title to show in the code editor dialog
-     * \param folding false: Enable folding for code editor
-     * \param margin false: Enable margin for code editor
+     * \param folding FALSE: Enable folding for code editor
+     * \param margin FALSE: Enable margin for code editor
      * \since QGIS 2.6
      */
     QgsCodeEditor( QWidget *parent SIP_TRANSFERTHIS = nullptr, const QString &title = QString(), bool folding = false, bool margin = false );

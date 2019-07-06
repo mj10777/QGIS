@@ -21,18 +21,17 @@ __author__ = 'Alexander Bruy'
 __date__ = 'August 2012'
 __copyright__ = '(C) 2012, Victor Olaya'
 
-# This will get replaced with a git SHA1 when you do a git archive323
-
-__revision__ = '$Format:%H$'
-
 import math
 
-from qgis.core import (QgsWkbTypes,
+from qgis.PyQt.QtCore import QCoreApplication
+from qgis.core import (NULL,
+                       QgsWkbTypes,
                        QgsFeature,
                        QgsFeatureSink,
                        QgsGeometry,
                        QgsPointXY,
                        QgsProcessing,
+                       QgsProcessingException,
                        QgsProcessingParameterField,
                        QgsProcessingParameterFeatureSource,
                        QgsProcessingParameterEnum,
@@ -87,7 +86,6 @@ class RectanglesOvalsDiamondsVariable(QgisAlgorithm):
         self.addParameter(QgsProcessingParameterNumber(self.SEGMENTS,
                                                        self.tr('Number of segments'),
                                                        minValue=1,
-                                                       maxValue=999999999,
                                                        defaultValue=36))
 
         self.addParameter(QgsProcessingParameterFeatureSink(self.OUTPUT,
@@ -102,6 +100,9 @@ class RectanglesOvalsDiamondsVariable(QgisAlgorithm):
 
     def processAlgorithm(self, parameters, context, feedback):
         source = self.parameterAsSource(parameters, self.INPUT, context)
+        if source is None:
+            raise QgsProcessingException(self.invalidSourceError(parameters, self.INPUT))
+
         shape = self.parameterAsEnum(parameters, self.SHAPE, context)
 
         width_field = self.parameterAsString(parameters, self.WIDTH, context)
@@ -111,6 +112,8 @@ class RectanglesOvalsDiamondsVariable(QgisAlgorithm):
 
         (sink, dest_id) = self.parameterAsSink(parameters, self.OUTPUT, context,
                                                source.fields(), QgsWkbTypes.Polygon, source.sourceCrs())
+        if sink is None:
+            raise QgsProcessingException(self.invalidSinkError(parameters, self.OUTPUT))
 
         width = source.fields().lookupField(width_field)
         height = source.fields().lookupField(height_field)
@@ -141,9 +144,15 @@ class RectanglesOvalsDiamondsVariable(QgisAlgorithm):
                 w = feat[width]
                 h = feat[height]
                 angle = feat[rotation]
-                if not w or not h or not angle:
+                # block 0/NULL width or height, but allow 0 as angle value
+                if not w or not h:
                     feedback.pushInfo(QCoreApplication.translate('RectanglesOvalsDiamondsVariable', 'Feature {} has empty '
-                                                                 'width, height or angle. '
+                                                                 'width or height. '
+                                                                 'Skipping…').format(feat.id()))
+                    continue
+                if angle is NULL:
+                    feedback.pushInfo(QCoreApplication.translate('RectanglesOvalsDiamondsVariable', 'Feature {} has empty '
+                                                                 'angle. '
                                                                  'Skipping…').format(feat.id()))
                     continue
 
@@ -210,9 +219,15 @@ class RectanglesOvalsDiamondsVariable(QgisAlgorithm):
                 w = feat[width]
                 h = feat[height]
                 angle = feat[rotation]
-                if not w or not h or not angle:
+                # block 0/NULL width or height, but allow 0 as angle value
+                if not w or not h:
                     feedback.pushInfo(QCoreApplication.translate('RectanglesOvalsDiamondsVariable', 'Feature {} has empty '
-                                                                 'width, height or angle. '
+                                                                 'width or height. '
+                                                                 'Skipping…').format(feat.id()))
+                    continue
+                if angle is NULL:
+                    feedback.pushInfo(QCoreApplication.translate('RectanglesOvalsDiamondsVariable', 'Feature {} has empty '
+                                                                 'angle. '
                                                                  'Skipping…').format(feat.id()))
                     continue
 
@@ -277,9 +292,15 @@ class RectanglesOvalsDiamondsVariable(QgisAlgorithm):
                 w = feat[width]
                 h = feat[height]
                 angle = feat[rotation]
-                if not w or not h or not angle:
+                # block 0/NULL width or height, but allow 0 as angle value
+                if not w or not h:
                     feedback.pushInfo(QCoreApplication.translate('RectanglesOvalsDiamondsVariable', 'Feature {} has empty '
-                                                                 'width, height or angle. '
+                                                                 'width or height. '
+                                                                 'Skipping…').format(feat.id()))
+                    continue
+                if angle == NULL:
+                    feedback.pushInfo(QCoreApplication.translate('RectanglesOvalsDiamondsVariable', 'Feature {} has empty '
+                                                                 'angle. '
                                                                  'Skipping…').format(feat.id()))
                     continue
 

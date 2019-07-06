@@ -3,14 +3,18 @@
 # the UI file won't be wrapped!
 INCLUDE_DIRECTORIES(
   ${CMAKE_CURRENT_SOURCE_DIR}
+  ${CMAKE_SOURCE_DIR}/external/nmea
   ${CMAKE_SOURCE_DIR}/src/core
   ${CMAKE_SOURCE_DIR}/src/core/auth
   ${CMAKE_SOURCE_DIR}/src/core/expression
   ${CMAKE_SOURCE_DIR}/src/core/geometry
   ${CMAKE_SOURCE_DIR}/src/core/layout
+  ${CMAKE_SOURCE_DIR}/src/core/locator
   ${CMAKE_SOURCE_DIR}/src/core/metadata
+  ${CMAKE_SOURCE_DIR}/src/core/mesh
   ${CMAKE_SOURCE_DIR}/src/core/raster
   ${CMAKE_SOURCE_DIR}/src/core/symbology
+  ${CMAKE_SOURCE_DIR}/src/core/validity
   ${CMAKE_SOURCE_DIR}/src/ui
   ${CMAKE_SOURCE_DIR}/src/gui
   ${CMAKE_SOURCE_DIR}/src/gui/editorwidgets
@@ -20,9 +24,14 @@ INCLUDE_DIRECTORIES(
   ${CMAKE_SOURCE_DIR}/src/gui/raster
   ${CMAKE_SOURCE_DIR}/src/python
   ${CMAKE_SOURCE_DIR}/src/app
+  ${CMAKE_SOURCE_DIR}/src/app/mesh
   ${CMAKE_SOURCE_DIR}/src/app/pluginmanager
   ${CMAKE_SOURCE_DIR}/src/test
+  ${CMAKE_SOURCE_DIR}/src/analysis
+  ${CMAKE_SOURCE_DIR}/src/analysis/mesh
+  ${CMAKE_SOURCE_DIR}/external
 
+  ${CMAKE_BINARY_DIR}/src/analysis
   ${CMAKE_BINARY_DIR}/src/core
   ${CMAKE_BINARY_DIR}/src/gui
   ${CMAKE_BINARY_DIR}/src/python
@@ -34,7 +43,6 @@ INCLUDE_DIRECTORIES(SYSTEM
   ${QT_INCLUDE_DIR}
   ${QWT_INCLUDE_DIR}
   ${GDAL_INCLUDE_DIR}
-  ${PROJ_INCLUDE_DIR}
   ${GEOS_INCLUDE_DIR}
   ${QCA_INCLUDE_DIR}
   ${QTKEYCHAIN_INCLUDE_DIR}
@@ -92,10 +100,14 @@ ENDMACRO (ADD_QGIS_TEST)
 IF (WITH_BINDINGS)
 ADD_QGIS_TEST(apppythontest testqgisapppython.cpp)
 ENDIF ()
+ADD_QGIS_TEST(qgisapp testqgisapp.cpp)
+ADD_QGIS_TEST(appbrowserproviders testqgsappbrowserproviders.cpp)
 ADD_QGIS_TEST(qgisappclipboard testqgisappclipboard.cpp)
 ADD_QGIS_TEST(attributetabletest testqgsattributetable.cpp)
+ADD_QGIS_TEST(applocatorfilters testqgsapplocatorfilters.cpp)
 ADD_QGIS_TEST(fieldcalculatortest testqgsfieldcalculator.cpp)
-ADD_QGIS_TEST(maptooladdfeature testqgsmaptooladdfeature.cpp)
+ADD_QGIS_TEST(maptooladdfeatureline testqgsmaptooladdfeatureline.cpp)
+ADD_QGIS_TEST(maptooladdfeaturepoint testqgsmaptooladdfeaturepoint.cpp)
 ADD_QGIS_TEST(maptoolidentifyaction testqgsmaptoolidentifyaction.cpp)
 ADD_QGIS_TEST(maptoolselect testqgsmaptoolselect.cpp)
 ADD_QGIS_TEST(maptoolreshape testqgsmaptoolreshape.cpp)
@@ -107,3 +119,10 @@ ADD_QGIS_TEST(maptoolregularpolygontest testqgsmaptoolregularpolygon.cpp)
 ADD_QGIS_TEST(measuretool testqgsmeasuretool.cpp)
 ADD_QGIS_TEST(vertextool testqgsvertextool.cpp)
 ADD_QGIS_TEST(vectorlayersaveasdialogtest testqgsvectorlayersaveasdialog.cpp)
+ADD_QGIS_TEST(maptoolreverselinetest testqgsmaptoolreverseline.cpp)
+ADD_QGIS_TEST(maptooltrimextendfeaturetest testqgsmaptooltrimextendfeature.cpp)
+ADD_QGIS_TEST(projectproperties testqgsprojectproperties.cpp)
+ADD_QGIS_TEST(layoutvaliditychecks testqgsapplayoutvaliditychecks.cpp)
+ADD_QGIS_TEST(meshcalculator testqgsmeshcalculatordialog.cpp)
+ADD_QGIS_TEST(meshlayerpropertiesdialog testqgsmeshlayerpropertiesdialog.cpp)
+ADD_QGIS_TEST(gpsinformationwidget testqgsgpsinformationwidget.cpp)

@@ -20,10 +20,12 @@ SET (wms_SRCS
   qgswmsrenderer.cpp
   qgswmsparameters.cpp
   qgslayerrestorer.cpp
+  qgswmsrendercontext.cpp
 )
 
 SET (wms_MOC_HDRS
   qgswmsparameters.h
+  qgswmsserviceexception.h
 )
 
 ########################################################
@@ -36,8 +38,6 @@ ADD_LIBRARY (wms MODULE ${wms_SRCS} ${wms_MOC_SRCS} ${wms_MOC_HDRS})
 
 INCLUDE_DIRECTORIES(SYSTEM
   ${GDAL_INCLUDE_DIR}
-  ${GEOS_INCLUDE_DIR}
-  ${PROJ_INCLUDE_DIR}
   ${POSTGRES_INCLUDE_DIR}
 )
 
@@ -66,10 +66,10 @@ INCLUDE_DIRECTORIES(
   ${CMAKE_BINARY_DIR}/src/analysis
   ${CMAKE_BINARY_DIR}/src/server
   ${CMAKE_CURRENT_BINARY_DIR}
+  ${CMAKE_SOURCE_DIR}/external
 )
 
 
-#endif
 TARGET_LINK_LIBRARIES(wms
   qgis_core
   qgis_server

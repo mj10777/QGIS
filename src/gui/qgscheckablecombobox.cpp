@@ -85,8 +85,8 @@ QgsCheckableComboBox::QgsCheckableComboBox( QWidget *parent )
   setLineEdit( lineEdit );
 
   mContextMenu = new QMenu( this );
-  mSelectAllAction = mContextMenu->addAction( tr( "Select all" ) );
-  mDeselectAllAction = mContextMenu->addAction( tr( "Deselect all" ) );
+  mSelectAllAction = mContextMenu->addAction( tr( "Select All" ) );
+  mDeselectAllAction = mContextMenu->addAction( tr( "Deselect All" ) );
   connect( mSelectAllAction, &QAction::triggered, this, &QgsCheckableComboBox::selectAllOptions );
   connect( mDeselectAllAction, &QAction::triggered, this, &QgsCheckableComboBox::deselectAllOptions );
 
@@ -138,7 +138,8 @@ QStringList QgsCheckableComboBox::checkedItems() const
   {
     QModelIndex index = model()->index( 0, modelColumn(), rootModelIndex() );
     QModelIndexList indexes = model()->match( index, Qt::CheckStateRole, Qt::Checked, -1, Qt::MatchExactly );
-    Q_FOREACH ( const QModelIndex &index, indexes )
+    const auto constIndexes = indexes;
+    for ( const QModelIndex &index : constIndexes )
     {
       items += index.data().toString();
     }
@@ -178,7 +179,7 @@ void QgsCheckableComboBox::hidePopup()
 
 void QgsCheckableComboBox::showContextMenu( QPoint pos )
 {
-  Q_UNUSED( pos );
+  Q_UNUSED( pos )
 
   mContextMenu->exec( QCursor::pos() );
 }
@@ -220,12 +221,13 @@ bool QgsCheckableComboBox::eventFilter( QObject *object, QEvent *event )
       return true;
     }
   }
-  return false;
+  return QComboBox::eventFilter( object, event );
 }
 
 void QgsCheckableComboBox::setCheckedItems( const QStringList &items )
 {
-  Q_FOREACH ( const QString &text, items )
+  const auto constItems = items;
+  for ( const QString &text : constItems )
   {
     const int index = findText( text );
     setItemCheckState( index, index != -1 ? Qt::Checked : Qt::Unchecked );

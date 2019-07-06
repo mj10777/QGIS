@@ -53,7 +53,7 @@ class QgsGrassMapcalc: public QMainWindow, private Ui::QgsGrassMapcalcBase,
       Select
     };
 
-    //! Get module options as list of arguments for QProcess
+    //! Gets module options as list of arguments for QProcess
     QStringList arguments() override;
 
     // Reimplemented methods
@@ -65,7 +65,7 @@ class QgsGrassMapcalc: public QMainWindow, private Ui::QgsGrassMapcalcBase,
     bool inputRegion( struct Cell_head *window, QgsCoordinateReferenceSystem &crs, bool all ) override;
     QStringList output( int type ) override;
     bool hasOutput( int type ) override
-    { Q_UNUSED( type ); return true; }
+    { Q_UNUSED( type ) return true; }
 
     //! \brief receives contentsMousePressEvent from view
     void mousePressEvent( QMouseEvent * ) override;
@@ -92,7 +92,7 @@ class QgsGrassMapcalc: public QMainWindow, private Ui::QgsGrassMapcalcBase,
     //! Show/hide options for tool
     void showOptions( int tool );
 
-    //! Set option for selected object
+    //! Sets option for selected object
     void setOption( void );
 
   public slots:
@@ -117,7 +117,7 @@ class QgsGrassMapcalc: public QMainWindow, private Ui::QgsGrassMapcalcBase,
     //! Reset tool actions togles
     void setToolActionsOff( void );
 
-    //! Set currnt tool and toggle menu
+    //! Sets current tool and toggle menu
     void setTool( int );
 
     //! Map selection changed

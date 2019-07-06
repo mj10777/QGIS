@@ -22,9 +22,150 @@
 #include "qgsfeature.h"
 #include "qgsabstractgeometry.h"
 #include "qgsvectorlayer.h"
+#include "qgsexpressioncontextutils.h"
+#include "qgsfeedback.h"
+#include "qgsexpression.h"
+#include "qgsexpressionutils.h"
+#include "qgsoffscreen3dengine.h"
 
+#include "qgs3dmapscene.h"
+#include "qgsabstract3dengine.h"
 #include "qgsterraingenerator.h"
+#include "qgscameracontroller.h"
 
+#include "qgsline3dsymbol.h"
+#include "qgspoint3dsymbol.h"
+#include "qgspolygon3dsymbol.h"
+
+#include <Qt3DExtras/QPhongMaterial>
+
+QImage Qgs3DUtils::captureSceneImage( QgsAbstract3DEngine &engine, Qgs3DMapScene *scene )
+{
+  QImage resImage;
+  QEventLoop evLoop;
+
+  auto requestImageFcn = [&engine, scene]
+  {
+    if ( scene->sceneState() == Qgs3DMapScene::Ready )
+    {
+      engine.requestCaptureImage();
+    }
+  };
+
+  auto saveImageFcn = [&evLoop, &resImage]( const QImage & img )
+  {
+    resImage = img;
+    evLoop.quit();
+  };
+
+  QMetaObject::Connection conn1 = QObject::connect( &engine, &QgsAbstract3DEngine::imageCaptured, saveImageFcn );
+  QMetaObject::Connection conn2;
+
+  if ( scene->sceneState() == Qgs3DMapScene::Ready )
+  {
+    requestImageFcn();
+  }
+  else
+  {
+    // first wait until scene is loaded
+    conn2 = QObject::connect( scene, &Qgs3DMapScene::sceneStateChanged, requestImageFcn );
+  }
+
+  evLoop.exec();
+
+  QObject::disconnect( conn1 );
+  if ( conn2 )
+    QObject::disconnect( conn2 );
+
+  return resImage;
+}
+
+bool Qgs3DUtils::exportAnimation( const Qgs3DAnimationSettings &animationSettings,
+                                  const Qgs3DMapSettings &mapSettings,
+                                  int framesPerSecond,
+                                  const QString &outputDirectory,
+                                  const QString &fileNameTemplate,
+                                  const QSize &outputSize,
+                                  QString &error,
+                                  QgsFeedback *feedback
+                                )
+{
+  QgsOffscreen3DEngine engine;
+  engine.setSize( outputSize );
+  Qgs3DMapScene *scene = new Qgs3DMapScene( mapSettings, &engine );
+  engine.setRootEntity( scene );
+
+  if ( animationSettings.keyFrames().size() < 2 )
+  {
+    error = QObject::tr( "Unable to export 3D animation. Add at least 2 keyframes" );
+    return false;
+  }
+
+  const float duration = animationSettings.duration(); //in seconds
+  if ( duration <= 0 )
+  {
+    error = QObject::tr( "Unable to export 3D animation (invalid duration)." );
+    return false;
+  }
+
+  float time = 0;
+  int frameNo = 0;
+  int totalFrames = static_cast<int>( duration * framesPerSecond );
+
+  if ( fileNameTemplate.isEmpty() )
+  {
+    error = QObject::tr( "Filename template is empty" );
+    return false;
+  }
+
+  int numberOfDigits = fileNameTemplate.count( QLatin1Char( '#' ) );
+  if ( numberOfDigits < 0 )
+  {
+    error = QObject::tr( "Wrong filename template format (must contain #)" );
+    return false;
+  }
+  const QString token( numberOfDigits, QLatin1Char( '#' ) );
+  if ( !fileNameTemplate.contains( token ) )
+  {
+    error = QObject::tr( "Filename template must contain all # placeholders in one continuous group." );
+    return false;
+  }
+
+  while ( time <= duration )
+  {
+
+    if ( feedback )
+    {
+      if ( feedback->isCanceled() )
+      {
+        error = QObject::tr( "Export canceled" );
+        return false;
+      }
+      feedback->setProgress( frameNo / static_cast<double>( totalFrames ) * 100 );
+    }
+    ++frameNo;
+
+    Qgs3DAnimationSettings::Keyframe kf = animationSettings.interpolate( time );
+    scene->cameraController()->setLookingAtPoint( kf.point, kf.dist, kf.pitch, kf.yaw );
+
+    QString fileName( fileNameTemplate );
+    const QString frameNoPaddedLeft( QStringLiteral( "%1" ).arg( frameNo, numberOfDigits, 10, QChar( '0' ) ) ); // e.g. 0001
+    fileName.replace( token, frameNoPaddedLeft );
+    const QString path = QDir( outputDirectory ).filePath( fileName );
+
+    // It would initially return empty rendered image.
+    // Capturing the initial image and throwing it away fixes that.
+    // Hopefully we will find a better fix in the future.
+    Qgs3DUtils::captureSceneImage( engine, scene );
+    QImage img = Qgs3DUtils::captureSceneImage( engine, scene );
+
+    img.save( path );
+
+    time += 1.0f / static_cast<float>( framesPerSecond );
+  }
+
+  return true;
+}
 
 
 int Qgs3DUtils::maxZoomLevel( double tile0width, double tileResolution, double maxError )
@@ -40,82 +181,98 @@ int Qgs3DUtils::maxZoomLevel( double tile0width, double tileResolution, double m
   return round( zoomLevel );  // we could use ceil() here if we wanted to always get to the desired error
 }
 
-QString Qgs3DUtils::altClampingToString( AltitudeClamping altClamp )
+QString Qgs3DUtils::altClampingToString( Qgs3DTypes::AltitudeClamping altClamp )
 {
   switch ( altClamp )
   {
-    case AltClampAbsolute: return QStringLiteral( "absolute" );
-    case AltClampRelative: return QStringLiteral( "relative" );
-    case AltClampTerrain: return QStringLiteral( "terrain" );
+    case Qgs3DTypes::AltClampAbsolute: return QStringLiteral( "absolute" );
+    case Qgs3DTypes::AltClampRelative: return QStringLiteral( "relative" );
+    case Qgs3DTypes::AltClampTerrain: return QStringLiteral( "terrain" );
     default: Q_ASSERT( false ); return QString();
   }
 }
 
 
-AltitudeClamping Qgs3DUtils::altClampingFromString( const QString &str )
+Qgs3DTypes::AltitudeClamping Qgs3DUtils::altClampingFromString( const QString &str )
 {
-  if ( str == "absolute" )
-    return AltClampAbsolute;
-  else if ( str == "terrain" )
-    return AltClampTerrain;
+  if ( str == QLatin1String( "absolute" ) )
+    return Qgs3DTypes::AltClampAbsolute;
+  else if ( str == QLatin1String( "terrain" ) )
+    return Qgs3DTypes::AltClampTerrain;
   else   // "relative"  (default)
-    return AltClampRelative;
+    return Qgs3DTypes::AltClampRelative;
 }
 
 
-QString Qgs3DUtils::altBindingToString( AltitudeBinding altBind )
+QString Qgs3DUtils::altBindingToString( Qgs3DTypes::AltitudeBinding altBind )
 {
   switch ( altBind )
   {
-    case AltBindVertex: return QStringLiteral( "vertex" );
-    case AltBindCentroid: return QStringLiteral( "centroid" );
+    case Qgs3DTypes::AltBindVertex: return QStringLiteral( "vertex" );
+    case Qgs3DTypes::AltBindCentroid: return QStringLiteral( "centroid" );
     default: Q_ASSERT( false ); return QString();
   }
 }
 
 
-AltitudeBinding Qgs3DUtils::altBindingFromString( const QString &str )
+Qgs3DTypes::AltitudeBinding Qgs3DUtils::altBindingFromString( const QString &str )
 {
-  if ( str == "vertex" )
-    return AltBindVertex;
+  if ( str == QLatin1String( "vertex" ) )
+    return Qgs3DTypes::AltBindVertex;
   else  // "centroid"  (default)
-    return AltBindCentroid;
+    return Qgs3DTypes::AltBindCentroid;
 }
 
-QString Qgs3DUtils::cullingModeToString( Qt3DRender::QCullFace::CullingMode mode )
+QString Qgs3DUtils::cullingModeToString( Qgs3DTypes::CullingMode mode )
 {
   switch ( mode )
   {
-    case Qt3DRender::QCullFace::NoCulling: return QStringLiteral( "no-culling" );
-    case Qt3DRender::QCullFace::Front: return QStringLiteral( "front" );
-    case Qt3DRender::QCullFace::Back: return QStringLiteral( "back" );
-    case Qt3DRender::QCullFace::FrontAndBack: return QStringLiteral( "front-and-back" );
+    case Qgs3DTypes::NoCulling: return QStringLiteral( "no-culling" );
+    case Qgs3DTypes::Front: return QStringLiteral( "front" );
+    case Qgs3DTypes::Back: return QStringLiteral( "back" );
+    case Qgs3DTypes::FrontAndBack: return QStringLiteral( "front-and-back" );
   }
   return QString();
 }
 
-Qt3DRender::QCullFace::CullingMode Qgs3DUtils::cullingModeFromString( const QString &str )
+Qgs3DTypes::CullingMode Qgs3DUtils::cullingModeFromString( const QString &str )
 {
   if ( str == QStringLiteral( "front" ) )
-    return Qt3DRender::QCullFace::Front;
+    return Qgs3DTypes::Front;
   else if ( str == QStringLiteral( "back" ) )
-    return Qt3DRender::QCullFace::Back;
+    return Qgs3DTypes::Back;
   else if ( str == QStringLiteral( "front-and-back" ) )
-    return Qt3DRender::QCullFace::FrontAndBack;
+    return Qgs3DTypes::FrontAndBack;
   else
-    return Qt3DRender::QCullFace::NoCulling;
+    return Qgs3DTypes::NoCulling;
 }
 
+float Qgs3DUtils::clampAltitude( const QgsPoint &p, Qgs3DTypes::AltitudeClamping altClamp, Qgs3DTypes::AltitudeBinding altBind, float height, const QgsPoint &centroid, const Qgs3DMapSettings &map )
+{
+  float terrainZ = 0;
+  if ( altClamp == Qgs3DTypes::AltClampRelative || altClamp == Qgs3DTypes::AltClampTerrain )
+  {
+    QgsPointXY pt = altBind == Qgs3DTypes::AltBindVertex ? p : centroid;
+    terrainZ = map.terrainGenerator()->heightAt( pt.x(), pt.y(), map );
+  }
 
-void Qgs3DUtils::clampAltitudes( QgsLineString *lineString, AltitudeClamping altClamp, AltitudeBinding altBind, const QgsPoint &centroid, float height, const Qgs3DMapSettings &map )
+  float geomZ = 0;
+  if ( p.is3D() && ( altClamp == Qgs3DTypes::AltClampAbsolute || altClamp == Qgs3DTypes::AltClampRelative ) )
+    geomZ = p.z();
+
+  float z = ( terrainZ + geomZ ) * map.terrainVerticalScale() + height;
+  return z;
+}
+
+void Qgs3DUtils::clampAltitudes( QgsLineString *lineString, Qgs3DTypes::AltitudeClamping altClamp, Qgs3DTypes::AltitudeBinding altBind, const QgsPoint &centroid, float height, const Qgs3DMapSettings &map )
 {
   for ( int i = 0; i < lineString->nCoordinates(); ++i )
   {
     float terrainZ = 0;
-    if ( altClamp == AltClampRelative || altClamp == AltClampTerrain )
+    if ( altClamp == Qgs3DTypes::AltClampRelative || altClamp == Qgs3DTypes::AltClampTerrain )
     {
       QgsPointXY pt;
-      if ( altBind == AltBindVertex )
+      if ( altBind == Qgs3DTypes::AltBindVertex )
       {
         pt.setX( lineString->xAt( i ) );
         pt.setY( lineString->yAt( i ) );
@@ -128,7 +285,7 @@ void Qgs3DUtils::clampAltitudes( QgsLineString *lineString, AltitudeClamping alt
     }
 
     float geomZ = 0;
-    if ( altClamp == AltClampAbsolute || altClamp == AltClampRelative )
+    if ( altClamp == Qgs3DTypes::AltClampAbsolute || altClamp == Qgs3DTypes::AltClampRelative )
       geomZ = lineString->zAt( i );
 
     float z = ( terrainZ + geomZ ) * map.terrainVerticalScale() + height;
@@ -137,13 +294,13 @@ void Qgs3DUtils::clampAltitudes( QgsLineString *lineString, AltitudeClamping alt
 }
 
 
-bool Qgs3DUtils::clampAltitudes( QgsPolygon *polygon, AltitudeClamping altClamp, AltitudeBinding altBind, float height, const Qgs3DMapSettings &map )
+bool Qgs3DUtils::clampAltitudes( QgsPolygon *polygon, Qgs3DTypes::AltitudeClamping altClamp, Qgs3DTypes::AltitudeBinding altBind, float height, const Qgs3DMapSettings &map )
 {
   if ( !polygon->is3D() )
     polygon->addZValue( 0 );
 
   QgsPoint centroid;
-  if ( altBind == AltBindCentroid )
+  if ( altBind == Qgs3DTypes::AltBindCentroid )
     centroid = polygon->centroid();
 
   QgsCurve *curve = const_cast<QgsCurve *>( polygon->exteriorRing() );
@@ -170,6 +327,7 @@ QString Qgs3DUtils::matrix4x4toString( const QMatrix4x4 &m )
 {
   const float *d = m.constData();
   QStringList elems;
+  elems.reserve( 16 );
   for ( int i = 0; i < 16; ++i )
     elems << QString::number( d[i] );
   return elems.join( ' ' );
@@ -185,45 +343,35 @@ QMatrix4x4 Qgs3DUtils::stringToMatrix4x4( const QString &str )
   return m;
 }
 
-QList<QVector3D> Qgs3DUtils::positions( const Qgs3DMapSettings &map, QgsVectorLayer *layer, const QgsFeatureRequest &request, AltitudeClamping altClamp )
+void Qgs3DUtils::extractPointPositions( QgsFeature &f, const Qgs3DMapSettings &map, Qgs3DTypes::AltitudeClamping altClamp, QVector<QVector3D> &positions )
 {
-  QList<QVector3D> positions;
-  QgsFeature f;
-  QgsFeatureIterator fi = layer->getFeatures( request );
-  while ( fi.nextFeature( f ) )
+  const QgsAbstractGeometry *g = f.geometry().constGet();
+  for ( auto it = g->vertices_begin(); it != g->vertices_end(); ++it )
   {
-    if ( f.geometry().isNull() )
-      continue;
-
-    const QgsAbstractGeometry *g = f.geometry().constGet();
-    for ( auto it = g->vertices_begin(); it != g->vertices_end(); ++it )
+    QgsPoint pt = *it;
+    float geomZ = 0;
+    if ( pt.is3D() )
     {
-      QgsPoint pt = *it;
-      float geomZ = 0;
-      if ( pt.is3D() )
-      {
-        geomZ = pt.z();
-      }
-      float terrainZ = map.terrainGenerator()->heightAt( pt.x(), pt.y(), map ) * map.terrainVerticalScale();
-      float h;
-      switch ( altClamp )
-      {
-        case AltClampAbsolute:
-          h = geomZ;
-          break;
-        case AltClampTerrain:
-          h = terrainZ;
-          break;
-        case AltClampRelative:
-          h = terrainZ + geomZ;
-          break;
-      }
-      positions.append( QVector3D( pt.x() - map.origin().x(), h, -( pt.y() - map.origin().y() ) ) );
-      //qDebug() << positions.last();
+      geomZ = pt.z();
     }
+    float terrainZ = map.terrainGenerator()->heightAt( pt.x(), pt.y(), map ) * map.terrainVerticalScale();
+    float h;
+    switch ( altClamp )
+    {
+      case Qgs3DTypes::AltClampAbsolute:
+      default:
+        h = geomZ;
+        break;
+      case Qgs3DTypes::AltClampTerrain:
+        h = terrainZ;
+        break;
+      case Qgs3DTypes::AltClampRelative:
+        h = terrainZ + geomZ;
+        break;
+    }
+    positions.append( QVector3D( pt.x() - map.origin().x(), h, -( pt.y() - map.origin().y() ) ) );
+    //qDebug() << positions.last();
   }
-
-  return positions;
 }
 
 /**
@@ -231,7 +379,7 @@ QList<QVector3D> Qgs3DUtils::positions( const Qgs3DMapSettings &map, QgsVectorLa
  * qt3d /src/threed/painting/qglpainter.cpp
  * no changes in the code
  */
-static inline uint outcode( const QVector4D &v )
+static inline uint outcode( QVector4D v )
 {
   // For a discussion of outcodes see pg 388 Dunn & Parberry.
   // For why you can't just test if the point is in a bounding box
@@ -315,3 +463,36 @@ QgsVector3D Qgs3DUtils::transformWorldCoordinates( const QgsVector3D &worldPoint
   return mapToWorldCoordinates( mapPoint2, origin2 );
 }
 
+std::unique_ptr<QgsAbstract3DSymbol> Qgs3DUtils::symbolForGeometryType( QgsWkbTypes::GeometryType geomType )
+{
+  switch ( geomType )
+  {
+    case QgsWkbTypes::PointGeometry:
+      return std::unique_ptr<QgsAbstract3DSymbol>( new QgsPoint3DSymbol );
+    case QgsWkbTypes::LineGeometry:
+      return std::unique_ptr<QgsAbstract3DSymbol>( new QgsLine3DSymbol );
+    case QgsWkbTypes::PolygonGeometry:
+      return std::unique_ptr<QgsAbstract3DSymbol>( new QgsPolygon3DSymbol );
+    default:
+      return nullptr;
+  }
+}
+
+QgsExpressionContext Qgs3DUtils::globalProjectLayerExpressionContext( QgsVectorLayer *layer )
+{
+  QgsExpressionContext exprContext;
+  exprContext << QgsExpressionContextUtils::globalScope()
+              << QgsExpressionContextUtils::projectScope( QgsProject::instance() )
+              << QgsExpressionContextUtils::layerScope( layer );
+  return exprContext;
+}
+
+Qt3DExtras::QPhongMaterial *Qgs3DUtils::phongMaterial( const QgsPhongMaterialSettings &settings )
+{
+  Qt3DExtras::QPhongMaterial *phong = new Qt3DExtras::QPhongMaterial;
+  phong->setAmbient( settings.ambient() );
+  phong->setDiffuse( settings.diffuse() );
+  phong->setSpecular( settings.specular() );
+  phong->setShininess( settings.shininess() );
+  return phong;
+}

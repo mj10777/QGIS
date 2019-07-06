@@ -23,7 +23,7 @@
 #include <QStandardItemModel>
 #include <QStyledItemDelegate>
 
-#include "qgis.h"
+#include "qgis_sip.h"
 #include "qgis_gui.h"
 
 class QEvent;
@@ -33,9 +33,9 @@ class QEvent;
  * \ingroup gui
  * QStandardItemModel subclass which makes all items checkable
  * by default.
- * \since QGIS 3.0
  * \note not available in Python bindings
- **/
+ * \since QGIS 3.0
+ */
 #ifndef SIP_RUN
 class QgsCheckableItemModel : public QStandardItemModel
 {
@@ -70,14 +70,14 @@ class QgsCheckableItemModel : public QStandardItemModel
      * \param index item index
      * \param value data value
      * \param role data role
-     * \returns true on success, false otherwise
+     * \returns TRUE on success, FALSE otherwise
      */
     bool setData( const QModelIndex &index, const QVariant &value, int role = Qt::EditRole ) override;
 
   signals:
 
     /**
-     * This signal is emitted whenever the items checkstate has changed.
+     * Emitted whenever the items checkstate has changed.
      */
     void itemCheckStateChanged();
 };
@@ -88,10 +88,9 @@ class QgsCheckableItemModel : public QStandardItemModel
  * \ingroup gui
  * QStyledItemDelegate subclass for QgsCheckableComboBox. Needed for
  * correct drawing of the checkable items on Mac and GTK.
- * \since QGIS 3.0
  * \note not available in Python bindings
- **/
-
+ * \since QGIS 3.0
+ */
 class QgsCheckBoxDelegate : public QStyledItemDelegate
 {
     Q_OBJECT
@@ -120,8 +119,7 @@ class QgsCheckBoxDelegate : public QStyledItemDelegate
  * \ingroup gui
  * QComboBox subclass which allows selecting multiple items.
  * \since QGIS 3.0
- **/
-
+ */
 class GUI_EXPORT QgsCheckableComboBox : public QComboBox
 {
     Q_OBJECT
@@ -210,7 +208,7 @@ class GUI_EXPORT QgsCheckableComboBox : public QComboBox
   signals:
 
     /**
-     * This signal is emitted whenever the checked items list changed.
+     * Emitted whenever the checked items list changed.
      */
     void checkedItemsChanged( const QStringList &items );
 

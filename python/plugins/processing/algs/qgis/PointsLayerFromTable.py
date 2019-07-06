@@ -21,20 +21,19 @@ __author__ = 'Victor Olaya'
 __date__ = 'August 2013'
 __copyright__ = '(C) 2013, Victor Olaya'
 
-# This will get replaced with a git SHA1 when you do a git archive
-
-__revision__ = '$Format:%H$'
-
 from qgis.core import (QgsApplication,
                        QgsWkbTypes,
                        QgsPoint,
                        QgsFeatureRequest,
                        QgsGeometry,
                        QgsProcessing,
+                       QgsProcessingException,
                        QgsProcessingParameterFeatureSink,
                        QgsProcessingParameterFeatureSource,
                        QgsProcessingParameterCrs,
-                       QgsProcessingParameterField)
+                       QgsProcessingParameterField,
+                       QgsProcessingFeatureSource,
+                       QgsFeatureRequest)
 from processing.algs.qgis.QgisAlgorithm import QgisAlgorithm
 
 
@@ -84,6 +83,8 @@ class PointsLayerFromTable(QgisAlgorithm):
 
     def processAlgorithm(self, parameters, context, feedback):
         source = self.parameterAsSource(parameters, self.INPUT, context)
+        if source is None:
+            raise QgsProcessingException(self.invalidSourceError(parameters, self.INPUT))
 
         fields = source.fields()
         x_field_index = fields.lookupField(self.parameterAsString(parameters, self.XFIELD, context))
@@ -105,9 +106,11 @@ class PointsLayerFromTable(QgisAlgorithm):
 
         (sink, dest_id) = self.parameterAsSink(parameters, self.OUTPUT, context,
                                                fields, wkb_type, target_crs)
+        if sink is None:
+            raise QgsProcessingException(self.invalidSinkError(parameters, self.OUTPUT))
 
         request = QgsFeatureRequest().setFlags(QgsFeatureRequest.NoGeometry)
-        features = source.getFeatures()
+        features = source.getFeatures(QgsFeatureRequest(), QgsProcessingFeatureSource.FlagSkipGeometryValidityChecks)
         total = 100.0 / source.featureCount() if source.featureCount() else 0
 
         for current, feature in enumerate(features):

@@ -21,13 +21,10 @@ __author__ = 'Nyall Dawson'
 __date__ = 'August 2016'
 __copyright__ = '(C) 2016, Nyall Dawson'
 
-# This will get replaced with a git SHA1 when you do a git archive323
-
-__revision__ = '$Format:%H$'
-
 from qgis.core import (QgsGeometry,
                        QgsWkbTypes,
                        QgsProcessing,
+                       QgsProcessingParameterDistance,
                        QgsProcessingParameterNumber,
                        QgsProcessingParameterEnum,
                        QgsProcessingException)
@@ -62,9 +59,9 @@ class SingleSidedBuffer(QgisFeatureBasedAlgorithm):
                             'Bevel']
 
     def initParameters(self, config=None):
-        self.addParameter(QgsProcessingParameterNumber(self.DISTANCE,
-                                                       self.tr('Distance'), QgsProcessingParameterNumber.Double,
-                                                       defaultValue=10.0))
+        self.addParameter(QgsProcessingParameterDistance(self.DISTANCE,
+                                                         self.tr('Distance'), parentParameterName='INPUT',
+                                                         defaultValue=10.0))
         self.addParameter(QgsProcessingParameterEnum(
             self.SIDE,
             self.tr('Side'),
@@ -122,4 +119,4 @@ class SingleSidedBuffer(QgisFeatureBasedAlgorithm):
 
             feature.setGeometry(output_geometry)
 
-        return feature
+        return [feature]

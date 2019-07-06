@@ -28,6 +28,8 @@
 #include "qgswfsfeatureiterator.h"
 #include "qgswfsdatasourceuri.h"
 
+#include "qgsprovidermetadata.h"
+
 class QgsRectangle;
 class QgsWFSSharedData;
 
@@ -63,7 +65,10 @@ class QgsWFSProvider : public QgsVectorDataProvider
     Q_OBJECT
   public:
 
-    explicit QgsWFSProvider( const QString &uri, const QgsWfsCapabilities::Capabilities &caps = QgsWfsCapabilities::Capabilities() );
+    static const QString WFS_PROVIDER_KEY;
+    static const QString WFS_PROVIDER_DESCRIPTION;
+
+    explicit QgsWFSProvider( const QString &uri, const QgsDataProvider::ProviderOptions &providerOptions, const QgsWfsCapabilities::Capabilities &caps = QgsWfsCapabilities::Capabilities() );
     ~QgsWFSProvider() override;
 
     /* Inherited from QgsVectorDataProvider */
@@ -111,6 +116,8 @@ class QgsWFSProvider : public QgsVectorDataProvider
     QString translateMetadataKey( const QString &mdKey ) const override;
     QString translateMetadataValue( const QString &mdKey, const QVariant &value ) const override;
 
+    bool empty() const override;
+
   public slots:
 
     void reloadData() override;
@@ -132,8 +139,6 @@ class QgsWFSProvider : public QgsVectorDataProvider
     //! String used to define a subset of the layer
     QString mSubsetString;
 
-    //! Geometry type of the features in this layer
-    mutable QgsWkbTypes::Type mWKBType = QgsWkbTypes::Unknown;
     //! Flag if provider is valid
     bool mValid = true;
     //! Namespace URL of the server (comes from DescribeFeatureDocument)
@@ -151,7 +156,7 @@ class QgsWFSProvider : public QgsVectorDataProvider
        The method gives back the name of
        the geometry attribute and the thematic attributes with their types*/
     bool describeFeatureType( QString &geometryAttribute,
-                              QgsFields &fields, QgsWkbTypes::Type &geomType, bool forceSingularTypeNames = false );
+                              QgsFields &fields, QgsWkbTypes::Type &geomType );
 
     /**
      * For a given typename, reads the name of the geometry attribute, the
@@ -187,5 +192,15 @@ class QgsWFSProvider : public QgsVectorDataProvider
 
     bool processSQL( const QString &sqlString, QString &errorMsg, QString &warningMsg );
 };
+
+class QgsWfsProviderMetadata: public QgsProviderMetadata
+{
+  public:
+    QgsWfsProviderMetadata();
+    void initProvider() override;
+    QList<QgsDataItemProvider *> dataItemProviders() const override;
+    QgsWFSProvider *createProvider( const QString &uri, const QgsDataProvider::ProviderOptions &options ) override;
+};
+
 
 #endif /* QGSWFSPROVIDER_H */

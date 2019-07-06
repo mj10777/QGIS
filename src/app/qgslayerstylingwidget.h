@@ -36,10 +36,13 @@ class QgsMapLayer;
 class QgsMapCanvas;
 class QgsRendererPropertiesDialog;
 class QgsRendererRasterPropertiesWidget;
+class QgsRendererMeshPropertiesWidget;
 class QgsUndoWidget;
 class QgsRasterHistogramWidget;
 class QgsMapLayerStyleManagerWidget;
 class QgsVectorLayer3DRendererWidget;
+class QgsMeshLayer3DRendererWidget;
+class QgsMessageBar;
 
 class APP_EXPORT QgsLayerStyleManagerWidgetFactory : public QgsMapLayerConfigWidgetFactory
 {
@@ -53,10 +56,10 @@ class APP_EXPORT QgsLayerStyleManagerWidgetFactory : public QgsMapLayerConfigWid
 class APP_EXPORT QgsMapLayerStyleCommand : public QUndoCommand
 {
   public:
-    QgsMapLayerStyleCommand( QgsMapLayer *layer, const QString &text, const QDomNode &current, const QDomNode &last );
+    QgsMapLayerStyleCommand( QgsMapLayer *layer, const QString &text, const QDomNode &current, const QDomNode &last, bool triggerRepaint = true );
 
     /**
-     * Return unique ID for this kind of undo command.
+     * Returns unique ID for this kind of undo command.
      * Currently we do not have a central registry of undo command IDs, so it is a random magic number.
      */
     int id() const override { return 0xbeef; }
@@ -72,6 +75,7 @@ class APP_EXPORT QgsMapLayerStyleCommand : public QUndoCommand
     QDomNode mXml;
     QDomNode mLastState;
     QTime mTime;
+    bool mTriggerRepaint = true;
 };
 
 class APP_EXPORT QgsLayerStylingWidget : public QWidget, private Ui::QgsLayerStylingWidgetBase
@@ -89,7 +93,7 @@ class APP_EXPORT QgsLayerStylingWidget : public QWidget, private Ui::QgsLayerSty
       Symbology3D,
     };
 
-    QgsLayerStylingWidget( QgsMapCanvas *canvas, const QList<QgsMapLayerConfigWidgetFactory *> &pages, QWidget *parent = nullptr );
+    QgsLayerStylingWidget( QgsMapCanvas *canvas, QgsMessageBar *messageBar, const QList<QgsMapLayerConfigWidgetFactory *> &pages, QWidget *parent = nullptr );
     ~QgsLayerStylingWidget() override;
     QgsMapLayer *layer() { return mCurrentLayer; }
 
@@ -126,20 +130,23 @@ class APP_EXPORT QgsLayerStylingWidget : public QWidget, private Ui::QgsLayerSty
     void liveApplyToggled( bool value );
 
   private:
-    void pushUndoItem( const QString &name );
+    void pushUndoItem( const QString &name, bool triggerRepaint = true );
     int mNotSupportedPage;
     int mLayerPage;
     QTimer *mAutoApplyTimer = nullptr;
     QDomNode mLastStyleXml;
     QgsMapCanvas *mMapCanvas = nullptr;
+    QgsMessageBar *mMessageBar = nullptr;
     bool mBlockAutoApply;
     QgsUndoWidget *mUndoWidget = nullptr;
     QgsMapLayer *mCurrentLayer = nullptr;
     QgsLabelingWidget *mLabelingWidget = nullptr;
 #ifdef HAVE_3D
     QgsVectorLayer3DRendererWidget *mVector3DWidget = nullptr;
+    QgsMeshLayer3DRendererWidget *mMesh3DWidget = nullptr;
 #endif
     QgsRendererRasterPropertiesWidget *mRasterStyleWidget = nullptr;
+    QgsRendererMeshPropertiesWidget *mMeshStyleWidget = nullptr;
     QList<QgsMapLayerConfigWidgetFactory *> mPageFactories;
     QMap<int, QgsMapLayerConfigWidgetFactory *> mUserPages;
     QgsLayerStyleManagerWidgetFactory *mStyleManagerFactory = nullptr;

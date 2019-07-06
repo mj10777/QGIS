@@ -17,7 +17,7 @@
 #define QGSSEARCHWIDGETWRAPPER_H
 
 #include <QObject>
-#include "qgis.h"
+#include "qgis_sip.h"
 #include <QMap>
 #include <QVariant>
 
@@ -113,15 +113,15 @@ class GUI_EXPORT QgsSearchWidgetWrapper : public QgsWidgetWrapper
 
     /**
      * Returns a list of exclusive filter flags, which cannot be combined with other flags (e.g., EqualTo/NotEqualTo)
-     * \since QGIS 2.16
      * \see nonExclusiveFilterFlags()
+     * \since QGIS 2.16
      */
     static QList< QgsSearchWidgetWrapper::FilterFlag > exclusiveFilterFlags();
 
     /**
      * Returns a list of non-exclusive filter flags, which can be combined with other flags (e.g., CaseInsensitive)
-     * \since QGIS 2.16
      * \see exclusiveFilterFlags()
+     * \since QGIS 2.16
      */
     static QList< QgsSearchWidgetWrapper::FilterFlag > nonExclusiveFilterFlags();
 
@@ -143,15 +143,15 @@ class GUI_EXPORT QgsSearchWidgetWrapper : public QgsWidgetWrapper
 
     /**
      * Returns filter flags supported by the search widget.
-     * \since QGIS 2.16
      * \see defaultFlags()
+     * \since QGIS 2.16
      */
     virtual FilterFlags supportedFlags() const;
 
     /**
      * Returns the filter flags which should be set by default for the search widget.
-     * \since QGIS 2.16
      * \see supportedFlags()
+     * \since QGIS 2.16
      */
     virtual FilterFlags defaultFlags() const;
 
@@ -167,7 +167,7 @@ class GUI_EXPORT QgsSearchWidgetWrapper : public QgsWidgetWrapper
     virtual QString expression() const = 0;
 
     /**
-     * If this is true, then this search widget should take effect directly
+     * If this is TRUE, then this search widget should take effect directly
      * when its expression changes
      */
     virtual bool applyDirectly() = 0;
@@ -179,11 +179,11 @@ class GUI_EXPORT QgsSearchWidgetWrapper : public QgsWidgetWrapper
      * \returns filter expression
      * \since QGIS 2.16
      */
-    // TODO QGIS 3.0 - make pure virtual
-    virtual QString createExpression( FilterFlags flags ) const { Q_UNUSED( flags ); return QStringLiteral( "TRUE" ); }
+    // TODO QGIS 4.0 - make pure virtual
+    virtual QString createExpression( FilterFlags flags ) const { Q_UNUSED( flags ) return QStringLiteral( "TRUE" ); }
 
     /**
-     * Get a field name or expression to use as field comparison.
+     * Gets a field name or expression to use as field comparison.
      * If in SearchMode returns a quoted field identifier.
      * If in AggregateSearchMode returns an appropriate aggregate expression.
      *
@@ -217,9 +217,9 @@ class GUI_EXPORT QgsSearchWidgetWrapper : public QgsWidgetWrapper
 
     /**
      * Toggles whether the search widget is enabled or disabled.
-     * \param enabled set to true to enable widget
+     * \param enabled set to TRUE to enable widget
      */
-    void setEnabled( bool enabled ) override { Q_UNUSED( enabled ); }
+    void setEnabled( bool enabled ) override { Q_UNUSED( enabled ) }
 
   signals:
 

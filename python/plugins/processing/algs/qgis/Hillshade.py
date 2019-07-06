@@ -21,10 +21,6 @@ __author__ = 'Alexander Bruy'
 __date__ = 'October 2016'
 __copyright__ = '(C) 2016, Alexander Bruy'
 
-# This will get replaced with a git SHA1 when you do a git archive
-
-__revision__ = '$Format:%H$'
-
 import os
 
 from qgis.PyQt.QtGui import QIcon
@@ -64,7 +60,7 @@ class Hillshade(QgisAlgorithm):
                                                             self.tr('Elevation layer')))
         self.addParameter(QgsProcessingParameterNumber(self.Z_FACTOR,
                                                        self.tr('Z factor'), QgsProcessingParameterNumber.Double,
-                                                       1, False, 0.00, 999999.99))
+                                                       1, False, 0.00))
         self.addParameter(QgsProcessingParameterNumber(self.AZIMUTH,
                                                        self.tr('Azimuth (horizontal angle)'), QgsProcessingParameterNumber.Double,
                                                        300, False, 0, 360))

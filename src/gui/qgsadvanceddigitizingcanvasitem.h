@@ -21,6 +21,7 @@
 #include "qgsmapcanvasitem.h"
 #include "qgis_gui.h"
 
+
 class QgsAdvancedDigitizingDockWidget;
 
 /**
@@ -34,15 +35,13 @@ class GUI_EXPORT QgsAdvancedDigitizingCanvasItem : public QgsMapCanvasItem
 
     void paint( QPainter *painter ) override;
 
-  protected:
+  private:
     QPen mLockedPen;
     QPen mConstruction1Pen;
     QPen mConstruction2Pen;
     QPen mSnapPen;
     QPen mSnapLinePen;
     QPen mCursorPen;
-
-  private:
     QgsAdvancedDigitizingDockWidget *mAdvancedDigitizingDockWidget = nullptr;
 };
 

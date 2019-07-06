@@ -12,8 +12,8 @@
  *   (at your option) any later version.                                   *
  *                                                                         *
  ***************************************************************************/
-#ifndef QGSRENDERERV2WIDGET_H
-#define QGSRENDERERV2WIDGET_H
+#ifndef QGSRENDERERWIDGET_H
+#define QGSRENDERERWIDGET_H
 
 #include <QWidget>
 #include <QMenu>
@@ -47,7 +47,7 @@ class GUI_EXPORT QgsRendererWidget : public QgsPanelWidget
   public:
     QgsRendererWidget( QgsVectorLayer *layer, QgsStyle *style );
 
-    //! return pointer to the renderer (no transfer of ownership)
+    //! Returns pointer to the renderer (no transfer of ownership)
     virtual QgsFeatureRenderer *renderer() = 0;
 
     //! show a dialog with renderer's symbol level settings
@@ -106,7 +106,7 @@ class GUI_EXPORT QgsRendererWidget : public QgsPanelWidget
 
     /**
      * Creates widget to setup data-defined size legend.
-     * Returns newly created panel - may be null if it could not be opened. Ownership is transferred to the caller.
+     * Returns newly created panel - may be NULLPTR if it could not be opened. Ownership is transferred to the caller.
      * \since QGIS 3.0
      */
     QgsDataDefinedSizeLegendWidget *createDataDefinedSizeLegendWidget( const QgsMarkerSymbol *symbol, const QgsDataDefinedSizeLegend *ddsLegend ) SIP_FACTORY;
@@ -167,7 +167,7 @@ class GUI_EXPORT QgsDataDefinedValueDialog : public QDialog, public Ui::QgsDataD
     /**
      * Constructor
      * \param symbolList must not be empty
-     * \param layer must not be null
+     * \param layer must not be NULLPTR
      * \param label value label
      */
     QgsDataDefinedValueDialog( const QList<QgsSymbol *> &symbolList, QgsVectorLayer *layer, const QString &label );
@@ -297,4 +297,4 @@ class GUI_EXPORT QgsDataDefinedWidthDialog : public QgsDataDefinedValueDialog
 
 
 
-#endif // QGSRENDERERV2WIDGET_H
+#endif // QGSRENDERERWIDGET_H

@@ -20,15 +20,16 @@
 #define QGSABSTRACTDATASOURCEWIDGET_H
 
 #include "qgis_sip.h"
-#include "qgis.h"
 #include "qgis_gui.h"
 
+#include "qgsproviderguimetadata.h"
 #include "qgsproviderregistry.h"
 #include "qgsguiutils.h"
 #include <QDialog>
 #include <QDialogButtonBox>
 
 class QgsMapCanvas;
+
 
 /**
  * \ingroup gui
@@ -66,7 +67,6 @@ class GUI_EXPORT QgsAbstractDataSourceWidget : public QDialog
      */
     virtual void addButtonClicked() { }
 
-
   signals:
 
     /**
@@ -90,6 +90,12 @@ class GUI_EXPORT QgsAbstractDataSourceWidget : public QDialog
     void addVectorLayer( const QString &uri, const QString &layerName, const QString &providerKey = QString() );
 
     /**
+     * Emitted when a mesh layer has been selected for addition.
+     * \since QGIS 3.4
+     */
+    void addMeshLayer( const QString &url, const QString &baseName, const QString &providerKey );
+
+    /**
      * Emitted when one or more OGR supported layers are selected for addition
      * \param layerList list of layers protocol URIs
      * \param encoding encoding
@@ -106,9 +112,12 @@ class GUI_EXPORT QgsAbstractDataSourceWidget : public QDialog
      */
     void replaceVectorLayer( const QString &oldId, const QString &source, const QString &name, const QString &provider );
 
-
-    //! Emitted when a progress dialog is shown by the provider dialog
-    void progress( int, int );
+    /**
+     * Emitted when a progress dialog is shown by the provider dialog.
+     *
+     * \deprecated Since QGIS 3.4 this signal is no longer used. Use QgsProxyProgressTask instead to show progress reports.
+     */
+    Q_DECL_DEPRECATED void progress( int, int ) SIP_DEPRECATED;
 
     //! Emitted when a progress dialog is shown by the provider dialog
     void progressMessage( QString message );
@@ -122,16 +131,16 @@ class GUI_EXPORT QgsAbstractDataSourceWidget : public QDialog
     //! Constructor
     QgsAbstractDataSourceWidget( QWidget *parent SIP_TRANSFERTHIS = nullptr, Qt::WindowFlags fl = QgsGuiUtils::ModalDialogFlags, QgsProviderRegistry::WidgetMode widgetMode = QgsProviderRegistry::WidgetMode::None );
 
-    //! Return the widget mode
+    //! Returns the widget mode
     QgsProviderRegistry::WidgetMode widgetMode() const;
 
-    //! Return the map canvas (can be null)
+    //! Returns the map canvas (can be NULLPTR)
     const QgsMapCanvas *mapCanvas() const;
 
     //! Connect the ok and apply/add buttons to the slots
     void setupButtons( QDialogButtonBox *buttonBox );
 
-    //! Return the add Button
+    //! Returns the add Button
     QPushButton *addButton( ) const { return mAddButton; }
 
   private:

@@ -18,6 +18,7 @@
 #include "qgis.h"
 
 #include <QFileInfo>
+#include <QUrl>
 
 
 QgsPathResolver::QgsPathResolver( const QString &baseFileName )
@@ -28,6 +29,9 @@ QgsPathResolver::QgsPathResolver( const QString &baseFileName )
 
 QString QgsPathResolver::readPath( const QString &filename ) const
 {
+  if ( filename.isEmpty() )
+    return QString();
+
   QString src = filename;
 
   if ( mBaseFileName.isNull() )
@@ -132,12 +136,11 @@ QString QgsPathResolver::readPath( const QString &filename ) const
 
 #if !defined(Q_OS_WIN)
   // make path absolute
-  projElems.prepend( QLatin1String( "" ) );
+  projElems.prepend( QString() );
 #endif
 
   return vsiPrefix + projElems.join( QStringLiteral( "/" ) );
 }
-
 
 QString QgsPathResolver::writePath( const QString &src ) const
 {
@@ -146,16 +149,34 @@ QString QgsPathResolver::writePath( const QString &src ) const
     return src;
   }
 
-  QFileInfo pfi( mBaseFileName );
-  QString projPath = pfi.absoluteFilePath();
+  // Get projPath even if project has not been created yet
+  QFileInfo pfi( QFileInfo( mBaseFileName ).path() );
+  QString projPath = pfi.canonicalFilePath();
+
+  // If project directory doesn't exit, fallback to absoluteFilePath : symbolic
+  // links won't be handled correctly, but that's OK as the path is "virtual".
+  if ( projPath.isEmpty() )
+    projPath = pfi.absoluteFilePath();
 
   if ( projPath.isEmpty() )
   {
     return src;
   }
 
-  QFileInfo srcFileInfo( src );
-  QString srcPath = srcFileInfo.exists() ? srcFileInfo.canonicalFilePath() : src;
+  // Check if it is a publicSource uri and clean it
+  QUrl url { src };
+  QString srcPath { src };
+  QString urlQuery;
+
+  if ( url.isLocalFile( ) )
+  {
+    srcPath = url.path();
+    urlQuery = url.query();
+  }
+
+  QFileInfo srcFileInfo( srcPath );
+  if ( srcFileInfo.exists() )
+    srcPath = srcFileInfo.canonicalFilePath();
 
   // if this is a VSIFILE, remove the VSI prefix and append to final result
   QString vsiPrefix = qgsVsiPrefix( src );
@@ -185,11 +206,8 @@ QString QgsPathResolver::writePath( const QString &src ) const
   const Qt::CaseSensitivity cs = Qt::CaseSensitive;
 #endif
 
-  QStringList projElems = mBaseFileName.split( '/', QString::SkipEmptyParts );
+  QStringList projElems = projPath.split( '/', QString::SkipEmptyParts );
   QStringList srcElems = srcPath.split( '/', QString::SkipEmptyParts );
-
-  // remove project file element
-  projElems.removeLast();
 
   projElems.removeAll( QStringLiteral( "." ) );
   srcElems.removeAll( QStringLiteral( "." ) );
@@ -207,7 +225,7 @@ QString QgsPathResolver::writePath( const QString &src ) const
 
   if ( n == 0 )
   {
-    // no common parts; might not even by a file
+    // no common parts; might not even be a file
     return src;
   }
 
@@ -226,5 +244,12 @@ QString QgsPathResolver::writePath( const QString &src ) const
     srcElems.insert( 0, QStringLiteral( "." ) );
   }
 
-  return vsiPrefix + srcElems.join( QStringLiteral( "/" ) );
+  // Append url query if any
+  QString returnPath { vsiPrefix + srcElems.join( QStringLiteral( "/" ) ) };
+  if ( ! urlQuery.isEmpty() )
+  {
+    returnPath.append( '?' );
+    returnPath.append( urlQuery );
+  }
+  return returnPath;
 }

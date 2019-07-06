@@ -21,19 +21,16 @@ __author__ = 'Médéric Ribreux'
 __date__ = 'January 2016'
 __copyright__ = '(C) 2016, Médéric Ribreux'
 
-# This will get replaced with a git SHA1 when you do a git archive
 
-__revision__ = '$Format:%H$'
-
-
-from qgis.core import (QgsProcessingParameterDefinition,
+from qgis.core import (QgsProcessingAlgorithm,
+                       QgsProcessingException,
+                       QgsProcessingParameterDefinition,
                        QgsProcessingParameterRasterLayer,
                        QgsProcessingParameterCrs,
                        QgsProcessingParameterEnum,
                        QgsProcessingParameterString,
                        QgsProcessingParameterNumber,
                        QgsProcessingParameterBoolean,
-                       QgsProcessingOutputFolder,
                        QgsProcessingParameterFolderDestination)
 from processing.algs.gdal.GdalAlgorithm import GdalAlgorithm
 from processing.algs.gdal.GdalUtils import GdalUtils
@@ -154,6 +151,12 @@ class gdal2tiles(GdalAlgorithm):
     def groupId(self):
         return 'rastermiscellaneous'
 
+    def commandName(self):
+        return 'gdal2tiles'
+
+    def flags(self):
+        return super().flags() | QgsProcessingAlgorithm.FlagDisplayNameIsLiteral
+
     def getConsoleCommands(self, parameters, context, feedback, executing=True):
         arguments = []
 
@@ -184,10 +187,10 @@ class gdal2tiles(GdalAlgorithm):
         crs = self.parameterAsCrs(parameters, self.SOURCE_CRS, context)
         if crs.isValid():
             arguments.append('-s')
-            arguments.append(crs.authid())
+            arguments.append(GdalUtils.gdal_crs_string(crs))
 
-        nodata = self.parameterAsDouble(parameters, self.NODATA, context)
-        if nodata:
+        if self.NODATA in parameters and parameters[self.NODATA] is not None:
+            nodata = self.parameterAsDouble(parameters, self.NODATA, context)
             arguments.append('-a')
             arguments.append(str(nodata))
 
@@ -206,25 +209,27 @@ class gdal2tiles(GdalAlgorithm):
             arguments.append('-b')
             arguments.append(key)
 
-        if self.parameterAsBool(parameters, self.RESUME, context):
+        if self.parameterAsBoolean(parameters, self.RESUME, context):
             arguments.append('-e')
 
-        if self.parameterAsBool(parameters, self.KML, context):
+        if self.parameterAsBoolean(parameters, self.KML, context):
             arguments.append('-k')
 
-        if self.parameterAsBool(parameters, self.NO_KML, context):
+        if self.parameterAsBoolean(parameters, self.NO_KML, context):
             arguments.append('-n')
 
         inLayer = self.parameterAsRasterLayer(parameters, self.INPUT, context)
+        if inLayer is None:
+            raise QgsProcessingException(self.invalidRasterError(parameters, self.INPUT))
+
         arguments.append(inLayer.source())
         arguments.append(self.parameterAsString(parameters, self.OUTPUT, context))
 
-        commands = []
         if isWindows():
-            commands = ['cmd.exe', '/C ', 'gdal2tiles.bat',
-                        GdalUtils.escapeAndJoin(arguments)]
+            commands = ["python3", "-m", self.commandName()]
         else:
-            commands = ['gdal2tiles.py',
-                        GdalUtils.escapeAndJoin(arguments)]
+            commands = [self.commandName() + '.py']
+
+        commands.append(GdalUtils.escapeAndJoin(arguments))
 
         return commands

@@ -39,11 +39,10 @@
 #include "qgsmaplayerconfigwidgetfactory.h"
 #include "qgsmaplayerstyleguiutils.h"
 #include "qgsmetadatawidget.h"
+#include "qgsnative.h"
 #include "qgspluginmetadata.h"
 #include "qgspluginregistry.h"
 #include "qgsproject.h"
-#include "qgssavestyletodbdialog.h"
-#include "qgsloadstylefromdbdialog.h"
 #include "qgsvectorlayer.h"
 #include "qgsvectorlayerjoininfo.h"
 #include "qgsvectorlayerproperties.h"
@@ -61,10 +60,21 @@
 #include "qgsnewauxiliaryfielddialog.h"
 #include "qgslabelinggui.h"
 #include "qgssymbollayer.h"
+#include "qgsgeometryoptions.h"
+#include "qgsgeometrycheckfactory.h"
+#include "qgsvectorlayersavestyledialog.h"
+#include "qgsvectorlayerloadstyledialog.h"
+#include "qgsmessagebar.h"
+#include "qgsgeometrycheckregistry.h"
+#include "qgsgeometrycheck.h"
+#include "qgsanalysis.h"
+#include "qgssymbolwidgetcontext.h"
+#include "qgsexpressioncontextutils.h"
 
 #include "layertree/qgslayertreelayer.h"
 #include "qgslayertree.h"
 
+#include <QDesktopServices>
 #include <QMessageBox>
 #include <QDir>
 #include <QFile>
@@ -75,6 +85,7 @@
 #include <QCheckBox>
 #include <QHeaderView>
 #include <QColorDialog>
+#include <QUrl>
 
 #include "qgsrendererpropertiesdialog.h"
 #include "qgsstyle.h"
@@ -113,22 +124,24 @@ QgsVectorLayerProperties::QgsVectorLayerProperties(
 
   mBtnStyle = new QPushButton( tr( "Style" ), this );
   QMenu *menuStyle = new QMenu( this );
-  mActionLoadStyle = menuStyle->addAction( tr( "Load Style" ), this, SLOT( loadStyle_clicked() ) );
-  mActionSaveStyleAs = menuStyle->addAction( tr( "Save Style" ), this, SLOT( saveStyleAs_clicked() ) );
+  mActionLoadStyle = menuStyle->addAction( tr( "Load Style…" ) );
+  connect( mActionLoadStyle, &QAction::triggered, this, &QgsVectorLayerProperties::loadStyle );
+  mActionSaveStyle = menuStyle->addAction( tr( "Save Style…" ) );
+  connect( mActionSaveStyle, &QAction::triggered, this, &QgsVectorLayerProperties::saveStyleAs );
   menuStyle->addSeparator();
-  menuStyle->addAction( tr( "Save as Default" ), this, SLOT( saveDefaultStyle_clicked() ) );
-  menuStyle->addAction( tr( "Restore Default" ), this, SLOT( loadDefaultStyle_clicked() ) );
+  menuStyle->addAction( tr( "Save as Default" ), this, &QgsVectorLayerProperties::saveDefaultStyle_clicked );
+  menuStyle->addAction( tr( "Restore Default" ), this, &QgsVectorLayerProperties::loadDefaultStyle_clicked );
   mBtnStyle->setMenu( menuStyle );
   connect( menuStyle, &QMenu::aboutToShow, this, &QgsVectorLayerProperties::aboutToShowStyleMenu );
   buttonBox->addButton( mBtnStyle, QDialogButtonBox::ResetRole );
 
   mBtnMetadata = new QPushButton( tr( "Metadata" ), this );
   QMenu *menuMetadata = new QMenu( this );
-  mActionLoadMetadata = menuMetadata->addAction( tr( "Load Metadata…" ), this, SLOT( loadMetadata() ) );
-  mActionSaveMetadataAs = menuMetadata->addAction( tr( "Save Metadata…" ), this, SLOT( saveMetadataAs() ) );
+  mActionLoadMetadata = menuMetadata->addAction( tr( "Load Metadata…" ), this, &QgsVectorLayerProperties::loadMetadata );
+  mActionSaveMetadataAs = menuMetadata->addAction( tr( "Save Metadata…" ), this, &QgsVectorLayerProperties::saveMetadataAs );
   menuMetadata->addSeparator();
-  menuMetadata->addAction( tr( "Save as Default" ), this, SLOT( saveDefaultMetadata() ) );
-  menuMetadata->addAction( tr( "Restore Default" ), this, SLOT( loadDefaultMetadata() ) );
+  menuMetadata->addAction( tr( "Save as Default" ), this, &QgsVectorLayerProperties::saveDefaultMetadata );
+  menuMetadata->addAction( tr( "Restore Default" ), this, &QgsVectorLayerProperties::loadDefaultMetadata );
   mBtnMetadata->setMenu( menuMetadata );
   buttonBox->addButton( mBtnMetadata, QDialogButtonBox::ResetRole );
 
@@ -171,6 +184,8 @@ QgsVectorLayerProperties::QgsVectorLayerProperties(
   {
     labelingDialog = nullptr;
     mOptsPage_Labels->setEnabled( false ); // disable labeling item
+    mGeometryGroupBox->setEnabled( false );
+    mGeometryGroupBox->setVisible( false );
   }
 
   // Create the Actions dialog tab
@@ -179,38 +194,6 @@ QgsVectorLayerProperties::QgsVectorLayerProperties(
   mActionDialog = new QgsAttributeActionDialog( *mLayer->actions(), actionOptionsFrame );
   mActionDialog->layout()->setMargin( 0 );
   actionLayout->addWidget( mActionDialog );
-
-  // Create the menu for the save style button to choose the output format
-  mSaveAsMenu = new QMenu( this );
-  mSaveAsMenu->addAction( tr( "QGIS Layer Style File…" ) );
-  mSaveAsMenu->addAction( tr( "SLD File…" ) );
-
-  //Only if the provider support loading & saving styles to db add new choices
-  if ( mLayer->dataProvider()->isSaveAndLoadStyleToDatabaseSupported() )
-  {
-    //for loading
-    mLoadStyleMenu = new QMenu( this );
-    mLoadStyleMenu->addAction( tr( "Load from file…" ) );
-    mLoadStyleMenu->addAction( tr( "Database styles manager" ) );
-    //mActionLoadStyle->setContextMenuPolicy( Qt::PreventContextMenu );
-    mActionLoadStyle->setMenu( mLoadStyleMenu );
-
-    connect( mLoadStyleMenu, &QMenu::triggered,
-             this, &QgsVectorLayerProperties::loadStyleMenuTriggered );
-
-    //for saving
-    QString providerName = mLayer->providerType();
-    if ( providerName == QLatin1String( "ogr" ) )
-    {
-      providerName = mLayer->dataProvider()->storageType();
-      if ( providerName == QLatin1String( "GPKG" ) )
-        providerName = QStringLiteral( "GeoPackage" );
-    }
-    mSaveAsMenu->addAction( tr( "Save in database (%1)" ).arg( providerName ) );
-  }
-
-  connect( mSaveAsMenu, &QMenu::triggered,
-           this, &QgsVectorLayerProperties::saveStyleAsMenuTriggered );
 
   mSourceFieldsPropertiesDialog = new QgsSourceFieldsProperties( mLayer, mSourceFieldsFrame );
   mSourceFieldsPropertiesDialog->layout()->setMargin( 0 );
@@ -250,7 +233,7 @@ QgsVectorLayerProperties::QgsVectorLayerProperties(
 
   if ( mLayer->dataProvider() )//enable spatial index button group if supported by provider
   {
-    int capabilities = mLayer->dataProvider()->capabilities();
+    QgsVectorDataProvider::Capabilities capabilities = mLayer->dataProvider()->capabilities();
     if ( !( capabilities & QgsVectorDataProvider::CreateSpatialIndex ) )
     {
       pbnIndex->setEnabled( false );
@@ -286,9 +269,9 @@ QgsVectorLayerProperties::QgsVectorLayerProperties(
 
   //insert existing join info
   const QList< QgsVectorLayerJoinInfo > &joins = mLayer->vectorJoins();
-  for ( int i = 0; i < joins.size(); ++i )
+  for ( const QgsVectorLayerJoinInfo &join : joins )
   {
-    addJoinToTreeWidget( joins[i] );
+    addJoinToTreeWidget( join );
   }
 
   mOldJoins = mLayer->vectorJoins();
@@ -302,6 +285,8 @@ QgsVectorLayerProperties::QgsVectorLayerProperties(
   mDiagramFrame->setLayout( diagLayout );
 
   // Legend tab
+  mLegendWidget->setMapCanvas( QgisApp::instance()->mapCanvas() );
+  mLegendWidget->setLayer( mLayer );
   mLegendConfigEmbeddedWidget->setLayer( mLayer );
 
   // WMS Name as layer short name
@@ -346,6 +331,8 @@ QgsVectorLayerProperties::QgsVectorLayerProperties(
   teMetadataViewer->clear();
   teMetadataViewer->document()->setDefaultStyleSheet( myStyle );
   teMetadataViewer->setHtml( htmlMetadata() );
+  teMetadataViewer->setOpenLinks( false );
+  connect( teMetadataViewer, &QTextBrowser::anchorClicked, this, &QgsVectorLayerProperties::urlClicked );
   mMetadataFilled = true;
 
   QgsSettings settings;
@@ -375,15 +362,19 @@ QgsVectorLayerProperties::QgsVectorLayerProperties(
   mLayersDependenciesTreeGroup->setItemVisibilityChecked( false );
 
   QSet<QString> dependencySources;
-  Q_FOREACH ( const QgsMapLayerDependency &dep, mLayer->dependencies() )
+  const auto constDependencies = mLayer->dependencies();
+  for ( const QgsMapLayerDependency &dep : constDependencies )
   {
     dependencySources << dep.layerId();
   }
-  Q_FOREACH ( QgsLayerTreeLayer *layer, mLayersDependenciesTreeGroup->findLayers() )
+  const auto constFindLayers = mLayersDependenciesTreeGroup->findLayers();
+  for ( QgsLayerTreeLayer *layer : constFindLayers )
   {
     layer->setItemVisibilityChecked( dependencySources.contains( layer->layerId() ) );
   }
 
+  QgsMapSettings ms = QgisApp::instance()->mapCanvas()->mapSettings();
+  mLayersDependenciesTreeModel->setLegendMapViewData( QgisApp::instance()->mapCanvas()->mapUnitsPerPixel(), ms.outputDpi(), ms.scale() );
   mLayersDependenciesTreeView->setModel( mLayersDependenciesTreeModel.get() );
 
   connect( mRefreshLayerCheckBox, &QCheckBox::toggled, mRefreshLayerIntervalSpinBox, &QDoubleSpinBox::setEnabled );
@@ -414,6 +405,94 @@ QgsVectorLayerProperties::QgsVectorLayerProperties(
 
   updateAuxiliaryStoragePage();
 
+  if ( mLayer->isSpatial() )
+  {
+    mRemoveDuplicateNodesCheckbox->setEnabled( true );
+    mGeometryPrecisionLineEdit->setEnabled( true );
+    mGeometryPrecisionLineEdit->setValidator( new QDoubleValidator( mGeometryPrecisionLineEdit ) );
+
+    double precision( mLayer->geometryOptions()->geometryPrecision() );
+    bool ok = true;
+    QString precisionStr( QLocale().toString( precision, ok ) );
+    if ( precision == 0.0 || ! ok )
+      precisionStr = QString();
+    mGeometryPrecisionLineEdit->setText( precisionStr );
+
+    mRemoveDuplicateNodesManuallyActivated = mLayer->geometryOptions()->removeDuplicateNodes();
+    mRemoveDuplicateNodesCheckbox->setChecked( mRemoveDuplicateNodesManuallyActivated );
+    if ( !precisionStr.isNull() )
+      mRemoveDuplicateNodesCheckbox->setEnabled( false );
+    connect( mGeometryPrecisionLineEdit, &QLineEdit::textChanged, this, [this]
+    {
+      if ( !mGeometryPrecisionLineEdit->text().isEmpty() )
+      {
+        if ( mRemoveDuplicateNodesCheckbox->isEnabled() )
+          mRemoveDuplicateNodesManuallyActivated  = mRemoveDuplicateNodesCheckbox->isChecked();
+        mRemoveDuplicateNodesCheckbox->setEnabled( false );
+        mRemoveDuplicateNodesCheckbox->setChecked( true );
+      }
+      else
+      {
+        mRemoveDuplicateNodesCheckbox->setEnabled( true );
+        mRemoveDuplicateNodesCheckbox->setChecked( mRemoveDuplicateNodesManuallyActivated );
+      }
+    } );
+
+    mPrecisionUnitsLabel->setText( QStringLiteral( "[%1]" ).arg( QgsUnitTypes::toAbbreviatedString( mLayer->crs().mapUnits() ) ) );
+
+    QLayout *geometryCheckLayout = new QVBoxLayout();
+    const QList<QgsGeometryCheckFactory *> geometryCheckFactories = QgsAnalysis::instance()->geometryCheckRegistry()->geometryCheckFactories( mLayer, QgsGeometryCheck::FeatureNodeCheck, QgsGeometryCheck::Flag::AvailableInValidation );
+    const QStringList activeChecks = mLayer->geometryOptions()->geometryChecks();
+    for ( const QgsGeometryCheckFactory *factory : geometryCheckFactories )
+    {
+      QCheckBox *cb = new QCheckBox( factory->description() );
+      cb->setChecked( activeChecks.contains( factory->id() ) );
+      mGeometryCheckFactoriesGroupBoxes.insert( cb, factory->id() );
+      geometryCheckLayout->addWidget( cb );
+    }
+    mGeometryValidationGroupBox->setLayout( geometryCheckLayout );
+    mGeometryValidationGroupBox->setVisible( !geometryCheckFactories.isEmpty() );
+
+    QLayout *topologyCheckLayout = new QVBoxLayout();
+    const QList<QgsGeometryCheckFactory *> topologyCheckFactories = QgsAnalysis::instance()->geometryCheckRegistry()->geometryCheckFactories( mLayer, QgsGeometryCheck::LayerCheck, QgsGeometryCheck::Flag::AvailableInValidation );
+
+    for ( const QgsGeometryCheckFactory *factory : topologyCheckFactories )
+    {
+      QCheckBox *cb = new QCheckBox( factory->description() );
+      cb->setChecked( activeChecks.contains( factory->id() ) );
+      mGeometryCheckFactoriesGroupBoxes.insert( cb, factory->id() );
+      topologyCheckLayout->addWidget( cb );
+    }
+    mTopologyChecksGroupBox->setLayout( topologyCheckLayout );
+    mTopologyChecksGroupBox->setVisible( !topologyCheckFactories.isEmpty() );
+  }
+  else
+  {
+    mRemoveDuplicateNodesCheckbox->setEnabled( false );
+    mGeometryPrecisionLineEdit->setEnabled( false );
+    mGeometryAutoFixesGroupBox->setEnabled( false );
+  }
+
+  mOptsPage_Information->setProperty( "helpPage", QStringLiteral( "working_with_vector/vector_properties.html#information-properties" ) );
+  mOptsPage_Source->setProperty( "helpPage", QStringLiteral( "working_with_vector/vector_properties.html#source-properties" ) );
+  mOptsPage_Style->setProperty( "helpPage", QStringLiteral( "working_with_vector/vector_properties.html#symbology-properties" ) );
+  mOptsPage_Labels->setProperty( "helpPage", QStringLiteral( "working_with_vector/vector_properties.html#labels-properties" ) );
+  mOptsPage_Diagrams->setProperty( "helpPage", QStringLiteral( "working_with_vector/vector_properties.html#diagrams-properties" ) );
+  mOptsPage_SourceFields->setProperty( "helpPage", QStringLiteral( "working_with_vector/vector_properties.html#source-fields-properties" ) );
+  mOptsPage_AttributesForm->setProperty( "helpPage", QStringLiteral( "working_with_vector/vector_properties.html#attributes-form-properties" ) );
+  mOptsPage_Joins->setProperty( "helpPage", QStringLiteral( "working_with_vector/vector_properties.html#joins-properties" ) );
+  mOptsPage_AuxiliaryStorage->setProperty( "helpPage", QStringLiteral( "working_with_vector/vector_properties.html#auxiliary-storage-properties" ) );
+  mOptsPage_Actions->setProperty( "helpPage", QStringLiteral( "working_with_vector/vector_properties.html#actions-properties" ) );
+  mOptsPage_Display->setProperty( "helpPage", QStringLiteral( "working_with_vector/vector_properties.html#display-properties" ) );
+  mOptsPage_Rendering->setProperty( "helpPage", QStringLiteral( "working_with_vector/vector_properties.html#rendering-properties" ) );
+  mOptsPage_Variables->setProperty( "helpPage", QStringLiteral( "working_with_vector/vector_properties.html#variables-properties" ) );
+  mOptsPage_Metadata->setProperty( "helpPage", QStringLiteral( "working_with_vector/vector_properties.html#metadata-properties" ) );
+  mOptsPage_DataDependencies->setProperty( "helpPage", QStringLiteral( "working_with_vector/vector_properties.html#dependencies-properties" ) ) ;
+  mOptsPage_Legend->setProperty( "helpPage", QStringLiteral( "working_with_vector/vector_properties.html#legend-properties" ) );
+  mOptsPage_Server->setProperty( "helpPage", QStringLiteral( "working_with_vector/vector_properties.html#qgis-server-properties" ) );
+  mOptsPage_Digitizing->setProperty( "helpPage", QStringLiteral( "working_with_vector/vector_properties.html#digitizing-properties" ) );
+
+
   optionsStackedWidget_CurrentChanged( mOptStackedWidget->currentIndex() );
 }
 
@@ -429,7 +508,7 @@ void QgsVectorLayerProperties::toggleEditing()
 
 void QgsVectorLayerProperties::addPropertiesPageFactory( QgsMapLayerConfigWidgetFactory *factory )
 {
-  if ( !factory->supportLayerPropertiesDialog() )
+  if ( !factory->supportsLayer( mLayer ) || !factory->supportLayerPropertiesDialog() )
   {
     return;
   }
@@ -463,11 +542,6 @@ void QgsVectorLayerProperties::syncToLayer()
   // populate the general information
   mLayerOrigNameLineEdit->setText( mLayer->name() );
   txtDisplayName->setText( mLayer->name() );
-  pbnQueryBuilder->setWhatsThis( tr( "This button opens the query "
-                                     "builder and allows you to create a subset of features to display on "
-                                     "the map canvas rather than displaying all features in the layer" ) );
-  txtSubsetSQL->setWhatsThis( tr( "The query used to limit the features in the "
-                                  "layer is shown here. To enter or modify the query, click on the Query Builder button" ) );
 
   //see if we are dealing with a pg layer here
   mSubsetGroupBox->setEnabled( true );
@@ -521,10 +595,10 @@ void QgsVectorLayerProperties::syncToLayer()
   }
 
   // Default local simplification algorithm
-  mSimplifyAlgorithmComboBox->addItem( tr( "Distance" ), ( int )QgsVectorSimplifyMethod::Distance );
-  mSimplifyAlgorithmComboBox->addItem( tr( "SnapToGrid" ), ( int )QgsVectorSimplifyMethod::SnapToGrid );
-  mSimplifyAlgorithmComboBox->addItem( tr( "Visvalingam" ), ( int )QgsVectorSimplifyMethod::Visvalingam );
-  mSimplifyAlgorithmComboBox->setCurrentIndex( mSimplifyAlgorithmComboBox->findData( ( int )simplifyMethod.simplifyAlgorithm() ) );
+  mSimplifyAlgorithmComboBox->addItem( tr( "Distance" ), QgsVectorSimplifyMethod::Distance );
+  mSimplifyAlgorithmComboBox->addItem( tr( "SnapToGrid" ), QgsVectorSimplifyMethod::SnapToGrid );
+  mSimplifyAlgorithmComboBox->addItem( tr( "Visvalingam" ), QgsVectorSimplifyMethod::Visvalingam );
+  mSimplifyAlgorithmComboBox->setCurrentIndex( mSimplifyAlgorithmComboBox->findData( simplifyMethod.simplifyAlgorithm() ) );
 
   QStringList myScalesList = PROJECT_SCALES.split( ',' );
   myScalesList.append( QStringLiteral( "1:1" ) );
@@ -560,7 +634,7 @@ void QgsVectorLayerProperties::syncToLayer()
   mVector3DWidget->setLayer( mLayer );
 #endif
 
-  mMetadataWidget->setMetadata( mLayer->metadata() );
+  mMetadataWidget->setMetadata( &mLayer->metadata() );
 
 } // syncToLayer()
 
@@ -572,6 +646,7 @@ void QgsVectorLayerProperties::apply()
   }
 
   // apply legend settings
+  mLegendWidget->applyToLayer();
   mLegendConfigEmbeddedWidget->applyToLayer();
 
   // save metadata
@@ -609,7 +684,8 @@ void QgsVectorLayerProperties::apply()
   mLayer->setMapTipTemplate( mMapTipWidget->text() );
 
   mLayer->actions()->clearActions();
-  Q_FOREACH ( const QgsAction &action, mActionDialog->actions() )
+  const auto constActions = mActionDialog->actions();
+  for ( const QgsAction &action : constActions )
   {
     mLayer->actions()->addAction( action );
   }
@@ -645,7 +721,8 @@ void QgsVectorLayerProperties::apply()
   diagramPropertiesDialog->apply();
 
   // apply all plugin dialogs
-  Q_FOREACH ( QgsMapLayerConfigWidget *page, mLayerPropertiesPages )
+  const auto constMLayerPropertiesPages = mLayerPropertiesPages;
+  for ( QgsMapLayerConfigWidget *page : constMLayerPropertiesPages )
   {
     page->apply();
   }
@@ -737,7 +814,8 @@ void QgsVectorLayerProperties::apply()
 
   // save dependencies
   QSet<QgsMapLayerDependency> deps;
-  Q_FOREACH ( const QgsLayerTreeLayer *layer, mLayersDependenciesTreeGroup->findLayers() )
+  const auto constFindLayers = mLayersDependenciesTreeGroup->findLayers();
+  for ( const QgsLayerTreeLayer *layer : constFindLayers )
   {
     if ( layer->isVisible() )
       deps << QgsMapLayerDependency( layer->layerId() );
@@ -751,8 +829,21 @@ void QgsVectorLayerProperties::apply()
   mVector3DWidget->apply();
 #endif
 
-  // update symbology
-  emit refreshLegend( mLayer->id() );
+  mLayer->geometryOptions()->setRemoveDuplicateNodes( mRemoveDuplicateNodesCheckbox->isChecked() );
+  bool ok = true;
+  double precision( QLocale().toDouble( mGeometryPrecisionLineEdit->text(), &ok ) );
+  if ( ! ok )
+    precision = 0.0;
+  mLayer->geometryOptions()->setGeometryPrecision( precision );
+
+  QStringList activeChecks;
+  QHash<QCheckBox *, QString>::const_iterator it;
+  for ( it = mGeometryCheckFactoriesGroupBoxes.constBegin(); it != mGeometryCheckFactoriesGroupBoxes.constEnd(); ++it )
+  {
+    if ( it.key()->isChecked() )
+      activeChecks << it.value();
+  }
+  mLayer->geometryOptions()->setGeometryChecks( activeChecks );
 
   mLayer->triggerRepaint();
   // notify the project we've made a change
@@ -766,10 +857,12 @@ void QgsVectorLayerProperties::onCancel()
     // need to undo changes in vector layer joins - they are applied directly to the layer (not in apply())
     // so other parts of the properties dialog can use the fields from the joined layers
 
-    Q_FOREACH ( const QgsVectorLayerJoinInfo &info, mLayer->vectorJoins() )
+    const auto constVectorJoins = mLayer->vectorJoins();
+    for ( const QgsVectorLayerJoinInfo &info : constVectorJoins )
       mLayer->removeJoin( info.joinLayerId() );
 
-    Q_FOREACH ( const QgsVectorLayerJoinInfo &info, mOldJoins )
+    const auto constMOldJoins = mOldJoins;
+    for ( const QgsVectorLayerJoinInfo &info : constMOldJoins )
       mLayer->addJoin( info );
   }
 
@@ -791,6 +884,15 @@ void QgsVectorLayerProperties::onCancel()
     mLayer->importNamedStyle( doc, myMessage );
     syncToLayer();
   }
+}
+
+void QgsVectorLayerProperties::urlClicked( const QUrl &url )
+{
+  QFileInfo file( url.toLocalFile() );
+  if ( file.exists() && !file.isDir() )
+    QgsGui::instance()->nativePlatformInterface()->openFileExplorerAndSelectFile( url.toLocalFile() );
+  else
+    QDesktopServices::openUrl( url );
 }
 
 void QgsVectorLayerProperties::pbnQueryBuilder_clicked()
@@ -865,8 +967,8 @@ void QgsVectorLayerProperties::loadDefaultStyle_clicked()
     askToUser.setText( tr( "Load default style from: " ) );
     askToUser.setIcon( QMessageBox::Question );
     askToUser.addButton( tr( "Cancel" ), QMessageBox::RejectRole );
-    askToUser.addButton( tr( "Local database" ), QMessageBox::NoRole );
-    askToUser.addButton( tr( "Datasource database" ), QMessageBox::YesRole );
+    askToUser.addButton( tr( "Local Database" ), QMessageBox::NoRole );
+    askToUser.addButton( tr( "Datasource Database" ), QMessageBox::YesRole );
 
     switch ( askToUser.exec() )
     {
@@ -920,15 +1022,15 @@ void QgsVectorLayerProperties::saveDefaultStyle_clicked()
     askToUser.setText( tr( "Save default style to: " ) );
     askToUser.setIcon( QMessageBox::Question );
     askToUser.addButton( tr( "Cancel" ), QMessageBox::RejectRole );
-    askToUser.addButton( tr( "Local database" ), QMessageBox::NoRole );
-    askToUser.addButton( tr( "Datasource database" ), QMessageBox::YesRole );
+    askToUser.addButton( tr( "Local Database" ), QMessageBox::NoRole );
+    askToUser.addButton( tr( "Datasource Database" ), QMessageBox::YesRole );
 
     switch ( askToUser.exec() )
     {
       case 0:
         return;
       case 2:
-        mLayer->saveStyleToDatabase( QLatin1String( "" ), QLatin1String( "" ), true, QLatin1String( "" ), errorMsg );
+        mLayer->saveStyleToDatabase( QString(), QString(), true, QString(), errorMsg );
         if ( errorMsg.isNull() )
         {
           return;
@@ -945,57 +1047,6 @@ void QgsVectorLayerProperties::saveDefaultStyle_clicked()
   {
     QMessageBox::warning( this, tr( "Default Style" ), errorMsg );
   }
-}
-
-
-void QgsVectorLayerProperties::loadStyle_clicked()
-{
-  QgsSettings myQSettings;  // where we keep last used filter in persistent state
-  QString myLastUsedDir = myQSettings.value( QStringLiteral( "style/lastStyleDir" ), QDir::homePath() ).toString();
-
-  QString myFileName = QFileDialog::getOpenFileName( this, tr( "Load Layer Properties from Style File" ), myLastUsedDir,
-                       tr( "QGIS Layer Style File" ) + " (*.qml);;" + tr( "SLD File" ) + " (*.sld)" );
-  if ( myFileName.isNull() )
-  {
-    return;
-  }
-
-  mOldStyle = mLayer->styleManager()->style( mLayer->styleManager()->currentStyle() );
-
-  QString myMessage;
-  bool defaultLoadedFlag = false;
-
-  if ( myFileName.endsWith( QLatin1String( ".sld" ), Qt::CaseInsensitive ) )
-  {
-    // load from SLD
-    myMessage = mLayer->loadSldStyle( myFileName, defaultLoadedFlag );
-  }
-  else
-  {
-    myMessage = mLayer->loadNamedStyle( myFileName, defaultLoadedFlag );
-  }
-  //reset if the default style was loaded OK only
-  if ( defaultLoadedFlag )
-  {
-    syncToLayer();
-  }
-  else
-  {
-    //let the user know what went wrong
-    QMessageBox::warning( this, tr( "Load Style" ), myMessage );
-  }
-
-  QFileInfo myFI( myFileName );
-  QString myPath = myFI.path();
-  myQSettings.setValue( QStringLiteral( "style/lastStyleDir" ), myPath );
-
-  activateWindow(); // set focus back to properties dialog
-}
-
-
-void QgsVectorLayerProperties::saveStyleAs_clicked()
-{
-  saveStyleAs( QML );
 }
 
 void QgsVectorLayerProperties::loadMetadata()
@@ -1017,7 +1068,7 @@ void QgsVectorLayerProperties::loadMetadata()
   //reset if the default style was loaded OK only
   if ( defaultLoadedFlag )
   {
-    mMetadataWidget->setMetadata( mLayer->metadata() );
+    mMetadataWidget->setMetadata( &mLayer->metadata() );
   }
   else
   {
@@ -1092,7 +1143,7 @@ void QgsVectorLayerProperties::loadDefaultMetadata()
   //reset if the default metadata was loaded OK only
   if ( defaultLoadedFlag )
   {
-    mMetadataWidget->setMetadata( mLayer->metadata() );
+    mMetadataWidget->setMetadata( &mLayer->metadata() );
   }
   else
   {
@@ -1100,135 +1151,65 @@ void QgsVectorLayerProperties::loadDefaultMetadata()
   }
 }
 
-void QgsVectorLayerProperties::saveStyleAsMenuTriggered( QAction *action )
+
+void QgsVectorLayerProperties::saveStyleAs()
 {
-  QMenu *menu = qobject_cast<QMenu *>( sender() );
-  if ( !menu )
-    return;
+  QgsVectorLayerSaveStyleDialog dlg( mLayer );
+  QgsSettings settings;
 
-  int index = mSaveAsMenu->actions().indexOf( action );
-  if ( index < 0 )
-    return;
-
-  saveStyleAs( static_cast< StyleType >( index ) );
-}
-
-void QgsVectorLayerProperties::saveStyleAs( StyleType styleType )
-{
-  QgsSettings myQSettings;  // where we keep last used filter in persistent state
-  QString myLastUsedDir = myQSettings.value( QStringLiteral( "style/lastStyleDir" ), QDir::homePath() ).toString();
-
-  if ( styleType == DB )
+  if ( dlg.exec() )
   {
-    QString infoWindowTitle = QObject::tr( "Save style to DB (%1)" ).arg( mLayer->providerType() );
-    QString msgError;
+    apply();
 
-    QgsSaveStyleToDbDialog askToUser;
-    //Ask the user for a name and a description about the style
-    if ( askToUser.exec() == QDialog::Accepted )
-    {
-      QString styleName = askToUser.getName();
-      QString styleDesc = askToUser.getDescription();
-      QString uiFileContent = askToUser.getUIFileContent();
-      bool isDefault = askToUser.isDefault();
-
-      apply();
-
-      mLayer->saveStyleToDatabase( styleName, styleDesc, isDefault, uiFileContent, msgError );
-
-      if ( !msgError.isNull() )
-      {
-        QgisApp::instance()->messageBar()->pushMessage( infoWindowTitle, msgError, Qgis::Warning, QgisApp::instance()->messageTimeout() );
-      }
-      else
-      {
-        QgisApp::instance()->messageBar()->pushMessage( infoWindowTitle, tr( "Style saved" ), Qgis::Info, QgisApp::instance()->messageTimeout() );
-      }
-
-    }
-    else
-    {
-      return;
-    }
-  }
-  else
-  {
-
-    QString format, extension;
-    if ( styleType == SLD )
-    {
-      format = tr( "SLD File" ) + " (*.sld)";
-      extension = QStringLiteral( ".sld" );
-    }
-    else
-    {
-      format = tr( "QGIS Layer Style File" ) + " (*.qml)";
-      extension = QgsMapLayer::extensionPropertyType( QgsMapLayer::Style );
-    }
-
-    QString myOutputFileName = QFileDialog::getSaveFileName( this, tr( "Save Layer Properties as Style File" ),
-                               myLastUsedDir, format );
-    if ( myOutputFileName.isNull() ) //dialog canceled
-    {
-      return;
-    }
-
-    apply(); // make sure the style to save is uptodate
-
-    QString myMessage;
     bool defaultLoadedFlag = false;
 
-    //ensure the user never omitted the extension from the file name
-    if ( !myOutputFileName.endsWith( extension, Qt::CaseInsensitive ) )
+    StyleType type = dlg.currentStyleType();
+    switch ( type )
     {
-      myOutputFileName += extension;
-    }
+      case QML:
+      case SLD:
+      {
+        QString message;
+        QString filePath = dlg.outputFilePath();
+        if ( type == QML )
+          message = mLayer->saveNamedStyle( filePath, defaultLoadedFlag, dlg.styleCategories() );
+        else
+          message = mLayer->saveSldStyle( filePath, defaultLoadedFlag );
 
-    if ( styleType == SLD )
-    {
-      // convert to SLD
-      myMessage = mLayer->saveSldStyle( myOutputFileName, defaultLoadedFlag );
-    }
-    else
-    {
-      myMessage = mLayer->saveNamedStyle( myOutputFileName, defaultLoadedFlag );
-    }
+        //reset if the default style was loaded OK only
+        if ( defaultLoadedFlag )
+        {
+          syncToLayer();
+        }
+        else
+        {
+          //let the user know what went wrong
+          QMessageBox::information( this, tr( "Save Style" ), message );
+        }
 
-    //reset if the default style was loaded OK only
-    if ( defaultLoadedFlag )
-    {
-      syncToLayer();
-    }
-    else
-    {
-      //let the user know what went wrong
-      QMessageBox::information( this, tr( "Save Style" ), myMessage );
-    }
+        break;
+      }
+      case DB:
+      {
+        QString infoWindowTitle = QObject::tr( "Save style to DB (%1)" ).arg( mLayer->providerType() );
+        QString msgError;
 
-    QFileInfo myFI( myOutputFileName );
-    QString myPath = myFI.path();
-    // Persist last used dir
-    myQSettings.setValue( QStringLiteral( "style/lastStyleDir" ), myPath );
+        QgsVectorLayerSaveStyleDialog::SaveToDbSettings dbSettings = dlg.saveToDbSettings();
+
+        mLayer->saveStyleToDatabase( dbSettings.name, dbSettings.description, dbSettings.isDefault, dbSettings.uiFileContent, msgError );
+
+        if ( !msgError.isNull() )
+        {
+          QgisApp::instance()->messageBar()->pushMessage( infoWindowTitle, msgError, Qgis::Warning, QgisApp::instance()->messageTimeout() );
+        }
+        else
+        {
+          QgisApp::instance()->messageBar()->pushMessage( infoWindowTitle, tr( "Style saved" ), Qgis::Info, QgisApp::instance()->messageTimeout() );
+        }
+        break;
+      }
+    }
   }
-}
-
-void QgsVectorLayerProperties::loadStyleMenuTriggered( QAction *action )
-{
-  QMenu *menu = qobject_cast<QMenu *>( sender() );
-  if ( !menu )
-    return;
-
-  int index = mLoadStyleMenu->actions().indexOf( action );
-
-  if ( index == 0 ) //Load from filesystem
-  {
-    loadStyle_clicked();
-  }
-  else if ( index == 1 ) //Load from database
-  {
-    showListOfStylesFromDatabase();
-  }
-
 }
 
 void QgsVectorLayerProperties::aboutToShowStyleMenu()
@@ -1263,47 +1244,79 @@ void QgsVectorLayerProperties::aboutToShowStyleMenu()
   QgsMapLayerStyleGuiUtils::instance()->addStyleManagerActions( m, mLayer );
 }
 
-void QgsVectorLayerProperties::showListOfStylesFromDatabase()
+void QgsVectorLayerProperties::loadStyle()
 {
+  QgsSettings settings;  // where we keep last used filter in persistent state
+
   QString errorMsg;
   QStringList ids, names, descriptions;
 
   //get the list of styles in the db
   int sectionLimit = mLayer->listStylesInDatabase( ids, names, descriptions, errorMsg );
-  if ( !errorMsg.isNull() )
+  QgsVectorLayerLoadStyleDialog dlg( mLayer );
+  dlg.initializeLists( ids, names, descriptions, sectionLimit );
+
+  if ( dlg.exec() )
   {
-    QMessageBox::warning( this, tr( "Load Styles from Database" ), errorMsg );
-    return;
-  }
-
-  QgsLoadStyleFromDBDialog dialog;
-  dialog.setLayer( mLayer );
-  dialog.initializeLists( ids, names, descriptions, sectionLimit );
-
-  if ( dialog.exec() == QDialog::Accepted )
-  {
-    QString selectedStyleId = dialog.getSelectedStyleId();
-
-    QString qmlStyle = mLayer->getStyleFromDatabase( selectedStyleId, errorMsg );
-    if ( !errorMsg.isNull() )
+    mOldStyle = mLayer->styleManager()->style( mLayer->styleManager()->currentStyle() );
+    QgsMapLayer::StyleCategories categories = dlg.styleCategories();
+    StyleType type = dlg.currentStyleType();
+    switch ( type )
     {
-      QMessageBox::warning( this, tr( "Load Styles from Database" ), errorMsg );
-      return;
-    }
+      case QML:
+      case SLD:
+      {
+        QString message;
+        bool defaultLoadedFlag = false;
+        QString filePath = dlg.filePath();
+        if ( type == SLD )
+        {
+          message = mLayer->loadSldStyle( filePath, defaultLoadedFlag );
+        }
+        else
+        {
+          message = mLayer->loadNamedStyle( filePath, defaultLoadedFlag, true, categories );
+        }
+        //reset if the default style was loaded OK only
+        if ( defaultLoadedFlag )
+        {
+          syncToLayer();
+        }
+        else
+        {
+          //let the user know what went wrong
+          QMessageBox::warning( this, tr( "Load Style" ), message );
+        }
+        break;
+      }
+      case DB:
+      {
+        QString selectedStyleId = dlg.selectedStyleId();
 
-    QDomDocument myDocument( QStringLiteral( "qgis" ) );
-    myDocument.setContent( qmlStyle );
+        QString qmlStyle = mLayer->getStyleFromDatabase( selectedStyleId, errorMsg );
+        if ( !errorMsg.isNull() )
+        {
+          QMessageBox::warning( this, tr( "Load Styles from Database" ), errorMsg );
+          return;
+        }
 
-    if ( mLayer->importNamedStyle( myDocument, errorMsg ) )
-    {
-      syncToLayer();
+        QDomDocument myDocument( QStringLiteral( "qgis" ) );
+        myDocument.setContent( qmlStyle );
+
+        if ( mLayer->importNamedStyle( myDocument, errorMsg, categories ) )
+        {
+          syncToLayer();
+        }
+        else
+        {
+          QMessageBox::warning( this, tr( "Load Styles from Database" ),
+                                tr( "The retrieved style is not a valid named style. Error message: %1" )
+                                .arg( errorMsg ) );
+        }
+        break;
+      }
     }
-    else
-    {
-      QMessageBox::warning( this, tr( "Load Styles from Database" ),
-                            tr( "The retrieved style is not a valid named style. Error message: %1" )
-                            .arg( errorMsg ) );
-    }
+    activateWindow(); // set focus back to properties dialog
   }
 }
 
@@ -1380,6 +1393,7 @@ void QgsVectorLayerProperties::mJoinTreeWidget_itemDoubleClicked( QTreeWidgetIte
   }
 
   QgsJoinDialog d( mLayer, joinedLayers );
+  d.setWindowTitle( tr( "Edit Vector Join" ) );
   d.setJoinInfo( joins[j] );
 
   if ( d.exec() == QDialog::Accepted )
@@ -1550,15 +1564,13 @@ void QgsVectorLayerProperties::updateSymbologyPage()
   {
     mRendererDialog = new QgsRendererPropertiesDialog( mLayer, QgsStyle::defaultStyle(), true, this );
     mRendererDialog->setDockMode( false );
-    mRendererDialog->setMapCanvas( QgisApp::instance()->mapCanvas() );
+    QgsSymbolWidgetContext context;
+    context.setMapCanvas( QgisApp::instance()->mapCanvas() );
+    context.setMessageBar( QgisApp::instance()->messageBar() );
+    mRendererDialog->setContext( context );
     connect( mRendererDialog, &QgsRendererPropertiesDialog::showPanel, this, &QgsVectorLayerProperties::openPanel );
     connect( mRendererDialog, &QgsRendererPropertiesDialog::layerVariablesChanged, this, &QgsVectorLayerProperties::updateVariableEditor );
     connect( mRendererDialog, &QgsRendererPropertiesDialog::widgetChanged, this,  [ = ] { updateAuxiliaryStoragePage(); } );
-
-    // display the menu to choose the output format (fix #5136)
-    mActionSaveStyleAs->setText( tr( "Save Style" ) );
-    mActionSaveStyleAs->setMenu( mSaveAsMenu );
-    disconnect( mActionSaveStyleAs, &QAction::triggered, this, &QgsVectorLayerProperties::saveStyleAs_clicked );
   }
   else
   {
@@ -1636,9 +1648,11 @@ void QgsVectorLayerProperties::updateVariableEditor()
 
 void QgsVectorLayerProperties::showHelp()
 {
-  if ( mOptionsListWidget->currentIndex().data().toString() == "Form" )
+  const QVariant helpPage = mOptionsStackedWidget->currentWidget()->property( "helpPage" );
+
+  if ( helpPage.isValid() )
   {
-    QgsHelp::openHelp( QStringLiteral( "working_with_vector/vector_properties.html#configure-the-field-behavior" ) );
+    QgsHelp::openHelp( helpPage.toString() );
   }
   else
   {
@@ -1646,7 +1660,7 @@ void QgsVectorLayerProperties::showHelp()
   }
 }
 
-void QgsVectorLayerProperties::updateAuxiliaryStoragePage( bool reset )
+void QgsVectorLayerProperties::updateAuxiliaryStoragePage()
 {
   const QgsAuxiliaryLayer *alayer = mLayer->auxiliaryLayer();
 
@@ -1660,7 +1674,7 @@ void QgsVectorLayerProperties::updateAuxiliaryStoragePage( bool reset )
     mAuxiliaryStorageKeyLineEdit->setText( alayer->joinInfo().targetFieldName() );
 
     // update feature count
-    int features = alayer->featureCount();
+    long features = alayer->featureCount();
     mAuxiliaryStorageFeaturesLineEdit->setText( QString::number( features ) );
 
     // update actions
@@ -1707,11 +1721,6 @@ void QgsVectorLayerProperties::updateAuxiliaryStoragePage( bool reset )
     mAuxiliaryStorageFieldsLineEdit->setText( QString() );
     mAuxiliaryStorageFeaturesLineEdit->setText( QString() );
   }
-
-  if ( reset && labelingDialog )
-  {
-    labelingDialog->setLayer( mLayer );
-  }
 }
 
 void QgsVectorLayerProperties::onAuxiliaryLayerNew()
@@ -1724,7 +1733,7 @@ void QgsVectorLayerProperties::onAuxiliaryLayerNew()
   QgsNewAuxiliaryLayerDialog dlg( mLayer, this );
   if ( dlg.exec() == QDialog::Accepted )
   {
-    updateAuxiliaryStoragePage( true );
+    updateAuxiliaryStoragePage();
   }
 }
 
@@ -1744,7 +1753,7 @@ void QgsVectorLayerProperties::onAuxiliaryLayerClear()
     QApplication::setOverrideCursor( Qt::WaitCursor );
     alayer->clear();
     QApplication::restoreOverrideCursor();
-    updateAuxiliaryStoragePage( true );
+    updateAuxiliaryStoragePage();
     mLayer->triggerRepaint();
   }
 }
@@ -1775,7 +1784,7 @@ void QgsVectorLayerProperties::onAuxiliaryLayerDelete()
     mLayer->setAuxiliaryLayer(); // remove auxiliary layer
     QgsAuxiliaryStorage::deleteTable( uri );
     QApplication::restoreOverrideCursor();
-    updateAuxiliaryStoragePage( true );
+    updateAuxiliaryStoragePage();
     mLayer->triggerRepaint();
   }
 }
@@ -1819,7 +1828,8 @@ void QgsVectorLayerProperties::onAuxiliaryLayerDeleteField()
   const QString msg = tr( "Are you sure you want to delete auxiliary field %1 for %2?" ).arg( item->text( 1 ), item->text( 0 ) );
 
   QMessageBox::StandardButton reply;
-  reply = QMessageBox::question( this, "Delete Auxiliary Field", msg, QMessageBox::Yes | QMessageBox::No );
+  const QString title = QObject::tr( "Delete Auxiliary Field" );
+  reply = QMessageBox::question( this, title, msg, QMessageBox::Yes | QMessageBox::No );
 
   if ( reply == QMessageBox::Yes )
   {
@@ -1860,10 +1870,18 @@ void QgsVectorLayerProperties::deleteAuxiliaryField( int index )
          && labelingDialog
          && labelingDialog->labelingGui() )
     {
-      labelingDialog->labelingGui()->deactivateField( ( QgsPalLayerSettings::Property ) key );
+      labelingDialog->labelingGui()->deactivateField( static_cast<QgsPalLayerSettings::Property>( key ) );
     }
 
-    updateAuxiliaryStoragePage( true );
+    updateAuxiliaryStoragePage();
     mSourceFieldsPropertiesDialog->init();
+  }
+  else
+  {
+    const QString title = QObject::tr( "Delete Auxiliary Field" );
+    const int timeout = QgisApp::instance()->messageTimeout();
+    const QString errors = mLayer->auxiliaryLayer()->commitErrors().join( QStringLiteral( "\n  " ) );
+    const QString msg = QObject::tr( "Unable to remove auxiliary field (%1)" ).arg( errors );
+    QgisApp::instance()->messageBar()->pushMessage( title, msg, Qgis::Warning, timeout );
   }
 }

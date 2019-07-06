@@ -21,16 +21,14 @@ __author__ = 'Alexander Bruy'
 __date__ = 'August 2012'
 __copyright__ = '(C) 2012, Victor Olaya'
 
-# This will get replaced with a git SHA1 when you do a git archive323
-
-__revision__ = '$Format:%H$'
-
 import math
 
 from qgis.core import (QgsProcessingParameterFeatureSource,
                        QgsProcessingParameterEnum,
                        QgsProcessingParameterNumber,
                        QgsProcessingParameterFeatureSink,
+                       QgsProcessingParameterDistance,
+                       QgsProcessingException,
                        QgsFeature,
                        QgsFeatureSink,
                        QgsGeometry,
@@ -68,16 +66,15 @@ class RectanglesOvalsDiamondsFixed(QgisAlgorithm):
                                                               [QgsProcessing.TypeVectorPoint]))
         self.addParameter(QgsProcessingParameterEnum(self.SHAPE,
                                                      self.tr('Buffer shape'), options=self.shapes))
-        self.addParameter(QgsProcessingParameterNumber(self.WIDTH, self.tr('Width'), type=QgsProcessingParameterNumber.Double,
-                                                       minValue=0.0000001, maxValue=999999999.0, defaultValue=1.0))
-        self.addParameter(QgsProcessingParameterNumber(self.HEIGHT, self.tr('Height'), type=QgsProcessingParameterNumber.Double,
-                                                       minValue=0.0000001, maxValue=999999999.0, defaultValue=1.0))
+        self.addParameter(QgsProcessingParameterDistance(self.WIDTH, self.tr('Width'), parentParameterName=self.INPUT,
+                                                         minValue=0.0000001, defaultValue=1.0))
+        self.addParameter(QgsProcessingParameterDistance(self.HEIGHT, self.tr('Height'), parentParameterName=self.INPUT,
+                                                         minValue=0.0000001, defaultValue=1.0))
         self.addParameter(QgsProcessingParameterNumber(self.ROTATION, self.tr('Rotation'), type=QgsProcessingParameterNumber.Double,
                                                        minValue=0.0, maxValue=360.0, optional=True))
         self.addParameter(QgsProcessingParameterNumber(self.SEGMENTS,
                                                        self.tr('Number of segments'),
                                                        minValue=1,
-                                                       maxValue=999999999,
                                                        defaultValue=36))
 
         self.addParameter(QgsProcessingParameterFeatureSink(self.OUTPUT,
@@ -92,6 +89,9 @@ class RectanglesOvalsDiamondsFixed(QgisAlgorithm):
 
     def processAlgorithm(self, parameters, context, feedback):
         source = self.parameterAsSource(parameters, self.INPUT, context)
+        if source is None:
+            raise QgsProcessingException(self.invalidSourceError(parameters, self.INPUT))
+
         shape = self.parameterAsEnum(parameters, self.SHAPE, context)
         width = self.parameterAsDouble(parameters, self.WIDTH, context)
         height = self.parameterAsDouble(parameters, self.HEIGHT, context)
@@ -100,6 +100,8 @@ class RectanglesOvalsDiamondsFixed(QgisAlgorithm):
 
         (sink, dest_id) = self.parameterAsSink(parameters, self.OUTPUT, context,
                                                source.fields(), QgsWkbTypes.Polygon, source.sourceCrs())
+        if sink is None:
+            raise QgsProcessingException(self.invalidSinkError(parameters, self.OUTPUT))
 
         if shape == 0:
             self.rectangles(sink, source, width, height, rotation, feedback)

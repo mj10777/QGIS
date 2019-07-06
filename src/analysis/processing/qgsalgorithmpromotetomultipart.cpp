@@ -16,6 +16,7 @@
  ***************************************************************************/
 
 #include "qgsalgorithmpromotetomultipart.h"
+#include "qgsvectorlayer.h"
 
 ///@cond PRIVATE
 
@@ -54,7 +55,7 @@ QString QgsPromoteToMultipartAlgorithm::shortHelpString() const
   return QObject::tr( "This algorithm takes a vector layer with singlepart geometries and generates a new one in which all geometries are "
                       "multipart. Input features which are already multipart features will remain unchanged." ) +
          QStringLiteral( "\n\n" ) +
-         QObject::tr( "This algorithm can be used to force geometries to multipart types in order to be compatibility with data providers "
+         QObject::tr( "This algorithm can be used to force geometries to multipart types in order to be compatible with data providers "
                       "with strict singlepart/multipart compatibility checks." ) +
          QStringLiteral( "\n\n" ) +
          QObject::tr( "See the 'Collect geometries' or 'Aggregate' algorithms for alternative options." );
@@ -65,12 +66,28 @@ QgsPromoteToMultipartAlgorithm *QgsPromoteToMultipartAlgorithm::createInstance()
   return new QgsPromoteToMultipartAlgorithm();
 }
 
+bool QgsPromoteToMultipartAlgorithm::supportInPlaceEdit( const QgsMapLayer *l ) const
+{
+  const QgsVectorLayer *layer = qobject_cast< const QgsVectorLayer * >( l );
+  if ( !layer )
+    return false;
+
+  if ( ! QgsProcessingFeatureBasedAlgorithm::supportInPlaceEdit( layer ) )
+    return false;
+  return QgsWkbTypes::isMultiType( layer->wkbType() );
+}
+
 QgsWkbTypes::Type QgsPromoteToMultipartAlgorithm::outputWkbType( QgsWkbTypes::Type inputWkbType ) const
 {
   return QgsWkbTypes::multiType( inputWkbType );
 }
 
-QgsFeature QgsPromoteToMultipartAlgorithm::processFeature( const QgsFeature &feature, QgsProcessingContext &, QgsProcessingFeedback * )
+QgsProcessingFeatureSource::Flag QgsPromoteToMultipartAlgorithm::sourceFlags() const
+{
+  return QgsProcessingFeatureSource::FlagSkipGeometryValidityChecks;
+}
+
+QgsFeatureList QgsPromoteToMultipartAlgorithm::processFeature( const QgsFeature &feature, QgsProcessingContext &, QgsProcessingFeedback * )
 {
   QgsFeature f = feature;
   if ( f.hasGeometry() && !f.geometry().isMultipart() )
@@ -79,7 +96,7 @@ QgsFeature QgsPromoteToMultipartAlgorithm::processFeature( const QgsFeature &fea
     g.convertToMultiType();
     f.setGeometry( g );
   }
-  return f;
+  return QgsFeatureList() << f;
 }
 
 ///@endcond

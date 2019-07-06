@@ -12,19 +12,20 @@
  *   (at your option) any later version.                                   *
  *                                                                         *
  ***************************************************************************/
-#ifndef QGSCATEGORIZEDSYMBOLRENDERERV2WIDGET_H
-#define QGSCATEGORIZEDSYMBOLRENDERERV2WIDGET_H
+#ifndef QGSCATEGORIZEDSYMBOLRENDERERWIDGET_H
+#define QGSCATEGORIZEDSYMBOLRENDERERWIDGET_H
 
 #include "qgscategorizedsymbolrenderer.h"
-#include "qgis.h"
+#include "qgis_sip.h"
 #include "qgsrendererwidget.h"
+#include "qgsproxystyle.h"
 #include <QStandardItem>
-#include <QProxyStyle>
+
 
 class QgsCategorizedSymbolRenderer;
 class QgsRendererCategory;
 
-#include "ui_qgscategorizedsymbolrendererv2widget.h"
+#include "ui_qgscategorizedsymbolrendererwidget.h"
 #include "qgis_gui.h"
 
 
@@ -70,12 +71,12 @@ class GUI_EXPORT QgsCategorizedSymbolRendererModel : public QAbstractItemModel
  * \ingroup gui
  * View style which shows drop indicator line between items
  */
-class QgsCategorizedSymbolRendererViewStyle: public QProxyStyle
+class QgsCategorizedSymbolRendererViewStyle: public QgsProxyStyle
 {
     Q_OBJECT
 
   public:
-    explicit QgsCategorizedSymbolRendererViewStyle( QStyle *style = nullptr );
+    explicit QgsCategorizedSymbolRendererViewStyle( QWidget *parent );
 
     void drawPrimitive( PrimitiveElement element, const QStyleOption *option, QPainter *painter, const QWidget *widget = nullptr ) const override;
 };
@@ -153,6 +154,22 @@ class GUI_EXPORT QgsCategorizedSymbolRendererWidget : public QgsRendererWidget, 
     void updateSymbolsFromWidget();
     void dataDefinedSizeLegend();
 
+    /**
+     * Merges all selected categories into a single multi-value category.
+     *
+     * \see unmergeSelectedCategories()
+     */
+    void mergeSelectedCategories();
+
+    /**
+     * Unmerges all selected multi-value categories into a individual value categories.
+     *
+     * \see mergeSelectedCategories()
+     */
+    void unmergeSelectedCategories();
+
+    void showContextMenu( QPoint p );
+
   protected:
 
     void updateUiFromRenderer();
@@ -162,16 +179,18 @@ class GUI_EXPORT QgsCategorizedSymbolRendererWidget : public QgsRendererWidget, 
     // Called by virtual refreshSymbolView()
     void populateCategories();
 
-    //! return row index for the currently selected category (-1 if on no selection)
+    //! Returns row index for the currently selected category (-1 if on no selection)
     int currentCategoryRow();
 
-    //! return a list of indexes for the categories unders selection
+    //! Returns a list of indexes for the categories under selection
     QList<int> selectedCategories();
 
-    //! change the selected symbols alone for the change button, if there is a selection
+    //! Changes the selected symbols alone for the change button, if there is a selection
     void changeSelectedSymbols();
 
     void changeCategorySymbol();
+    //! Applies current symbol to selected categories, or to all categories if none is selected
+    void applyChangeToSymbol();
 
     QList<QgsSymbol *> selectedSymbols() override;
     QgsCategoryList selectedCategoryList();
@@ -179,17 +198,22 @@ class GUI_EXPORT QgsCategorizedSymbolRendererWidget : public QgsRendererWidget, 
     void keyPressEvent( QKeyEvent *event ) override;
 
   protected:
-    QgsCategorizedSymbolRenderer *mRenderer = nullptr;
+    std::unique_ptr< QgsCategorizedSymbolRenderer > mRenderer;
 
-    QgsSymbol *mCategorizedSymbol = nullptr;
+    std::unique_ptr< QgsSymbol > mCategorizedSymbol;
 
     QgsCategorizedSymbolRendererModel *mModel = nullptr;
 
   private:
     QString mOldClassificationAttribute;
     QgsCategoryList mCopyBuffer;
+    QMenu *mContextMenu = nullptr;
+    QAction *mMergeCategoriesAction = nullptr;
+    QAction *mUnmergeCategoriesAction = nullptr;
 
     QgsExpressionContext createExpressionContext() const override;
+
+    friend class TestQgsCategorizedRendererWidget;
 };
 
-#endif // QGSCATEGORIZEDSYMBOLRENDERERV2WIDGET_H
+#endif // QGSCATEGORIZEDSYMBOLRENDERERWIDGET_H

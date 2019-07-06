@@ -1,17 +1,17 @@
 /***************************************************************************
-  qgstracer.h
-  --------------------------------------
-  Date                 : January 2016
-  Copyright            : (C) 2016 by Martin Dobias
-  Email                : wonder dot sk at gmail dot com
- ***************************************************************************
- *                                                                         *
- *   This program is free software; you can redistribute it and/or modify  *
- *   it under the terms of the GNU General Public License as published by  *
- *   the Free Software Foundation; either version 2 of the License, or     *
- *   (at your option) any later version.                                   *
- *                                                                         *
- ***************************************************************************/
+ qgstracer.h
+ --------------------------------------
+ Date                 : January 2016
+ Copyright            : (C) 2016 by Martin Dobias
+ Email                : wonder dot sk at gmail dot com
+***************************************************************************
+*                                                                         *
+*   This program is free software; you can redistribute it and/or modify  *
+*   it under the terms of the GNU General Public License as published by  *
+*   the Free Software Foundation; either version 2 of the License, or     *
+*   (at your option) any later version.                                   *
+*                                                                         *
+***************************************************************************/
 
 #ifndef QGSTRACER_H
 #define QGSTRACER_H
@@ -23,11 +23,14 @@ class QgsVectorLayer;
 #include <QVector>
 #include <memory>
 
+#include "qgsfeatureid.h"
 #include "qgscoordinatereferencesystem.h"
-#include "qgsfeature.h"
 #include "qgsrectangle.h"
+#include "qgsgeometry.h"
 
 struct QgsTracerGraph;
+class QgsFeatureRenderer;
+class QgsRenderContext;
 
 /**
  * \ingroup core
@@ -48,9 +51,9 @@ class CORE_EXPORT QgsTracer : public QObject
     QgsTracer();
     ~QgsTracer() override;
 
-    //! Get layers used for tracing
+    //! Gets layers used for tracing
     QList<QgsVectorLayer *> layers() const { return mLayers; }
-    //! Set layers used for tracing
+    //! Sets layers used for tracing
     void setLayers( const QList<QgsVectorLayer *> &layers );
 
     /**
@@ -65,13 +68,19 @@ class CORE_EXPORT QgsTracer : public QObject
      */
     void setDestinationCrs( const QgsCoordinateReferenceSystem &crs, const QgsCoordinateTransformContext &context );
 
-    //! Get extent to which graph's features will be limited (empty extent means no limit)
+    /**
+     * Sets the \a renderContext used for tracing only on visible features.
+     * \since QGIS 3.4
+     */
+    void setRenderContext( const QgsRenderContext *renderContext );
+
+    //! Gets extent to which graph's features will be limited (empty extent means no limit)
     QgsRectangle extent() const { return mExtent; }
-    //! Set extent to which graph's features will be limited (empty extent means no limit)
+    //! Sets extent to which graph's features will be limited (empty extent means no limit)
     void setExtent( const QgsRectangle &extent );
 
     /**
-     * Get offset in map units that should be applied to the traced paths returned from findShortestPath().
+     * Gets offset in map units that should be applied to the traced paths returned from findShortestPath().
      * Positive offset for right side, negative offset for left side.
      * \since QGIS 3.0
      */
@@ -85,7 +94,7 @@ class CORE_EXPORT QgsTracer : public QObject
     void setOffset( double offset );
 
     /**
-     * Get extra parameters for offset curve algorithm (used when offset is non-zero)
+     * Gets extra parameters for offset curve algorithm (used when offset is non-zero)
      * \since QGIS 3.0
      */
     void offsetParameters( int &quadSegments SIP_OUT, int &joinStyle SIP_OUT, double &miterLimit SIP_OUT );
@@ -96,9 +105,9 @@ class CORE_EXPORT QgsTracer : public QObject
      */
     void setOffsetParameters( int quadSegments, int joinStyle, double miterLimit );
 
-    //! Get maximum possible number of features in graph. If the number is exceeded, graph is not created.
+    //! Gets maximum possible number of features in graph. If the number is exceeded, graph is not created.
     int maxFeatureCount() const { return mMaxFeatureCount; }
-    //! Get maximum possible number of features in graph. If the number is exceeded, graph is not created.
+    //! Gets maximum possible number of features in graph. If the number is exceeded, graph is not created.
     void setMaxFeatureCount( int count ) { mMaxFeatureCount = count; }
 
     /**
@@ -131,7 +140,7 @@ class CORE_EXPORT QgsTracer : public QObject
 
     /**
      * Given two points, find the shortest path and return points on the way.
-     * The optional "error" argument may receive error code (PathError enum) if it is not null
+     * The optional "error" argument may receive error code (PathError enum) if it is not NULLPTR
      * \returns array of points - trace of linestrings of other features (empty array one error)
      */
     QVector<QgsPointXY> findShortestPath( const QgsPointXY &p1, const QgsPointXY &p2, PathError *error SIP_OUT = nullptr );
@@ -159,6 +168,9 @@ class CORE_EXPORT QgsTracer : public QObject
     void onFeatureAdded( QgsFeatureId fid );
     void onFeatureDeleted( QgsFeatureId fid );
     void onGeometryChanged( QgsFeatureId fid, const QgsGeometry &geom );
+    void onAttributeValueChanged( QgsFeatureId fid, int idx, const QVariant &value );
+    void onDataChanged( );
+    void onStyleChanged( );
     void onLayerDestroyed( QObject *obj );
 
   private:
@@ -170,6 +182,8 @@ class CORE_EXPORT QgsTracer : public QObject
     QgsCoordinateReferenceSystem mCRS;
     //! Coordinate transform context
     QgsCoordinateTransformContext mTransformContext;
+    //! Render context
+    std::unique_ptr<QgsRenderContext> mRenderContext;
     //! Extent for graph building (empty extent means no limit)
     QgsRectangle mExtent;
 

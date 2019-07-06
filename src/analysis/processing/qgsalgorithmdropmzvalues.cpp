@@ -59,6 +59,12 @@ QgsDropMZValuesAlgorithm *QgsDropMZValuesAlgorithm::createInstance() const
   return new QgsDropMZValuesAlgorithm();
 }
 
+bool QgsDropMZValuesAlgorithm::supportInPlaceEdit( const QgsMapLayer *layer ) const
+{
+  Q_UNUSED( layer )
+  return false;
+}
+
 void QgsDropMZValuesAlgorithm::initParameters( const QVariantMap & )
 {
   addParameter( new QgsProcessingParameterBoolean( QStringLiteral( "DROP_M_VALUES" ), QObject::tr( "Drop M Values" ), false ) );
@@ -75,14 +81,19 @@ QgsWkbTypes::Type QgsDropMZValuesAlgorithm::outputWkbType( QgsWkbTypes::Type inp
   return wkb;
 }
 
+QgsProcessingFeatureSource::Flag QgsDropMZValuesAlgorithm::sourceFlags() const
+{
+  return QgsProcessingFeatureSource::FlagSkipGeometryValidityChecks;
+}
+
 bool QgsDropMZValuesAlgorithm::prepareAlgorithm( const QVariantMap &parameters, QgsProcessingContext &context, QgsProcessingFeedback * )
 {
-  mDropM = parameterAsBool( parameters, QStringLiteral( "DROP_M_VALUES" ), context );
-  mDropZ = parameterAsBool( parameters, QStringLiteral( "DROP_Z_VALUES" ), context );
+  mDropM = parameterAsBoolean( parameters, QStringLiteral( "DROP_M_VALUES" ), context );
+  mDropZ = parameterAsBoolean( parameters, QStringLiteral( "DROP_Z_VALUES" ), context );
   return true;
 }
 
-QgsFeature QgsDropMZValuesAlgorithm::processFeature( const QgsFeature &feature, QgsProcessingContext &, QgsProcessingFeedback * )
+QgsFeatureList QgsDropMZValuesAlgorithm::processFeature( const QgsFeature &feature, QgsProcessingContext &, QgsProcessingFeedback * )
 {
   QgsFeature f = feature;
   if ( f.hasGeometry() )
@@ -95,7 +106,7 @@ QgsFeature QgsDropMZValuesAlgorithm::processFeature( const QgsFeature &feature, 
     f.setGeometry( QgsGeometry( newGeom.release() ) );
   }
 
-  return f;
+  return QgsFeatureList() << f;
 }
 
 ///@endcond

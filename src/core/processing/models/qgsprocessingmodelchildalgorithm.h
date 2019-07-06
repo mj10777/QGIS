@@ -32,8 +32,8 @@ class QgsProcessingAlgorithm;
 
 /**
  * Child algorithm representing a single component of a QgsProcessingModelAlgorithm.
- * \since QGIS 3.0
  * \ingroup core
+ * \since QGIS 3.0
  */
 class CORE_EXPORT QgsProcessingModelChildAlgorithm : public QgsProcessingModelComponent
 {
@@ -82,10 +82,27 @@ class CORE_EXPORT QgsProcessingModelChildAlgorithm : public QgsProcessingModelCo
     /**
      * Sets the underlying child algorithm's ID. This
      * should be set to an existing QgsProcessingAlgorithm algorithm ID.
+     *
+     * Returns TRUE if the algorithm was successfully set.
+     *
+     * \see reattach()
      * \see algorithm()
      * \see algorithmId()
      */
-    void setAlgorithmId( const QString &algorithmId );
+    bool setAlgorithmId( const QString &algorithmId );
+
+    /**
+     * Attempts to re-attach the child to the algorithm specified by \a algorithmId().
+     *
+     * This can be run to relink the child to algorithms from providers which were not
+     * originally available for the model to link to.
+     *
+     * Returns TRUE if the algorithm was successfully reattached.
+     *
+     * \see algorithm()
+     * \see setAlgorithmId()
+     */
+    bool reattach() const;
 
     /**
      * Returns the child algorithm's configuration map.
@@ -112,8 +129,9 @@ class CORE_EXPORT QgsProcessingModelChildAlgorithm : public QgsProcessingModelCo
     void setConfiguration( const QVariantMap &configuration );
 
     /**
-     * Returns the underlying child algorithm, or a nullptr
+     * Returns the underlying child algorithm, or NULLPTR
      * if a matching algorithm is not available.
+     * \see reattach()
      * \see algorithmId()
      */
     const QgsProcessingAlgorithm *algorithm() const;
@@ -146,7 +164,7 @@ class CORE_EXPORT QgsProcessingModelChildAlgorithm : public QgsProcessingModelCo
     void addParameterSources( const QString &name, const QList< QgsProcessingModelChildParameterSource > &source ) { mParams.insert( name, source ); }
 
     /**
-     * Returns true if the child algorithm is active.
+     * Returns TRUE if the child algorithm is active.
      * \see setActive()
      */
     bool isActive() const { return mActive; }
@@ -174,8 +192,8 @@ class CORE_EXPORT QgsProcessingModelChildAlgorithm : public QgsProcessingModelCo
     void setDependencies( const QStringList &dependencies ) { mDependencies = dependencies; }
 
     /**
-     * Returns true if the list of parameters for this algorithm should be collapsed
-     * in the graphical modeller.
+     * Returns TRUE if the list of parameters for this algorithm should be collapsed
+     * in the graphical modeler.
      * \see setParametersCollapsed()
      * \see outputsCollapsed()
      */
@@ -183,15 +201,15 @@ class CORE_EXPORT QgsProcessingModelChildAlgorithm : public QgsProcessingModelCo
 
     /**
      * Sets whether the list of parameters for this algorithm should be collapsed
-     * in the graphical modeller.
+     * in the graphical modeler.
      * \see parametersCollapsed()
      * \see setOutputsCollapsed()
      */
     void setParametersCollapsed( bool collapsed ) { mParametersCollapsed = collapsed; }
 
     /**
-     * Returns true if the list of outputs for this algorithm should be collapsed
-     * in the graphical modeller.
+     * Returns TRUE if the list of outputs for this algorithm should be collapsed
+     * in the graphical modeler.
      * \see setParametersCollapsed()
      * \see parametersCollapsed()
      */
@@ -199,7 +217,7 @@ class CORE_EXPORT QgsProcessingModelChildAlgorithm : public QgsProcessingModelCo
 
     /**
      * Sets whether the list of outputs for this algorithm should be collapsed
-     * in the graphical modeller.
+     * in the graphical modeler.
      * \see outputsCollapsed()
      * \see setParametersCollapsed()
      */
@@ -238,6 +256,16 @@ class CORE_EXPORT QgsProcessingModelChildAlgorithm : public QgsProcessingModelCo
     void setModelOutputs( const QMap<QString, QgsProcessingModelOutput> &outputs );
 
     /**
+     * Removes an existing output from the final model outputs.
+     *
+     * QgsProcessingModelAlgorithm::updateDestinationParameters() must be called on the parent model.
+     *
+     * \see modelOutputs()
+     * \since QGIS 3.2
+     */
+    bool removeModelOutput( const QString &name );
+
+    /**
      * Saves this child to a QVariant.
      * \see loadVariant()
      */
@@ -250,9 +278,18 @@ class CORE_EXPORT QgsProcessingModelChildAlgorithm : public QgsProcessingModelCo
     bool loadVariant( const QVariant &child );
 
     /**
-     * Attempts to convert the child to executable Python code.
+     * Attempts to convert the child to executable Python code, and returns a list of the generated lines of code.
+     *
+     * The \a outputType argument specifies the type of script to generate.
+     *
+     * Additional parameters to be passed to the child algorithm are specified in the \a extraParameters argument.
+     *
+     * The \a currentIndent and \a indentSize are used to set the base line indent and size of further indented lines respectively.
+     *
+     * The \a friendlyChildNames argument gives a map of child id to a friendly algorithm name, to be used in the code to identify that algorithm instead of the raw child id.
      */
-    QString asPythonCode() const;
+    QStringList asPythonCode( QgsProcessing::PythonOutputType outputType, const QgsStringMap &extraParameters, int currentIndent, int indentSize,
+                              const QMap<QString, QString> &friendlyChildNames, const QMap<QString, QString> &friendlyOutputNames ) const;
 
   private:
 
@@ -274,10 +311,12 @@ class CORE_EXPORT QgsProcessingModelChildAlgorithm : public QgsProcessingModelCo
     //! List of child algorithms from the parent model on which this algorithm is dependent
     QStringList mDependencies;
 
-    //! Whether list of parameters should be collapsed in the graphical modeller
+    //! Whether list of parameters should be collapsed in the graphical modeler
     bool mParametersCollapsed = true;
-    //! Whether list of outputs should be collapsed in the graphical modeller
+    //! Whether list of outputs should be collapsed in the graphical modeler
     bool mOutputsCollapsed = true;
+
+    friend class TestQgsProcessing;
 
 };
 

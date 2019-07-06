@@ -41,8 +41,8 @@ class QInputEvent;
  * Also is responsible for mouse interactions such as resizing and moving selected items.
  *
  * \note not available in Python bindings
- * \since QGIS 3.0
  *
+ * \since QGIS 3.0
 */
 class GUI_EXPORT QgsLayoutMouseHandles: public QObject, public QGraphicsRectItem
 {
@@ -98,15 +98,15 @@ class GUI_EXPORT QgsLayoutMouseHandles: public QObject, public QGraphicsRectItem
      */
     QgsLayout *layout() { return mLayout; }
 
-    void paint( QPainter *painter, const QStyleOptionGraphicsItem *itemStyle, QWidget *pWidget ) override;
+    void paint( QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget = nullptr ) override;
 
     //! Finds out which mouse move action to choose depending on the scene cursor position
     QgsLayoutMouseHandles::MouseAction mouseActionForScenePos( QPointF sceneCoordPos );
 
-    //! Returns true is user is currently dragging the handles
+    //! Returns TRUE is user is currently dragging the handles
     bool isDragging() const { return mIsDragging; }
 
-    //! Returns true is user is currently resizing with the handles
+    //! Returns TRUE is user is currently resizing with the handles
     bool isResizing() const { return mIsResizing; }
 
     bool shouldBlockEvent( QInputEvent *event ) const;
@@ -167,7 +167,7 @@ class GUI_EXPORT QgsLayoutMouseHandles: public QObject, public QGraphicsRectItem
     //! Returns the mouse handle bounds of current selection
     QRectF selectionBounds() const;
 
-    //! Returns true if all selected items have same rotation, and if so, updates passed rotation variable
+    //! Returns TRUE if all selected items have same rotation, and if so, updates passed rotation variable
     bool selectionRotation( double &rotation ) const;
 
     //! Redraws or hides the handles based on the current selection
@@ -209,7 +209,7 @@ class GUI_EXPORT QgsLayoutMouseHandles: public QObject, public QGraphicsRectItem
     void hideAlignItems();
 
     //! Collects all items from a list of \a items, exploring for any group members and adding them too
-    void collectItems( const QList< QgsLayoutItem * > items, QList< QgsLayoutItem * > &collected );
+    void collectItems( QList< QgsLayoutItem * > items, QList< QgsLayoutItem * > &collected );
 
 };
 

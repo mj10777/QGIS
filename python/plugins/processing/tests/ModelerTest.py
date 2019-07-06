@@ -21,16 +21,13 @@ __author__ = 'Nyall Dawson'
 __date__ = 'November 2016'
 __copyright__ = '(C) 2016, Nyall Dawson'
 
-# This will get replaced with a git SHA1 when you do a git archive
-
-__revision__ = '$Format:%H$'
-
 from qgis.testing import start_app, unittest
 
 from qgis.core import (QgsProcessingModelAlgorithm,
                        QgsProcessingModelParameter,
                        QgsProcessingParameterString,
                        QgsProcessingParameterNumber,
+                       QgsProcessingParameterDistance,
                        QgsProcessingParameterField,
                        QgsProcessingParameterFile)
 from processing.modeler.ModelerParametersDialog import (ModelerParametersDialog)

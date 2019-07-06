@@ -475,16 +475,16 @@ class OracleDBConnector(DBConnector):
 
     def singleGeomTypes(self, geomtypes, srids):
         """Intelligent wkbtype grouping (multi with non multi)"""
-        if (QgsWkbTypes.Polygon in geomtypes and
-                QgsWkbTypes.MultiPolygon in geomtypes):
+        if (QgsWkbTypes.Polygon in geomtypes
+                and QgsWkbTypes.MultiPolygon in geomtypes):
             srids.pop(geomtypes.index(QgsWkbTypes.Polygon))
             geomtypes.pop(geomtypes.index(QgsWkbTypes.Polygon))
-        if (QgsWkbTypes.Point in geomtypes and
-                QgsWkbTypes.MultiPoint in geomtypes):
+        if (QgsWkbTypes.Point in geomtypes
+                and QgsWkbTypes.MultiPoint in geomtypes):
             srids.pop(geomtypes.index(QgsWkbTypes.Point))
             geomtypes.pop(geomtypes.index(QgsWkbTypes.Point))
-        if (QgsWkbTypes.LineString in geomtypes and
-                QgsWkbTypes.MultiLineString in geomtypes):
+        if (QgsWkbTypes.LineString in geomtypes
+                and QgsWkbTypes.MultiLineString in geomtypes):
             srids.pop(geomtypes.index(QgsWkbTypes.LineString))
             geomtypes.pop(geomtypes.index(QgsWkbTypes.LineString))
         if QgsWkbTypes.Unknown in geomtypes and len(geomtypes) > 1:
@@ -541,11 +541,11 @@ class OracleDBConnector(DBConnector):
                     buf = list(item)
                     geomtype = geomtypes[j]
                     srid = srids[j]
-                    datatype = Qgis.featureType(Qgis.singleType(geomtype))
-                    geo = datatype[3:].upper().strip(u"25D")
+                    datatype = QgsWkbTypes.displayString(QgsWkbTypes.flatType(QgsWkbTypes.singleType(geomtype)))
+                    geo = datatype.upper()
                     buf.append(geo)
                     buf.append(geomtype)
-                    buf.append(Qgis.wkbDimensions(geomtype))  # Dimensions
+                    buf.append(QgsWkbTypes.coordDimensions(geomtype))  # Dimensions
                     buf.append(srid)
                     buf.append(None)  # To respect ORTableVector row
                     buf.append(None)  # To respect ORTableVector row
@@ -636,11 +636,11 @@ class OracleDBConnector(DBConnector):
             for j in range(len(geomtypes)):
                 buf = list(item)
                 geomtype = geomtypes[j]
-                datatype = Qgis.featureType(Qgis.singleType(geomtype))
-                geo = datatype[3:].upper().strip(u"25D")
+                datatype = QgsWkbTypes.displayString(QgsWkbTypes.flatType(QgsWkbTypes.singleType(geomtype)))
+                geo = datatype.upper()
                 buf.append(geo)  # Geometry type as String
                 buf.append(geomtype)  # Qgis.WkbType
-                buf.append(Qgis.wkbDimensions(geomtype))  # Dimensions
+                buf.append(QgsWkbTypes.coordDimensions(geomtype))  # Dimensions
                 buf.append(detectedSrid)  # srid
                 if not self.onlyExistingTypes:
                     geomMultiTypes.append(0)
@@ -1336,7 +1336,7 @@ class OracleDBConnector(DBConnector):
 
     def updateTableColumn(self, table, column, new_name=None,
                           data_type=None, not_null=None,
-                          default=None):
+                          default=None, comment=None):
         """Update properties of a column in a table."""
 
         schema, tablename = self.getSchemaTableName(table)
@@ -1743,3 +1743,7 @@ class OracleDBConnector(DBConnector):
     def getQueryBuilderDictionary(self):
         from .sql_dictionary import getQueryBuilderDictionary
         return getQueryBuilderDictionary()
+
+    def cancel(self):
+        # how to cancel an Oracle query?
+        pass

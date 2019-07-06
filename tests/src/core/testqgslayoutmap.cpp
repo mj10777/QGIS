@@ -57,6 +57,9 @@ class TestQgsLayoutMap : public QObject
     void layersToRender();
     void mapRotation();
     void mapItemRotation();
+    void expressionContext();
+    void layoutToMapCoordsTransform();
+    void labelBlockingRegions();
 
   private:
     QgsRasterLayer *mRasterLayer = nullptr;
@@ -92,6 +95,9 @@ void TestQgsLayoutMap::initTestCase()
 
   // some layers need to be in project for data-defined layers functionality
   QgsProject::instance()->addMapLayers( QList<QgsMapLayer *>() << mRasterLayer << mPointsLayer << mPolysLayer << mLinesLayer );
+
+  mReport = QStringLiteral( "<h1>Composer Map Tests</h1>\n" );
+
 }
 
 void TestQgsLayoutMap::cleanupTestCase()
@@ -119,7 +125,6 @@ void TestQgsLayoutMap::init()
   mComposerMap->setLayers( QList<QgsMapLayer *>() << mRasterLayer );
   mComposition->addComposerMap( mComposerMap );
 #endif
-  mReport = QStringLiteral( "<h1>Composer Map Tests</h1>\n" );
 }
 
 void TestQgsLayoutMap::cleanup()
@@ -179,7 +184,7 @@ void TestQgsLayoutMap::uniqueId()
   l.addItemsFromXml( documentElement, doc, QgsReadWriteContext() );
 
   //test if both composer maps have different ids
-  QgsLayoutItemMap *newMap = 0;
+  QgsLayoutItemMap *newMap = nullptr;
   QList<QgsLayoutItemMap *> mapList;
   l.layoutItems( mapList );
   for ( auto mapIt = mapList.constBegin() ; mapIt != mapList.constEnd(); ++mapIt )
@@ -581,6 +586,185 @@ void TestQgsLayoutMap::mapItemRotation()
   QgsLayoutChecker checker( QStringLiteral( "composerrotation_mapitemrotation" ), &l );
   checker.setControlPathPrefix( QStringLiteral( "composer_items" ) );
   QVERIFY( checker.testLayout( mReport, 0, 200 ) );
+}
+
+void TestQgsLayoutMap::expressionContext()
+{
+  QgsRectangle extent( 2000, 2800, 2500, 2900 );
+  QgsLayout l( QgsProject::instance() );
+
+  QgsLayoutItemMap *map = new QgsLayoutItemMap( &l );
+  map->setCrs( QgsCoordinateReferenceSystem( QStringLiteral( "EPSG:4326" ) ) );
+  map->attemptSetSceneRect( QRectF( 30, 60, 200, 100 ) );
+  map->setExtent( extent );
+  l.addLayoutItem( map );
+  map->setId( QStringLiteral( "Map_id" ) );
+
+  QgsExpression e( QStringLiteral( "@map_scale" ) );
+
+  QgsExpressionContext c = map->createExpressionContext();
+  QVariant r = e.evaluate( &c );
+  QGSCOMPARENEAR( r.toDouble(), 184764103, 100 );
+
+  QgsExpression e2( QStringLiteral( "@map_crs" ) );
+  r = e2.evaluate( &c );
+  QCOMPARE( r.toString(), QString( "EPSG:4326" ) );
+
+  QgsExpression e3( QStringLiteral( "@map_crs_definition" ) );
+  r = e3.evaluate( &c );
+  QCOMPARE( r.toString(), QString( "+proj=longlat +datum=WGS84 +no_defs" ) );
+
+  QgsExpression e4( QStringLiteral( "@map_units" ) );
+  r = e4.evaluate( &c );
+  QCOMPARE( r.toString(), QString( "degrees" ) );
+
+  QgsExpression e5( QStringLiteral( "@map_crs_description" ) );
+  r = e5.evaluate( &c );
+  QCOMPARE( r.toString(), QString( "WGS 84" ) );
+
+  QgsExpression e6( QStringLiteral( "@map_crs_acronym" ) );
+  r = e6.evaluate( &c );
+  QCOMPARE( r.toString(), QString( "longlat" ) );
+
+  QgsExpression e7( QStringLiteral( "@map_crs_proj4" ) );
+  r = e7.evaluate( &c );
+  QCOMPARE( r.toString(), QString( "+proj=longlat +datum=WGS84 +no_defs" ) );
+
+  QgsExpression e8( QStringLiteral( "@map_crs_wkt" ) );
+  r = e8.evaluate( &c );
+  QVERIFY( r.toString().length() >= 15 );
+
+  QgsExpression e9( QStringLiteral( "@map_crs_ellipsoid" ) );
+  r = e9.evaluate( &c );
+  QCOMPARE( r.toString(), QString( "WGS84" ) );
+
+  QgsVectorLayer *layer = new QgsVectorLayer( QStringLiteral( "Point?field=id_a:integer" ), QStringLiteral( "A" ), QStringLiteral( "memory" ) );
+  QgsVectorLayer *layer2 = new QgsVectorLayer( QStringLiteral( "Point?field=id_a:integer" ), QStringLiteral( "B" ), QStringLiteral( "memory" ) );
+  map->setLayers( QList<QgsMapLayer *>() << layer << layer2 );
+  QgsProject::instance()->addMapLayers( map->layers() );
+  c = map->createExpressionContext();
+  QgsExpression e10( QStringLiteral( "@map_layer_ids" ) );
+  r = e10.evaluate( &c );
+  QCOMPARE( r.toStringList().join( ',' ), QStringLiteral( "%1,%2" ).arg( layer->id(), layer2->id() ) );
+  e10 = QgsExpression( QStringLiteral( "array_foreach(@map_layers, layer_property(@element, 'name'))" ) );
+  r = e10.evaluate( &c );
+  QCOMPARE( r.toStringList().join( ',' ), QStringLiteral( "A,B" ) );
+
+  QgsExpression e11( QStringLiteral( "is_layer_visible( '%1' )" ).arg( layer->id() ) );
+  r = e11.evaluate( &c );
+  QCOMPARE( r.toBool(), true );
+
+  QgsExpression e12( QStringLiteral( "is_layer_visible( 'aaaaaa' )" ) );
+  r = e12.evaluate( &c );
+  QCOMPARE( r.toBool(), false );
+}
+
+void TestQgsLayoutMap::layoutToMapCoordsTransform()
+{
+  QgsRectangle extent( 2000, 2800, 2500, 2900 );
+  QgsLayout l( QgsProject::instance() );
+
+  QgsLayoutItemMap *map = new QgsLayoutItemMap( &l );
+  map->setCrs( QgsCoordinateReferenceSystem( QStringLiteral( "EPSG:4326" ) ) );
+  map->attemptSetSceneRect( QRectF( 30, 60, 200, 100 ) );
+  map->setExtent( extent );
+  l.addLayoutItem( map );
+
+  QTransform t = map->layoutToMapCoordsTransform();
+  QGSCOMPARENEAR( t.map( QPointF( 30, 60 ) ).x(), 2000, 1 );
+  QGSCOMPARENEAR( t.map( QPointF( 30, 60 ) ).y(), 2900, 1 );
+  QGSCOMPARENEAR( t.map( QPointF( 230, 60 ) ).x(), 2500, 1 );
+  QGSCOMPARENEAR( t.map( QPointF( 230, 60 ) ).y(), 2900, 1 );
+  QGSCOMPARENEAR( t.map( QPointF( 30, 100 ) ).x(), 2000, 1 );
+  QGSCOMPARENEAR( t.map( QPointF( 30, 100 ) ).y(), 2800, 1 );
+  QGSCOMPARENEAR( t.map( QPointF( 230, 100 ) ).x(), 2500, 1 );
+  QGSCOMPARENEAR( t.map( QPointF( 230, 100 ) ).y(), 2800, 1 );
+
+  // with map rotation
+  map->setMapRotation( 75 );
+  t = map->layoutToMapCoordsTransform();
+  QGSCOMPARENEAR( t.map( QPointF( 30, 60 ) ).x(), 2136.998947, 1 );
+  QGSCOMPARENEAR( t.map( QPointF( 30, 60 ) ).y(), 2621.459496, 1 );
+  QGSCOMPARENEAR( t.map( QPointF( 230, 60 ) ).x(), 2266.408470, 1 );
+  QGSCOMPARENEAR( t.map( QPointF( 230, 60 ) ).y(), 3104.422409, 1 );
+  QGSCOMPARENEAR( t.map( QPointF( 30, 100 ) ).x(), 2233.591530, 1 );
+  QGSCOMPARENEAR( t.map( QPointF( 30, 100 ) ).y(), 2595.577591, 1 );
+  QGSCOMPARENEAR( t.map( QPointF( 230, 100 ) ).x(), 2363.001053, 1 );
+  QGSCOMPARENEAR( t.map( QPointF( 230, 100 ) ).y(), 3078.540504, 1 );
+
+  // with item rotation
+  map->setItemRotation( -30 );
+  t = map->layoutToMapCoordsTransform();
+  QGSCOMPARENEAR( t.map( QPointF( 30, 60 ) ).x(), 2037.867966, 1 );
+  QGSCOMPARENEAR( t.map( QPointF( 30, 60 ) ).y(), 2708.578644, 1 );
+  QGSCOMPARENEAR( t.map( QPointF( 230, 60 ) ).x(), 2391.421356, 1 );
+  QGSCOMPARENEAR( t.map( QPointF( 230, 60 ) ).y(), 3062.132034, 1 );
+  QGSCOMPARENEAR( t.map( QPointF( 30, 100 ) ).x(), 2108.578644, 1 );
+  QGSCOMPARENEAR( t.map( QPointF( 30, 100 ) ).y(), 2637.867966, 1 );
+  QGSCOMPARENEAR( t.map( QPointF( 230, 100 ) ).x(), 2462.132034, 1 );
+  QGSCOMPARENEAR( t.map( QPointF( 230, 100 ) ).y(), 2991.421356, 1 );
+}
+
+void TestQgsLayoutMap::labelBlockingRegions()
+{
+  QgsRectangle extent( 2000, 2800, 2500, 2900 );
+  QgsLayout l( QgsProject::instance() );
+
+  QgsLayoutItemMap *map = new QgsLayoutItemMap( &l );
+  map->setCrs( QgsCoordinateReferenceSystem( QStringLiteral( "EPSG:4326" ) ) );
+  map->attemptSetSceneRect( QRectF( 30, 60, 200, 100 ) );
+  map->setExtent( extent );
+  l.addLayoutItem( map );
+
+  QgsLayoutItemMap *map2 = new QgsLayoutItemMap( &l );
+  map2->attemptSetSceneRect( QRectF( 10, 30, 100, 200 ) );
+  l.addLayoutItem( map2 );
+
+  QgsLayoutItemMap *map3 = new QgsLayoutItemMap( &l );
+  map3->attemptSetSceneRect( QRectF( 210, 70, 100, 200 ) );
+  l.addLayoutItem( map3 );
+
+  QgsLayoutItemMap *map4 = new QgsLayoutItemMap( &l );
+  map4->attemptSetSceneRect( QRectF( 210, 70, 100, 200 ) );
+  l.addLayoutItem( map4 );
+
+  QVERIFY( !map->isLabelBlockingItem( map2 ) );
+  QVERIFY( !map->isLabelBlockingItem( map3 ) );
+  QVERIFY( !map->isLabelBlockingItem( map4 ) );
+  map->addLabelBlockingItem( map2 );
+  QVERIFY( map->isLabelBlockingItem( map2 ) );
+  map->addLabelBlockingItem( map3 );
+  QVERIFY( map->isLabelBlockingItem( map3 ) );
+  map->addLabelBlockingItem( map4 );
+  QVERIFY( map->isLabelBlockingItem( map4 ) );
+  map->removeLabelBlockingItem( map4 );
+  QVERIFY( !map->isLabelBlockingItem( map4 ) );
+
+  QList<QgsLabelBlockingRegion> regions = map->createLabelBlockingRegions( map->mapSettings( map->extent(), map->rect().size(), 300, false ) );
+  QCOMPARE( regions.count(), 2 );
+  QCOMPARE( regions.at( 0 ).geometry.asWkt( 0 ), QStringLiteral( "Polygon ((1950 2975, 2200 2975, 2200 2475, 1950 2475, 1950 2975, 1950 2975))" ) );
+  QCOMPARE( regions.at( 1 ).geometry.asWkt( 0 ), QStringLiteral( "Polygon ((2450 2875, 2700 2875, 2700 2375, 2450 2375, 2450 2875, 2450 2875))" ) );
+  map->setLabelMargin( QgsLayoutMeasurement( 2, QgsUnitTypes::LayoutCentimeters ) );
+  regions = map->createLabelBlockingRegions( map->mapSettings( map->extent(), map->rect().size(), 300, false ) );
+  QCOMPARE( regions.count(), 2 );
+  QCOMPARE( regions.at( 0 ).geometry.asWkt( 0 ), QStringLiteral( "Polygon ((1950 2975, 2200 2975, 2200 2475, 1950 2475, 1950 2975, 1950 2975))" ) );
+  QCOMPARE( regions.at( 1 ).geometry.asWkt( 0 ), QStringLiteral( "Polygon ((2450 2875, 2700 2875, 2700 2375, 2450 2375, 2450 2875, 2450 2875))" ) );
+
+  map2->setRotation( 45 );
+  regions = map->createLabelBlockingRegions( map->mapSettings( map->extent(), map->rect().size(), 300, false ) );
+  QCOMPARE( regions.count(), 2 );
+  QCOMPARE( regions.at( 0 ).geometry.asWkt( 0 ), QStringLiteral( "Polygon ((1950 2975, 2127 2798, 1773 2445, 1596 2621, 1950 2975, 1950 2975))" ) );
+  QCOMPARE( regions.at( 1 ).geometry.asWkt( 0 ), QStringLiteral( "Polygon ((2450 2875, 2700 2875, 2700 2375, 2450 2375, 2450 2875, 2450 2875))" ) );
+
+  regions = map2->createLabelBlockingRegions( map2->mapSettings( map2->extent(), map2->rect().size(), 300, false ) );
+  QVERIFY( regions.isEmpty() );
+
+  // invisible items don't block
+  map2->setVisibility( false );
+  regions = map->createLabelBlockingRegions( map->mapSettings( map->extent(), map->rect().size(), 300, false ) );
+  QCOMPARE( regions.count(), 1 );
+  QCOMPARE( regions.at( 0 ).geometry.asWkt( 0 ), QStringLiteral( "Polygon ((2450 2875, 2700 2875, 2700 2375, 2450 2375, 2450 2875, 2450 2875))" ) );
+
 }
 
 QGSTEST_MAIN( TestQgsLayoutMap )

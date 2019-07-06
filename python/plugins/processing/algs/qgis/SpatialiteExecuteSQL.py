@@ -21,11 +21,8 @@ __author__ = 'Mathieu Pellerin'
 __date__ = 'October 2016'
 __copyright__ = '(C) 2016, Mathieu Pellerin'
 
-# This will get replaced with a git SHA1 when you do a git archive
-
-__revision__ = '$Format:%H$'
-
 from qgis.core import (QgsDataSourceUri,
+                       QgsProcessing,
                        QgsProcessingAlgorithm,
                        QgsProcessingException,
                        QgsProcessingParameterVectorLayer,
@@ -50,7 +47,7 @@ class SpatialiteExecuteSQL(QgisAlgorithm):
         super().__init__()
 
     def initAlgorithm(self, config=None):
-        self.addParameter(QgsProcessingParameterVectorLayer(self.DATABASE, self.tr('File Database'), optional=False))
+        self.addParameter(QgsProcessingParameterVectorLayer(self.DATABASE, self.tr('File Database'), types=[QgsProcessing.TypeVector], optional=False))
         self.addParameter(QgsProcessingParameterString(self.SQL, self.tr('SQL query'), multiLine=True))
 
     def name(self):
@@ -58,6 +55,9 @@ class SpatialiteExecuteSQL(QgisAlgorithm):
 
     def displayName(self):
         return self.tr('SpatiaLite execute SQL')
+
+    def shortDescription(self):
+        return self.tr('Executes a SQL command on a SpatiaLite database')
 
     def flags(self):
         return super().flags() | QgsProcessingAlgorithm.FlagNoThreading

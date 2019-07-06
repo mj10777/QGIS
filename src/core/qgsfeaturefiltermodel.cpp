@@ -16,7 +16,10 @@
 #include "qgsfeaturefiltermodel.h"
 #include "qgsfeaturefiltermodel_p.h"
 
+#include "qgsvectorlayer.h"
 #include "qgsconditionalstyle.h"
+#include "qgsapplication.h"
+#include "qgssettings.h"
 
 QgsFeatureFilterModel::QgsFeatureFilterModel( QObject *parent )
   : QAbstractItemModel( parent )
@@ -113,7 +116,7 @@ QModelIndex QgsFeatureFilterModel::parent( const QModelIndex &child ) const
 
 int QgsFeatureFilterModel::rowCount( const QModelIndex &parent ) const
 {
-  Q_UNUSED( parent );
+  Q_UNUSED( parent )
 
   return mEntries.size();
 }
@@ -222,7 +225,7 @@ void QgsFeatureFilterModel::updateCompleter()
     std::sort( entries.begin(), entries.end(), []( const Entry & a, const Entry & b ) { return a.value.localeAwareCompare( b.value ) < 0; } );
 
     if ( mAllowNull )
-      entries.prepend( Entry( QVariant( QVariant::Int ), tr( "NULL" ), QgsFeature() ) );
+      entries.prepend( Entry( QVariant( QVariant::Int ), QgsApplication::nullRepresentation(), QgsFeature() ) );
 
     const int newEntriesSize = entries.size();
 
@@ -255,12 +258,7 @@ void QgsFeatureFilterModel::updateCompleter()
       if ( mExtraIdentifierValueIndex != 0 )
       {
         beginMoveRows( QModelIndex(), mExtraIdentifierValueIndex, mExtraIdentifierValueIndex, QModelIndex(), 0 );
-#if QT_VERSION < QT_VERSION_CHECK(5, 6, 0)
-        Entry extraEntry = mEntries.takeAt( mExtraIdentifierValueIndex );
-        mEntries.prepend( extraEntry );
-#else
         mEntries.move( mExtraIdentifierValueIndex, 0 );
-#endif
         endMoveRows();
       }
       firstRow = 1;
@@ -356,7 +354,7 @@ void QgsFeatureFilterModel::scheduledReload()
   request.setSubsetOfAttributes( attributes, mSourceLayer->fields() );
   request.setFlags( QgsFeatureRequest::NoGeometry );
 
-  request.setLimit( 100 );
+  request.setLimit( QgsSettings().value( QStringLiteral( "maxEntriesRelationWidget" ), 100, QgsSettings::Gui ).toInt() );
 
   mGatherer = new QgsFieldExpressionValuesGatherer( mSourceLayer, mDisplayExpression, mIdentifierField, request );
   mGatherer->setData( mShouldReloadCurrentFeature );
@@ -384,7 +382,8 @@ QSet<QString> QgsFeatureFilterModel::requestedAttributes() const
   if ( mDisplayExpression.isField() )
   {
     QString fieldName = *mDisplayExpression.referencedColumns().constBegin();
-    Q_FOREACH ( const QgsConditionalStyle &style, mSourceLayer->conditionalStyles()->fieldStyles( fieldName ) )
+    const auto constFieldStyles = mSourceLayer->conditionalStyles()->fieldStyles( fieldName );
+    for ( const QgsConditionalStyle &style : constFieldStyles )
     {
       QgsExpression exp( style.rule() );
       requestedAttrs += exp.referencedColumns();
@@ -394,9 +393,9 @@ QSet<QString> QgsFeatureFilterModel::requestedAttributes() const
   return requestedAttrs;
 }
 
-void QgsFeatureFilterModel::setExtraIdentifierValueIndex( int index )
+void QgsFeatureFilterModel::setExtraIdentifierValueIndex( int index, bool force )
 {
-  if ( mExtraIdentifierValueIndex == index )
+  if ( mExtraIdentifierValueIndex == index && !force )
     return;
 
   mExtraIdentifierValueIndex = index;
@@ -416,7 +415,9 @@ void QgsFeatureFilterModel::setExtraIdentifierValueUnguarded( const QVariant &ex
   int index = 0;
   for ( const Entry &entry : entries )
   {
-    if ( entry.identifierValue == extraIdentifierValue && entry.identifierValue.isNull() == extraIdentifierValue.isNull() && entry.identifierValue.isValid() == extraIdentifierValue.isValid() )
+    if ( entry.identifierValue == extraIdentifierValue
+         && entry.identifierValue.isNull() == extraIdentifierValue.isNull()
+         && entry.identifierValue.isValid() == extraIdentifierValue.isValid() )
     {
       setExtraIdentifierValueIndex( index );
       break;
@@ -430,11 +431,12 @@ void QgsFeatureFilterModel::setExtraIdentifierValueUnguarded( const QVariant &ex
   {
     beginInsertRows( QModelIndex(), 0, 0 );
     if ( extraIdentifierValue.isNull() )
-      mEntries.prepend( Entry( QVariant( QVariant::Int ), QStringLiteral( "%1" ).arg( tr( "NULL" ) ), QgsFeature() ) );
+      mEntries.prepend( Entry( QVariant( QVariant::Int ), QgsApplication::nullRepresentation( ), QgsFeature() ) );
     else
       mEntries.prepend( Entry( extraIdentifierValue, QStringLiteral( "(%1)" ).arg( extraIdentifierValue.toString() ), QgsFeature() ) );
     endInsertRows();
-    setExtraIdentifierValueIndex( 0 );
+
+    setExtraIdentifierValueIndex( 0, true );
 
     reloadCurrentFeature();
   }
@@ -448,16 +450,10 @@ QgsConditionalStyle QgsFeatureFilterModel::featureStyle( const QgsFeature &featu
   QgsVectorLayer *layer = mSourceLayer;
   QgsFeatureId fid = feature.id();
   mExpressionContext.setFeature( feature );
-  QgsConditionalStyle style;
-
-  if ( mEntryStylesMap.contains( fid ) )
-  {
-    style = mEntryStylesMap.value( fid );
-  }
 
   auto styles = QgsConditionalStyle::matchingConditionalStyles( layer->conditionalStyles()->rowStyles(), QVariant(),  mExpressionContext );
 
-  if ( mDisplayExpression.isField() )
+  if ( mDisplayExpression.referencedColumns().count() == 1 )
   {
     // Style specific for this field
     QString fieldName = *mDisplayExpression.referencedColumns().constBegin();
@@ -465,10 +461,11 @@ QgsConditionalStyle QgsFeatureFilterModel::featureStyle( const QgsFeature &featu
     const auto matchingFieldStyles = QgsConditionalStyle::matchingConditionalStyles( allStyles, feature.attribute( fieldName ),  mExpressionContext );
 
     styles += matchingFieldStyles;
-
-    style = QgsConditionalStyle::compressStyles( styles );
-    mEntryStylesMap.insert( fid, style );
   }
+
+  QgsConditionalStyle style;
+  style = QgsConditionalStyle::compressStyles( styles );
+  mEntryStylesMap.insert( fid, style );
 
   return style;
 }
@@ -534,11 +531,19 @@ QVariant QgsFeatureFilterModel::extraIdentifierValue() const
 
 void QgsFeatureFilterModel::setExtraIdentifierValue( const QVariant &extraIdentifierValue )
 {
-  if ( extraIdentifierValue == mExtraIdentifierValue && extraIdentifierValue.isNull() == mExtraIdentifierValue.isNull() && mExtraIdentifierValue.isValid() )
+  if ( qgsVariantEqual( extraIdentifierValue, mExtraIdentifierValue ) && mExtraIdentifierValue.isValid() )
     return;
+
+  if ( mIsSettingExtraIdentifierValue )
+    return;
+
+  mIsSettingExtraIdentifierValue = true;
+
+  mExtraIdentifierValue = extraIdentifierValue;
 
   setExtraIdentifierValueUnguarded( extraIdentifierValue );
 
-  mExtraIdentifierValue = extraIdentifierValue;
+  mIsSettingExtraIdentifierValue = false;
+
   emit extraIdentifierValueChanged();
 }

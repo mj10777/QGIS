@@ -48,6 +48,21 @@ class GUI_EXPORT QgsExpressionBuilderDialog : public QDialog, private Ui::QgsExp
     QString expressionText();
 
     /**
+     * Returns the expected format string, which is shown in the dialog.
+     * This is purely a text format and no expression validation
+     * is done against it.
+     * \see setExpectedOutputFormat()
+     */
+    QString expectedOutputFormat();
+
+    /**
+     * Set the \a expected format string, which is shown in the dialog.
+     * This is purely a text format and no expression validation is done against it.
+     * \see expectedOutputFormat()
+     */
+    void setExpectedOutputFormat( const QString &expected );
+
+    /**
      * Returns the expression context for the dialog. The context is used for the expression
      * preview result and for populating the list of available functions and variables.
      * \see setExpressionContext

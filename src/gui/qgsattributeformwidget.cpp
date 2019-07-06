@@ -21,7 +21,6 @@
 
 QgsAttributeFormWidget::QgsAttributeFormWidget( QgsWidgetWrapper *widget, QgsAttributeForm *form )
   : QWidget( form )
-  , mMode( DefaultMode )
   , mForm( form )
   , mWidget( widget )
 {
@@ -138,7 +137,8 @@ QString QgsAttributeFormWidget::currentFilterExpression() const
 void QgsAttributeFormWidget::resetSearch()
 {
   mSearchWidgetToolButton->setInactive();
-  Q_FOREACH ( QgsSearchWidgetWrapper *widget, mSearchWidgets )
+  const auto constMSearchWidgets = mSearchWidgets;
+  for ( QgsSearchWidgetWrapper *widget : constMSearchWidgets )
   {
     widget->clearWidget();
   }
@@ -151,7 +151,8 @@ QgsVectorLayer *QgsAttributeFormWidget::layer()
 
 void QgsAttributeFormWidget::searchWidgetFlagsChanged( QgsSearchWidgetWrapper::FilterFlags flags )
 {
-  Q_FOREACH ( QgsSearchWidgetWrapper *widget, mSearchWidgets )
+  const auto constMSearchWidgets = mSearchWidgets;
+  for ( QgsSearchWidgetWrapper *widget : constMSearchWidgets )
   {
     widget->setEnabled( !( flags & QgsSearchWidgetWrapper::IsNull )
                         && !( flags & QgsSearchWidgetWrapper::IsNotNull ) );

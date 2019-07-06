@@ -19,8 +19,10 @@
 #define QGSRASTERRESAMPLER_H
 
 #include <QString>
-#include "qgis.h"
+#include "qgis_core.h"
+#include "qgis_sip.h"
 
+class QString;
 class QImage;
 
 /**
@@ -51,13 +53,13 @@ class CORE_EXPORT QgsRasterResampler
     virtual void resample( const QImage &srcImage, QImage &dstImage ) = 0;
 
     /**
-     * Get a descriptive type identifier for this raster resampler.
+     * Gets a descriptive type identifier for this raster resampler.
      * Needs to be implemented by subclasses.
      */
     virtual QString type() const = 0;
 
     /**
-     * Get a deep copy of this object.
+     * Gets a deep copy of this object.
      * Needs to be reimplemented by subclasses.
      * Ownership is transferred to the caller.
      */

@@ -35,6 +35,8 @@
 #include "qgspointxy.h"
 #include "qgsfields.h"
 #include "qgsrectangle.h"
+#include "qgsvectorlayer.h"
+#include "qgsgui.h"
 
 #include <QMessageBox>
 #include <QTreeWidgetItem>
@@ -46,14 +48,17 @@
 
 /**
 * Constructor called when browser is launched from the application plugin tool bar
-* @param parent - Pointer the to parent QWidget for modality
-* @param interface - Pointer to the application interface
-* @param fl - Window flags
+* \param parent - Pointer the to parent QWidget for modality
+* \param interface - Pointer to the application interface
+* \param fl - Window flags
 */
 eVisGenericEventBrowserGui::eVisGenericEventBrowserGui( QWidget *parent, QgisInterface *interface, Qt::WindowFlags fl )
   : QDialog( parent, fl )
+  , mInterface( interface )
 {
   setupUi( this );
+  QgsGui::instance()->enableAutoGeometryRestore( this );
+
   connect( buttonboxOptions, &QDialogButtonBox::clicked, this, &eVisGenericEventBrowserGui::buttonboxOptions_clicked );
   connect( chkboxApplyPathRulesToDocs, &QCheckBox::stateChanged, this, &eVisGenericEventBrowserGui::chkboxApplyPathRulesToDocs_stateChanged );
   connect( cboxEventImagePathField, static_cast<void ( QComboBox::* )( int )>( &QComboBox::currentIndexChanged ), this, &eVisGenericEventBrowserGui::cboxEventImagePathField_currentIndexChanged );
@@ -77,17 +82,6 @@ eVisGenericEventBrowserGui::eVisGenericEventBrowserGui( QWidget *parent, QgisInt
   connect( pbtnResetUseOnlyFilenameData, &QPushButton::clicked, this, &eVisGenericEventBrowserGui::pbtnResetUseOnlyFilenameData_clicked );
   connect( rbtnManualCompassOffset, &QRadioButton::toggled, this, &eVisGenericEventBrowserGui::rbtnManualCompassOffset_toggled );
   connect( tableFileTypeAssociations, &QTableWidget::cellDoubleClicked, this, &eVisGenericEventBrowserGui::tableFileTypeAssociations_cellDoubleClicked );
-
-  QSettings settings;
-  restoreGeometry( settings.value( QStringLiteral( "eVis/browser-geometry" ) ).toByteArray() );
-
-  mCurrentFeatureIndex = 0;
-  mInterface = interface;
-  mDataProvider = nullptr;
-  mVectorLayer = nullptr;
-  mCanvas = nullptr;
-
-  mIgnoreEvent = false;
 
   if ( initBrowser() )
   {
@@ -102,12 +96,13 @@ eVisGenericEventBrowserGui::eVisGenericEventBrowserGui( QWidget *parent, QgisInt
 
 /**
 * Constructor called when browser is launched by the eVisEventIdTool
-* @param parent - Pointer to the parent QWidget for modality
-* @param canvas - Pointer to the map canvas
-* @param fl - Window flags
+* \param parent - Pointer to the parent QWidget for modality
+* \param canvas - Pointer to the map canvas
+* \param fl - Window flags
 */
 eVisGenericEventBrowserGui::eVisGenericEventBrowserGui( QWidget *parent, QgsMapCanvas *canvas, Qt::WindowFlags fl )
   : QDialog( parent, fl )
+  , mCanvas( canvas )
 {
   setupUi( this );
   connect( buttonboxOptions, &QDialogButtonBox::clicked, this, &eVisGenericEventBrowserGui::buttonboxOptions_clicked );
@@ -134,14 +129,6 @@ eVisGenericEventBrowserGui::eVisGenericEventBrowserGui( QWidget *parent, QgsMapC
   connect( rbtnManualCompassOffset, &QRadioButton::toggled, this, &eVisGenericEventBrowserGui::rbtnManualCompassOffset_toggled );
   connect( tableFileTypeAssociations, &QTableWidget::cellDoubleClicked, this, &eVisGenericEventBrowserGui::tableFileTypeAssociations_cellDoubleClicked );
 
-  mCurrentFeatureIndex = 0;
-  mInterface = nullptr;
-  mDataProvider = nullptr;
-  mVectorLayer = nullptr;
-  mCanvas = canvas;
-
-  mIgnoreEvent = false;
-
   if ( initBrowser() )
   {
     loadRecord();
@@ -155,13 +142,10 @@ eVisGenericEventBrowserGui::eVisGenericEventBrowserGui( QWidget *parent, QgsMapC
 
 
 /**
- * Basic descructor
+ * Basic destructor
  */
 eVisGenericEventBrowserGui::~eVisGenericEventBrowserGui()
 {
-  QSettings settings;
-  settings.setValue( QStringLiteral( "eVis/browser-geometry" ), saveGeometry() );
-
   //Clean up, disconnect the highlighting routine and refresh the canvas to clear highlighting symbol
   if ( mCanvas )
   {
@@ -241,20 +225,20 @@ bool eVisGenericEventBrowserGui::initBrowser()
     if ( mInterface->activeLayer() )
     {
       //verify that the active layer is a vector layer
-      if ( QgsMapLayer::VectorLayer == mInterface->activeLayer()->type() )
+      if ( QgsMapLayerType::VectorLayer == mInterface->activeLayer()->type() )
       {
-        mVectorLayer = ( QgsVectorLayer * )mInterface->activeLayer();
+        mVectorLayer = qobject_cast< QgsVectorLayer * >( mInterface->activeLayer() );
         mCanvas = mInterface->mapCanvas();
       }
       else
       {
-        QMessageBox::warning( this, tr( "Warning" ), tr( "This tool only supports vector data" ) );
+        QMessageBox::warning( this, tr( "Generic Event Browser" ), tr( "This tool only supports vector data." ) );
         return false;
       }
     }
     else
     {
-      QMessageBox::warning( this, tr( "Warning" ), tr( "No active layers found" ) );
+      QMessageBox::warning( this, tr( "Generic Event Browser" ), tr( "No active layers found." ) );
       return false;
     }
   }
@@ -265,25 +249,25 @@ bool eVisGenericEventBrowserGui::initBrowser()
     if ( mCanvas->currentLayer() )
     {
       //verify that the active layer is a vector layer
-      if ( QgsMapLayer::VectorLayer == mCanvas->currentLayer()->type() )
+      if ( QgsMapLayerType::VectorLayer == mCanvas->currentLayer()->type() )
       {
-        mVectorLayer = ( QgsVectorLayer * )mCanvas->currentLayer();
+        mVectorLayer = qobject_cast< QgsVectorLayer * >( mCanvas->currentLayer() );
       }
       else
       {
-        QMessageBox::warning( this, tr( "Warning" ), tr( "This tool only supports vector data" ) );
+        QMessageBox::warning( this, tr( "Generic Event Browser" ), tr( "This tool only supports vector data." ) );
         return false;
       }
     }
     else
     {
-      QMessageBox::warning( this, tr( "Warning" ), tr( "No active layers found" ) );
+      QMessageBox::warning( this, tr( "Generic Event Browser" ), tr( "No active layers found." ) );
       return false;
     }
   }
   else
   {
-    QMessageBox::warning( this, tr( "Error" ), tr( "Unable to connect to either the map canvas or application interface" ) );
+    QMessageBox::warning( this, tr( "Generic Event Browser" ), tr( "Unable to connect to either the map canvas or application interface." ) );
     return false;
   }
 
@@ -310,15 +294,15 @@ bool eVisGenericEventBrowserGui::initBrowser()
   if ( 0 == mFeatureIds.size() )
     return false;
 
-  //get the first feature in the list so we can set the field in the pulldown menues
+  //get the first feature in the list so we can set the field in the pull-down menus
   QgsFeature *myFeature = featureAtId( mFeatureIds.at( mCurrentFeatureIndex ) );
   if ( !myFeature )
   {
-    QMessageBox::warning( this, tr( "Error" ), tr( "An invalid feature was received during initialization" ) );
+    QMessageBox::warning( this, tr( "Generic Event Browser" ), tr( "An invalid feature was received during initialization." ) );
     return false;
   }
 
-  QgsFields myFields = mDataProvider->fields();
+  QgsFields myFields = mVectorLayer->fields();
   mIgnoreEvent = true; //Ignore indexChanged event when adding items to combo boxes
   for ( int x = 0; x < myFields.count(); x++ )
   {
@@ -596,13 +580,13 @@ void eVisGenericEventBrowserGui::displayImage()
 
 /**
  * Returns a pointer to the requested feature with a given featureid
- * @param id - FeatureId of the feature to find/select
+ * \param id - FeatureId of the feature to find/select
  */
 QgsFeature *eVisGenericEventBrowserGui::featureAtId( QgsFeatureId id )
 {
   //This method was originally necessary because delimited text data provider did not support featureAtId()
   //It has mostly been stripped down now
-  if ( mDataProvider && mFeatureIds.size() != 0 )
+  if ( mVectorLayer && mFeatureIds.size() != 0 )
   {
     if ( !mVectorLayer->getFeatures( QgsFeatureRequest().setFilterFid( id ) ).nextFeature( mFeature ) )
     {
@@ -630,7 +614,7 @@ void eVisGenericEventBrowserGui::loadRecord()
   QString myCompassBearingField = cboxCompassBearingField->currentText();
   QString myCompassOffsetField = cboxCompassOffsetField->currentText();
   QString myEventImagePathField = cboxEventImagePathField->currentText();
-  QgsFields myFields = mDataProvider->fields();
+  QgsFields myFields = mVectorLayer->fields();
   QgsAttributes myAttrs = myFeature->attributes();
   //loop through the attributes and display their contents
   for ( int i = 0; i < myAttrs.count(); ++i )
@@ -759,8 +743,8 @@ void eVisGenericEventBrowserGui::setBasePathToDataSource()
 
 /**
  * Slot called when a column is clicked in the tree displaying the attribute data
- * @param item - The tree widget item click
- * @param column - The column that was clicked
+ * \param item - The tree widget item click
+ * \param column - The column that was clicked
  */
 void eVisGenericEventBrowserGui::launchExternalApplication( QTreeWidgetItem *item, int column )
 {
@@ -837,7 +821,7 @@ void eVisGenericEventBrowserGui::launchExternalApplication( QTreeWidgetItem *ite
 
 /**
  * Slot called when the restore or save button is click on the options panel
- * @param state - The new state of the checkbox
+ * \param state - The new state of the checkbox
  */
 void eVisGenericEventBrowserGui::buttonboxOptions_clicked( QAbstractButton *button )
 {
@@ -853,26 +837,26 @@ void eVisGenericEventBrowserGui::buttonboxOptions_clicked( QAbstractButton *butt
 
 /**
  * Slot called when the state changes for the chkboxApplyPathRulesToDocs checkbox.
- * @param state - The new state of the checkbox
+ * \param state - The new state of the checkbox
  */
 void eVisGenericEventBrowserGui::chkboxApplyPathRulesToDocs_stateChanged( int state )
 {
-  Q_UNUSED( state );
+  Q_UNUSED( state )
   mConfiguration.setApplyPathRulesToDocs( chkboxApplyPathRulesToDocs->isChecked() );
 }
 
 /**
  * Slot called when the index changes for the cboxEventImagePathField combo box.
- * @param index - The index of the new selected item
+ * \param index - The index of the new selected item
  */
 void eVisGenericEventBrowserGui::cboxEventImagePathField_currentIndexChanged( int index )
 {
-  Q_UNUSED( index );
+  Q_UNUSED( index )
   if ( !mIgnoreEvent )
   {
     mConfiguration.setEventImagePathField( cboxEventImagePathField->currentText() );
 
-    QgsFields myFields = mDataProvider->fields();
+    QgsFields myFields = mVectorLayer->fields();
     QgsFeature *myFeature = featureAtId( mFeatureIds.at( mCurrentFeatureIndex ) );
 
     if ( !myFeature )
@@ -891,16 +875,16 @@ void eVisGenericEventBrowserGui::cboxEventImagePathField_currentIndexChanged( in
 
 /**
  * Slot called when the index changes for the cboxCompassBearingField combo box.
- * @param index - The index of the new selected item
+ * \param index - The index of the new selected item
  */
 void eVisGenericEventBrowserGui::cboxCompassBearingField_currentIndexChanged( int index )
 {
-  Q_UNUSED( index );
+  Q_UNUSED( index )
   if ( !mIgnoreEvent )
   {
     mConfiguration.setCompassBearingField( cboxCompassBearingField->currentText() );
 
-    QgsFields myFields = mDataProvider->fields();
+    QgsFields myFields = mVectorLayer->fields();
     QgsFeature *myFeature = featureAtId( mFeatureIds.at( mCurrentFeatureIndex ) );
 
     if ( !myFeature )
@@ -919,16 +903,16 @@ void eVisGenericEventBrowserGui::cboxCompassBearingField_currentIndexChanged( in
 
 /**
  * Slot called when the index changes for the cboxCompassBearingField combo box.
- * @param index - The index of the new selected item
+ * \param index - The index of the new selected item
  */
 void eVisGenericEventBrowserGui::cboxCompassOffsetField_currentIndexChanged( int index )
 {
-  Q_UNUSED( index );
+  Q_UNUSED( index )
   if ( !mIgnoreEvent )
   {
     mConfiguration.setCompassOffsetField( cboxCompassOffsetField->currentText() );
 
-    QgsFields myFields = mDataProvider->fields();
+    QgsFields myFields = mVectorLayer->fields();
     QgsFeature *myFeature = featureAtId( mFeatureIds.at( mCurrentFeatureIndex ) );
 
     if ( !myFeature )
@@ -947,22 +931,22 @@ void eVisGenericEventBrowserGui::cboxCompassOffsetField_currentIndexChanged( int
 
 /**
  * Slot called when the chkDisplayCompassBearing radio button is toggled
- * @param state - The current selection state of the radio button
+ * \param state - The current selection state of the radio button
  */
 void eVisGenericEventBrowserGui::chkboxDisplayCompassBearing_stateChanged( int state )
 {
-  Q_UNUSED( state );
+  Q_UNUSED( state )
   mConfiguration.setDisplayCompassBearing( chkboxDisplayCompassBearing->isChecked() );
   cboxCompassBearingField->setEnabled( chkboxDisplayCompassBearing->isChecked() );
 }
 
 /**
  * Slot called when the state changes for the chkboxEventImagePathRelative checkbox.
- * @param state - The new state of the checkbox
+ * \param state - The new state of the checkbox
  */
 void eVisGenericEventBrowserGui::chkboxEventImagePathRelative_stateChanged( int state )
 {
-  Q_UNUSED( state );
+  Q_UNUSED( state )
   mConfiguration.setEventImagePathRelative( chkboxEventImagePathRelative->isChecked() );
 
   if ( chkboxEventImagePathRelative->isChecked() && "" == leBasePath->text() )
@@ -974,17 +958,17 @@ void eVisGenericEventBrowserGui::chkboxEventImagePathRelative_stateChanged( int 
 
 /**
  * Slot called when the state changes for the chkboxUseOnlyFilename checkbox.
- * @param state - The new state of the checkbox
+ * \param state - The new state of the checkbox
  */
 void eVisGenericEventBrowserGui::chkboxUseOnlyFilename_stateChanged( int state )
 {
-  Q_UNUSED( state );
+  Q_UNUSED( state )
   mConfiguration.setUseOnlyFilename( chkboxUseOnlyFilename->isChecked() );
 }
 
 /**
  * Slot called when the tabs in the tabWidget are selected
- * @param currentTabIndex - The index of the currently selected tab
+ * \param currentTabIndex - The index of the currently selected tab
  */
 void eVisGenericEventBrowserGui::displayArea_currentChanged( int currentTabIndex )
 {
@@ -997,7 +981,7 @@ void eVisGenericEventBrowserGui::displayArea_currentChanged( int currentTabIndex
 
 /**
  * Slot called when a manual compass offset is entered
- * @param value - The new compass offset
+ * \param value - The new compass offset
  */
 void eVisGenericEventBrowserGui::dsboxCompassOffset_valueChanged( double value )
 {
@@ -1006,7 +990,7 @@ void eVisGenericEventBrowserGui::dsboxCompassOffset_valueChanged( double value )
 
 /**
  * Slot called the text in leBasePath is set or changed
- * @param text - The new base path
+ * \param text - The new base path
  */
 void eVisGenericEventBrowserGui::leBasePath_textChanged( const QString &text )
 {
@@ -1131,8 +1115,8 @@ void eVisGenericEventBrowserGui::rbtnManualCompassOffset_toggled( bool state )
 
 /**
  * Slot called when an entry in the file associations table is clicked
- * @param row - the row that was clicked
- * @param column - the column that was clicked
+ * \param row - the row that was clicked
+ * \param column - the column that was clicked
  */
 void eVisGenericEventBrowserGui::tableFileTypeAssociations_cellDoubleClicked( int row, int column )
 {
@@ -1149,7 +1133,7 @@ void eVisGenericEventBrowserGui::tableFileTypeAssociations_cellDoubleClicked( in
 
 /**
  * This slot is coonnected to the map canvas. When the canvas is done drawing the slot is fired to display thee highlighting symbol
- * @param painter - Pointer to the QPainter object
+ * \param painter - Pointer to the QPainter object
  */
 void eVisGenericEventBrowserGui::renderSymbol( QPainter *painter )
 {
@@ -1202,14 +1186,14 @@ void eVisGenericEventBrowserGui::renderSymbol( QPainter *painter )
       p.setWorldMatrix( wm );
       p.drawPixmap( -mPointerSymbol.width() / 2, -mPointerSymbol.height() / 2, mPointerSymbol );
 
-      int xShift = ( int )myPoint.x() - ( myTempPixmap.width() / 2 );
-      int yShift = ( int )myPoint.y() - ( myTempPixmap.height() / 2 );
+      int xShift = static_cast<int>( myPoint.x() ) - ( myTempPixmap.width() / 2 );
+      int yShift = static_cast<int>( myPoint.y() ) - ( myTempPixmap.height() / 2 );
       painter->drawPixmap( xShift, yShift, myTempPixmap );
     }
     else
     {
-      int xShift = ( int )myPoint.x() - ( mHighlightSymbol.width() / 2 );
-      int yShift = ( int )myPoint.y() - ( mHighlightSymbol.height() / 2 );
+      int xShift = static_cast<int>( myPoint.x() ) - ( mHighlightSymbol.width() / 2 );
+      int yShift = static_cast<int>( myPoint.y() ) - ( mHighlightSymbol.height() / 2 );
       painter->drawPixmap( xShift, yShift, mHighlightSymbol );
     }
   }

@@ -26,14 +26,13 @@
 class QDir;
 
 /**
-The custom projection widget is used to define the projection family, ellipsoid and paremters needed by proj4 to assemble a customised projection definition. The resulting projection will be store in an sqlite backend.
+The custom projection widget is used to define the projection family, ellipsoid and paremters needed by proj4 to assemble a customized projection definition. The resulting projection will be store in an sqlite backend.
 */
 class APP_EXPORT QgsCustomProjectionDialog : public QDialog, private Ui::QgsCustomProjectionDialogBase
 {
     Q_OBJECT
   public:
     QgsCustomProjectionDialog( QWidget *parent = nullptr, Qt::WindowFlags fl = nullptr );
-    ~QgsCustomProjectionDialog() override;
 
   public slots:
     void pbnCalculate_clicked();
@@ -51,7 +50,6 @@ class APP_EXPORT QgsCustomProjectionDialog : public QDialog, private Ui::QgsCust
 
     //helper functions
     void populateList();
-    QString quotedValue( QString value );
     bool deleteCrs( const QString &id );
     bool saveCrs( QgsCoordinateReferenceSystem parameters, const QString &name, const QString &id, bool newEntry );
     void insertProjection( const QString &projectionAcronym );

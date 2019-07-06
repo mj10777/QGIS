@@ -20,7 +20,6 @@
 
 #include "qgis_core.h"
 #include "qgis_sip.h"
-#include "qgis.h"
 #include "qgslayoutitemmapitem.h"
 #include "qgssymbol.h"
 #include <QString>
@@ -37,8 +36,8 @@ class QgsLayoutItemMapOverview;
  * \brief A collection of overviews which are drawn above the map content in a
  * QgsLayoutItemMap. The overview stack controls which overviews are drawn and the
  * order they are drawn in.
- * \since QGIS 3.0
  * \see QgsLayoutItemMapOverview
+ * \since QGIS 3.0
  */
 class CORE_EXPORT QgsLayoutItemMapOverviewStack : public QgsLayoutItemMapItemStack
 {
@@ -86,19 +85,16 @@ class CORE_EXPORT QgsLayoutItemMapOverviewStack : public QgsLayoutItemMapItemSta
 
     /**
      * Returns a reference to an overview with matching overviewId within the stack.
-     * \see constOverview()
      */
     QgsLayoutItemMapOverview *overview( const QString &overviewId ) const;
 
     /**
      * Returns a reference to an overview at the specified \a index within the stack.
-     * \see constOverview()
      */
-    QgsLayoutItemMapOverview *overview( const int index ) const;
+    QgsLayoutItemMapOverview *overview( int index ) const;
 
     /**
      * Returns a reference to an overview at the specified \a index within the stack.
-     * \see constOverview()
      * \see overview()
      */
     QgsLayoutItemMapOverview &operator[]( int index );
@@ -109,6 +105,14 @@ class CORE_EXPORT QgsLayoutItemMapOverviewStack : public QgsLayoutItemMapItemSta
     QList< QgsLayoutItemMapOverview * > asList() const;
     bool readXml( const QDomElement &elem, const QDomDocument &doc, const QgsReadWriteContext &context ) override;
 
+    /**
+     * Alters the list of map \a layers which will be rendered for the link map item, inserting
+     * temporary layers which represent overview extents as required.
+     *
+     * \since QGIS 3.6
+     */
+    QList< QgsMapLayer * > modifyMapLayerList( const QList< QgsMapLayer * > &layers );
+
 };
 
 /**
@@ -116,8 +120,8 @@ class CORE_EXPORT QgsLayoutItemMapOverviewStack : public QgsLayoutItemMapItemSta
  * \class QgsLayoutItemMapOverview
  * \brief An individual overview which is drawn above the map content in a
  * QgsLayoutItemMap, and shows the extent of another QgsLayoutItemMap.
- * \since QGIS 3.0
  * \see QgsLayoutItemMapOverviewStack
+ * \since QGIS 3.0
  */
 class CORE_EXPORT QgsLayoutItemMapOverview : public QgsLayoutItemMapItem
 {
@@ -131,6 +135,7 @@ class CORE_EXPORT QgsLayoutItemMapOverview : public QgsLayoutItemMapItem
      * \param map QgsLayoutItemMap the overview is attached to
      */
     QgsLayoutItemMapOverview( const QString &name, QgsLayoutItemMap *map );
+    ~QgsLayoutItemMapOverview() override;
 
     void draw( QPainter *painter ) override;
     bool writeXml( QDomElement &elem, QDomDocument &doc, const QgsReadWriteContext &context ) const override;
@@ -180,7 +185,7 @@ class CORE_EXPORT QgsLayoutItemMapOverview : public QgsLayoutItemMapItem
      * Sets the blending \a mode used for drawing the overview.
      * \see blendMode()
      */
-    void setBlendMode( const QPainter::CompositionMode mode );
+    void setBlendMode( QPainter::CompositionMode mode );
 
     /**
      * Returns whether the overview frame is inverted, ie, whether the shaded area is drawn outside
@@ -194,7 +199,7 @@ class CORE_EXPORT QgsLayoutItemMapOverview : public QgsLayoutItemMapItem
      * the extent of the overview map.
      * \see inverted()
      */
-    void setInverted( const bool inverted );
+    void setInverted( bool inverted );
 
     /**
      * Returns whether the extent of the map is forced to center on the overview.
@@ -206,13 +211,26 @@ class CORE_EXPORT QgsLayoutItemMapOverview : public QgsLayoutItemMapItem
      * Sets whether the extent of the map is forced to center on the overview
      * \see centered()
      */
-    void setCentered( const bool centered );
+    void setCentered( bool centered );
 
     /**
      * Reconnects signals for overview map, so that overview correctly follows changes to source
      * map's extent.
      */
     void connectSignals();
+
+    /**
+     * Returns a vector layer to render as part of the QgsLayoutItemMap render, containing
+     * a feature representing the overview extent (and with an appropriate renderer set matching
+     * the overview's frameSymbol() ).
+     *
+     * Ownership of the layer remain with the overview item.
+     *
+     * \since QGIS 3.6
+     */
+    QgsVectorLayer *asMapLayer();
+
+    bool accept( QgsStyleEntityVisitorInterface *visitor ) const override;
 
   public slots:
 
@@ -239,6 +257,8 @@ class CORE_EXPORT QgsLayoutItemMapOverview : public QgsLayoutItemMapItem
 
     //! True if map is centered on overview
     bool mCentered = false;
+
+    std::unique_ptr< QgsVectorLayer > mExtentLayer;
 
     //! Creates default overview symbol
     void createDefaultFrameSymbol();

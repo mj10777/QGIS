@@ -20,7 +20,6 @@
 
 QgsVectorFileWriterTask::QgsVectorFileWriterTask( QgsVectorLayer *layer, const QString &fileName, const QgsVectorFileWriter::SaveVectorOptions &options )
   : QgsTask( tr( "Saving %1" ).arg( fileName ), QgsTask::CanCancel )
-  , mLayer( layer )
   , mDestFileName( fileName )
   , mOptions( options )
 {
@@ -36,8 +35,8 @@ QgsVectorFileWriterTask::QgsVectorFileWriterTask( QgsVectorLayer *layer, const Q
     mOwnedFeedback.reset( new QgsFeedback() );
     mOptions.feedback = mOwnedFeedback.get();
   }
-  if ( mLayer )
-    setDependentLayers( QList< QgsMapLayer * >() << mLayer );
+
+  mError = QgsVectorFileWriter::prepareWriteAsVectorFormat( layer, mOptions, mWriterDetails );
 }
 
 void QgsVectorFileWriterTask::cancel()
@@ -48,20 +47,26 @@ void QgsVectorFileWriterTask::cancel()
 
 bool QgsVectorFileWriterTask::run()
 {
-  if ( !mLayer )
+  if ( mError != QgsVectorFileWriter::NoError )
     return false;
 
   connect( mOptions.feedback, &QgsFeedback::progressChanged, this, &QgsVectorFileWriterTask::setProgress );
 
+
   mError = QgsVectorFileWriter::writeAsVectorFormat(
-             mLayer, mDestFileName, mOptions, &mNewFilename, &mErrorMessage );
+             mWriterDetails, mDestFileName, mOptions, &mNewFilename, &mErrorMessage, &mNewLayer );
   return mError == QgsVectorFileWriter::NoError;
 }
 
 void QgsVectorFileWriterTask::finished( bool result )
 {
   if ( result )
+  {
     emit writeComplete( mNewFilename );
+    emit completed( mNewFilename, mNewLayer );
+  }
   else
+  {
     emit errorOccurred( mError, mErrorMessage );
+  }
 }

@@ -20,7 +20,7 @@
 
 #include <QStandardItemModel>
 
-#include "qgis.h"
+#include "qgswkbtypes.h"
 
 //! Layer Property structure
 struct QgsMssqlLayerProperty
@@ -78,7 +78,7 @@ class QgsMssqlTableModel : public QStandardItemModel
 
     bool setData( const QModelIndex &index, const QVariant &value, int role = Qt::EditRole ) override;
 
-    QString layerURI( const QModelIndex &index, const QString &connInfo, bool useEstimatedMetadata );
+    QString layerURI( const QModelIndex &index, const QString &connInfo, bool useEstimatedMetadata, bool disableInvalidGeometryHandling );
 
     static QIcon iconForWkbType( QgsWkbTypes::Type type );
 

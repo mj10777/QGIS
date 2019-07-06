@@ -92,21 +92,17 @@ void QgsLayoutView::setCurrentLayout( QgsLayout *layout )
 
   viewChanged();
 
-  delete mSnapMarker;
+  // IMPORTANT!
+  // previous snap markers, snap lines are owned by previous layout - so don't delete them here!
   mSnapMarker = new QgsLayoutViewSnapMarker();
   mSnapMarker->hide();
   layout->addItem( mSnapMarker );
-
-  delete mHorizontalSnapLine;
   mHorizontalSnapLine = createSnapLine();
   mHorizontalSnapLine->hide();
   layout->addItem( mHorizontalSnapLine );
-  delete mVerticalSnapLine;
   mVerticalSnapLine = createSnapLine();
   mVerticalSnapLine->hide();
   layout->addItem( mVerticalSnapLine );
-
-  delete mSectionLabel;
   mSectionLabel = nullptr;
 
   if ( mHorizontalRuler )
@@ -343,7 +339,7 @@ void QgsLayoutView::copyItems( const QList<QgsLayoutItem *> &items, QgsLayoutVie
     else if ( QgsLayoutFrame *frame = qobject_cast<QgsLayoutFrame *>( item ) )
     {
       // copy multiframe too
-      if ( !copiedMultiFrames.contains( frame->multiFrame() ) )
+      if ( frame->multiFrame() && !copiedMultiFrames.contains( frame->multiFrame() ) )
       {
         frame->multiFrame()->writeXml( documentElement, doc, context );
         copiedMultiFrames.insert( frame->multiFrame() );

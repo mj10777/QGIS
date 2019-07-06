@@ -21,17 +21,13 @@ __author__ = 'Médéric Ribreux'
 __date__ = 'December 2017'
 __copyright__ = '(C) 2017, Médéric Ribreux'
 
-# This will get replaced with a git SHA1 when you do a git archive
-
-__revision__ = '$Format:%H$'
-
 from .v_net import incorporatePoints, variableOutput
 
 
-def processCommand(alg, parameters, context):
-    incorporatePoints(alg, parameters, context)
+def processCommand(alg, parameters, context, feedback):
+    incorporatePoints(alg, parameters, context, feedback)
 
 
-def processOutputs(alg, parameters, context):
+def processOutputs(alg, parameters, context, feedback):
     outputParameter = {'output': ['output', 'line', 1, True]}
     variableOutput(alg, outputParameter, parameters, context)

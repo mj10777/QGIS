@@ -18,7 +18,7 @@
 #define QGSPROJECTIONSELECTIONWIDGET_H
 
 #include <QWidget>
-#include "qgis.h"
+#include "qgis_sip.h"
 #include <QLineEdit>
 #include <QToolButton>
 #include <QComboBox>
@@ -67,12 +67,12 @@ class GUI_EXPORT QgsProjectionSelectionWidget : public QWidget
      * \param visible whether the option should be shown
      * \see optionVisible()
      */
-    void setOptionVisible( const CrsOption option, const bool visible );
+    void setOptionVisible( CrsOption option, bool visible );
 
     /**
      * Returns whether the specified CRS option is visible in the widget.
-     * \since QGIS 3.0
      * \see setOptionVisible()
+     * \since QGIS 3.0
      */
     bool optionVisible( CrsOption option ) const;
 
@@ -90,6 +90,14 @@ class GUI_EXPORT QgsProjectionSelectionWidget : public QWidget
      * \since QGIS 3.0
      */
     void setMessage( const QString &text );
+
+    /**
+     * Returns display text for the specified \a crs.
+     *
+     * \note Not available in Python bindings
+     * \since QGIS 3.8
+     */
+    static QString crsOptionText( const QgsCoordinateReferenceSystem &crs ) SIP_SKIP;
 
   signals:
 
@@ -140,9 +148,9 @@ class GUI_EXPORT QgsProjectionSelectionWidget : public QWidget
     void addProjectCrsOption();
     void addDefaultCrsOption();
     void addCurrentCrsOption();
-    QString currentCrsOptionText( const QgsCoordinateReferenceSystem &crs ) const;
+
     void addRecentCrs();
-    bool crsIsShown( const long srsid ) const;
+    bool crsIsShown( long srsid ) const;
 
     int firstRecentCrsIndex() const;
 

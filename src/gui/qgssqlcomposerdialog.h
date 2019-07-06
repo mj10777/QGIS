@@ -20,7 +20,7 @@ email                : even.rouault at spatialys.com
 #define QGSSQLCOMPOSERDIALOG_H
 
 #include "ui_qgssqlcomposerdialogbase.h"
-#include "qgis.h"
+#include "qgis_sip.h"
 #include "qgsguiutils.h"
 
 #include <QPair>
@@ -69,7 +69,7 @@ class GUI_EXPORT QgsSQLComposerDialog : public QDialog, private Ui::QgsSQLCompos
     {
       public:
         virtual ~SQLValidatorCallback() = default;
-        //! method should return true if the SQL is valid. Otherwise return false and set the errorReason
+        //! method should return TRUE if the SQL is valid. Otherwise return FALSE and set the errorReason
         virtual bool isValid( const QString &sql, QString &errorReason, QString &warningMsg ) = 0;
     };
 
@@ -90,7 +90,7 @@ class GUI_EXPORT QgsSQLComposerDialog : public QDialog, private Ui::QgsSQLCompos
     {
       //! name
       QString name;
-      //! return type, or empty if unknown
+      //! Returns type, or empty if unknown
       QString returnType;
       //! minimum number of argument (or -1 if unknown)
       int minArgs = -1;
@@ -114,7 +114,7 @@ class GUI_EXPORT QgsSQLComposerDialog : public QDialog, private Ui::QgsSQLCompos
     //! initialize the SQL statement
     void setSql( const QString &sql );
 
-    //! get the SQL statement
+    //! Gets the SQL statement
     QString sql() const;
 
     //! add a list of table names
@@ -138,7 +138,7 @@ class GUI_EXPORT QgsSQLComposerDialog : public QDialog, private Ui::QgsSQLCompos
     //! add a list of API for autocompletion
     void addApis( const QStringList &list );
 
-    //! set if multiple tables/joins are supported. Default is false
+    //! Sets if multiple tables/joins are supported. Default is FALSE
     void setSupportMultipleTables( bool bMultipleTables, const QString &mainTypename = QString() );
 
     /**

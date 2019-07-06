@@ -38,6 +38,7 @@ class QgsTessellateAlgorithm : public QgsProcessingFeatureBasedAlgorithm
     QString displayName() const override;
     QStringList tags() const override;
     QString group() const override;
+    QString groupId() const override;
     QString shortHelpString() const override;
     QList<int> inputLayerTypes() const override;
     QgsTessellateAlgorithm *createInstance() const override SIP_FACTORY;
@@ -47,7 +48,7 @@ class QgsTessellateAlgorithm : public QgsProcessingFeatureBasedAlgorithm
     QgsProcessing::SourceType outputLayerType() const override;
     QgsWkbTypes::Type outputWkbType( QgsWkbTypes::Type inputWkbType ) const override;
 
-    QgsFeature processFeature( const QgsFeature &feature, QgsProcessingContext &context, QgsProcessingFeedback *feedback ) override;
+    QgsFeatureList processFeature( const QgsFeature &feature, QgsProcessingContext &context, QgsProcessingFeedback *feedback ) override;
 
 };
 

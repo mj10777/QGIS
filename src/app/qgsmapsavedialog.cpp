@@ -15,8 +15,18 @@
  *                                                                         *
  ***************************************************************************/
 
-#include "qgsmapsavedialog.h"
 
+#include <QClipboard>
+#include <QCheckBox>
+#include <QFileDialog>
+#include <QImage>
+#include <QList>
+#include <QPainter>
+#include <QPrinter>
+#include <QSpinBox>
+
+#include "qgsmapsavedialog.h"
+#include "qgsguiutils.h"
 #include "qgis.h"
 #include "qgisapp.h"
 #include "qgsscalecalculator.h"
@@ -28,15 +38,11 @@
 #include "qgsmaprenderertask.h"
 #include "qgsproject.h"
 #include "qgssettings.h"
+#include "qgsmapcanvas.h"
+#include "qgsmessagebar.h"
+#include "qgsapplication.h"
+#include "qgsexpressioncontextutils.h"
 
-#include <QClipboard>
-#include <QCheckBox>
-#include <QFileDialog>
-#include <QImage>
-#include <QList>
-#include <QPainter>
-#include <QPrinter>
-#include <QSpinBox>
 
 Q_GUI_EXPORT extern int qt_defaultDpiX();
 
@@ -67,7 +73,8 @@ QgsMapSaveDialog::QgsMapSaveDialog( QWidget *parent, QgsMapCanvas *mapCanvas, co
   mScaleWidget->setShowCurrentScaleButton( true );
 
   QString activeDecorations;
-  Q_FOREACH ( QgsDecorationItem *decoration, decorations )
+  const auto constDecorations = decorations;
+  for ( QgsDecorationItem *decoration : constDecorations )
   {
     mDecorations << decoration;
     if ( activeDecorations.isEmpty() )
@@ -77,9 +84,9 @@ QgsMapSaveDialog::QgsMapSaveDialog( QWidget *parent, QgsMapCanvas *mapCanvas, co
   }
   mDrawDecorations->setText( tr( "Draw active decorations: %1" ).arg( !activeDecorations.isEmpty() ? activeDecorations : tr( "none" ) ) );
 
-  connect( mResolutionSpinBox, static_cast < void ( QSpinBox::* )( int ) > ( &QSpinBox::valueChanged ), this, &QgsMapSaveDialog::updateDpi );
-  connect( mOutputWidthSpinBox, static_cast < void ( QSpinBox::* )( int ) > ( &QSpinBox::valueChanged ), this, &QgsMapSaveDialog::updateOutputWidth );
-  connect( mOutputHeightSpinBox, static_cast < void ( QSpinBox::* )( int ) > ( &QSpinBox::valueChanged ), this, &QgsMapSaveDialog::updateOutputHeight );
+  connect( mResolutionSpinBox, &QSpinBox::editingFinished, this, [ = ] { updateDpi( mResolutionSpinBox->value() ); } );
+  connect( mOutputWidthSpinBox, &QSpinBox::editingFinished, this, [ = ] { updateOutputWidth( mOutputWidthSpinBox->value() );} );
+  connect( mOutputHeightSpinBox, &QSpinBox::editingFinished, this, [ = ] { updateOutputHeight( mOutputHeightSpinBox->value() );} );
   connect( mExtentGroupBox, &QgsExtentGroupBox::extentChanged, this, &QgsMapSaveDialog::updateExtent );
   connect( mScaleWidget, &QgsScaleWidget::scaleChanged, this, &QgsMapSaveDialog::updateScale );
   connect( mLockAspectRatio, &QgsRatioLockButton::lockChanged, this, &QgsMapSaveDialog::lockChanged );
@@ -113,7 +120,7 @@ QgsMapSaveDialog::QgsMapSaveDialog( QWidget *parent, QgsMapCanvas *mapCanvas, co
   }
   else
   {
-    QPushButton *button = new QPushButton( tr( "Copy to clipboard" ) );
+    QPushButton *button = new QPushButton( tr( "Copy to Clipboard" ) );
     buttonBox->addButton( button, QDialogButtonBox::ResetRole );
     connect( button, &QPushButton::clicked, this, &QgsMapSaveDialog::copyToClipboard );
   }
@@ -124,7 +131,7 @@ QgsMapSaveDialog::QgsMapSaveDialog( QWidget *parent, QgsMapCanvas *mapCanvas, co
 
 void QgsMapSaveDialog::updateDpi( int dpi )
 {
-  mSize *= ( double )dpi / mDpi;
+  mSize *= static_cast<double>( dpi ) / mDpi;
   mDpi = dpi;
 
   updateOutputSize();
@@ -132,7 +139,7 @@ void QgsMapSaveDialog::updateDpi( int dpi )
 
 void QgsMapSaveDialog::updateOutputWidth( int width )
 {
-  double scale = ( double )width / mSize.width();
+  double scale = static_cast<double>( width ) / mSize.width();
   double adjustment = ( ( mExtent.width() * scale ) - mExtent.width() ) / 2;
 
   mSize.setWidth( width );
@@ -143,7 +150,7 @@ void QgsMapSaveDialog::updateOutputWidth( int width )
   if ( mLockAspectRatio->locked() )
   {
     int height = width * mExtentGroupBox->ratio().height() / mExtentGroupBox->ratio().width();
-    double scale = ( double )height / mSize.height();
+    double scale = static_cast<double>( height ) / mSize.height();
     double adjustment = ( ( mExtent.height() * scale ) - mExtent.height() ) / 2;
 
     whileBlocking( mOutputHeightSpinBox )->setValue( height );
@@ -158,7 +165,7 @@ void QgsMapSaveDialog::updateOutputWidth( int width )
 
 void QgsMapSaveDialog::updateOutputHeight( int height )
 {
-  double scale = ( double )height / mSize.height();
+  double scale = static_cast<double>( height ) / mSize.height();
   double adjustment = ( ( mExtent.height() * scale ) - mExtent.height() ) / 2;
 
   mSize.setHeight( height );
@@ -169,7 +176,7 @@ void QgsMapSaveDialog::updateOutputHeight( int height )
   if ( mLockAspectRatio->locked() )
   {
     int width = height * mExtentGroupBox->ratio().width() / mExtentGroupBox->ratio().height();
-    double scale = ( double )width / mSize.width();
+    double scale = static_cast<double>( width ) / mSize.width();
     double adjustment = ( ( mExtent.width() * scale ) - mExtent.width() ) / 2;
 
     whileBlocking( mOutputWidthSpinBox )->setValue( width );
@@ -225,7 +232,7 @@ void QgsMapSaveDialog::updateScale( double scale )
   calculator.setMapUnits( mExtentGroupBox->currentCrs().mapUnits() );
   calculator.setDpi( mDpi );
 
-  double oldScale = 1 / ( calculator.calculate( mExtent, mSize.width() ) );
+  double oldScale = calculator.calculate( mExtent, mSize.width() );
   double scaleRatio = scale / oldScale;
   mExtent.scale( scaleRatio );
   mExtentGroupBox->setOutputExtentFromUser( mExtent, mExtentGroupBox->currentCrs() );
@@ -287,14 +294,16 @@ void QgsMapSaveDialog::applyMapSettings( QgsMapSettings &mapSettings )
   mapSettings.setFlag( QgsMapSettings::ForceVectorOutput, true ); // force vector output (no caching of marker images etc.)
   mapSettings.setFlag( QgsMapSettings::DrawEditingInfo, false );
   mapSettings.setFlag( QgsMapSettings::DrawSelection, true );
-
+  mapSettings.setSelectionColor( mMapCanvas->mapSettings().selectionColor() );
   mapSettings.setDestinationCrs( mMapCanvas->mapSettings().destinationCrs() );
   mapSettings.setExtent( extent() );
   mapSettings.setOutputSize( size() );
   mapSettings.setOutputDpi( dpi() );
   mapSettings.setBackgroundColor( mMapCanvas->canvasColor() );
   mapSettings.setRotation( mMapCanvas->rotation() );
+  mapSettings.setEllipsoid( QgsProject::instance()->ellipsoid() );
   mapSettings.setLayers( mMapCanvas->layers() );
+  mapSettings.setLabelingEngineSettings( mMapCanvas->mapSettings().labelingEngineSettings() );
   mapSettings.setTransformContext( QgsProject::instance()->transformContext() );
   mapSettings.setPathResolver( QgsProject::instance()->pathResolver() );
 
@@ -404,7 +413,7 @@ void QgsMapSaveDialog::onAccepted()
       connect( mapRendererTask, &QgsMapRendererTask::renderingComplete, [ = ]
       {
         QgisApp::instance()->messageBar()->pushSuccess( tr( "Save as image" ), tr( "Successfully saved map to <a href=\"%1\">%2</a>" )
-            .arg( QUrl::fromLocalFile( QFileInfo( fileNameAndFilter.first ).path() ).toString(), QDir::toNativeSeparators( fileNameAndFilter.first ) ) );
+            .arg( QUrl::fromLocalFile( fileNameAndFilter.first ).toString(), QDir::toNativeSeparators( fileNameAndFilter.first ) ) );
       } );
       connect( mapRendererTask, &QgsMapRendererTask::errorOccurred, [ = ]( int error )
       {
@@ -430,9 +439,11 @@ void QgsMapSaveDialog::onAccepted()
   {
     QgsSettings settings;
     QString lastUsedDir = settings.value( QStringLiteral( "UI/lastSaveAsImageDir" ), QDir::homePath() ).toString();
-    QString fileName = QFileDialog::getSaveFileName( QgisApp::instance(), tr( "Save map as" ), lastUsedDir, tr( "PDF Format" ) + " (*.pdf *.PDF)" );
+    QString fileName = QFileDialog::getSaveFileName( QgisApp::instance(), tr( "Save Map As" ), lastUsedDir, tr( "PDF Format" ) + " (*.pdf *.PDF)" );
     if ( !fileName.isEmpty() )
     {
+      settings.setValue( QStringLiteral( "UI/lastSaveAsImageDir" ), QFileInfo( fileName ).absolutePath() );
+
       QgsMapSettings ms = QgsMapSettings();
       applyMapSettings( ms );
 
@@ -453,7 +464,7 @@ void QgsMapSaveDialog::onAccepted()
       connect( mapRendererTask, &QgsMapRendererTask::renderingComplete, [ = ]
       {
         QgisApp::instance()->messageBar()->pushSuccess( tr( "Save as PDF" ), tr( "Successfully saved map to <a href=\"%1\">%2</a>" )
-            .arg( QUrl::fromLocalFile( QFileInfo( fileName ).path() ).toString(), QDir::toNativeSeparators( fileName ) ) );
+            .arg( QUrl::fromLocalFile( fileName ).toString(), QDir::toNativeSeparators( fileName ) ) );
       } );
       connect( mapRendererTask, &QgsMapRendererTask::errorOccurred, [ = ]( int )
       {

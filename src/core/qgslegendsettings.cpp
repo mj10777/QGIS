@@ -14,12 +14,13 @@
  ***************************************************************************/
 
 #include "qgslegendsettings.h"
+#include "qgsexpressioncontext.h"
+#include "qgsexpression.h"
 
 #include <QPainter>
 
 QgsLegendSettings::QgsLegendSettings()
-  : mTitle( QObject::tr( "Legend" ) )
-  , mFontColor( QColor( 0, 0, 0 ) )
+  : mFontColor( QColor( 0, 0, 0 ) )
   , mSymbolSize( 7, 4 )
   , mWmsLegendSize( 50, 25 )
   , mRasterStrokeColor( Qt::black )
@@ -36,10 +37,26 @@ QgsLegendSettings::QgsLegendSettings()
   rstyle( QgsLegendStyle::SymbolLabel ).rfont().setPointSizeF( 12.0 );
 }
 
+double QgsLegendSettings::mapUnitsPerPixel() const
+{
+  return 1 / ( mMmPerMapUnit * ( mDpi / 25.4 ) );
+}
+
+void QgsLegendSettings::setMapUnitsPerPixel( double mapUnitsPerPixel )
+{
+  mMmPerMapUnit = 1 / mapUnitsPerPixel / ( mDpi / 25.4 );
+}
+
+QStringList QgsLegendSettings::evaluateItemText( const QString &text, const QgsExpressionContext &context ) const
+{
+  const QString textToRender = QgsExpression::replaceExpressionText( text, &context );
+  return splitStringForWrapping( textToRender );
+}
+
 QStringList QgsLegendSettings::splitStringForWrapping( const QString &stringToSplt ) const
 {
   QStringList list;
-  // If the string contains nothing then just return the string without spliting.
+  // If the string contains nothing then just return the string without splitting.
   if ( wrapChar().count() == 0 )
     list << stringToSplt;
   else

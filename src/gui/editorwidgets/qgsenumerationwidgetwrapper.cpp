@@ -18,8 +18,8 @@
 #include "qgsvectorlayer.h"
 #include "qgsvectordataprovider.h"
 
-QgsEnumerationWidgetWrapper::QgsEnumerationWidgetWrapper( QgsVectorLayer *vl, int fieldIdx, QWidget *editor, QWidget *parent )
-  : QgsEditorWidgetWrapper( vl, fieldIdx, editor, parent )
+QgsEnumerationWidgetWrapper::QgsEnumerationWidgetWrapper( QgsVectorLayer *layer, int fieldIdx, QWidget *editor, QWidget *parent )
+  : QgsEditorWidgetWrapper( layer, fieldIdx, editor, parent )
 
 {
 }
@@ -57,7 +57,8 @@ void QgsEnumerationWidgetWrapper::initWidget( QWidget *editor )
     QStringList enumValues;
     layer()->dataProvider()->enumValues( fieldIdx(), enumValues );
 
-    Q_FOREACH ( const QString &s, enumValues )
+    const auto constEnumValues = enumValues;
+    for ( const QString &s : constEnumValues )
     {
       mComboBox->addItem( s, s );
     }

@@ -114,12 +114,12 @@ namespace pal
       bool isIntersect( double *bbox );
 
       /**
-       * Returns true if the label position intersects a \a geometry.
+       * Returns TRUE if the label position intersects a \a geometry.
        */
       bool intersects( const GEOSPreparedGeometry *geometry );
 
       /**
-       * Returns true if the label position is within a \a geometry.
+       * Returns TRUE if the label position is within a \a geometry.
        */
       bool within( const GEOSPreparedGeometry *geometry );
 
@@ -134,20 +134,20 @@ namespace pal
        * \brief Check whether or not this overlap with another labelPosition
        *
        * \param ls other labelposition
-       * \returns true or false
+       * \returns TRUE or FALSE
        */
       bool isInConflict( LabelPosition *ls );
 
-      //! Return bounding box - amin: xmin,ymin - amax: xmax,ymax
+      //! Returns bounding box - amin: xmin,ymin - amax: xmax,ymax
       void getBoundingBox( double amin[2], double amax[2] ) const;
 
-      //! Get distance from this label to a point. If point lies inside, returns negative number.
+      //! Gets distance from this label to a point. If point lies inside, returns negative number.
       double getDistanceToPoint( double xp, double yp ) const;
 
-      //! Returns true if this label crosses the specified line
+      //! Returns TRUE if this label crosses the specified line
       bool crossesLine( PointSet *line ) const;
 
-      //! Returns true if this label crosses the boundary of the specified polygon
+      //! Returns TRUE if this label crosses the boundary of the specified polygon
       bool crossesBoundary( PointSet *polygon ) const;
 
       /**
@@ -157,7 +157,7 @@ namespace pal
       int polygonIntersectionCost( PointSet *polygon ) const;
 
       /**
-       * Returns true if any intersection between polygon and position exists.
+       * Returns TRUE if any intersection between polygon and position exists.
       */
       bool intersectsWithPolygon( PointSet *polygon ) const;
 
@@ -165,15 +165,13 @@ namespace pal
       void offsetPosition( double xOffset, double yOffset );
 
       /**
-       * \brief return id
-       * \returns id
+       * Returns the id
        */
       int getId() const;
 
 
       /**
-       * \brief return the feature corresponding to this labelposition
-       * \returns the feature
+       * Returns the feature corresponding to this labelposition
        */
       FeaturePart *getFeaturePart();
 
@@ -207,7 +205,7 @@ namespace pal
 
       /**
        * Sets whether the position is marked as conflicting with an obstacle feature.
-       * \param conflicts set to true to mark candidate as being in conflict
+       * \param conflicts set to TRUE to mark candidate as being in conflict
        * \note This method applies to all label parts for the candidate position.
        * \see conflictsWithObstacle
        */
@@ -223,14 +221,14 @@ namespace pal
       void validateCost();
 
       /**
-       * \brief get the down-left x coordinate
-       * \returns x coordinate
+       * Returns the down-left x coordinate.
+       * \see getY()
        */
       double getX( int i = 0 ) const;
 
       /**
-       * \brief get the down-left y coordinate
-       * \returns y coordinate
+       * Returns the down-left y coordinate.
+       * \see getX()
        */
       double getY( int i = 0 ) const;
 
@@ -238,8 +236,7 @@ namespace pal
       double getHeight() const { return h; }
 
       /**
-       * \brief get alpha
-       * \returns alpha to rotate text (in rad)
+       * Returns the angle to rotate text (in rad).
        */
       double getAlpha() const;
       bool getReversed() const { return reversed; }

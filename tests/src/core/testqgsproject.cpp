@@ -24,7 +24,7 @@
 #include "qgssettings.h"
 #include "qgsunittypes.h"
 #include "qgsvectorlayer.h"
-
+#include "qgssymbollayerutils.h"
 
 class TestQgsProject : public QObject
 {
@@ -40,6 +40,9 @@ class TestQgsProject : public QObject
     void testPathResolverSvg();
     void testProjectUnits();
     void variablesChanged();
+    void testLayerFlags();
+    void testLocalFiles();
+    void testLocalUrlFiles();
 };
 
 void TestQgsProject::init()
@@ -99,14 +102,34 @@ void TestQgsProject::testReadPath()
 
 void TestQgsProject::testPathResolver()
 {
-  QgsPathResolver resolverRel( QStringLiteral( "/home/qgis/test.qgs" ) );
-  QCOMPARE( resolverRel.writePath( "/home/qgis/file1.txt" ), QString( "./file1.txt" ) );
-  QCOMPARE( resolverRel.writePath( "/home/qgis/subdir/file1.txt" ), QString( "./subdir/file1.txt" ) );
-  QCOMPARE( resolverRel.writePath( "/home/file1.txt" ), QString( "../file1.txt" ) );
-  QCOMPARE( resolverRel.readPath( "./file1.txt" ), QString( "/home/qgis/file1.txt" ) );
-  QCOMPARE( resolverRel.readPath( "./subdir/file1.txt" ), QString( "/home/qgis/subdir/file1.txt" ) );
-  QCOMPARE( resolverRel.readPath( "../file1.txt" ), QString( "/home/file1.txt" ) );
-  QCOMPARE( resolverRel.readPath( "/home/qgis/file1.txt" ), QString( "/home/qgis/file1.txt" ) );
+  // Test resolver with a non existing file path
+  QgsPathResolver resolverLegacy( QStringLiteral( "/home/qgis/test.qgs" ) );
+  QCOMPARE( resolverLegacy.readPath( QString() ), QString() );
+  QCOMPARE( resolverLegacy.writePath( QString() ), QString() );
+  QCOMPARE( resolverLegacy.writePath( "/home/qgis/file1.txt" ), QString( "./file1.txt" ) );
+  QCOMPARE( resolverLegacy.writePath( "/home/qgis/subdir/file1.txt" ), QString( "./subdir/file1.txt" ) );
+  QCOMPARE( resolverLegacy.writePath( "/home/file1.txt" ), QString( "../file1.txt" ) );
+  QCOMPARE( resolverLegacy.readPath( "./file1.txt" ), QString( "/home/qgis/file1.txt" ) );
+  QCOMPARE( resolverLegacy.readPath( "./subdir/file1.txt" ), QString( "/home/qgis/subdir/file1.txt" ) );
+  QCOMPARE( resolverLegacy.readPath( "../file1.txt" ), QString( "/home/file1.txt" ) );
+  QCOMPARE( resolverLegacy.readPath( "/home/qgis/file1.txt" ), QString( "/home/qgis/file1.txt" ) );
+
+  // Test resolver with existing file path
+  QTemporaryDir tmpDir;
+  QString tmpDirName = tmpDir.path();
+  QDir dir( tmpDirName );
+  dir.mkpath( tmpDirName + "/home/qgis/" );
+
+  QgsPathResolver resolverRel( QString( tmpDirName + "/home/qgis/test.qgs" ) );
+  QCOMPARE( resolverRel.readPath( QString() ), QString() );
+  QCOMPARE( resolverRel.writePath( QString() ), QString() );
+  QCOMPARE( resolverRel.writePath( tmpDirName + "/home/qgis/file1.txt" ), QString( "./file1.txt" ) );
+  QCOMPARE( resolverRel.writePath( tmpDirName + "/home/qgis/subdir/file1.txt" ), QString( "./subdir/file1.txt" ) );
+  QCOMPARE( resolverRel.writePath( tmpDirName + "/home/file1.txt" ), QString( "../file1.txt" ) );
+  QCOMPARE( resolverRel.readPath( "./file1.txt" ), QString( tmpDirName + "/home/qgis/file1.txt" ) );
+  QCOMPARE( resolverRel.readPath( "./subdir/file1.txt" ), QString( tmpDirName + "/home/qgis/subdir/file1.txt" ) );
+  QCOMPARE( resolverRel.readPath( "../file1.txt" ), QString( tmpDirName + "/home/file1.txt" ) );
+  QCOMPARE( resolverRel.readPath( tmpDirName + "/home/qgis/file1.txt" ), QString( tmpDirName + "/home/qgis/file1.txt" ) );
 
   // test older style relative path - file must exist for this to work
   QTemporaryFile tmpFile;
@@ -116,7 +139,7 @@ void TestQgsProject::testPathResolver()
   QgsPathResolver tempRel( tmpName );
   QFileInfo fi( tmpName );
   QFile testFile( fi.path() + QStringLiteral( "/file1.txt" ) );
-  testFile.open( QIODevice::WriteOnly | QIODevice::Text );
+  QVERIFY( testFile.open( QIODevice::WriteOnly | QIODevice::Text ) );
   testFile.close();
   QVERIFY( QFile::exists( fi.path() + QStringLiteral( "/file1.txt" ) ) );
   QCOMPARE( tempRel.readPath( "file1.txt" ), fi.path() + QStringLiteral( "/file1.txt" ) );
@@ -142,7 +165,7 @@ static QString _getLayerSvgMarkerPath( const QgsProject &prj, const QString &lay
 {
   QList<QgsMapLayer *> layers = prj.mapLayersByName( layerName );
   Q_ASSERT( layers.count() == 1 );
-  Q_ASSERT( layers[0]->type() == QgsMapLayer::VectorLayer );
+  Q_ASSERT( layers[0]->type() == QgsMapLayerType::VectorLayer );
   QgsVectorLayer *layer = qobject_cast<QgsVectorLayer *>( layers[0] );
   Q_ASSERT( layer->renderer() );
   Q_ASSERT( layer->renderer()->type() == "singleSymbol" );
@@ -195,6 +218,9 @@ void TestQgsProject::testPathResolverSvg()
   QString dataDir( TEST_DATA_DIR ); //defined in CmakeLists.txt
   QString layerPath = dataDir + "/points.shp";
 
+  QVERIFY( QgsSymbolLayerUtils::svgSymbolNameToPath( QString(), QgsPathResolver() ).isEmpty() );
+  QVERIFY( QgsSymbolLayerUtils::svgSymbolPathToName( QString(), QgsPathResolver() ).isEmpty() );
+
   // build a project with 3 layers, each having a simple renderer with SVG marker
   // - existing SVG file in project dir
   // - existing SVG file in QGIS dir
@@ -217,6 +243,7 @@ void TestQgsProject::testPathResolverSvg()
   QVERIFY( QFileInfo::exists( ourSvgPath ) );  // should exist now
 
   QString librarySvgPath = QgsSymbolLayerUtils::svgSymbolNameToPath( QStringLiteral( "transport/transport_airport.svg" ), QgsPathResolver() );
+  QCOMPARE( QgsSymbolLayerUtils::svgSymbolPathToName( librarySvgPath, QgsPathResolver() ), QStringLiteral( "transport/transport_airport.svg" ) );
 
   QgsVectorLayer *layer1 = new QgsVectorLayer( layerPath, QStringLiteral( "points 1" ), QStringLiteral( "ogr" ) );
   _useRendererWithSvgSymbol( layer1, ourSvgPath );
@@ -329,6 +356,75 @@ void TestQgsProject::variablesChanged()
   prj->setCustomVariables( vars );
   QVERIFY( spyVariablesChanged.count() == 1 );
   delete prj;
+}
+
+void TestQgsProject::testLayerFlags()
+{
+  QString dataDir( TEST_DATA_DIR ); //defined in CmakeLists.txt
+  QString layerPath = dataDir + "/points.shp";
+  QgsVectorLayer *layer1 = new QgsVectorLayer( layerPath, QStringLiteral( "points 1" ), QStringLiteral( "ogr" ) );
+  QgsVectorLayer *layer2 = new QgsVectorLayer( layerPath, QStringLiteral( "points 2" ), QStringLiteral( "ogr" ) );
+
+  QgsProject prj;
+  prj.addMapLayer( layer1 );
+  prj.addMapLayer( layer2 );
+
+  layer2->setFlags( layer2->flags() & ~QgsMapLayer::Removable );
+
+  QString layer2id = layer2->id();
+
+  QTemporaryFile f;
+  QVERIFY( f.open() );
+  f.close();
+  prj.setFileName( f.fileName() );
+  prj.write();
+
+  // test reading required layers back
+  QgsProject prj2;
+  prj2.setFileName( f.fileName() );
+  QVERIFY( prj2.read() );
+  QgsMapLayer *layer = prj.mapLayer( layer2id );
+  QVERIFY( layer );
+  QVERIFY( !layer->flags().testFlag( QgsMapLayer::Removable ) );
+}
+
+void TestQgsProject::testLocalFiles()
+{
+  QTemporaryFile f;
+  QVERIFY( f.open() );
+  f.close();
+  QgsProject prj;
+  QFileInfo info( f.fileName() );
+  prj.setFileName( f.fileName() );
+  prj.write();
+  QString shpPath = info.dir().path() + '/' + info.baseName() + ".shp";
+  QString layerPath = "file://" + shpPath;
+  QFile f2( shpPath );
+  QVERIFY( f2.open( QFile::ReadWrite ) );
+  f2.close();
+  QgsPathResolver resolver( f.fileName( ) );
+  QCOMPARE( resolver.writePath( layerPath ), QString( "./" + info.baseName() + ".shp" ) ) ;
+
+}
+
+void TestQgsProject::testLocalUrlFiles()
+{
+  QTemporaryFile f;
+  QVERIFY( f.open() );
+  f.close();
+  QgsProject prj;
+  QFileInfo info( f.fileName() );
+  prj.setFileName( f.fileName() );
+  prj.write();
+  QString shpPath = info.dir().path() + '/' + info.baseName() + ".shp";
+  QString extraStuff {"?someVar=someValue&someOtherVar=someOtherValue" };
+  QString layerPath = "file://" + shpPath + extraStuff;
+  QFile f2( shpPath );
+  QVERIFY( f2.open( QFile::ReadWrite ) );
+  f2.close();
+  QgsPathResolver resolver( f.fileName( ) );
+  QCOMPARE( resolver.writePath( layerPath ), QString( "./" + info.baseName() + ".shp" + extraStuff ) ) ;
+
 }
 
 

@@ -20,6 +20,7 @@
 #include "qgsdatetimeedit.h"
 #include "qgsdatetimeeditconfig.h"
 #include "qgsdatetimefieldformatter.h"
+#include "qgsapplication.h"
 
 #include <QDateTimeEdit>
 #include <QDateEdit>
@@ -27,8 +28,8 @@
 #include <QTextCharFormat>
 #include <QCalendarWidget>
 
-QgsDateTimeEditWrapper::QgsDateTimeEditWrapper( QgsVectorLayer *vl, int fieldIdx, QWidget *editor, QWidget *parent )
-  : QgsEditorWidgetWrapper( vl, fieldIdx, editor, parent )
+QgsDateTimeEditWrapper::QgsDateTimeEditWrapper( QgsVectorLayer *layer, int fieldIdx, QWidget *editor, QWidget *parent )
+  : QgsEditorWidgetWrapper( layer, fieldIdx, editor, parent )
 
 {
 }
@@ -58,7 +59,7 @@ void QgsDateTimeEditWrapper::initWidget( QWidget *editor )
 
   if ( !mQDateTimeEdit )
   {
-    QgsDebugMsg( "Date/time edit widget could not be initialized because provided widget is not a QDateTimeEdit." );
+    QgsDebugMsg( QStringLiteral( "Date/time edit widget could not be initialized because provided widget is not a QDateTimeEdit." ) );
     QgsMessageLog::logMessage( tr( "Date/time edit widget could not be initialized because provided widget is not a QDateTimeEdit." ), tr( "UI forms" ), Qgis::Warning );
     return;
   }
@@ -126,15 +127,22 @@ void QgsDateTimeEditWrapper::dateTimeChanged( const QDateTime &dateTime )
       emit valueChanged( dateTime.time() );
       break;
     default:
-      const bool fieldIsoFormat = config( QStringLiteral( "field_iso_format" ), false ).toBool();
-      const QString fieldFormat = config( QStringLiteral( "field_format" ), QgsDateTimeFieldFormatter::defaultFormat( field().type() ) ).toString();
-      if ( fieldIsoFormat )
+      if ( !dateTime.isValid() || dateTime.isNull() )
       {
-        emit valueChanged( dateTime.toString( Qt::ISODate ) );
+        emit valueChanged( QVariant( field().type() ) );
       }
       else
       {
-        emit valueChanged( dateTime.toString( fieldFormat ) );
+        const bool fieldIsoFormat = config( QStringLiteral( "field_iso_format" ), false ).toBool();
+        const QString fieldFormat = config( QStringLiteral( "field_format" ), QgsDateTimeFieldFormatter::defaultFormat( field().type() ) ).toString();
+        if ( fieldIsoFormat )
+        {
+          emit valueChanged( dateTime.toString( Qt::ISODate ) );
+        }
+        else
+        {
+          emit valueChanged( dateTime.toString( fieldFormat ) );
+        }
       }
       break;
   }

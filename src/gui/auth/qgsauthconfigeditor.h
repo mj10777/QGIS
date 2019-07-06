@@ -18,7 +18,7 @@
 #define QGSAUTHCONFIGEDITOR_H
 
 #include <QSqlTableModel>
-#include "qgis.h"
+#include "qgis_sip.h"
 #include <QWidget>
 
 #include "ui_qgsauthconfigeditor.h"
@@ -49,10 +49,10 @@ class GUI_EXPORT QgsAuthConfigEditor : public QWidget, private Ui::QgsAuthConfig
     void toggleTitleVisibility( bool visible );
 
   public slots:
-    //! Set whether to show the widget's utilities button, e.g. when embedding
+    //! Sets whether to show the widget's utilities button, e.g. when embedding
     void setShowUtilitiesButton( bool show = true );
 
-    //! Set whether to relay auth manager messages to internal message bar, e.g. when embedding
+    //! Sets whether to relay auth manager messages to internal message bar, e.g. when embedding
     void setRelayMessages( bool relay = true );
 
   private slots:

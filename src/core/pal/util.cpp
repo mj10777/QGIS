@@ -95,7 +95,7 @@ QLinkedList<const GEOSGeometry *> *pal::Util::unmulti( const GEOSGeometry *the_g
   int nGeom;
   int i;
 
-  GEOSContextHandle_t geosctxt = geosContext();
+  GEOSContextHandle_t geosctxt = QgsGeos::getGEOSHandler();
 
   while ( !queue->isEmpty() )
   {
@@ -106,6 +106,7 @@ QLinkedList<const GEOSGeometry *> *pal::Util::unmulti( const GEOSGeometry *the_g
       case GEOS_MULTIPOINT:
       case GEOS_MULTILINESTRING:
       case GEOS_MULTIPOLYGON:
+      case GEOS_GEOMETRYCOLLECTION:
         nGeom = GEOSGetNumGeometries_r( geosctxt, geom );
         for ( i = 0; i < nGeom; i++ )
         {
@@ -118,7 +119,7 @@ QLinkedList<const GEOSGeometry *> *pal::Util::unmulti( const GEOSGeometry *the_g
         final_queue->append( geom );
         break;
       default:
-        QgsDebugMsg( QString( "unexpected geometry type:%1" ).arg( type ) );
+        QgsDebugMsg( QStringLiteral( "unexpected geometry type:%1" ).arg( type ) );
         delete final_queue;
         delete queue;
         return nullptr;

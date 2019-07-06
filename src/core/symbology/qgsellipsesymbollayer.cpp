@@ -21,6 +21,7 @@
 #include "qgslogger.h"
 #include "qgsunittypes.h"
 #include "qgsproperty.h"
+#include "qgssymbollayerutils.h"
 
 #include <QPainter>
 #include <QSet>
@@ -48,6 +49,18 @@ QgsSymbolLayer *QgsEllipseSymbolLayer::create( const QgsStringMap &properties )
   if ( properties.contains( QStringLiteral( "symbol_name" ) ) )
   {
     layer->setSymbolName( properties[ QStringLiteral( "symbol_name" )] );
+  }
+  if ( properties.contains( QStringLiteral( "size" ) ) )
+  {
+    layer->setSize( properties[QStringLiteral( "size" )].toDouble() );
+  }
+  if ( properties.contains( QStringLiteral( "size_unit" ) ) )
+  {
+    layer->setSizeUnit( QgsUnitTypes::decodeRenderUnit( properties[QStringLiteral( "size_unit" )] ) );
+  }
+  if ( properties.contains( QStringLiteral( "size_map_unit_scale" ) ) )
+  {
+    layer->setSizeMapUnitScale( QgsSymbolLayerUtils::decodeMapUnitScale( properties[QStringLiteral( "size_map_unit_scale" )] ) );
   }
   if ( properties.contains( QStringLiteral( "symbol_width" ) ) )
   {
@@ -125,18 +138,6 @@ QgsSymbolLayer *QgsEllipseSymbolLayer::create( const QgsStringMap &properties )
   else if ( properties.contains( QStringLiteral( "line_color" ) ) )
   {
     layer->setStrokeColor( QgsSymbolLayerUtils::decodeColor( properties[QStringLiteral( "line_color" )] ) );
-  }
-  if ( properties.contains( QStringLiteral( "size" ) ) )
-  {
-    layer->setSize( properties[QStringLiteral( "size" )].toDouble() );
-  }
-  if ( properties.contains( QStringLiteral( "size_unit" ) ) )
-  {
-    layer->setSizeUnit( QgsUnitTypes::decodeRenderUnit( properties[QStringLiteral( "size_unit" )] ) );
-  }
-  if ( properties.contains( QStringLiteral( "size_map_unit_scale" ) ) )
-  {
-    layer->setSizeMapUnitScale( QgsSymbolLayerUtils::decodeMapUnitScale( properties[QStringLiteral( "size_map_unit_scale" )] ) );
   }
   if ( properties.contains( QStringLiteral( "offset" ) ) )
   {
@@ -346,12 +347,12 @@ QgsEllipseSymbolLayer *QgsEllipseSymbolLayer::clone() const
 void QgsEllipseSymbolLayer::toSld( QDomDocument &doc, QDomElement &element, const QgsStringMap &props ) const
 {
   QDomElement symbolizerElem = doc.createElement( QStringLiteral( "se:PointSymbolizer" ) );
-  if ( !props.value( QStringLiteral( "uom" ), QLatin1String( "" ) ).isEmpty() )
-    symbolizerElem.setAttribute( QStringLiteral( "uom" ), props.value( QStringLiteral( "uom" ), QLatin1String( "" ) ) );
+  if ( !props.value( QStringLiteral( "uom" ), QString() ).isEmpty() )
+    symbolizerElem.setAttribute( QStringLiteral( "uom" ), props.value( QStringLiteral( "uom" ), QString() ) );
   element.appendChild( symbolizerElem );
 
   // <Geometry>
-  QgsSymbolLayerUtils::createGeometryElement( doc, symbolizerElem, props.value( QStringLiteral( "geom" ), QLatin1String( "" ) ) );
+  QgsSymbolLayerUtils::createGeometryElement( doc, symbolizerElem, props.value( QStringLiteral( "geom" ), QString() ) );
 
   writeSldMarker( doc, symbolizerElem, props );
 }
@@ -369,7 +370,7 @@ void QgsEllipseSymbolLayer::writeSldMarker( QDomDocument &doc, QDomElement &elem
   // <Rotation>
   QgsProperty ddRotation = mDataDefinedProperties.property( QgsSymbolLayer::PropertyAngle );
 
-  QString angleFunc = props.value( QStringLiteral( "angle" ), QLatin1String( "" ) );
+  QString angleFunc = props.value( QStringLiteral( "angle" ), QString() );
   if ( angleFunc.isEmpty() )  // symbol has no angle set
   {
     if ( ddRotation && ddRotation.isActive() )
@@ -415,7 +416,7 @@ void QgsEllipseSymbolLayer::writeSldMarker( QDomDocument &doc, QDomElement &elem
 
 QgsSymbolLayer *QgsEllipseSymbolLayer::createFromSld( QDomElement &element )
 {
-  QgsDebugMsg( "Entered." );
+  QgsDebugMsg( QStringLiteral( "Entered." ) );
 
   QDomElement graphicElem = element.firstChildElement( QStringLiteral( "Graphic" ) );
   if ( graphicElem.isNull() )
@@ -590,6 +591,33 @@ void QgsEllipseSymbolLayer::preparePath( const QString &symbolName, QgsSymbolRen
     mPainterPath.lineTo( 0, -size.height() / 2.0 );
     mPainterPath.lineTo( -size.width() / 2.0, size.height() / 2.0 );
   }
+}
+
+void QgsEllipseSymbolLayer::setSize( double size )
+{
+  if ( mSymbolWidth >= mSymbolHeight )
+  {
+    mSymbolHeight = mSymbolHeight * size / mSymbolWidth;
+    mSymbolWidth = size;
+  }
+  else
+  {
+    mSymbolWidth = mSymbolWidth * size / mSymbolHeight;
+    mSymbolHeight = size;
+  }
+  QgsMarkerSymbolLayer::setSize( size );
+}
+
+void QgsEllipseSymbolLayer::setSymbolWidth( double w )
+{
+  mSymbolWidth = w;
+  QgsMarkerSymbolLayer::setSize( mSymbolWidth >= mSymbolHeight ? mSymbolWidth : mSymbolHeight );
+}
+
+void QgsEllipseSymbolLayer::setSymbolHeight( double h )
+{
+  mSymbolHeight = h;
+  QgsMarkerSymbolLayer::setSize( mSymbolWidth >= mSymbolHeight ? mSymbolWidth : mSymbolHeight );
 }
 
 void QgsEllipseSymbolLayer::setOutputUnit( QgsUnitTypes::RenderUnit unit )

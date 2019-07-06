@@ -3,16 +3,25 @@
 
 SET(QGIS_3D_SRCS
   qgsaabb.cpp
+  qgsabstract3dengine.cpp
+  qgs3danimationsettings.cpp
   qgs3dmapscene.cpp
   qgs3dmapsettings.cpp
   qgs3dutils.cpp
   qgscameracontroller.cpp
+  qgscamerapose.cpp
+  qgsfeature3dhandler_p.cpp
+  qgslayoutitem3dmap.cpp
+  qgsoffscreen3dengine.cpp
   qgsphongmaterialsettings.cpp
+  qgspointlightsettings.cpp
+  qgsraycastingutils_p.cpp
+  qgsrulebased3drenderer.cpp
   qgstessellatedpolygongeometry.cpp
-  qgstessellator.cpp
   qgstilingscheme.cpp
-  qgsvector3d.cpp
   qgsvectorlayer3drenderer.cpp
+  qgsmeshlayer3drenderer.cpp
+  qgswindow3dengine.cpp
 
   chunks/qgschunkboundsentity_p.cpp
   chunks/qgschunkedentity_p.cpp
@@ -26,6 +35,10 @@ SET(QGIS_3D_SRCS
   symbols/qgsabstract3dsymbol.cpp
   symbols/qgsline3dsymbol.cpp
   symbols/qgsline3dsymbol_p.cpp
+  symbols/qgslinematerial_p.cpp
+  symbols/qgslinevertexdata_p.cpp
+  symbols/qgsmesh3dsymbol.cpp
+  symbols/qgsmesh3dsymbol_p.cpp
   symbols/qgspoint3dsymbol.cpp
   symbols/qgspoint3dsymbol_p.cpp
   symbols/qgspolygon3dsymbol.cpp
@@ -35,6 +48,8 @@ SET(QGIS_3D_SRCS
   terrain/qgsdemterraintilegeometry_p.cpp
   terrain/qgsdemterraintileloader_p.cpp
   terrain/qgsflatterraingenerator.cpp
+  terrain/qgsonlineterraingenerator.cpp
+  terrain/qgsterraindownloader.cpp
   terrain/qgsterrainentity_p.cpp
   terrain/qgsterraingenerator.cpp
   terrain/qgsterraintexturegenerator_p.cpp
@@ -42,31 +57,35 @@ SET(QGIS_3D_SRCS
   terrain/qgsterraintileloader_p.cpp
   #terrain/quantizedmeshgeometry.cpp
   #terrain/quantizedmeshterraingenerator.cpp
-
-  ${CMAKE_SOURCE_DIR}/external/poly2tri/common/shapes.cc
-  ${CMAKE_SOURCE_DIR}/external/poly2tri/sweep/advancing_front.cc
-  ${CMAKE_SOURCE_DIR}/external/poly2tri/sweep/cdt.cc
-  ${CMAKE_SOURCE_DIR}/external/poly2tri/sweep/sweep_context.cc
-  ${CMAKE_SOURCE_DIR}/external/poly2tri/sweep/sweep.cc
 )
 
 SET(QGIS_3D_MOC_HDRS
 
   qgs3dmapscene.h
   qgs3dmapsettings.h
+  qgsabstract3dengine.h
   qgscameracontroller.h
+  qgslayoutitem3dmap.h
+  qgsoffscreen3dengine.h
+  qgstessellatedpolygongeometry.h
+  qgswindow3dengine.h
 
+  chunks/qgschunkboundsentity_p.h
   chunks/qgschunkedentity_p.h
   chunks/qgschunkloader_p.h
   chunks/qgschunkqueuejob_p.h
 
   processing/qgs3dalgorithms.h
 
+  symbols/qgslinematerial_p.h
+
   terrain/qgsdemterraintileloader_p.h
+  terrain/qgsflatterraingenerator.h
   terrain/qgsterrainentity_p.h
   terrain/qgsterraintexturegenerator_p.h
   terrain/qgsterraintextureimage_p.h
   terrain/qgsterraintileentity_p.h
+  terrain/qgsterraintileloader_p.h
 )
 
 QT5_WRAP_CPP(QGIS_3D_MOC_SRCS ${QGIS_3D_MOC_HDRS})
@@ -77,18 +96,27 @@ QT5_ADD_RESOURCES(QGIS_3D_RCC_SRCS shaders.qrc)
 
 SET(QGIS_3D_HDRS
   qgsaabb.h
+  qgsabstract3dengine.h
+  qgs3danimationsettings.h
   qgs3dmapscene.h
   qgs3dmapsettings.h
+  qgs3dtypes.h
   qgs3dutils.h
   qgscameracontroller.h
+  qgscamerapose.h
+  qgsfeature3dhandler_p.h
+  qgslayoutitem3dmap.h
+  qgsoffscreen3dengine.h
   qgsphongmaterialsettings.h
+  qgspointlightsettings.h
+  qgsraycastingutils_p.h
+  qgsrulebased3drenderer.h
   qgstessellatedpolygongeometry.h
-  qgstessellator.h
   qgstilingscheme.h
-  qgsvector3d.h
   qgsvectorlayer3drenderer.h
+  qgsmeshlayer3drenderer.h
+  qgswindow3dengine.h
 
-  chunks/qgschunkboundsentity_p.h
   chunks/qgschunkedentity_p.h
   chunks/qgschunklist_p.h
   chunks/qgschunkloader_p.h
@@ -98,6 +126,10 @@ SET(QGIS_3D_HDRS
   symbols/qgsabstract3dsymbol.h
   symbols/qgsline3dsymbol.h
   symbols/qgsline3dsymbol_p.h
+  symbols/qgslinematerial_p.h
+  symbols/qgslinevertexdata_p.h
+  symbols/qgsmesh3dsymbol.h
+  symbols/qgsmesh3dsymbol_p.h
   symbols/qgspoint3dsymbol.h
   symbols/qgspoint3dsymbol_p.h
   symbols/qgspolygon3dsymbol.h
@@ -106,13 +138,13 @@ SET(QGIS_3D_HDRS
   terrain/qgsdemterraingenerator.h
   terrain/qgsdemterraintilegeometry_p.h
   terrain/qgsdemterraintileloader_p.h
-  terrain/qgsflatterraingenerator.h
+  terrain/qgsonlineterraingenerator.h
+  terrain/qgsterraindownloader.h
   terrain/qgsterrainentity_p.h
   terrain/qgsterraingenerator.h
   terrain/qgsterraintexturegenerator_p.h
   terrain/qgsterraintextureimage_p.h
   terrain/qgsterraintileentity_p.h
-  terrain/qgsterraintileloader_p.h
   #terrain/quantizedmeshgeometry.h
   #terrain/quantizedmeshterraingenerator.h
 )
@@ -125,19 +157,21 @@ INCLUDE_DIRECTORIES(
   ${CMAKE_SOURCE_DIR}/src/core/
   ${CMAKE_SOURCE_DIR}/src/core/geometry
   ${CMAKE_SOURCE_DIR}/src/core/raster
+  ${CMAKE_SOURCE_DIR}/src/core/mesh
   ${CMAKE_SOURCE_DIR}/src/core/symbology
   ${CMAKE_SOURCE_DIR}/src/core/metadata
   ${CMAKE_SOURCE_DIR}/src/core/expression
+  ${CMAKE_SOURCE_DIR}/src/core/layout
   ${CMAKE_SOURCE_DIR}/src/core/3d
-  ${CMAKE_SOURCE_DIR}/external/poly2tri
+  ${CMAKE_SOURCE_DIR}/external
   ${CMAKE_BINARY_DIR}/src/core
   ${CMAKE_BINARY_DIR}/src/3d
 )
 INCLUDE_DIRECTORIES(SYSTEM
-  ${PROJ_INCLUDE_DIR}
   ${GEOS_INCLUDE_DIR}
   ${GDAL_INCLUDE_DIR}
   ${SQLITE3_INCLUDE_DIR}
+  ${QT5_3DEXTRA_INCLUDE_DIR}
 )
 
 #############################################################
@@ -145,7 +179,7 @@ INCLUDE_DIRECTORIES(SYSTEM
 
 ADD_LIBRARY(qgis_3d SHARED ${QGIS_3D_SRCS} ${QGIS_3D_MOC_SRCS} ${QGIS_3D_HDRS} ${QGIS_3D_RCC_SRCS})
 
-qt5_use_modules(qgis_3d 3DCore 3DRender 3DInput 3DLogic 3DExtras)
+TARGET_LINK_LIBRARIES(qgis_3d Qt5::3DCore Qt5::3DRender Qt5::3DInput Qt5::3DLogic Qt5::3DExtras)
 
 GENERATE_EXPORT_HEADER(
    qgis_3d

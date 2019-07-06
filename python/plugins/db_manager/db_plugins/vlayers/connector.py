@@ -24,7 +24,15 @@ from qgis.PyQt.QtCore import QUrl, QTemporaryFile
 from ..connector import DBConnector
 from ..plugin import Table
 
-from qgis.core import QgsDataSourceUri, QgsVirtualLayerDefinition, QgsProject, QgsMapLayer, QgsVectorLayer, QgsCoordinateReferenceSystem, QgsWkbTypes
+from qgis.core import (
+    QgsDataSourceUri,
+    QgsVirtualLayerDefinition,
+    QgsProject,
+    QgsMapLayerType,
+    QgsVectorLayer,
+    QgsCoordinateReferenceSystem,
+    QgsWkbTypes
+)
 
 import sqlite3
 
@@ -193,8 +201,8 @@ class VLayerConnector(DBConnector):
         reg = VLayerRegistry.instance()
         VLayerRegistry.instance().reset()
         lst = []
-        for _, l in list(QgsProject.instance().mapLayers().items()):
-            if l.type() == QgsMapLayer.VectorLayer:
+        for _, l in QgsProject.instance().mapLayers().items():
+            if l.type() == QgsMapLayerType.VectorLayer:
 
                 lname = l.name()
                 # if there is already a layer with this name, use the layer id
@@ -349,7 +357,7 @@ class VLayerConnector(DBConnector):
     def deleteTableColumn(self, table, column):
         print("**unimplemented** deleteTableColumn")
 
-    def updateTableColumn(self, table, column, new_name, new_data_type=None, new_not_null=None, new_default=None):
+    def updateTableColumn(self, table, column, new_name, new_data_type=None, new_not_null=None, new_default=None, comment=None):
         print("**unimplemented** updateTableColumn")
 
     def renameTableColumn(self, table, column, new_name):

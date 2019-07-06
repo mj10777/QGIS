@@ -21,24 +21,29 @@
 #define SIP_NO_FILE
 
 
-#include "qgsrequesthandler.h"
 #include "qgsserverinterface.h"
 
 // This is needed by SIP otherwise it doesn't find QgsPythonUtils header
 class QgsPythonUtils;
 
 /**
- * \brief Init Python server plugins and store a list of server plugin names
+ * \ingroup server
+ * \brief Initializes Python server plugins and stores a list of server plugin names
+ * \since QGIS 2.8
  */
 class SERVER_EXPORT QgsServerPlugins
 {
   public:
+
+    /**
+     * Default constructor for QgsServerPlugins.
+     */
     explicit QgsServerPlugins() = default;
 
     /**
-     * Initialize the Python plugins
+     * Initializes the Python plugins
      * \param interface QgsServerInterface
-     * \returns bool true on success
+     * \returns bool TRUE on success
      */
     static bool initPlugins( QgsServerInterface *interface );
     //! List of available server plugin names

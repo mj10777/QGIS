@@ -21,10 +21,6 @@ __author__ = 'Victor Olaya'
 __date__ = 'November 2012'
 __copyright__ = '(C) 2012, Victor Olaya'
 
-# This will get replaced with a git SHA1 when you do a git archive
-
-__revision__ = '$Format:%H$'
-
 from qgis.core import QgsSettings
 
 from processing.algs.gdal.GdalAlgorithm import GdalAlgorithm
@@ -130,7 +126,7 @@ class Ogr2OgrTableToPostGisList(GdalAlgorithm):
             uri = GeoDB(uri=uri).uri
 
         inLayer = self.getParameterValue(self.INPUT_LAYER)
-        ogrLayer = GdalUtils.ogrConnectionString(inLayer, context)[1:-1]
+        ogrLayer = GdalUtils.ogrConnectionStringFromLayer(inLayer)
         shapeEncoding = self.getParameterValue(self.SHAPE_ENCODING)
         schema = str(self.getParameterValue(self.SCHEMA))
         table = str(self.getParameterValue(self.TABLE))

@@ -24,7 +24,7 @@
 #include <QItemDelegate>
 #include <QAbstractTableModel>
 #include <QSortFilterProxyModel>
-#include "qgis.h"
+#include "qgis_sip.h"
 #include "ui_qgslayoutattributeselectiondialogbase.h"
 #include "qgsexpressioncontextgenerator.h"
 
@@ -87,7 +87,7 @@ class QgsLayoutAttributeTableColumnModel: public QAbstractTableModel
 
     /**
      * Resets the attribute table's columns to match the source layer's fields. Remove all existing
-     * attribute table columns and column customisations.
+     * attribute table columns and column customizations.
      */
     void resetToLayer();
 
@@ -286,8 +286,6 @@ class QgsLayoutAttributeSelectionDialog: public QDialog, private Ui::QgsLayoutAt
   public:
     QgsLayoutAttributeSelectionDialog( QgsLayoutItemAttributeTable *table, QgsVectorLayer *vLayer, QWidget *parent = nullptr, Qt::WindowFlags f = nullptr );
 
-    ~QgsLayoutAttributeSelectionDialog() override;
-
   private slots:
     void mRemoveColumnPushButton_clicked();
     void mAddColumnPushButton_clicked();
@@ -299,6 +297,7 @@ class QgsLayoutAttributeSelectionDialog: public QDialog, private Ui::QgsLayoutAt
     void mRemoveSortColumnPushButton_clicked();
     void mSortColumnUpPushButton_clicked();
     void mSortColumnDownPushButton_clicked();
+    void showHelp();
 
   private:
     QgsLayoutItemAttributeTable *mTable = nullptr;

@@ -21,16 +21,13 @@ __author__ = 'Victor Olaya'
 __date__ = 'July 2014'
 __copyright__ = '(C) 2014, Victor Olaya'
 
-# This will get replaced with a git SHA1 when you do a git archive
-
-__revision__ = '$Format:%H$'
-
 from operator import itemgetter
 
 
 from qgis.core import (QgsGeometry,
                        QgsFeatureSink,
                        QgsProcessing,
+                       QgsProcessingException,
                        QgsProcessingParameterFeatureSink,
                        QgsProcessingParameterFeatureSource,
                        QgsProcessingParameterNumber,
@@ -72,11 +69,16 @@ class KeepNBiggestParts(QgisAlgorithm):
 
     def processAlgorithm(self, parameters, context, feedback):
         source = self.parameterAsSource(parameters, self.POLYGONS, context)
+        if source is None:
+            raise QgsProcessingException(self.invalidSourceError(parameters, self.POLYGONS))
+
         parts = self.parameterAsInt(parameters, self.PARTS, context)
 
         fields = source.fields()
         (sink, dest_id) = self.parameterAsSink(parameters, self.OUTPUT, context,
                                                source.fields(), source.wkbType(), source.sourceCrs())
+        if sink is None:
+            raise QgsProcessingException(self.invalidSinkError(parameters, self.OUTPUT))
 
         features = source.getFeatures()
         total = 100.0 / source.featureCount() if source.featureCount() else 0

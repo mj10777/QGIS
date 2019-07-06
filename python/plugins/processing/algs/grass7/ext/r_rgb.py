@@ -21,21 +21,17 @@ __author__ = 'Médéric Ribreux'
 __date__ = 'February 2016'
 __copyright__ = '(C) 2016, Médéric Ribreux'
 
-# This will get replaced with a git SHA1 when you do a git archive
 
-__revision__ = '$Format:%H$'
-
-
-def processInputs(alg, parameters, context):
+def processInputs(alg, parameters, context, feedback):
     if 'input' in alg.exportedLayers:
         return
 
     # We need to import all the bands and color tables of the input raster
     alg.loadRasterLayerFromParameter('input', parameters, context, False, None)
-    alg.postInputs()
+    alg.postInputs(context)
 
 
-def processCommand(alg, parameters, context):
+def processCommand(alg, parameters, context, feedback):
     # if the input raster is multiband: export each component directly
     rasterInput = alg.exportedLayers['input']
     raster = alg.parameterAsRasterLayer(parameters, 'input', context)
@@ -52,7 +48,7 @@ def processCommand(alg, parameters, context):
         ))
 
 
-def processOutputs(alg, parameters, context):
+def processOutputs(alg, parameters, context, feedback):
     raster = alg.parameterAsRasterLayer(parameters, 'input', context)
 
     # if the raster was monoband, export from r.rgb

@@ -9,8 +9,6 @@ the Free Software Foundation; either version 2 of the License, or
 __author__ = 'Matthias Kuhn'
 __date__ = '2015-04-23'
 __copyright__ = 'Copyright 2015, The QGIS Project'
-# This will get replaced with a git SHA1 when you do a git archive
-__revision__ = '$Format:%H$'
 
 
 from qgis.core import (
@@ -42,7 +40,7 @@ from utilities import (
 )
 
 from providertestbase import ProviderTestCase
-from qgis.PyQt.QtCore import QVariant
+from qgis.PyQt.QtCore import QVariant, QByteArray
 
 start_app()
 TEST_DATA_DIR = unitTestDataPath()
@@ -228,6 +226,31 @@ class TestPyQgsMemoryProvider(unittest.TestCase, ProviderTestCase):
 
             assert compareWkt(str(geom.asWkt()), "Point (10 10)"), myMessage
 
+    def testClone(self):
+        """
+        Test that cloning a memory layer also clones features
+        """
+        vl = QgsVectorLayer(
+            'Point?crs=epsg:4326&field=f1:integer&field=f2:integer',
+            'test', 'memory')
+        self.assertTrue(vl.isValid())
+
+        f1 = QgsFeature()
+        f1.setAttributes([5, -200])
+        f2 = QgsFeature()
+        f2.setAttributes([3, 300])
+        f3 = QgsFeature()
+        f3.setAttributes([1, 100])
+        res, [f1, f2, f3] = vl.dataProvider().addFeatures([f1, f2, f3])
+        self.assertEqual(vl.featureCount(), 3)
+
+        vl2 = vl.clone()
+        self.assertEqual(vl2.featureCount(), 3)
+        features = [f for f in vl2.getFeatures()]
+        self.assertTrue([f for f in features if f['f1'] == 5])
+        self.assertTrue([f for f in features if f['f1'] == 3])
+        self.assertTrue([f for f in features if f['f1'] == 1])
+
     def testGetFields(self):
         layer = QgsVectorLayer("Point", "test", "memory")
         provider = layer.dataProvider()
@@ -274,6 +297,31 @@ class TestPyQgsMemoryProvider(unittest.TestCase, ProviderTestCase):
 
         self.assertEqual(myMemoryLayer.fields().field('size').length(), 12)
         self.assertEqual(myMemoryLayer.fields().field('size').precision(), 9)
+
+        myMemoryLayer = QgsVectorLayer(
+            ('Point?crs=epsg:4326&field=size:double(-1,-1)&index=yes'),
+            'test',
+            'memory')
+
+        self.assertEqual(myMemoryLayer.fields().field('size').length(), -1)
+        self.assertEqual(myMemoryLayer.fields().field('size').precision(), -1)
+
+        myMemoryLayer = QgsVectorLayer(
+            ('Point?crs=epsg:4326&field=size:string(-1)&index=yes'),
+            'test',
+            'memory')
+
+        self.assertEqual(myMemoryLayer.fields().field('size').length(), -1)
+
+    def testFromUriWithEncodedField(self):
+        """Test we can construct the mem provider from a uri when a field name is encoded"""
+        layer = QgsVectorLayer(
+            ('Point?crs=epsg:4326&field=name:string(20)&'
+             'field=test%2Ffield:integer'),
+            'test',
+            'memory')
+        self.assertTrue(layer.isValid())
+        self.assertEqual([f.name() for f in layer.fields()], ['name', 'test/field'])
 
     def testSaveFields(self):
         # Create a new memory layer with no fields
@@ -398,6 +446,10 @@ class TestPyQgsMemoryProvider(unittest.TestCase, ProviderTestCase):
         fields.append(QgsField("date", QVariant.Date))
         fields.append(QgsField("datetime", QVariant.DateTime))
         fields.append(QgsField("time", QVariant.Time))
+        fields.append(QgsField("#complex_name", QVariant.String))
+        fields.append(QgsField("complex/name", QVariant.String))
+        fields.append(QgsField("binaryfield", QVariant.ByteArray))
+        fields.append(QgsField("boolfield", QVariant.Bool))
         layer = QgsMemoryProviderUtils.createMemoryLayer('my name', fields)
         self.assertTrue(layer.isValid())
         self.assertFalse(layer.fields().isEmpty())
@@ -405,6 +457,8 @@ class TestPyQgsMemoryProvider(unittest.TestCase, ProviderTestCase):
         for i in range(len(fields)):
             self.assertEqual(layer.fields()[i].name(), fields[i].name())
             self.assertEqual(layer.fields()[i].type(), fields[i].type())
+            self.assertEqual(layer.fields()[i].length(), fields[i].length())
+            self.assertEqual(layer.fields()[i].precision(), fields[i].precision(), fields[i].name())
 
         # unsupported field type
         fields = QgsFields()
@@ -414,6 +468,22 @@ class TestPyQgsMemoryProvider(unittest.TestCase, ProviderTestCase):
         self.assertFalse(layer.fields().isEmpty())
         self.assertEqual(layer.fields()[0].name(), 'rect')
         self.assertEqual(layer.fields()[0].type(), QVariant.String) # should be mapped to string
+
+        # field precision
+        fields = QgsFields()
+        fields.append(QgsField("string", QVariant.String, len=10))
+        fields.append(QgsField("long", QVariant.LongLong, len=6))
+        fields.append(QgsField("double", QVariant.Double, len=10, prec=7))
+        fields.append(QgsField("double2", QVariant.Double, len=-1, prec=-1))
+        layer = QgsMemoryProviderUtils.createMemoryLayer('my name', fields)
+        self.assertTrue(layer.isValid())
+        self.assertFalse(layer.fields().isEmpty())
+        self.assertEqual(len(layer.fields()), len(fields))
+        for i in range(len(fields)):
+            self.assertEqual(layer.fields()[i].name(), fields[i].name())
+            self.assertEqual(layer.fields()[i].type(), fields[i].type())
+            self.assertEqual(layer.fields()[i].length(), fields[i].length())
+            self.assertEqual(layer.fields()[i].precision(), fields[i].precision())
 
     def testThreadSafetyWithIndex(self):
         layer = QgsVectorLayer('Point?crs=epsg:4326&index=yes&field=pk:integer&field=cnt:int8&field=name:string(0)&field=name2:string(0)&field=num_char:string&key=pk',
@@ -431,6 +501,147 @@ class TestPyQgsMemoryProvider(unittest.TestCase, ProviderTestCase):
         extent = QgsRectangle(-73, 70, -63, 80)
         request = QgsFeatureRequest().setFilterRect(extent)
         self.assertTrue(QgsTestUtils.testProviderIteratorThreadSafety(self.source, request))
+
+    def testMinMaxCache(self):
+        """
+        Test that min/max cache is appropriately cleared
+        :return:
+        """
+        vl = QgsVectorLayer(
+            'Point?crs=epsg:4326&field=f1:integer&field=f2:integer',
+            'test', 'memory')
+        self.assertTrue(vl.isValid())
+
+        f1 = QgsFeature()
+        f1.setAttributes([5, -200])
+        f2 = QgsFeature()
+        f2.setAttributes([3, 300])
+        f3 = QgsFeature()
+        f3.setAttributes([1, 100])
+        f4 = QgsFeature()
+        f4.setAttributes([2, 200])
+        f5 = QgsFeature()
+        f5.setAttributes([4, 400])
+        res, [f1, f2, f3, f4, f5] = vl.dataProvider().addFeatures([f1, f2, f3, f4, f5])
+        self.assertTrue(res)
+
+        self.assertEqual(vl.dataProvider().minimumValue(0), 1)
+        self.assertEqual(vl.dataProvider().minimumValue(1), -200)
+        self.assertEqual(vl.dataProvider().maximumValue(0), 5)
+        self.assertEqual(vl.dataProvider().maximumValue(1), 400)
+
+        # add feature
+        f6 = QgsFeature()
+        f6.setAttributes([15, 1400])
+        res, [f6] = vl.dataProvider().addFeatures([f6])
+        self.assertTrue(res)
+        self.assertEqual(vl.dataProvider().minimumValue(0), 1)
+        self.assertEqual(vl.dataProvider().minimumValue(1), -200)
+        self.assertEqual(vl.dataProvider().maximumValue(0), 15)
+        self.assertEqual(vl.dataProvider().maximumValue(1), 1400)
+        f7 = QgsFeature()
+        f7.setAttributes([-1, -1400])
+        res, [f7] = vl.dataProvider().addFeatures([f7])
+        self.assertTrue(res)
+        self.assertEqual(vl.dataProvider().minimumValue(0), -1)
+        self.assertEqual(vl.dataProvider().minimumValue(1), -1400)
+        self.assertEqual(vl.dataProvider().maximumValue(0), 15)
+        self.assertEqual(vl.dataProvider().maximumValue(1), 1400)
+
+        # change attribute values
+        self.assertTrue(vl.dataProvider().changeAttributeValues({f6.id(): {0: 3, 1: 150}, f7.id(): {0: 4, 1: -100}}))
+        self.assertEqual(vl.dataProvider().minimumValue(0), 1)
+        self.assertEqual(vl.dataProvider().minimumValue(1), -200)
+        self.assertEqual(vl.dataProvider().maximumValue(0), 5)
+        self.assertEqual(vl.dataProvider().maximumValue(1), 400)
+
+        # delete features
+        self.assertTrue(vl.dataProvider().deleteFeatures([f4.id(), f1.id()]))
+        self.assertEqual(vl.dataProvider().minimumValue(0), 1)
+        self.assertEqual(vl.dataProvider().minimumValue(1), -100)
+        self.assertEqual(vl.dataProvider().maximumValue(0), 4)
+        self.assertEqual(vl.dataProvider().maximumValue(1), 400)
+
+        # delete attributes
+        self.assertTrue(vl.dataProvider().deleteAttributes([0]))
+        self.assertEqual(vl.dataProvider().minimumValue(0), -100)
+        self.assertEqual(vl.dataProvider().maximumValue(0), 400)
+
+    def testBinary(self):
+        vl = QgsVectorLayer(
+            'Point?crs=epsg:4326&field=f1:integer&field=f2:binary',
+            'test', 'memory')
+        self.assertTrue(vl.isValid())
+
+        dp = vl.dataProvider()
+        fields = dp.fields()
+        self.assertEqual([f.name() for f in fields], ['f1', 'f2'])
+        self.assertEqual([f.type() for f in fields], [QVariant.Int, QVariant.ByteArray])
+        self.assertEqual([f.typeName() for f in fields], ['integer', 'binary'])
+
+        f = QgsFeature(dp.fields())
+        bin_1 = b'xxx'
+        bin_val1 = QByteArray(bin_1)
+        f.setAttributes([1, bin_val1])
+        self.assertTrue(dp.addFeature(f))
+
+        f2 = [f for f in dp.getFeatures()][0]
+        self.assertEqual(f2.attributes(), [1, bin_val1])
+
+        # add binary field
+        self.assertTrue(dp.addAttributes([QgsField('binfield2', QVariant.ByteArray, 'Binary')]))
+
+        fields = dp.fields()
+        bin2_field = fields[fields.lookupField('binfield2')]
+        self.assertEqual(bin2_field.type(), QVariant.ByteArray)
+        self.assertEqual(bin2_field.typeName(), 'Binary')
+
+        f = QgsFeature(fields)
+        bin_2 = b'yyy'
+        bin_val2 = QByteArray(bin_2)
+        f.setAttributes([2, NULL, bin_val2])
+        self.assertTrue(dp.addFeature(f))
+
+        f1 = [f for f in dp.getFeatures()][0]
+        self.assertEqual(f1.attributes(), [1, bin_val1, NULL])
+        f2 = [f for f in dp.getFeatures()][1]
+        self.assertEqual(f2.attributes(), [2, NULL, bin_val2])
+
+    def testBool(self):
+        vl = QgsVectorLayer(
+            'Point?crs=epsg:4326&field=f1:integer&field=f2:bool',
+            'test', 'memory')
+        self.assertTrue(vl.isValid())
+
+        dp = vl.dataProvider()
+        fields = dp.fields()
+        self.assertEqual([f.name() for f in fields], ['f1', 'f2'])
+        self.assertEqual([f.type() for f in fields], [QVariant.Int, QVariant.Bool])
+        self.assertEqual([f.typeName() for f in fields], ['integer', 'boolean'])
+
+        f = QgsFeature(dp.fields())
+        f.setAttributes([1, True])
+        f2 = QgsFeature(dp.fields())
+        f2.setAttributes([2, False])
+        f3 = QgsFeature(dp.fields())
+        f3.setAttributes([3, NULL])
+        self.assertTrue(dp.addFeatures([f, f2, f3]))
+
+        self.assertEqual([f.attributes() for f in dp.getFeatures()], [[1, True], [2, False], [3, NULL]])
+
+        # add boolean field
+        self.assertTrue(dp.addAttributes([QgsField('boolfield2', QVariant.Bool, 'Boolean')]))
+
+        fields = dp.fields()
+        bool2_field = fields[fields.lookupField('boolfield2')]
+        self.assertEqual(bool2_field.type(), QVariant.Bool)
+        self.assertEqual(bool2_field.typeName(), 'Boolean')
+
+        f = QgsFeature(fields)
+        f.setAttributes([2, NULL, True])
+        self.assertTrue(dp.addFeature(f))
+
+        self.assertEqual([f.attributes() for f in dp.getFeatures()], [[1, True, NULL], [2, False, NULL], [3, NULL, NULL], [2, NULL, True]])
 
 
 class TestPyQgsMemoryProviderIndexed(unittest.TestCase, ProviderTestCase):

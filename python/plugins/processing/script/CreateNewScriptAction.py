@@ -21,11 +21,9 @@ __author__ = 'Victor Olaya'
 __date__ = 'August 2012'
 __copyright__ = '(C) 2012, Victor Olaya'
 
-# This will get replaced with a git SHA1 when you do a git archive
-
-__revision__ = '$Format:%H$'
-
 import os
+
+from qgis.PyQt.QtCore import QCoreApplication
 
 from qgis.core import QgsApplication
 
@@ -37,7 +35,7 @@ from processing.script.ScriptEditorDialog import ScriptEditorDialog
 class CreateNewScriptAction(ToolboxAction):
 
     def __init__(self):
-        self.name = self.tr("Create new script")
+        self.name = QCoreApplication.translate("CreateNewScriptAction", "Create New Script…")
         self.group = self.tr("Tools")
 
     def execute(self):

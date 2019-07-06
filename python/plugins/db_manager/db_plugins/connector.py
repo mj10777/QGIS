@@ -42,6 +42,9 @@ class DBConnector(object):
     def uri(self):
         return QgsDataSourceUri(self._uri.uri(False))
 
+    def cancel(self):
+        pass
+
     def publicUri(self):
         publicUri = QgsDataSourceUri.removePassword(self._uri.uri(False))
         return QgsDataSourceUri(publicUri)
@@ -169,8 +172,6 @@ class DBConnector(object):
             raise ConnectionError(e)
 
         except self.execution_error_types() as e:
-            # do the rollback to avoid a "current transaction aborted, commands ignored" errors
-            self._rollback()
             raise DbError(e)
 
     def _get_cursor_columns(self, c):
@@ -230,5 +231,14 @@ class DBConnector(object):
         except ImportError:
             return []
 
+    def getComment(self, tablename, field):
+        """Returns the comment for a field"""
+        return ''
+
+    def commentTable(self, schema, tablename, comment=None):
+        """Comment the table"""
+        pass
+
     def getQueryBuilderDictionary(self):
+
         return {}

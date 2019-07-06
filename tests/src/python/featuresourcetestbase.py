@@ -12,8 +12,6 @@ from builtins import object
 __author__ = 'Nyall Dawson'
 __date__ = '2017-05-25'
 __copyright__ = 'Copyright 2017, The QGIS Project'
-# This will get replaced with a git SHA1 when you do a git archive
-__revision__ = '$Format:%H$'
 
 from qgis.core import (
     QgsRectangle,
@@ -155,6 +153,8 @@ class FeatureSourceTestCase(object):
         self.assert_query(source, '(name = \'Apple\') is not null', [1, 2, 3, 4])
         self.assert_query(source, 'name LIKE \'Apple\'', [2])
         self.assert_query(source, 'name LIKE \'aPple\'', [])
+        self.assert_query(source, 'name LIKE \'Ap_le\'', [2])
+        self.assert_query(source, 'name LIKE \'Ap\\_le\'', [])
         self.assert_query(source, 'name ILIKE \'aPple\'', [2])
         self.assert_query(source, 'name ILIKE \'%pp%\'', [2])
         self.assert_query(source, 'cnt > 0', [1, 2, 3, 4])
@@ -320,6 +320,10 @@ class FeatureSourceTestCase(object):
         values = [f['name'] for f in self.source.getFeatures(request)]
         self.assertEqual(values, ['Pear', 'Orange', 'Honey', 'Apple', NULL])
 
+        request = QgsFeatureRequest().addOrderBy('num_char', False)
+        values = [f['pk'] for f in self.source.getFeatures(request)]
+        self.assertEqual(values, [5, 4, 3, 2, 1])
+
         # Case sensitivity
         request = QgsFeatureRequest().addOrderBy('name2')
         values = [f['name2'] for f in self.source.getFeatures(request)]
@@ -421,6 +425,11 @@ class FeatureSourceTestCase(object):
         fids = [f.id() for f in self.source.getFeatures()]
         self.assertEqual(len(fids), 5)
 
+        # empty list = no features
+        request = QgsFeatureRequest().setFilterFids([])
+        result = set([f.id() for f in self.source.getFeatures(request)])
+        self.assertFalse(result)
+
         request = QgsFeatureRequest().setFilterFids([fids[0], fids[2]])
         result = set([f.id() for f in self.source.getFeatures(request)])
         all_valid = (all(f.isValid() for f in self.source.getFeatures(request)))
@@ -505,6 +514,52 @@ class FeatureSourceTestCase(object):
 
         # shouldn't matter what order this is done in
         request = QgsFeatureRequest().setFilterRect(extent).setFilterExpression('"cnt">200')
+        result = set([f['pk'] for f in self.source.getFeatures(request)])
+        all_valid = (all(f.isValid() for f in self.source.getFeatures(request)))
+        expected = [4]
+        assert set(
+            expected) == result, 'Expected {} and got {} when testing for combination of filterRect and expression'.format(
+            set(expected), result)
+        self.assertTrue(all_valid)
+
+        # test that results match QgsFeatureRequest.acceptFeature
+        for f in self.source.getFeatures():
+            self.assertEqual(request.acceptFeature(f), f['pk'] in expected)
+
+    def testGeomAndAllAttributes(self):
+        """
+        Test combination of a filter which requires geometry and all attributes
+        """
+        request = QgsFeatureRequest().setFilterExpression('attribute($currentfeature,\'cnt\')>200 and $x>=-70 and $x<=-60').setSubsetOfAttributes([]).setFlags(QgsFeatureRequest.NoGeometry)
+        result = set([f['pk'] for f in self.source.getFeatures(request)])
+        all_valid = (all(f.isValid() for f in self.source.getFeatures(request)))
+        self.assertEqual(result, {4})
+        self.assertTrue(all_valid)
+
+        request = QgsFeatureRequest().setFilterExpression('attribute($currentfeature,\'cnt\')>200 and $x>=-70 and $x<=-60')
+        result = set([f['pk'] for f in self.source.getFeatures(request)])
+        all_valid = (all(f.isValid() for f in self.source.getFeatures(request)))
+        self.assertEqual(result, {4})
+        self.assertTrue(all_valid)
+
+    def testRectAndFids(self):
+        """
+        Test the combination of a filter rect along with filterfids
+        """
+
+        # first get feature ids
+        ids = {f['pk']: f.id() for f in self.source.getFeatures()}
+
+        extent = QgsRectangle(-70, 67, -60, 80)
+        request = QgsFeatureRequest().setFilterFids([ids[3], ids[4]]).setFilterRect(extent)
+        result = set([f['pk'] for f in self.source.getFeatures(request)])
+        all_valid = (all(f.isValid() for f in self.source.getFeatures(request)))
+        expected = [4]
+        assert set(expected) == result, 'Expected {} and got {} when testing for combination of filterRect and expression'.format(set(expected), result)
+        self.assertTrue(all_valid)
+
+        # shouldn't matter what order this is done in
+        request = QgsFeatureRequest().setFilterRect(extent).setFilterFids([ids[3], ids[4]])
         result = set([f['pk'] for f in self.source.getFeatures(request)])
         all_valid = (all(f.isValid() for f in self.source.getFeatures(request)))
         expected = [4]

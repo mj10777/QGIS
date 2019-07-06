@@ -35,7 +35,7 @@ QgsLayoutViewToolAddItem::QgsLayoutViewToolAddItem( QgsLayoutView *view )
   : QgsLayoutViewTool( view, tr( "Add item" ) )
 {
   setFlags( QgsLayoutViewTool::FlagSnaps );
-  setCursor( QgsApplication::getThemeCursor( QgsApplication::Cursor::CrossHair ) );
+  setCursor( Qt::CrossCursor );
 }
 
 void QgsLayoutViewToolAddItem::setItemMetadataId( int metadataId )
@@ -135,7 +135,7 @@ void QgsLayoutViewToolAddItem::layoutReleaseEvent( QgsLayoutViewMouseEvent *even
   QgsSettings settings;
   settings.setValue( QStringLiteral( "LayoutDesigner/lastItemWidth" ), item->sizeWithUnits().width() );
   settings.setValue( QStringLiteral( "LayoutDesigner/lastItemHeight" ), item->sizeWithUnits().height() );
-  settings.setValue( QStringLiteral( "LayoutDesigner/lastSizeUnit" ), static_cast< int >( item->sizeWithUnits().units() ) );
+  settings.setEnumValue( QStringLiteral( "LayoutDesigner/lastSizeUnit" ), item->sizeWithUnits().units() );
 
   QgsGui::layoutItemGuiRegistry()->newItemAddedToLayout( mItemMetadataId, item );
 

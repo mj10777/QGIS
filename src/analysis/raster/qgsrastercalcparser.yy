@@ -34,7 +34,7 @@
   extern char* rastertext;
   extern void set_raster_input_buffer(const char* buffer);
 
-  //! varible where the parser error will be stored
+  //! variable where the parser error will be stored
   QString rParserErrorMsg;
 
   //! sets gParserErrorMsg
@@ -110,7 +110,7 @@ void addToTmpNodes(QgsRasterCalcNode* node)
 void joinTmpNodes(QgsRasterCalcNode* parent, QgsRasterCalcNode* left, QgsRasterCalcNode* right)
 {
   bool res;
-  Q_UNUSED(res);
+  Q_UNUSED(res)
 
   if (left)
   {

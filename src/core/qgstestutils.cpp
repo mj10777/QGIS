@@ -20,7 +20,7 @@
 ///@cond PRIVATE
 ///
 
-static void getFeaturesForProvider( QPair< QgsVectorDataProvider *, QgsFeatureRequest > pair )
+static void getFeaturesForProvider( const QPair< QgsVectorDataProvider *, QgsFeatureRequest > &pair )
 {
   QgsFeatureIterator it = pair.first->getFeatures( pair.second );
   QgsFeature f;
@@ -40,7 +40,7 @@ bool QgsTestUtils::testProviderIteratorThreadSafety( QgsVectorDataProvider *prov
     jobs.append( qMakePair( provider, request ) );
   }
 
-  //freaking hammmer the provider with a ton of concurrent requests.
+  //freaking hammer the provider with a ton of concurrent requests.
   //thread unsafe providers... you better be ready!!!!
   QtConcurrent::blockingMap( jobs, getFeaturesForProvider );
 

@@ -17,9 +17,10 @@
 #define QGSLAYOUTMULTIFRAME_H
 
 #include "qgis_core.h"
-#include "qgis.h"
+#include "qgis_sip.h"
 #include "qgslayoutobject.h"
 #include "qgslayoutundocommand.h"
+#include "qgsapplication.h"
 #include <QIcon>
 #include <QObject>
 #include <QSizeF>
@@ -157,7 +158,7 @@ class CORE_EXPORT QgsLayoutMultiFrame: public QgsLayoutObject, public QgsLayoutU
      * \see minFrameSize()
      * \see recalculateFrameRects()
      */
-    virtual QSizeF fixedFrameSize( const int frameIndex = -1 ) const;
+    virtual QSizeF fixedFrameSize( int frameIndex = -1 ) const;
 
     /**
      * Returns the minimum size for a frames, if desired. If the minimum
@@ -169,7 +170,7 @@ class CORE_EXPORT QgsLayoutMultiFrame: public QgsLayoutObject, public QgsLayoutU
      * \see fixedFrameSize()
      * \see recalculateFrameRects()
      */
-    virtual QSizeF minFrameSize( const int frameIndex = -1 ) const;
+    virtual QSizeF minFrameSize( int frameIndex = -1 ) const;
 
     /**
      * Renders a portion of the multiframe's content into a render \a context.
@@ -182,7 +183,7 @@ class CORE_EXPORT QgsLayoutMultiFrame: public QgsLayoutObject, public QgsLayoutU
     /**
      * Adds a \a frame to the multiframe.
      *
-     * If \a recalcFrameSizes is set to true, then a recalculation of all existing frame sizes will be forced.
+     * If \a recalcFrameSizes is set to TRUE, then a recalculation of all existing frame sizes will be forced.
      *
      * \see removeFrame()
      */
@@ -200,7 +201,7 @@ class CORE_EXPORT QgsLayoutMultiFrame: public QgsLayoutObject, public QgsLayoutU
      * Removes a frame by \a index from the multiframe. This method automatically removes the frame from the
      * layout too.
      *
-     * If \a removeEmptyPages is set to true, then pages which are empty after the frame is removed will
+     * If \a removeEmptyPages is set to TRUE, then pages which are empty after the frame is removed will
      * also be removed from the layout.
      *
      * \see addFrame()
@@ -231,7 +232,7 @@ class CORE_EXPORT QgsLayoutMultiFrame: public QgsLayoutObject, public QgsLayoutU
      * \param parentElement parent DOM element (e.g. 'Layout' element)
      * \param document DOM document
      * \param context read write context
-     * \param includeFrames set to true to write state information about child frames into DOM
+     * \param includeFrames set to TRUE to write state information about child frames into DOM
      * \see readXml()
      */
     bool writeXml( QDomElement &parentElement, QDomDocument &document, const QgsReadWriteContext &context, bool includeFrames = false ) const;
@@ -241,7 +242,7 @@ class CORE_EXPORT QgsLayoutMultiFrame: public QgsLayoutObject, public QgsLayoutU
      * \param itemElement is the DOM node corresponding to item (e.g. 'LayoutItem' element)
      * \param document DOM document
      * \param context read write context
-     * \param includeFrames set to true to read state information about child frames from DOM
+     * \param includeFrames set to TRUE to read state information about child frames from DOM
      * \see writeXml()
      */
     bool readXml( const QDomElement &itemElement, const QDomDocument &document, const QgsReadWriteContext &context, bool includeFrames = false );
@@ -286,6 +287,8 @@ class CORE_EXPORT QgsLayoutMultiFrame: public QgsLayoutObject, public QgsLayoutU
     virtual QString displayName() const;
 
     QgsAbstractLayoutUndoCommand *createCommand( const QString &text, int id, QUndoCommand *parent = nullptr ) override SIP_FACTORY;
+
+    QgsExpressionContext createExpressionContext() const override;
 
     /**
      * Starts new undo command for this item.
@@ -358,7 +361,7 @@ class CORE_EXPORT QgsLayoutMultiFrame: public QgsLayoutObject, public QgsLayoutU
      * QgsLayoutObject::AllProperties then all data defined properties for the item will be
      * refreshed.
     */
-    virtual void refreshDataDefinedProperty( const QgsLayoutObject::DataDefinedProperty property = QgsLayoutObject::AllProperties );
+    virtual void refreshDataDefinedProperty( QgsLayoutObject::DataDefinedProperty property = QgsLayoutObject::AllProperties );
 
   signals:
 

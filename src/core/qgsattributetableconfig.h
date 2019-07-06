@@ -21,7 +21,7 @@
 #include <QDomNode>
 #include <QVariant>
 
-#include "qgis.h"
+#include "qgis_sip.h"
 #include "qgis_core.h"
 
 class QgsFields;
@@ -77,13 +77,13 @@ class CORE_EXPORT QgsAttributeTableConfig
     QgsAttributeTableConfig() = default;
 
     /**
-     * Get the list with all columns and their configuration.
+     * Gets the list with all columns and their configuration.
      * The list order defines the order of appearance.
      */
     QVector<QgsAttributeTableConfig::ColumnConfig> columns() const;
 
     /**
-     * Returns true if the configuration is empty, ie it contains no columns.
+     * Returns TRUE if the configuration is empty, ie it contains no columns.
      */
     bool isEmpty() const;
 
@@ -109,7 +109,7 @@ class CORE_EXPORT QgsAttributeTableConfig
     void update( const QgsFields &fields );
 
     /**
-     * Returns true if the action widget is visible
+     * Returns TRUE if the action widget is visible
      */
     bool actionWidgetVisible() const;
 
@@ -119,7 +119,7 @@ class CORE_EXPORT QgsAttributeTableConfig
     void setActionWidgetVisible( bool visible );
 
     /**
-     * Get the style of the action widget
+     * Gets the style of the action widget
      */
     ActionWidgetStyle actionWidgetStyle() const;
 
@@ -139,7 +139,7 @@ class CORE_EXPORT QgsAttributeTableConfig
     void readXml( const QDomNode &node );
 
     /**
-     * Get the expression used for sorting.
+     * Gets the expression used for sorting.
      */
     QString sortExpression() const;
 
@@ -164,7 +164,7 @@ class CORE_EXPORT QgsAttributeTableConfig
     void setColumnWidth( int column, int width );
 
     /**
-     * Returns true if the specified column is hidden.
+     * Returns TRUE if the specified column is hidden.
      * \param column column index
      * \see setColumnHidden()
      */
@@ -173,13 +173,13 @@ class CORE_EXPORT QgsAttributeTableConfig
     /**
      * Sets whether the specified column should be hidden.
      * \param column column index
-     * \param hidden set to true to hide column
+     * \param hidden set to TRUE to hide column
      * \see columnHidden()
      */
     void setColumnHidden( int column, bool hidden );
 
     /**
-     * Get the sort order
+     * Gets the sort order
      * \since QGIS 2.16
      */
     Qt::SortOrder sortOrder() const;

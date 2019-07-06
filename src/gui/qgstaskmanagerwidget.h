@@ -18,7 +18,7 @@
 #define QGSTASKMANAGERWIDGET_H
 
 #include "qgsfloatingwidget.h"
-#include "qgis.h"
+#include "qgis_sip.h"
 #include "qgstaskmanager.h"
 #include <QStyledItemDelegate>
 #include <QToolButton>
@@ -113,6 +113,10 @@ class GUI_EXPORT QgsTaskManagerStatusBarWidget : public QToolButton
 
     QSize sizeHint() const override;
 
+  protected:
+
+    void changeEvent( QEvent *event ) override;
+
   private slots:
 
     void toggleDisplay();
@@ -165,7 +169,7 @@ class GUI_EXPORT QgsTaskManagerModel: public QAbstractItemModel
     bool setData( const QModelIndex &index, const QVariant &value, int role = Qt::EditRole ) override;
 
     /**
-     * Returns the task associated with a specified model index, or nullptr if no
+     * Returns the task associated with a specified model index, or NULLPTR if no
      * task was found.
      */
     QgsTask *indexToTask( const QModelIndex &index ) const;
@@ -185,6 +189,13 @@ class GUI_EXPORT QgsTaskManagerModel: public QAbstractItemModel
 
   private:
 
+    enum ToolTipType
+    {
+      ToolTipDescription,
+      ToolTipStatus,
+      ToolTipProgress,
+    };
+
     QgsTaskManager *mManager = nullptr;
 
     QList< long > mRowToTaskIdList;
@@ -192,6 +203,9 @@ class GUI_EXPORT QgsTaskManagerModel: public QAbstractItemModel
 
     int idToRow( long id ) const;
     QModelIndex idToIndex( long id, int column ) const;
+    static QString createTooltip( QgsTask *task, ToolTipType type );
+
+    friend class QgsTaskManagerStatusBarWidget;
 };
 
 /**

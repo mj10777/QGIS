@@ -181,7 +181,7 @@ void QgsOptionsDialogBase::restoreOptionsBaseUi( const QString &title )
   int curIndx = mSettings->value( QStringLiteral( "/Windows/%1/tab" ).arg( mOptsKey ), 0 ).toInt();
 
   // if the last used tab is out of range or not enabled display the first enabled one
-  if ( mOptStackedWidget->count() < ( curIndx + 1 )
+  if ( mOptStackedWidget->count() < curIndx + 1
        || !mOptStackedWidget->widget( curIndx )->isEnabled() )
   {
     curIndx = 0;
@@ -256,11 +256,12 @@ void QgsOptionsDialogBase::registerTextSearchWidgets()
 
   for ( int i = 0; i < mOptStackedWidget->count(); i++ )
   {
-    Q_FOREACH ( QWidget *w, mOptStackedWidget->widget( i )->findChildren<QWidget *>() )
+    const auto constWidget = mOptStackedWidget->widget( i )->findChildren<QWidget *>();
+    for ( QWidget *w : constWidget )
     {
 
       // get custom highlight widget in user added pages
-      QMap<QWidget *, QgsOptionsDialogHighlightWidget *> customHighlightWidgets = QMap<QWidget *, QgsOptionsDialogHighlightWidget *>();
+      QMap<QWidget *, QgsOptionsDialogHighlightWidget *> customHighlightWidgets;
       QgsOptionsPageWidget *opw = qobject_cast<QgsOptionsPageWidget *>( mOptStackedWidget->widget( i ) );
       if ( opw )
       {
@@ -279,7 +280,7 @@ void QgsOptionsDialogBase::registerTextSearchWidgets()
       }
       if ( shw && shw->isValid() )
       {
-        QgsDebugMsgLevel( QString( "Registering: %1" ).arg( w->objectName() ), 4 );
+        QgsDebugMsgLevel( QStringLiteral( "Registering: %1" ).arg( w->objectName() ), 4 );
         mRegisteredSearchWidgets.append( qMakePair( shw, i ) );
       }
       else
@@ -393,7 +394,7 @@ void QgsOptionsDialogBase::optionsStackedWidget_WidgetRemoved( int index )
 
 void QgsOptionsDialogBase::warnAboutMissingObjects()
 {
-  QMessageBox::warning( nullptr, tr( "Missing objects" ),
+  QMessageBox::warning( nullptr, tr( "Missing Objects" ),
                         tr( "Base options dialog could not be initialized.\n\n"
                             "Missing some of the .ui template objects:\n" )
                         + " mOptionsListWidget,\n mOptionsStackedWidget,\n mOptionsSplitter,\n mOptionsListFrame",

@@ -15,16 +15,6 @@
 
 #include "qgs3dmapcanvasdockwidget.h"
 
-#include "qgisapp.h"
-#include "qgs3dmapcanvas.h"
-#include "qgs3dmapconfigwidget.h"
-#include "qgs3dmapscene.h"
-#include "qgscameracontroller.h"
-#include "qgsmapcanvas.h"
-
-#include "qgs3dmapsettings.h"
-#include "qgs3dutils.h"
-
 #include <QBoxLayout>
 #include <QDialog>
 #include <QDialogButtonBox>
@@ -32,21 +22,67 @@
 #include <QToolBar>
 #include <QUrl>
 
+#include "qgisapp.h"
+#include "qgs3dmapcanvas.h"
+#include "qgs3dmapconfigwidget.h"
+#include "qgs3dmapscene.h"
+#include "qgscameracontroller.h"
+#include "qgsmapcanvas.h"
+#include "qgsmessagebar.h"
+#include "qgsapplication.h"
+#include "qgssettings.h"
+
+#include "qgs3danimationsettings.h"
+#include "qgs3danimationwidget.h"
+#include "qgs3dmapsettings.h"
+#include "qgs3dmaptoolidentify.h"
+#include "qgs3dutils.h"
+
+
+
 Qgs3DMapCanvasDockWidget::Qgs3DMapCanvasDockWidget( QWidget *parent )
   : QgsDockWidget( parent )
 {
+  QgsSettings setting;
   setAttribute( Qt::WA_DeleteOnClose );  // removes the dock widget from main window when
 
   QWidget *contentsWidget = new QWidget( this );
 
   QToolBar *toolBar = new QToolBar( contentsWidget );
   toolBar->setIconSize( QgisApp::instance()->iconSize( true ) );
+
+
   toolBar->addAction( QgsApplication::getThemeIcon( QStringLiteral( "mActionZoomFullExtent.svg" ) ),
                       tr( "Zoom Full" ), this, &Qgs3DMapCanvasDockWidget::resetView );
+
+  QAction *toggleOnScreenNavigation = toolBar->addAction(
+                                        QgsApplication::getThemeIcon( QStringLiteral( "mAction3DNavigation.svg" ) ),
+                                        tr( "Toggle On-Screen Navigation" ) );
+
+  toggleOnScreenNavigation->setCheckable( true );
+  toggleOnScreenNavigation->setChecked(
+    setting.value( QStringLiteral( "/3D/navigationWidget/visibility" ), true, QgsSettings::Gui ).toBool()
+  );
+  QObject::connect( toggleOnScreenNavigation, &QAction::toggled, this, &Qgs3DMapCanvasDockWidget::toggleNavigationWidget );
+
+  toolBar->addSeparator();
+
+  QAction *actionIdentify = toolBar->addAction( QIcon( QgsApplication::iconPath( "mActionIdentify.svg" ) ),
+                            tr( "Identify" ), this, &Qgs3DMapCanvasDockWidget::identify );
+  actionIdentify->setCheckable( true );
+
+  QAction *actionAnim = toolBar->addAction( QIcon( QgsApplication::iconPath( "mTaskRunning.svg" ) ),
+                        tr( "Animations" ), this, &Qgs3DMapCanvasDockWidget::toggleAnimations );
+  actionAnim->setCheckable( true );
+
   toolBar->addAction( QgsApplication::getThemeIcon( QStringLiteral( "mActionSaveMapAsImage.svg" ) ),
-                      tr( "Save as image…" ), this, &Qgs3DMapCanvasDockWidget::saveAsImage );
-  toolBar->addAction( QgsApplication::getThemeIcon( QStringLiteral( "mIconProperties.svg" ) ),
-                      tr( "Configure" ), this, &Qgs3DMapCanvasDockWidget::configure );
+                      tr( "Save as Image…" ), this, &Qgs3DMapCanvasDockWidget::saveAsImage );
+
+  toolBar->addSeparator();
+
+  toolBar->addAction( QgsApplication::getThemeIcon( QStringLiteral( "mActionOptions.svg" ) ),
+                      tr( "Configure…" ), this, &Qgs3DMapCanvasDockWidget::configure );
+
 
   mCanvas = new Qgs3DMapCanvas( contentsWidget );
   mCanvas->setMinimumSize( QSize( 200, 200 ) );
@@ -54,12 +90,17 @@ Qgs3DMapCanvasDockWidget::Qgs3DMapCanvasDockWidget( QWidget *parent )
 
   connect( mCanvas, &Qgs3DMapCanvas::savedAsImage, this, [ = ]( const QString fileName )
   {
-    QgisApp::instance()->messageBar()->pushSuccess( tr( "Save as Image" ), tr( "Successfully saved the 3D map to <a href=\"%1\">%2</a>" ).arg( QUrl::fromLocalFile( QFileInfo( fileName ).path() ).toString(), QDir::toNativeSeparators( fileName ) ) );
+    QgisApp::instance()->messageBar()->pushSuccess( tr( "Save as Image" ), tr( "Successfully saved the 3D map to <a href=\"%1\">%2</a>" ).arg( QUrl::fromLocalFile( fileName ).toString(), QDir::toNativeSeparators( fileName ) ) );
   } );
+
+  mMapToolIdentify = new Qgs3DMapToolIdentify( mCanvas );
 
   mLabelPendingJobs = new QLabel( this );
   mProgressPendingJobs = new QProgressBar( this );
   mProgressPendingJobs->setRange( 0, 0 );
+
+  mAnimationWidget = new Qgs3DAnimationWidget( this );
+  mAnimationWidget->setVisible( false );
 
   QHBoxLayout *topLayout = new QHBoxLayout;
   topLayout->setContentsMargins( 0, 0, 0, 0 );
@@ -74,6 +115,7 @@ Qgs3DMapCanvasDockWidget::Qgs3DMapCanvasDockWidget( QWidget *parent )
   layout->setSpacing( 0 );
   layout->addLayout( topLayout );
   layout->addWidget( mCanvas );
+  layout->addWidget( mAnimationWidget );
 
   contentsWidget->setLayout( layout );
 
@@ -91,11 +133,45 @@ void Qgs3DMapCanvasDockWidget::saveAsImage()
   }
 }
 
+void Qgs3DMapCanvasDockWidget::toggleAnimations()
+{
+  if ( mAnimationWidget->isVisible() )
+  {
+    mAnimationWidget->setVisible( false );
+    return;
+  }
+
+  mAnimationWidget->setVisible( true );
+
+  // create a dummy animation when first started - better to have something than nothing...
+  if ( mAnimationWidget->animation().duration() == 0 )
+  {
+    mAnimationWidget->setDefaultAnimation();
+  }
+}
+
+void Qgs3DMapCanvasDockWidget::identify()
+{
+  QAction *action = qobject_cast<QAction *>( sender() );
+  if ( !action )
+    return;
+
+  mCanvas->setMapTool( action->isChecked() ? mMapToolIdentify : nullptr );
+}
+
+void Qgs3DMapCanvasDockWidget::toggleNavigationWidget( bool visibility )
+{
+  mCanvas->setOnScreenNavigationVisibility( visibility );
+}
+
 void Qgs3DMapCanvasDockWidget::setMapSettings( Qgs3DMapSettings *map )
 {
   mCanvas->setMap( map );
 
   connect( mCanvas->scene(), &Qgs3DMapScene::terrainPendingJobsCountChanged, this, &Qgs3DMapCanvasDockWidget::onTerrainPendingJobsCountChanged );
+
+  mAnimationWidget->setCameraController( mCanvas->scene()->cameraController() );
+  mAnimationWidget->setMap( map );
 }
 
 void Qgs3DMapCanvasDockWidget::setMainCanvas( QgsMapCanvas *canvas )
@@ -114,6 +190,8 @@ void Qgs3DMapCanvasDockWidget::resetView()
 void Qgs3DMapCanvasDockWidget::configure()
 {
   QDialog dlg;
+  dlg.setWindowTitle( tr( "3D Configuration" ) );
+
   Qgs3DMapSettings *map = mCanvas->map();
   Qgs3DMapConfigWidget *w = new Qgs3DMapConfigWidget( map, mMainCanvas, &dlg );
   QDialogButtonBox *buttons = new QDialogButtonBox( QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dlg );
@@ -128,7 +206,8 @@ void Qgs3DMapCanvasDockWidget::configure()
 
   QgsVector3D oldOrigin = map->origin();
   QgsCoordinateReferenceSystem oldCrs = map->crs();
-  QgsVector3D oldLookingAt = mCanvas->cameraController()->lookingAtPoint();
+  QgsCameraPose oldCameraPose = mCanvas->cameraController()->cameraPose();
+  QgsVector3D oldLookingAt = oldCameraPose.centerPoint();
 
   // update map
   w->apply();
@@ -141,7 +220,9 @@ void Qgs3DMapCanvasDockWidget::configure()
   if ( p != oldLookingAt )
   {
     // apply() call has moved origin of the world so let's move camera so we look still at the same place
-    mCanvas->cameraController()->setLookingAtPoint( p );
+    QgsCameraPose newCameraPose = oldCameraPose;
+    newCameraPose.setCenterPoint( p );
+    mCanvas->cameraController()->setCameraPose( newCameraPose );
   }
 }
 

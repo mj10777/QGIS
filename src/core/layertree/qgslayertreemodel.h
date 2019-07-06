@@ -24,14 +24,12 @@
 #include <memory>
 
 #include "qgsgeometry.h"
-#include "qgsmaplayer.h"
 #include "qgslayertreemodellegendnode.h"
 
 class QgsLayerTreeNode;
 class QgsLayerTreeGroup;
 class QgsLayerTreeLayer;
 class QgsMapHitTest;
-class QgsMapLayer;
 class QgsMapSettings;
 class QgsExpression;
 class QgsRenderContext;
@@ -68,7 +66,7 @@ class CORE_EXPORT QgsLayerTreeModel : public QAbstractItemModel
   public:
 
     /**
-     * Construct a new tree model with given layer tree (root node must not be null pointer).
+     * Construct a new tree model with given layer tree (root node must not be NULLPTR).
      * The root node is not transferred by the model.
      */
     explicit QgsLayerTreeModel( QgsLayerTree *rootNode, QObject *parent SIP_TRANSFERTHIS = nullptr );
@@ -109,61 +107,61 @@ class CORE_EXPORT QgsLayerTreeModel : public QAbstractItemModel
     };
     Q_DECLARE_FLAGS( Flags, Flag )
 
-    //! Set OR-ed combination of model flags
+    //! Sets OR-ed combination of model flags
     void setFlags( QgsLayerTreeModel::Flags f );
     //! Enable or disable a model flag
     void setFlag( Flag f, bool on = true );
-    //! Return OR-ed combination of model flags
+    //! Returns OR-ed combination of model flags
     Flags flags() const;
     //! Check whether a flag is enabled
     bool testFlag( Flag f ) const;
 
     /**
-     * Return layer tree node for given index. Returns root node for invalid index.
-     * Returns null pointer if index does not refer to a layer tree node (e.g. it is a legend node)
+     * Returns layer tree node for given index. Returns root node for invalid index.
+     * Returns NULLPTR if index does not refer to a layer tree node (e.g. it is a legend node)
      */
     QgsLayerTreeNode *index2node( const QModelIndex &index ) const;
-    //! Return index for a given node. If the node does not belong to the layer tree, the result is undefined
+    //! Returns index for a given node. If the node does not belong to the layer tree, the result is undefined
     QModelIndex node2index( QgsLayerTreeNode *node ) const;
 
     /**
      * Convert a \a list of indexes to a list of layer tree nodes.
      * Indices that do not represent layer tree nodes are skipped.
-     * If \a skipInternal is true, a node is included in the output list only if no parent node is in the list.
+     * If \a skipInternal is TRUE, a node is included in the output list only if no parent node is in the list.
      */
     QList<QgsLayerTreeNode *> indexes2nodes( const QModelIndexList &list, bool skipInternal = false ) const;
 
     /**
-     * Return legend node for given index. Returns null for invalid index
+     * Returns legend node for given index. Returns NULLPTR for invalid index
      * \since QGIS 2.6
      */
     static QgsLayerTreeModelLegendNode *index2legendNode( const QModelIndex &index );
 
     /**
-     * Return index for a given legend node. If the legend node does not belong to the layer tree, the result is undefined.
+     * Returns index for a given legend node. If the legend node does not belong to the layer tree, the result is undefined.
      * If the legend node is belongs to the tree but it is filtered out, invalid model index is returned.
      * \since QGIS 2.6
      */
     QModelIndex legendNode2index( QgsLayerTreeModelLegendNode *legendNode );
 
     /**
-     * Return filtered list of active legend nodes attached to a particular layer node
-     * (by default it returns also legend node embedded in parent layer node (if any) unless skipNodeEmbeddedInParent is true)
-     * \since QGIS 2.6
+     * Returns filtered list of active legend nodes attached to a particular layer node
+     * (by default it returns also legend node embedded in parent layer node (if any) unless skipNodeEmbeddedInParent is TRUE)
      * \note Parameter skipNodeEmbeddedInParent added in QGIS 2.18
      * \see layerOriginalLegendNodes()
+     * \since QGIS 2.6
      */
     QList<QgsLayerTreeModelLegendNode *> layerLegendNodes( QgsLayerTreeLayer *nodeLayer, bool skipNodeEmbeddedInParent = false );
 
     /**
-     * Return original (unfiltered) list of legend nodes attached to a particular layer node
-     * \since QGIS 2.14
+     * Returns original (unfiltered) list of legend nodes attached to a particular layer node
      * \see layerLegendNodes()
+     * \since QGIS 2.14
      */
     QList<QgsLayerTreeModelLegendNode *> layerOriginalLegendNodes( QgsLayerTreeLayer *nodeLayer );
 
     /**
-     * Return legend node that may be embedded in parent (i.e. its icon will be used for layer's icon).
+     * Returns legend node that may be embedded in parent (i.e. its icon will be used for layer's icon).
      * \since QGIS 2.18
      */
     QgsLayerTreeModelLegendNode *legendNodeEmbeddedInParent( QgsLayerTreeLayer *nodeLayer ) const;
@@ -178,7 +176,7 @@ class CORE_EXPORT QgsLayerTreeModel : public QAbstractItemModel
      */
     QgsLayerTreeModelLegendNode *findLegendNode( const QString &layerId, const QString &ruleKey ) const;
 
-    //! Return pointer to the root node of the layer tree. Always a non-null pointer.
+    //! Returns pointer to the root node of the layer tree. Always a non NULLPTR value.
     QgsLayerTree *rootGroup() const;
 
     /**
@@ -193,27 +191,27 @@ class CORE_EXPORT QgsLayerTreeModel : public QAbstractItemModel
      */
     void refreshLayerLegend( QgsLayerTreeLayer *nodeLayer );
 
-    //! Get index of the item marked as current. Item marked as current is underlined.
+    //! Gets index of the item marked as current. Item marked as current is underlined.
     QModelIndex currentIndex() const;
-    //! Set index of the current item. May be used by view. Item marked as current is underlined.
+    //! Sets index of the current item. May be used by view. Item marked as current is underlined.
     void setCurrentIndex( const QModelIndex &currentIndex );
 
-    //! Set font for a particular type of layer tree node. nodeType should come from QgsLayerTreeNode::NodeType enumeration
+    //! Sets font for a particular type of layer tree node. nodeType should come from QgsLayerTreeNode::NodeType enumeration
     void setLayerTreeNodeFont( int nodeType, const QFont &font );
-    //! Get font for a particular type of layer tree node. nodeType should come from QgsLayerTreeNode::NodeType enumeration
+    //! Gets font for a particular type of layer tree node. nodeType should come from QgsLayerTreeNode::NodeType enumeration
     QFont layerTreeNodeFont( int nodeType ) const;
 
-    //! Set at what number of legend nodes the layer node should be collapsed. Setting -1 disables the auto-collapse (default).
+    //! Sets at what number of legend nodes the layer node should be collapsed. Setting -1 disables the auto-collapse (default).
     void setAutoCollapseLegendNodes( int nodeCount ) { mAutoCollapseLegendNodesCount = nodeCount; }
-    //! Return at what number of legend nodes the layer node should be collapsed. -1 means no auto-collapse (default).
+    //! Returns at what number of legend nodes the layer node should be collapsed. -1 means no auto-collapse (default).
     int autoCollapseLegendNodes() const { return mAutoCollapseLegendNodesCount; }
 
     /**
      * Force only display of legend nodes which are valid for a given \a scale.
      * The \a scale value indicates the scale denominator, e.g. 1000.0 for a 1:1000 map.
      * Setting \a scale <= 0 will disable the functionality.
-     * \since QGIS 2.6
      * \see legendFilterByScale()
+     * \since QGIS 2.6
      */
     void setLegendFilterByScale( double scale );
 
@@ -221,14 +219,14 @@ class CORE_EXPORT QgsLayerTreeModel : public QAbstractItemModel
      * Returns the scale which restricts the legend nodes which are visible.
      * The  scale value indicates the scale denominator, e.g. 1000.0 for a 1:1000 map.
      * A scale <= 0 indicates that no scale filtering is being performed.
-     * \since QGIS 2.6
      * \see setLegendFilterByScale()
+     * \since QGIS 2.6
      */
     double legendFilterByScale() const { return mLegendFilterByScale; }
 
     /**
      * Force only display of legend nodes which are valid for given map settings.
-     * Setting null pointer or invalid map settings will disable the functionality.
+     * Setting NULLPTR or invalid map settings will disable the functionality.
      * Ownership of map settings pointer does not change, a copy is made.
      * \since QGIS 2.6
      */
@@ -236,7 +234,7 @@ class CORE_EXPORT QgsLayerTreeModel : public QAbstractItemModel
 
     /**
      * Filter display of legend nodes for given map settings
-     * \param settings Map settings. Setting a null pointer or invalid settings will disable any filter. Ownership is not changed, a copy is made
+     * \param settings Map settings. Setting NULLPTR or invalid settings will disable any filter. Ownership is not changed, a copy is made
      * \param useExtent Whether to use the extent of the map settings as a first spatial filter on legend nodes
      * \param polygon If not empty, this polygon will be used instead of the map extent to filter legend nodes
      * \param useExpressions Whether to use legend node filter expressions
@@ -245,7 +243,7 @@ class CORE_EXPORT QgsLayerTreeModel : public QAbstractItemModel
     void setLegendFilter( const QgsMapSettings *settings, bool useExtent = true, const QgsGeometry &polygon = QgsGeometry(), bool useExpressions = true );
 
     /**
-     * Returns the current map settings used for the current legend filter (or null if none is enabled)
+     * Returns the current map settings used for the current legend filter (or NULLPTR if none is enabled)
      * \since QGIS 2.14
      */
     const QgsMapSettings *legendFilterMapSettings() const { return mLegendFilterMapSettings.get(); }
@@ -258,23 +256,34 @@ class CORE_EXPORT QgsLayerTreeModel : public QAbstractItemModel
     void setLegendMapViewData( double mapUnitsPerPixel, int dpi, double scale );
 
     /**
-     * Get hints about map view - to be used in legend nodes. Arguments that are not null will receive values.
+     * Gets hints about map view - to be used in legend nodes. Arguments that are not NULLPTR will receive values.
      * If there are no valid map view data (from previous call to setLegendMapViewData()), returned values are zeros.
      * \since QGIS 2.6
      */
     void legendMapViewData( double *mapUnitsPerPixel SIP_OUT, int *dpi SIP_OUT, double *scale  SIP_OUT ) const;
 
     /**
-     * Get map of map layer style overrides (key: layer ID, value: style name) where a different style should be used instead of the current one
+     * Gets map of map layer style overrides (key: layer ID, value: style name) where a different style should be used instead of the current one
      * \since QGIS 2.10
      */
     QMap<QString, QString> layerStyleOverrides() const;
 
     /**
-     * Set map of map layer style overrides (key: layer ID, value: style name) where a different style should be used instead of the current one
+     * Sets map of map layer style overrides (key: layer ID, value: style name) where a different style should be used instead of the current one
      * \since QGIS 2.10
      */
     void setLayerStyleOverrides( const QMap<QString, QString> &overrides );
+
+    /**
+     * Scales an layer tree model icon size to compensate for display pixel density, making the icon
+     * size hi-dpi friendly, whilst still resulting in pixel-perfect sizes for low-dpi
+     * displays.
+     *
+     * \a standardSize should be set to a standard icon size, e.g. 16, 24, 48, etc.
+     *
+     * \since QGIS 3.6
+     */
+    static int scaleIconSize( int standardSize );
 
   protected slots:
     void nodeWillAddChildren( QgsLayerTreeNode *node, int indexFrom, int indexTo );
@@ -346,7 +355,7 @@ class CORE_EXPORT QgsLayerTreeModel : public QAbstractItemModel
   protected:
     //! Pointer to the root node of the layer tree. Not owned by the model
     QgsLayerTree *mRootNode = nullptr;
-    //! Set of flags for the model
+    //! Sets of flags for the model
     Flags mFlags;
     //! Current index - will be underlined
     QPersistentModelIndex mCurrentIndex;
@@ -364,9 +373,9 @@ class CORE_EXPORT QgsLayerTreeModel : public QAbstractItemModel
 #ifndef SIP_RUN
     struct LayerLegendTree
     {
-      //! Pointer to parent for each active node. Top-level nodes have null parent. Pointers are not owned.
+      //! Pointer to parent for each active node. Top-level nodes have NULLPTR parent. Pointers are not owned.
       QMap<QgsLayerTreeModelLegendNode *, QgsLayerTreeModelLegendNode *> parents;
-      //! List of children for each active node. Top-level nodes are under null pointer key. Pointers are not owned.
+      //! List of children for each active node. Top-level nodes are under NULLPTR key. Pointers are not owned.
       QMap<QgsLayerTreeModelLegendNode *, QList<QgsLayerTreeModelLegendNode *> > children;
     };
 #endif
@@ -389,7 +398,7 @@ class CORE_EXPORT QgsLayerTreeModel : public QAbstractItemModel
       /**
        * A legend node that is not displayed separately, its icon is instead
        * shown within the layer node's item.
-       * May be null. if non-null, node is owned by originalNodes !
+       * May be NULLPTR. if non-null, node is owned by originalNodes !
        */
       QgsLayerTreeModelLegendNode *embeddedNodeInParent = nullptr;
 

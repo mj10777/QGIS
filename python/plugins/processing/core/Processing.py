@@ -21,10 +21,6 @@ __author__ = 'Victor Olaya'
 __date__ = 'August 2012'
 __copyright__ = '(C) 2012, Victor Olaya'
 
-# This will get replaced with a git SHA1 when you do a git archive
-
-__revision__ = '$Format:%H$'
-
 import os
 import traceback
 
@@ -43,7 +39,8 @@ from qgis.core import (QgsMessageLog,
                        QgsProcessingOutputVectorLayer,
                        QgsProcessingOutputRasterLayer,
                        QgsProcessingOutputMapLayer,
-                       QgsProcessingOutputMultipleLayers)
+                       QgsProcessingOutputMultipleLayers,
+                       QgsProcessingFeedback)
 
 import processing
 from processing.core.ProcessingConfig import ProcessingConfig
@@ -57,12 +54,14 @@ from processing.tools import dataobjects
 from processing.algs.qgis.QgisAlgorithmProvider import QgisAlgorithmProvider  # NOQA
 from processing.algs.grass7.Grass7AlgorithmProvider import Grass7AlgorithmProvider
 from processing.algs.gdal.GdalAlgorithmProvider import GdalAlgorithmProvider  # NOQA
+from processing.algs.otb.OtbAlgorithmProvider import OtbAlgorithmProvider  # NOQA
 from processing.algs.saga.SagaAlgorithmProvider import SagaAlgorithmProvider  # NOQA
 from processing.script.ScriptAlgorithmProvider import ScriptAlgorithmProvider  # NOQA
 #from processing.preconfigured.PreconfiguredAlgorithmProvider import PreconfiguredAlgorithmProvider  # NOQA
 
 # should be loaded last - ensures that all dependent algorithms are available when loading models
 from processing.modeler.ModelerAlgorithmProvider import ModelerAlgorithmProvider  # NOQA
+from processing.modeler.ProjectProvider import ProjectProvider # NOQA
 
 
 class Processing(object):
@@ -85,11 +84,17 @@ class Processing(object):
         if "model" in [p.id() for p in QgsApplication.processingRegistry().providers()]:
             return
         # Add the basic providers
-        for c in QgsProcessingProvider.__subclasses__():
+        for c in [
+            QgisAlgorithmProvider,
+            Grass7AlgorithmProvider,
+            GdalAlgorithmProvider,
+            OtbAlgorithmProvider,
+            SagaAlgorithmProvider,
+            ScriptAlgorithmProvider,
+            ModelerAlgorithmProvider,
+            ProjectProvider
+        ]:
             p = c()
-            if p.id() in ('native', '3d'):
-                # c++ providers are already registered
-                continue
             if QgsApplication.processingRegistry().addProvider(p):
                 Processing.BASIC_PROVIDERS.append(p)
         # And initialize
@@ -112,39 +117,26 @@ class Processing(object):
             alg = QgsApplication.processingRegistry().createAlgorithmById(algOrName)
 
         if feedback is None:
-            feedback = MessageBarProgress(alg.displayName() if alg else Processing.tr('Processing'))
+            feedback = QgsProcessingFeedback()
 
         if alg is None:
-            # fix_print_with_import
-            print('Error: Algorithm not found\n')
             msg = Processing.tr('Error: Algorithm {0} not found\n').format(algOrName)
             feedback.reportError(msg)
             raise QgsProcessingException(msg)
 
-        # check for any mandatory parameters which were not specified
-        for param in alg.parameterDefinitions():
-            if param.name() not in parameters:
-                if not param.flags() & QgsProcessingParameterDefinition.FlagOptional:
-                    # fix_print_with_import
-                    msg = Processing.tr('Error: Missing parameter value for parameter {0}.').format(param.name())
-                    print('Error: Missing parameter value for parameter %s.' % param.name())
-                    feedback.reportError(msg)
-                    raise QgsProcessingException(msg)
-
         if context is None:
             context = dataobjects.createContext(feedback)
 
+        if context.feedback() is None:
+            context.setFeedback(feedback)
+
         ok, msg = alg.checkParameterValues(parameters, context)
         if not ok:
-            # fix_print_with_import
-            print('Unable to execute algorithm\n' + str(msg))
             msg = Processing.tr('Unable to execute algorithm\n{0}').format(msg)
             feedback.reportError(msg)
             raise QgsProcessingException(msg)
 
         if not alg.validateInputCrs(parameters, context):
-            print('Warning: Not all input layers use the same CRS.\n' +
-                  'This can cause unexpected results.')
             feedback.pushInfo(
                 Processing.tr('Warning: Not all input layers use the same CRS.\nThis can cause unexpected results.'))
 
@@ -158,6 +150,9 @@ class Processing(object):
             else:
                 # auto convert layer references in results to map layers
                 for out in alg.outputDefinitions():
+                    if out.name() not in results:
+                        continue
+
                     if isinstance(out, (QgsProcessingOutputVectorLayer, QgsProcessingOutputRasterLayer, QgsProcessingOutputMapLayer)):
                         result = results[out.name()]
                         if not isinstance(result, QgsMapLayer):

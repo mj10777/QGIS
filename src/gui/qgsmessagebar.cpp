@@ -19,6 +19,7 @@
 #include "qgsmessagebaritem.h"
 #include "qgsapplication.h"
 #include "qgsmessagelog.h"
+#include "qgsmessageviewer.h"
 
 #include <QWidget>
 #include <QPalette>
@@ -43,7 +44,9 @@ QgsMessageBar::QgsMessageBar( QWidget *parent )
   setFrameShadow( QFrame::Plain );
 
   mLayout = new QGridLayout( this );
-  mLayout->setContentsMargins( 9, 1, 9, 1 );
+  const int xMargin = std::max( 9.0, Qgis::UI_SCALE_FACTOR * fontMetrics().height() * 0.45 );
+  const int yMargin = std::max( 1.0, Qgis::UI_SCALE_FACTOR * fontMetrics().height() * 0.05 );
+  mLayout->setContentsMargins( xMargin, yMargin, xMargin, yMargin );
   setLayout( mLayout );
 
   mCountProgress = new QProgressBar( this );
@@ -52,9 +55,11 @@ QgsMessageBar::QgsMessageBar( QWidget *parent )
                               " image: url(:/images/themes/default/%1) }"
                               "QProgressBar::chunk { background-color: rgba(0, 0, 0, 30%); width: 5px; }" );
 
-  mCountProgress->setStyleSheet( mCountStyleSheet.arg( QStringLiteral( "mIconTimerPause.png" ) ) );
+  mCountProgress->setStyleSheet( mCountStyleSheet.arg( QStringLiteral( "mIconTimerPause.svg" ) ) );
   mCountProgress->setObjectName( QStringLiteral( "mCountdown" ) );
-  mCountProgress->setFixedSize( 25, 14 );
+  const int barWidth = std::max( 25.0, Qgis::UI_SCALE_FACTOR * fontMetrics().height() * 1.25 );
+  const int barHeight = std::max( 14.0, Qgis::UI_SCALE_FACTOR * fontMetrics().height() * 0.7 );
+  mCountProgress->setFixedSize( barWidth, barHeight );
   mCountProgress->setSizePolicy( QSizePolicy::Fixed, QSizePolicy::Fixed );
   mCountProgress->setTextVisible( false );
   mCountProgress->setRange( 0, 5 );
@@ -69,7 +74,7 @@ QgsMessageBar::QgsMessageBar( QWidget *parent )
 
   mCloseMenu = new QMenu( this );
   mCloseMenu->setObjectName( QStringLiteral( "mCloseMenu" ) );
-  mActionCloseAll = new QAction( tr( "Close all" ), this );
+  mActionCloseAll = new QAction( tr( "Close All" ), this );
   mCloseMenu->addAction( mActionCloseAll );
   connect( mActionCloseAll, &QAction::triggered, this, &QgsMessageBar::clearWidgets );
 
@@ -78,11 +83,13 @@ QgsMessageBar::QgsMessageBar( QWidget *parent )
   mCloseBtn->setToolTip( tr( "Close" ) );
   mCloseBtn->setMinimumWidth( 40 );
   mCloseBtn->setStyleSheet(
-    "QToolButton { background-color: rgba(0, 0, 0, 0); }"
-    "QToolButton::menu-button { background-color: rgba(0, 0, 0, 0); }" );
+    "QToolButton { border:none; background-color: rgba(0, 0, 0, 0); }"
+    "QToolButton::menu-button { border:none; background-color: rgba(0, 0, 0, 0); }" );
   mCloseBtn->setCursor( Qt::PointingHandCursor );
   mCloseBtn->setIcon( QgsApplication::getThemeIcon( QStringLiteral( "/mIconClose.svg" ) ) );
-  mCloseBtn->setIconSize( QSize( 18, 18 ) );
+
+  const int iconSize = std::max( 18.0, Qgis::UI_SCALE_FACTOR * fontMetrics().height() * 0.9 );
+  mCloseBtn->setIconSize( QSize( iconSize, iconSize ) );
   mCloseBtn->setSizePolicy( QSizePolicy::Maximum, QSizePolicy::Maximum );
   mCloseBtn->setMenu( mCloseMenu );
   mCloseBtn->setPopupMode( QToolButton::MenuButtonPopup );
@@ -107,12 +114,12 @@ void QgsMessageBar::mousePressEvent( QMouseEvent *e )
     if ( mCountdownTimer->isActive() )
     {
       mCountdownTimer->stop();
-      mCountProgress->setStyleSheet( mCountStyleSheet.arg( QStringLiteral( "mIconTimerContinue.png" ) ) );
+      mCountProgress->setStyleSheet( mCountStyleSheet.arg( QStringLiteral( "mIconTimerContinue.svg" ) ) );
     }
     else
     {
       mCountdownTimer->start();
-      mCountProgress->setStyleSheet( mCountStyleSheet.arg( QStringLiteral( "mIconTimerPause.png" ) ) );
+      mCountProgress->setStyleSheet( mCountStyleSheet.arg( QStringLiteral( "mIconTimerPause.svg" ) ) );
     }
   }
 }
@@ -126,15 +133,11 @@ void QgsMessageBar::popItem( QgsMessageBarItem *item )
 
   if ( item == mCurrentItem )
   {
-    if ( mCurrentItem )
-    {
-      QWidget *widget = mCurrentItem;
-      mLayout->removeWidget( widget );
-      mCurrentItem->hide();
-      disconnect( mCurrentItem, &QgsMessageBarItem::styleChanged, this, &QWidget::setStyleSheet );
-      mCurrentItem->deleteLater();
-      mCurrentItem = nullptr;
-    }
+    mLayout->removeWidget( mCurrentItem );
+    mCurrentItem->hide();
+    disconnect( mCurrentItem, &QgsMessageBarItem::styleChanged, this, &QWidget::setStyleSheet );
+    mCurrentItem->deleteLater();
+    mCurrentItem = nullptr;
 
     if ( !mItems.isEmpty() )
     {
@@ -164,7 +167,7 @@ bool QgsMessageBar::popWidget( QgsMessageBarItem *item )
     return true;
   }
 
-  Q_FOREACH ( QgsMessageBarItem *existingItem, mItems )
+  for ( QgsMessageBarItem *existingItem : qgis::as_const( mItems ) )
   {
     if ( existingItem == item )
     {
@@ -266,14 +269,25 @@ void QgsMessageBar::showItem( QgsMessageBarItem *item )
 void QgsMessageBar::pushItem( QgsMessageBarItem *item )
 {
   resetCountdown();
+
+  item->mMessageBar = this;
+
   // avoid duplicated widget
   popWidget( item );
   showItem( item );
 
-  // Log all messages that are sent to the message bar into the message log so the
+  // Log all (non-empty) messages that are sent to the message bar into the message log so the
   // user can get them back easier.
-  QString formattedTitle = QStringLiteral( "%1 : %2" ).arg( item->title(), item->text() );
-  QgsMessageLog::logMessage( formattedTitle, tr( "Messages" ), item->level() );
+  QString formattedTitle;
+  if ( !item->title().isEmpty() && !item->text().isEmpty() )
+    formattedTitle = QStringLiteral( "%1 : %2" ).arg( item->title(), item->text() );
+  else if ( !item->title().isEmpty() )
+    formattedTitle = item->title();
+  else if ( !item->text().isEmpty() )
+    formattedTitle = item->text();
+
+  if ( !formattedTitle.isEmpty() )
+    QgsMessageLog::logMessage( formattedTitle, tr( "Messages" ), item->level() );
 }
 
 QgsMessageBarItem *QgsMessageBar::pushWidget( QWidget *widget, Qgis::MessageLevel level, int duration )
@@ -294,7 +308,44 @@ QgsMessageBarItem *QgsMessageBar::pushWidget( QWidget *widget, Qgis::MessageLeve
 
 void QgsMessageBar::pushMessage( const QString &title, const QString &text, Qgis::MessageLevel level, int duration )
 {
+  // keep the number of items in the message bar to a maximum of 20, avoids flooding (and freezing) of the main window
+  if ( mItems.count() > 20 )
+    mItems.removeFirst();
+
+  // block duplicate items, avoids flooding (and freezing) of the main window
+  for ( auto it = mItems.constBegin(); it != mItems.constEnd(); ++it )
+  {
+    if ( level == ( *it )->level() && title == ( *it )->title() && text == ( *it )->text() )
+      return;
+  }
+
   QgsMessageBarItem *item = new QgsMessageBarItem( title, text, level, duration );
+  pushItem( item );
+}
+
+void QgsMessageBar::pushMessage( const QString &title, const QString &text, const QString &showMore, Qgis::MessageLevel level, int duration )
+{
+  QgsMessageViewer *mv = new QgsMessageViewer();
+  mv->setWindowTitle( title );
+  mv->setMessageAsPlainText( text + "\n\n" + showMore );
+
+  QToolButton *showMoreButton = new QToolButton();
+  QAction *act = new QAction( showMoreButton );
+  act->setText( tr( "Show more" ) );
+  showMoreButton->setStyleSheet( QStringLiteral( "background-color: rgba(255, 255, 255, 0); color: black; text-decoration: underline;" ) );
+  showMoreButton->setCursor( Qt::PointingHandCursor );
+  showMoreButton->setSizePolicy( QSizePolicy::Maximum, QSizePolicy::Preferred );
+  showMoreButton->addAction( act );
+  showMoreButton->setDefaultAction( act );
+  connect( showMoreButton, &QToolButton::triggered, mv, &QDialog::exec );
+  connect( showMoreButton, &QToolButton::triggered, showMoreButton, &QObject::deleteLater );
+
+  QgsMessageBarItem *item = new QgsMessageBarItem(
+    title,
+    text,
+    showMoreButton,
+    level,
+    duration );
   pushItem( item );
 }
 
@@ -336,7 +387,7 @@ void QgsMessageBar::resetCountdown()
   if ( mCountdownTimer->isActive() )
     mCountdownTimer->stop();
 
-  mCountProgress->setStyleSheet( mCountStyleSheet.arg( QStringLiteral( "mIconTimerPause.png" ) ) );
+  mCountProgress->setStyleSheet( mCountStyleSheet.arg( QStringLiteral( "mIconTimerPause.svg" ) ) );
   mCountProgress->setVisible( false );
 }
 

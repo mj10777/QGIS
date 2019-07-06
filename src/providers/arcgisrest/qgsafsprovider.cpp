@@ -19,39 +19,36 @@
 #include "qgsarcgisrestutils.h"
 #include "qgsafsfeatureiterator.h"
 #include "qgsdatasourceuri.h"
+#include "qgsafsdataitems.h"
 #include "qgslogger.h"
-#include "geometry/qgsgeometry.h"
-#include "qgsnetworkaccessmanager.h"
+#include "qgsdataitemprovider.h"
+#include "qgsapplication.h"
 
-#ifdef HAVE_GUI
-#include "qgsafssourceselect.h"
-#include "qgssourceselectprovider.h"
-#endif
-
-#include <QEventLoop>
-#include <QMessageBox>
-#include <QNetworkRequest>
-#include <QNetworkReply>
+const QString QgsAfsProvider::AFS_PROVIDER_KEY = QStringLiteral( "arcgisfeatureserver" );
+const QString QgsAfsProvider::AFS_PROVIDER_DESCRIPTION = QStringLiteral( "ArcGIS Feature Server data provider" );
 
 
-static const QString TEXT_PROVIDER_KEY = QStringLiteral( "arcgisfeatureserver" );
-static const QString TEXT_PROVIDER_DESCRIPTION = QStringLiteral( "ArcGIS Feature Server data provider" );
-
-QgsAfsProvider::QgsAfsProvider( const QString &uri )
-  : QgsVectorDataProvider( uri )
-  , mValid( false )
-  , mObjectIdFieldIdx( -1 )
+QgsAfsProvider::QgsAfsProvider( const QString &uri, const ProviderOptions &options )
+  : QgsVectorDataProvider( uri, options )
 {
   mSharedData.reset( new QgsAfsSharedData() );
   mSharedData->mGeometryType = QgsWkbTypes::Unknown;
   mSharedData->mDataSource = QgsDataSourceUri( uri );
 
+  const QString authcfg = mSharedData->mDataSource.authConfigId();
+
   // Set CRS
-  mSharedData->mSourceCRS = QgsCoordinateReferenceSystem::fromOgcWmsCrs( mSharedData->mDataSource.param( QStringLiteral( "crs" ) ) );
+  mSharedData->mSourceCRS.createFromString( mSharedData->mDataSource.param( QStringLiteral( "crs" ) ) );
 
   // Get layer info
   QString errorTitle, errorMessage;
-  QVariantMap layerData = QgsArcGisRestUtils::getLayerInfo( mSharedData->mDataSource.param( QStringLiteral( "url" ) ), errorTitle, errorMessage );
+
+  const QString referer = mSharedData->mDataSource.param( QStringLiteral( "referer" ) );
+  if ( !referer.isEmpty() )
+    mRequestHeaders[ QStringLiteral( "Referer" )] = referer;
+
+  const QVariantMap layerData = QgsArcGisRestUtils::getLayerInfo( mSharedData->mDataSource.param( QStringLiteral( "url" ) ),
+                                authcfg, errorTitle, errorMessage, mRequestHeaders );
   if ( layerData.isEmpty() )
   {
     pushError( errorTitle + ": " + errorMessage );
@@ -63,6 +60,7 @@ QgsAfsProvider::QgsAfsProvider( const QString &uri )
 
   // Set extent
   QStringList coords = mSharedData->mDataSource.param( QStringLiteral( "bbox" ) ).split( ',' );
+  bool limitBbox = false;
   if ( coords.size() == 4 )
   {
     bool xminOk = false, yminOk = false, xmaxOk = false, ymaxOk = false;
@@ -72,9 +70,14 @@ QgsAfsProvider::QgsAfsProvider( const QString &uri )
     mSharedData->mExtent.setYMaximum( coords[3].toDouble( &ymaxOk ) );
     if ( !xminOk || !yminOk || !xmaxOk || !ymaxOk )
       mSharedData->mExtent = QgsRectangle();
+    else
+    {
+      // user has set a bounding box limit on the layer - so we only EVER fetch features from this extent
+      limitBbox = true;
+    }
   }
 
-  QVariantMap layerExtentMap = layerData[QStringLiteral( "extent" )].toMap();
+  const QVariantMap layerExtentMap = layerData[QStringLiteral( "extent" )].toMap();
   bool xminOk = false, yminOk = false, xmaxOk = false, ymaxOk = false;
   QgsRectangle originalExtent;
   originalExtent.setXMinimum( layerExtentMap[QStringLiteral( "xmin" )].toDouble( &xminOk ) );
@@ -110,15 +113,14 @@ QgsAfsProvider::QgsAfsProvider( const QString &uri )
   if ( mSharedData->mExtent.isEmpty() )
   {
     mSharedData->mExtent = originalExtent;
-    Q_NOWARN_DEPRECATED_PUSH
-    mSharedData->mExtent = QgsCoordinateTransform( extentCrs, mSharedData->mSourceCRS ).transformBoundingBox( mSharedData->mExtent );
-    Q_NOWARN_DEPRECATED_POP
+    mSharedData->mExtent = QgsCoordinateTransform( extentCrs, mSharedData->mSourceCRS, options.transformContext ).transformBoundingBox( mSharedData->mExtent );
   }
 
   QString objectIdFieldName;
 
   // Read fields
-  foreach ( const QVariant &fieldData, layerData["fields"].toList() )
+  const QVariantList fields = layerData.value( QStringLiteral( "fields" ) ).toList();
+  for ( const QVariant &fieldData : fields )
   {
     const QVariantMap fieldDataMap = fieldData.toMap();
     const QString fieldName = fieldDataMap[QStringLiteral( "name" )].toString();
@@ -135,10 +137,28 @@ QgsAfsProvider::QgsAfsProvider( const QString &uri )
     }
     if ( type == QVariant::Invalid )
     {
-      QgsDebugMsg( QString( "Skipping unsupported field %1 of type %2" ).arg( fieldName, fieldTypeString ) );
+      QgsDebugMsg( QStringLiteral( "Skipping unsupported field %1 of type %2" ).arg( fieldName, fieldTypeString ) );
       continue;
     }
     QgsField field( fieldName, type, fieldDataMap[QStringLiteral( "type" )].toString(), fieldDataMap[QStringLiteral( "length" )].toInt() );
+
+    if ( fieldDataMap.contains( QStringLiteral( "domain" ) ) && fieldDataMap.value( QStringLiteral( "domain" ) ).toMap().value( QStringLiteral( "type" ) ).toString() == QStringLiteral( "codedValue" ) )
+    {
+      const QVariantList values = fieldDataMap.value( QStringLiteral( "domain" ) ).toMap().value( QStringLiteral( "codedValues" ) ).toList();
+      QVariantList valueConfig;
+      valueConfig.reserve( values.count() );
+      for ( const QVariant &v : values )
+      {
+        const QVariantMap value = v.toMap();
+        QVariantMap config;
+        config[ value.value( QStringLiteral( "name" ) ).toString() ] = value.value( QStringLiteral( "code" ) );
+        valueConfig.append( config );
+      }
+      QVariantMap editorConfig;
+      editorConfig.insert( QStringLiteral( "map" ), valueConfig );
+      field.setEditorWidgetSetup( QgsEditorWidgetSetup( QStringLiteral( "ValueMap" ), editorConfig ) );
+    }
+
     mSharedData->mFields.append( field );
   }
   if ( objectIdFieldName.isEmpty() )
@@ -150,15 +170,24 @@ QgsAfsProvider::QgsAfsProvider( const QString &uri )
   mSharedData->mGeometryType = QgsArcGisRestUtils::mapEsriGeometryType( layerData[QStringLiteral( "geometryType" )].toString() );
   if ( mSharedData->mGeometryType == QgsWkbTypes::Unknown )
   {
-    appendError( QgsErrorMessage( tr( "Failed to determine geometry type" ), QStringLiteral( "AFSProvider" ) ) );
-    return;
+    if ( layerData.value( QStringLiteral( "serviceDataType" ) ).toString().startsWith( QLatin1String( "esriImageService" ) ) )
+    {
+      // it's possible to connect to ImageServers as a feature service, to view tile boundaries
+      mSharedData->mGeometryType = QgsWkbTypes::Polygon;
+    }
+    else
+    {
+      appendError( QgsErrorMessage( tr( "Failed to determine geometry type" ), QStringLiteral( "AFSProvider" ) ) );
+      return;
+    }
   }
   mSharedData->mGeometryType = QgsWkbTypes::zmType( mSharedData->mGeometryType, hasZ, hasM );
 
   // Read OBJECTIDs of all features: these may not be a continuous sequence,
   // and we need to store these to iterate through the features. This query
   // also returns the name of the ObjectID field.
-  QVariantMap objectIdData = QgsArcGisRestUtils::getObjectIds( mSharedData->mDataSource.param( QStringLiteral( "url" ) ), objectIdFieldName, errorTitle, errorMessage );
+  QVariantMap objectIdData = QgsArcGisRestUtils::getObjectIds( mSharedData->mDataSource.param( QStringLiteral( "url" ) ), authcfg,
+                             errorTitle,  errorMessage, mRequestHeaders, limitBbox ? mSharedData->mExtent : QgsRectangle() );
   if ( objectIdData.isEmpty() )
   {
     appendError( QgsErrorMessage( tr( "getObjectIds failed: %1 - %2" ).arg( errorTitle, errorMessage ), QStringLiteral( "AFSProvider" ) ) );
@@ -185,7 +214,8 @@ QgsAfsProvider::QgsAfsProvider( const QString &uri )
       break;
     }
   }
-  foreach ( const QVariant &objectId, objectIdData["objectIds"].toList() )
+  const QVariantList objectIds = objectIdData.value( QStringLiteral( "objectIds" ) ).toList();
+  for ( const QVariant &objectId : objectIds )
   {
     mSharedData->mObjectIds.append( objectId.toInt() );
   }
@@ -206,7 +236,11 @@ QgsAfsProvider::QgsAfsProvider( const QString &uri )
   QString copyright = layerData[QStringLiteral( "copyrightText" )].toString();
   if ( !copyright.isEmpty() )
     mLayerMetadata.setRights( QStringList() << copyright );
-  mLayerMetadata.addLink( QgsLayerMetadata::Link( tr( "Source" ), QStringLiteral( "WWW:LINK" ), mSharedData->mDataSource.param( QStringLiteral( "url" ) ) ) );
+  mLayerMetadata.addLink( QgsAbstractMetadataBase::Link( tr( "Source" ), QStringLiteral( "WWW:LINK" ), mSharedData->mDataSource.param( QStringLiteral( "url" ) ) ) );
+
+  // renderer
+  mRendererDataMap = layerData.value( QStringLiteral( "drawingInfo" ) ).toMap().value( QStringLiteral( "renderer" ) ).toMap();
+  mLabelingDataList = layerData.value( QStringLiteral( "drawingInfo" ) ).toMap().value( QStringLiteral( "labelingInfo" ) ).toList();
 
   mValid = true;
 }
@@ -243,7 +277,16 @@ QgsLayerMetadata QgsAfsProvider::layerMetadata() const
 
 QgsVectorDataProvider::Capabilities QgsAfsProvider::capabilities() const
 {
-  return QgsVectorDataProvider::SelectAtId | QgsVectorDataProvider::ReadLayerMetadata;
+  QgsVectorDataProvider::Capabilities c = QgsVectorDataProvider::SelectAtId | QgsVectorDataProvider::ReadLayerMetadata;
+  if ( !mRendererDataMap.empty() )
+  {
+    c = c | QgsVectorDataProvider::CreateRenderer;
+  }
+  if ( !mLabelingDataList.empty() )
+  {
+    c = c | QgsVectorDataProvider::CreateLabeling;
+  }
+  return c;
 }
 
 void QgsAfsProvider::setDataSourceUri( const QString &uri )
@@ -264,12 +307,12 @@ QgsRectangle QgsAfsProvider::extent() const
 
 QString QgsAfsProvider::name() const
 {
-  return TEXT_PROVIDER_KEY;
+  return AFS_PROVIDER_KEY;
 }
 
 QString QgsAfsProvider::description() const
 {
-  return TEXT_PROVIDER_DESCRIPTION;
+  return AFS_PROVIDER_DESCRIPTION;
 }
 
 QString QgsAfsProvider::dataComment() const
@@ -282,32 +325,55 @@ void QgsAfsProvider::reloadData()
   mSharedData->clearCache();
 }
 
-
-#ifdef HAVE_GUI
-
-//! Provider for AFS layers source select
-class QgsAfsSourceSelectProvider : public QgsSourceSelectProvider
+QgsFeatureRenderer *QgsAfsProvider::createRenderer( const QVariantMap & ) const
 {
-  public:
+  return QgsArcGisRestUtils::parseEsriRenderer( mRendererDataMap );
+}
 
-    QString providerKey() const override { return TEXT_PROVIDER_KEY; }
-    QString text() const override { return QObject::tr( "ArcGIS Feature Server" ); }
-    int ordering() const override { return QgsSourceSelectProvider::OrderRemoteProvider + 150; }
-    QIcon icon() const override { return QgsApplication::getThemeIcon( QStringLiteral( "/mActionAddAfsLayer.svg" ) ); }
-    QgsAbstractDataSourceWidget *createDataSourceWidget( QWidget *parent = nullptr, Qt::WindowFlags fl = Qt::Widget, QgsProviderRegistry::WidgetMode widgetMode = QgsProviderRegistry::WidgetMode::Embedded ) const override
-    {
-      return new QgsAfsSourceSelect( parent, fl, widgetMode );
-    }
-};
-
-
-QGISEXTERN QList<QgsSourceSelectProvider *> *sourceSelectProviders()
+QgsAbstractVectorLayerLabeling *QgsAfsProvider::createLabeling( const QVariantMap & ) const
 {
-  QList<QgsSourceSelectProvider *> *providers = new QList<QgsSourceSelectProvider *>();
+  return QgsArcGisRestUtils::parseEsriLabeling( mLabelingDataList );
+}
 
-  *providers
-      << new QgsAfsSourceSelectProvider;
+bool QgsAfsProvider::renderInPreview( const QgsDataProvider::PreviewContext & )
+{
+  // these servers can be sloooooooow, and unpredictable. The previous preview job may have been fast to render,
+  // but the next may take minutes or worse to download...
+  return false;
+}
+
+
+QgsAfsProviderMetadata::QgsAfsProviderMetadata():
+  QgsProviderMetadata( QgsAfsProvider::AFS_PROVIDER_KEY, QgsAfsProvider::AFS_PROVIDER_DESCRIPTION )
+{
+}
+
+QList<QgsDataItemProvider *> QgsAfsProviderMetadata::dataItemProviders() const
+{
+  QList<QgsDataItemProvider *> providers;
+
+  providers
+      << new QgsAfsDataItemProvider;
 
   return providers;
 }
-#endif
+
+QVariantMap QgsAfsProviderMetadata::decodeUri( const QString &uri )
+{
+  QgsDataSourceUri dsUri = QgsDataSourceUri( uri );
+
+  QVariantMap components;
+  components.insert( QStringLiteral( "url" ), dsUri.param( QStringLiteral( "url" ) ) );
+  return components;
+}
+
+QgsAfsProvider *QgsAfsProviderMetadata::createProvider( const QString &uri, const QgsDataProvider::ProviderOptions &options )
+{
+  return new QgsAfsProvider( uri, options );
+}
+
+
+QGISEXTERN QgsProviderMetadata *providerMetadataFactory()
+{
+  return new QgsAfsProviderMetadata();
+}

@@ -772,9 +772,6 @@ void getStackTrace( StackTrace *stackTrace, QString symbolPath, QgsStackTrace *t
 QgsStackTrace *QgsStackTrace::trace( DWORD processId, DWORD threadId, LPEXCEPTION_POINTERS exception, QString symbolPath )
 {
   QgsStackTrace *trace = new QgsStackTrace();
-#ifndef QGISDEBUG
-  return stack;
-#endif
   EXCEPTION_POINTERS remoteException = { 0 };
   CONTEXT remoteContextRecord = { 0 };
 
@@ -845,7 +842,7 @@ QgsStackTrace *QgsStackTrace::trace( DWORD processId, DWORD threadId, LPEXCEPTIO
 #ifdef Q_OS_LINUX
 QVector<QgsStackTrace::StackLine> QgsStackTrace::trace( unsigned int maxFrames )
 {
-  Q_UNUSED( maxFrames );
+  Q_UNUSED( maxFrames )
   QgsStackLines stack;
 #ifndef QGISDEBUG
   return stack;

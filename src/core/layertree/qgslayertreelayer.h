@@ -17,7 +17,7 @@
 #define QGSLAYERTREELAYER_H
 
 #include "qgis_core.h"
-#include "qgis.h"
+#include "qgis_sip.h"
 #include "qgslayertreenode.h"
 #include "qgsmaplayerref.h"
 #include "qgsreadwritecontext.h"
@@ -54,21 +54,54 @@ class CORE_EXPORT QgsLayerTreeLayer : public QgsLayerTreeNode
      */
     explicit QgsLayerTreeLayer( const QString &layerId, const QString &name = QString(), const QString &source = QString(), const QString &provider = QString() );
 
+    /**
+     * Returns the ID for the map layer associated with this node.
+     *
+     * \see layer()
+     */
     QString layerId() const { return mRef.layerId; }
 
+    /**
+     * Returns the map layer associated with this node.
+     *
+     * \warning This can be (and often is!) NULLPTR, e.g. in the case of a layer node representing a layer
+     * which has not yet been fully loaded into a project, or a layer node representing a layer
+     * with an invalid data source. The returned pointer must ALWAYS be checked to avoid dereferencing NULLPTR.
+     *
+     * \see layerId()
+     */
     QgsMapLayer *layer() const { return mRef.get(); }
 
     /**
      * Returns the layer's name.
+     *
+     * \see setName()
+     *
      * \since QGIS 3.0
      */
     QString name() const override;
 
     /**
      * Sets the layer's name.
+     *
+     * \see name()
+     *
      * \since QGIS 3.0
      */
     void setName( const QString &n ) override;
+
+    /**
+     * Uses the layer's name if \a use is true, or the name manually set if
+     * false.
+     * \since QGIS 3.8
+     */
+    void setUseLayerName( bool use = true );
+
+    /**
+     * Returns whether the layer's name is used, or the name manually set.
+     * \since QGIS 3.8
+     */
+    bool useLayerName() const;
 
     /**
      * Read layer node from XML. Returns new instance.
@@ -113,8 +146,11 @@ class CORE_EXPORT QgsLayerTreeLayer : public QgsLayerTreeNode
 
     //! Weak reference to the layer (or just it's ID if the reference is not resolved yet)
     QgsMapLayerRef mRef;
-    //! Layer name - only used if layer does not exist
+    //! Layer name - only used if layer does not exist or if mUseLayerName is false
     QString mLayerName;
+
+    //!
+    bool mUseLayerName = true;
 
   private slots:
 

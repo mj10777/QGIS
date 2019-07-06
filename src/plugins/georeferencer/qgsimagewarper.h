@@ -82,7 +82,7 @@ class QgsImageWarper
      * \returns Argument to use with the static GDAL callback \ref GeoToPixelTransform
      */
     void *addGeoToPixelTransform( GDALTransformerFunc GDALTransformer, void *GDALTransformerArg, double *padfGeotransform ) const;
-    void destroyGeoToPixelTransform( void *GeoToPixelTransfomArg ) const;
+    void destroyGeoToPixelTransform( void *GeoToPixelTransformArg ) const;
 
     bool openSrcDSAndGetWarpOpt( const QString &input, ResamplingMethod resampling,
                                  const GDALTransformerFunc &pfnTransform, gdal::dataset_unique_ptr &hSrcDS,
@@ -98,7 +98,7 @@ class QgsImageWarper
 
     static bool sWarpCanceled;
 
-    GDALResampleAlg toGDALResampleAlg( const ResamplingMethod method ) const;
+    GDALResampleAlg toGDALResampleAlg( ResamplingMethod method ) const;
 };
 
 

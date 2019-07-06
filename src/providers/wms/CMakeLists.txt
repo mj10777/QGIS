@@ -1,12 +1,8 @@
-FIND_PACKAGE(Qt5XmlPatterns REQUIRED)
-
-
 SET (WMS_SRCS
   qgswmscapabilities.cpp
   qgswmsprovider.cpp
   qgswmsconnection.cpp
   qgswmsdataitems.cpp
-  qgstilecache.cpp
   qgsxyzconnection.cpp
 )
 SET (WMS_MOC_HDRS
@@ -17,13 +13,16 @@ SET (WMS_MOC_HDRS
 
 IF (WITH_GUI)
   SET(WMS_SRCS ${WMS_SRCS}
+    qgswmsprovidergui.cpp
     qgswmssourceselect.cpp
+    qgswmsdataitemguiproviders.cpp
     qgstilescalewidget.cpp
     qgswmtsdimensions.cpp
     qgsxyzconnectiondialog.cpp
   )
   SET(WMS_MOC_HDRS ${WMS_MOC_HDRS}
     qgswmssourceselect.h
+    qgswmsdataitemguiproviders.h
     qgstilescalewidget.h
     qgswmtsdimensions.h
     qgsxyzconnectiondialog.h
@@ -42,6 +41,7 @@ INCLUDE_DIRECTORIES(
   ${CMAKE_SOURCE_DIR}/src/core/metadata
   ${CMAKE_SOURCE_DIR}/src/gui
   ${CMAKE_SOURCE_DIR}/src/gui/auth
+  ${CMAKE_SOURCE_DIR}/external
 
   ${CMAKE_BINARY_DIR}/src/ui
   ${CMAKE_BINARY_DIR}/src/core
@@ -49,7 +49,7 @@ INCLUDE_DIRECTORIES(
 )
 INCLUDE_DIRECTORIES(SYSTEM
   ${GDAL_INCLUDE_DIR}
-  ${GEOS_INCLUDE_DIR}
+  ${EXPAT_INCLUDE_DIR}
   ${QCA_INCLUDE_DIR}
   ${QTKEYCHAIN_INCLUDE_DIR}
 )
@@ -76,6 +76,8 @@ IF (WITH_GUI)
     qgis_gui
   )
 ENDIF ()
+
+TARGET_COMPILE_DEFINITIONS(wmsprovider PRIVATE "-DQT_NO_FOREACH")
 
 INSTALL (TARGETS wmsprovider
   RUNTIME DESTINATION ${QGIS_PLUGIN_DIR}

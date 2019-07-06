@@ -21,15 +21,11 @@ __author__ = 'Victor Olaya'
 __date__ = 'November 2012'
 __copyright__ = '(C) 2012, Victor Olaya'
 
-# This will get replaced with a git SHA1 when you do a git archive
 
-__revision__ = '$Format:%H$'
-
-
-from qgis.core import (QgsProcessingParameterVectorLayer,
+from qgis.core import (QgsProcessingException,
+                       QgsProcessingParameterVectorLayer,
                        QgsProcessingParameterBoolean,
-                       QgsProcessingParameterFileDestination,
-                       QgsProcessingOutputHtml)
+                       QgsProcessingParameterFileDestination)
 from processing.algs.gdal.GdalAlgorithm import GdalAlgorithm
 from processing.algs.gdal.GdalUtils import GdalUtils
 
@@ -57,7 +53,6 @@ class ogrinfo(GdalAlgorithm):
         self.addParameter(QgsProcessingParameterFileDestination(self.OUTPUT,
                                                                 self.tr('Layer information'),
                                                                 self.tr('HTML files (*.html)')))
-        self.addOutput(QgsProcessingOutputHtml(self.OUTPUT, self.tr('Layer information')))
 
     def name(self):
         return 'ogrinfo'
@@ -71,19 +66,24 @@ class ogrinfo(GdalAlgorithm):
     def groupId(self):
         return 'vectormiscellaneous'
 
-    def getConsoleCommands(self, parameters, context, feedback, executing=True):
-        arguments = ['ogrinfo']
-        arguments.append('-al')
+    def commandName(self):
+        return 'ogrinfo'
 
-        if self.parameterAsBool(parameters, self.SUMMARY_ONLY, context):
+    def getConsoleCommands(self, parameters, context, feedback, executing=True):
+        arguments = ['-al']
+
+        if self.parameterAsBoolean(parameters, self.SUMMARY_ONLY, context):
             arguments.append('-so')
-        if self.parameterAsBool(parameters, self.NO_METADATA, context):
+        if self.parameterAsBoolean(parameters, self.NO_METADATA, context):
             arguments.append('-nomd')
 
         inLayer = self.parameterAsVectorLayer(parameters, self.INPUT, context)
-        connectionString = GdalUtils.ogrConnectionString(inLayer.source(), context)
+        if inLayer is None:
+            raise QgsProcessingException(self.invalidSourceError(parameters, self.INPUT))
+
+        connectionString = GdalUtils.ogrConnectionStringFromLayer(inLayer)
         arguments.append(connectionString)
-        return arguments
+        return [self.commandName(), GdalUtils.escapeAndJoin(arguments)]
 
     def processAlgorithm(self, parameters, context, feedback):
         GdalUtils.runGdal(self.getConsoleCommands(parameters, context, feedback), feedback)

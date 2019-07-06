@@ -21,16 +21,13 @@ __author__ = 'Alexander Bruy'
 __date__ = 'September 2013'
 __copyright__ = '(C) 2013, Alexander Bruy'
 
-# This will get replaced with a git SHA1 when you do a git archive
-
-__revision__ = '$Format:%H$'
-
-from qgis.core import (QgsProcessing,
+from qgis.core import (QgsProcessingAlgorithm,
+                       QgsProcessingException,
                        QgsProcessingParameterRasterLayer,
                        QgsProcessingParameterBand,
                        QgsProcessingParameterBoolean,
-                       QgsProcessingParameterFileDestination,
-                       QgsProcessingOutputFile)
+                       QgsProcessingParameterFileDestination
+                       )
 from processing.algs.gdal.GdalAlgorithm import GdalAlgorithm
 from processing.algs.gdal.GdalUtils import GdalUtils
 from processing.tools.system import isWindows
@@ -51,6 +48,7 @@ class gdal2xyz(GdalAlgorithm):
                                                             self.tr('Input layer')))
         self.addParameter(QgsProcessingParameterBand(self.BAND,
                                                      self.tr('Band number'),
+                                                     1,
                                                      parentLayerParameterName=self.INPUT))
         self.addParameter(QgsProcessingParameterBoolean(self.CSV,
                                                         self.tr('Output comma-separated values'),
@@ -58,7 +56,6 @@ class gdal2xyz(GdalAlgorithm):
         self.addParameter(QgsProcessingParameterFileDestination(self.OUTPUT,
                                                                 self.tr('XYZ ASCII file'),
                                                                 self.tr('CSV files (*.csv)')))
-        self.addOutput(QgsProcessingOutputFile(self.OUTPUT, self.tr('XYZ ASCII file')))
 
     def name(self):
         return 'gdal2xyz'
@@ -72,23 +69,32 @@ class gdal2xyz(GdalAlgorithm):
     def groupId(self):
         return 'rasterconversion'
 
+    def commandName(self):
+        return 'gdal2xyz'
+
+    def flags(self):
+        return super().flags() | QgsProcessingAlgorithm.FlagDisplayNameIsLiteral
+
     def getConsoleCommands(self, parameters, context, feedback, executing=True):
-        arguments = []
         arguments = []
         arguments.append('-band')
         arguments.append(str(self.parameterAsInt(parameters, self.BAND, context)))
 
-        if self.parameterAsBool(parameters, self.CSV, context):
+        if self.parameterAsBoolean(parameters, self.CSV, context):
             arguments.append('-csv')
 
-        arguments.append(self.parameterAsRasterLayer(parameters, self.INPUT, context).source())
+        raster = self.parameterAsRasterLayer(parameters, self.INPUT, context)
+        if raster is None:
+            raise QgsProcessingException(self.invalidRasterError(parameters, self.INPUT))
+
+        arguments.append(raster.source())
         arguments.append(self.parameterAsFileOutput(parameters, self.OUTPUT, context))
 
-        commands = []
         if isWindows():
-            commands = ['cmd.exe', '/C ', 'gdal2xyz.bat',
-                        GdalUtils.escapeAndJoin(arguments)]
+            commands = ["python3", "-m", self.commandName()]
         else:
-            commands = ['gdal2xyz.py', GdalUtils.escapeAndJoin(arguments)]
+            commands = [self.commandName() + '.py']
+
+        commands.append(GdalUtils.escapeAndJoin(arguments))
 
         return commands

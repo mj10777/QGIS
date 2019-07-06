@@ -12,7 +12,9 @@
  *   (at your option) any later version.                                   *
  *                                                                         *
  ***************************************************************************/
+
 #include "qgsvectorlayerfeaturecounter.h"
+#include "qgsvectorlayer.h"
 
 QgsVectorLayerFeatureCounter::QgsVectorLayerFeatureCounter( QgsVectorLayer *layer, const QgsExpressionContext &context )
   : QgsTask( tr( "Counting features in %1" ).arg( layer->name() ), QgsTask::CanCancel )
@@ -64,7 +66,8 @@ bool QgsVectorLayerFeatureCounter::run()
     {
       renderContext.expressionContext().setFeature( f );
       QSet<QString> featureKeyList = mRenderer->legendKeysForFeature( f, renderContext );
-      Q_FOREACH ( const QString &key, featureKeyList )
+      const auto constFeatureKeyList = featureKeyList;
+      for ( const QString &key : constFeatureKeyList )
       {
         mSymbolFeatureCountMap[key] += 1;
       }

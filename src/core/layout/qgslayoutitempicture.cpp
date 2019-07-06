@@ -203,7 +203,7 @@ void QgsLayoutItemPicture::draw( QgsLayoutItemRenderContext &context )
   painter->restore();
 }
 
-QSizeF QgsLayoutItemPicture::applyItemSizeConstraint( const QSizeF &targetSize )
+QSizeF QgsLayoutItemPicture::applyItemSizeConstraint( const QSizeF targetSize )
 {
   QSizeF currentPictureSize = pictureSize();
   QSizeF newSize = targetSize;
@@ -347,7 +347,7 @@ void QgsLayoutItemPicture::refreshPicture( const QgsExpressionContext *context )
     if ( ok )
     {
       source = source.trimmed();
-      QgsDebugMsg( QString( "exprVal PictureSource:%1" ).arg( source ) );
+      QgsDebugMsg( QStringLiteral( "exprVal PictureSource:%1" ).arg( source ) );
     }
     else
     {
@@ -472,8 +472,8 @@ void QgsLayoutItemPicture::updateMapRotation()
       }
       catch ( QgsException &e )
       {
-        Q_UNUSED( e );
-        QgsDebugMsg( QString( "Caught exception %1" ).arg( e.what() ) );
+        Q_UNUSED( e )
+        QgsDebugMsg( QStringLiteral( "Caught exception %1" ).arg( e.what() ) );
       }
       break;
     }
@@ -485,6 +485,8 @@ void QgsLayoutItemPicture::updateMapRotation()
 
 void QgsLayoutItemPicture::loadPicture( const QString &path )
 {
+  mIsMissingImage = false;
+  mEvaluatedPath = path;
   if ( path.startsWith( QLatin1String( "http" ) ) )
   {
     //remote location
@@ -503,6 +505,7 @@ void QgsLayoutItemPicture::loadPicture( const QString &path )
   {
     //trying to load an invalid file or bad expression, show cross picture
     mMode = FormatSVG;
+    mIsMissingImage = true;
     QString badFile( QStringLiteral( ":/images/composer/missing_image.svg" ) );
     mSVG.load( badFile );
     if ( mSVG.isValid() )
@@ -567,6 +570,16 @@ QSizeF QgsLayoutItemPicture::pictureSize()
   {
     return QSizeF( 0, 0 );
   }
+}
+
+bool QgsLayoutItemPicture::isMissingImage() const
+{
+  return mIsMissingImage;
+}
+
+QString QgsLayoutItemPicture::evaluatedPath() const
+{
+  return mEvaluatedPath;
 }
 
 void QgsLayoutItemPicture::shapeChanged()
@@ -669,14 +682,6 @@ void QgsLayoutItemPicture::refreshDataDefinedProperty( const QgsLayoutObject::Da
   QgsLayoutItem::refreshDataDefinedProperty( property );
 }
 
-bool QgsLayoutItemPicture::containsAdvancedEffects() const
-{
-  if ( QgsLayoutItem::containsAdvancedEffects() )
-    return true;
-
-  return mMode == FormatSVG && itemOpacity() < 1.0;
-}
-
 void QgsLayoutItemPicture::setPicturePath( const QString &path )
 {
   mSourcePath = path;
@@ -752,7 +757,7 @@ bool QgsLayoutItemPicture::readPropertiesFromElement( const QDomElement &itemEle
   if ( itemElem.hasAttribute( QStringLiteral( "sourceExpression" ) ) )
   {
     //update pre 2.5 picture expression to use data defined expression
-    QString sourceExpression = itemElem.attribute( QStringLiteral( "sourceExpression" ), QLatin1String( "" ) );
+    QString sourceExpression = itemElem.attribute( QStringLiteral( "sourceExpression" ), QString() );
     QString useExpression = itemElem.attribute( QStringLiteral( "useExpression" ) );
     bool expressionActive;
     expressionActive = ( useExpression.compare( QLatin1String( "true" ), Qt::CaseInsensitive ) == 0 );

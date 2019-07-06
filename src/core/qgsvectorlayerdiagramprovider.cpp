@@ -20,6 +20,7 @@
 #include "qgsvectorlayer.h"
 #include "qgsvectorlayerfeatureiterator.h"
 #include "diagram/qgsdiagram.h"
+#include "qgsgeos.h"
 
 #include "feature.h"
 #include "labelposition.h"
@@ -42,7 +43,6 @@ void QgsVectorLayerDiagramProvider::init()
   mName = mLayerId;
   mPriority = 1 - mSettings.priority() / 10.0; // convert 0..10 --> 1..0
   mPlacement = QgsPalLayerSettings::Placement( mSettings.placement() );
-  mLinePlacementFlags = mSettings.linePlacementFlags();
 }
 
 
@@ -77,12 +77,17 @@ QList<QgsLabelFeature *> QgsVectorLayerDiagramProvider::labelFeatures( QgsRender
   QgsFeatureRequest request;
   request.setFilterRect( layerExtent );
   request.setSubsetOfAttributes( attributeNames, mFields );
+  const QgsFeatureFilterProvider *featureFilterProvider = context.featureFilterProvider();
+  if ( featureFilterProvider )
+  {
+    featureFilterProvider->filterFeatures( qobject_cast<QgsVectorLayer *>( mLayer ), request );
+  }
   QgsFeatureIterator fit = mSource->getFeatures( request );
-
 
   QgsFeature fet;
   while ( fit.nextFeature( fet ) )
   {
+    context.expressionContext().setFeature( fet );
     registerFeature( fet, context );
   }
 
@@ -96,7 +101,7 @@ void QgsVectorLayerDiagramProvider::drawLabel( QgsRenderContext &context, pal::L
   // features are pre-rotated but not scaled/translated,
   // so we only disable rotation here. Ideally, they'd be
   // also pre-scaled/translated, as suggested here:
-  // https://issues.qgis.org/issues/11856
+  // https://github.com/qgis/QGIS/issues/20071
   QgsMapToPixel xform = context.mapToPixel();
   xform.setMapRotation( 0, 0, 0 );
 #else
@@ -142,14 +147,12 @@ bool QgsVectorLayerDiagramProvider::prepare( const QgsRenderContext &context, QS
   const QgsMapSettings &mapSettings = mEngine->mapSettings();
 
   if ( context.coordinateTransform().isValid() )
-    // this is context for layer rendering - use its CT as it includes correct datum transform
+    // this is context for layer rendering
     s2.setCoordinateTransform( context.coordinateTransform() );
   else
   {
-    // otherwise fall back to creating our own CT - this one may not have the correct datum transform!
-    Q_NOWARN_DEPRECATED_PUSH
-    s2.setCoordinateTransform( QgsCoordinateTransform( mLayerCrs, mapSettings.destinationCrs() ) );
-    Q_NOWARN_DEPRECATED_POP
+    // otherwise fall back to creating our own CT
+    s2.setCoordinateTransform( QgsCoordinateTransform( mLayerCrs, mapSettings.destinationCrs(), context.transformContext() ) );
   }
 
   s2.setRenderer( mDiagRenderer );
@@ -211,7 +214,7 @@ QgsLabelFeature *QgsVectorLayerDiagramProvider::registerDiagram( QgsFeature &fea
     extentGeom.rotate( -mapSettings.rotation(), mapSettings.visibleExtent().center() );
   }
 
-  GEOSGeometry *geomCopy = nullptr;
+  geos::unique_ptr geomCopy;
   std::unique_ptr<QgsGeometry> scopedPreparedGeom;
   if ( QgsPalLabeling::geometryRequiresPreparation( geom, context, mSettings.coordinateTransform(), extentGeom ) )
   {
@@ -219,26 +222,26 @@ QgsLabelFeature *QgsVectorLayerDiagramProvider::registerDiagram( QgsFeature &fea
     QgsGeometry *preparedGeom = scopedPreparedGeom.get();
     if ( preparedGeom->isNull() )
       return nullptr;
-    geomCopy = preparedGeom->exportToGeos();
+    geomCopy = QgsGeos::asGeos( *preparedGeom );
   }
   else
   {
-    geomCopy = geom.exportToGeos();
+    geomCopy = QgsGeos::asGeos( geom );
   }
 
   if ( !geomCopy )
     return nullptr; // invalid geometry
 
-  GEOSGeometry *geosObstacleGeomClone = nullptr;
+  geos::unique_ptr geosObstacleGeomClone;
   std::unique_ptr<QgsGeometry> scopedObstacleGeom;
-  if ( isObstacle && obstacleGeometry && QgsPalLabeling::geometryRequiresPreparation( obstacleGeometry, context, mSettings.coordinateTransform(), extentGeom ) )
+  if ( isObstacle && !obstacleGeometry.isNull() && QgsPalLabeling::geometryRequiresPreparation( obstacleGeometry, context, mSettings.coordinateTransform(), extentGeom ) )
   {
     QgsGeometry preparedObstacleGeom = QgsPalLabeling::prepareGeometry( obstacleGeometry, context, mSettings.coordinateTransform(), extentGeom );
-    geosObstacleGeomClone = preparedObstacleGeom.exportToGeos();
+    geosObstacleGeomClone = QgsGeos::asGeos( preparedObstacleGeom );
   }
   else if ( mSettings.isObstacle() && !obstacleGeometry.isNull() )
   {
-    geosObstacleGeomClone = obstacleGeometry.exportToGeos();
+    geosObstacleGeomClone = QgsGeos::asGeos( obstacleGeometry );
   }
 
   double diagramWidth = 0;
@@ -286,7 +289,7 @@ QgsLabelFeature *QgsVectorLayerDiagramProvider::registerDiagram( QgsFeature &fea
     }
   }
 
-  QgsDiagramLabelFeature *lf = new QgsDiagramLabelFeature( feat.id(), geomCopy, QSizeF( diagramWidth, diagramHeight ) );
+  QgsDiagramLabelFeature *lf = new QgsDiagramLabelFeature( feat.id(), std::move( geomCopy ), QSizeF( diagramWidth, diagramHeight ) );
   lf->setHasFixedPosition( ddPos );
   lf->setFixedPosition( QgsPointXY( ddPosX, ddPosY ) );
   lf->setHasFixedAngle( true );
@@ -295,7 +298,7 @@ QgsLabelFeature *QgsVectorLayerDiagramProvider::registerDiagram( QgsFeature &fea
   lf->setIsObstacle( isObstacle );
   if ( geosObstacleGeomClone )
   {
-    lf->setObstacleGeometry( geosObstacleGeomClone );
+    lf->setObstacleGeometry( std::move( geosObstacleGeomClone ) );
   }
 
   if ( dr )

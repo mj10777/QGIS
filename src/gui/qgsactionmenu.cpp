@@ -44,6 +44,10 @@ void QgsActionMenu::init()
   setTitle( tr( "&Actions" ) );
 
   connect( QgsGui::mapLayerActionRegistry(), &QgsMapLayerActionRegistry::changed, this, &QgsActionMenu::reloadActions );
+  connect( mLayer, &QgsVectorLayer::editingStarted, this, &QgsActionMenu::reloadActions );
+  connect( mLayer, &QgsVectorLayer::editingStopped, this, &QgsActionMenu::reloadActions );
+  connect( mLayer, &QgsVectorLayer::readOnlyChanged, this, &QgsActionMenu::reloadActions );
+  connect( mLayer, &QgsMapLayer::willBeDeleted, this, &QgsActionMenu::layerWillBeDeleted );
 
   reloadActions();
 }
@@ -61,6 +65,12 @@ QgsFeature QgsActionMenu::feature()
 void QgsActionMenu::setFeature( const QgsFeature &feature )
 {
   mFeature = feature;
+}
+
+void QgsActionMenu::setMode( const QgsAttributeEditorContext::Mode mode )
+{
+  mMode = mode;
+  reloadActions();
 }
 
 void QgsActionMenu::triggerAction()
@@ -105,8 +115,15 @@ void QgsActionMenu::reloadActions()
 
   mActions = mLayer->actions()->actions( mActionScope );
 
-  Q_FOREACH ( const QgsAction &action, mActions )
+  const auto constMActions = mActions;
+  for ( const QgsAction &action : constMActions )
   {
+    if ( !mLayer->isEditable() && action.isEnabledOnlyWhenEditable() )
+      continue;
+
+    if ( action.isEnabledOnlyWhenEditable() && ( mMode == QgsAttributeEditorContext::AddFeatureMode || mMode == QgsAttributeEditorContext::IdentifyMode ) )
+      continue;
+
     QgsAction act( action );
     act.setExpressionContextScope( mExpressionContextScope );
 
@@ -138,6 +155,10 @@ void QgsActionMenu::reloadActions()
     for ( int i = 0; i < mapLayerActions.size(); ++i )
     {
       QgsMapLayerAction *qaction = mapLayerActions.at( i );
+
+      if ( qaction->isEnabledOnlyWhenEditable() && ( mMode == QgsAttributeEditorContext::AddFeatureMode || mMode == QgsAttributeEditorContext::IdentifyMode ) )
+        continue;
+
       QAction *qAction = new QAction( qaction->icon(), qaction->text(), this );
       qAction->setData( QVariant::fromValue<ActionData>( ActionData( qaction, mFeatureId, mLayer ) ) );
       addAction( qAction );
@@ -146,6 +167,15 @@ void QgsActionMenu::reloadActions()
   }
 
   emit reinit();
+}
+
+void QgsActionMenu::layerWillBeDeleted()
+{
+  // here we are just making sure that we are not going to have reloadActions() called again
+  // with a dangling pointer to a layer when actions get removed on QGIS exit
+  clear();
+  mLayer = nullptr;
+  disconnect( QgsGui::mapLayerActionRegistry(), &QgsMapLayerActionRegistry::changed, this, &QgsActionMenu::reloadActions );
 }
 
 

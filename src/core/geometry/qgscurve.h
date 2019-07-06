@@ -15,11 +15,11 @@
  *                                                                         *
  ***************************************************************************/
 
-#ifndef QGSCURVEV2_H
-#define QGSCURVEV2_H
+#ifndef QGSCURVE_H
+#define QGSCURVE_H
 
 #include "qgis_core.h"
-#include "qgis.h"
+#include "qgis_sip.h"
 #include "qgsabstractgeometry.h"
 #include "qgsrectangle.h"
 
@@ -65,12 +65,12 @@ class CORE_EXPORT QgsCurve: public QgsAbstractGeometry
     virtual QgsPoint endPoint() const = 0;
 
     /**
-     * Returns true if the curve is closed.
+     * Returns TRUE if the curve is closed.
      */
     virtual bool isClosed() const;
 
     /**
-     * Returns true if the curve is a ring.
+     * Returns TRUE if the curve is a ring.
      */
     virtual bool isRing() const;
 
@@ -106,6 +106,22 @@ class CORE_EXPORT QgsCurve: public QgsAbstractGeometry
      */
     virtual int numPoints() const = 0;
 
+#ifdef SIP_RUN
+    int __len__() const;
+    % Docstring
+    Returns the number of points in the curve.
+    % End
+    % MethodCode
+    sipRes = sipCpp->numPoints();
+    % End
+
+    //! Ensures that bool(obj) returns TRUE (otherwise __len__() would be used)
+    int __bool__() const;
+    % MethodCode
+    sipRes = true;
+    % End
+#endif
+
     /**
      * Sums up the area of the curve by iterating over the vertices (shoelace formula).
      */
@@ -121,7 +137,7 @@ class CORE_EXPORT QgsCurve: public QgsAbstractGeometry
      * \param node node number, where the first node is 0
      * \param point will be set to point at corresponding node in the curve
      * \param type will be set to the vertex type of the node
-     * \returns true if node exists within the curve
+     * \returns TRUE if node exists within the curve
      */
     virtual bool pointAt( int node, QgsPoint &point SIP_OUT, QgsVertexId::VertexType &type SIP_OUT ) const = 0;
 
@@ -146,12 +162,12 @@ class CORE_EXPORT QgsCurve: public QgsAbstractGeometry
     QgsCurve *toCurveType() const override SIP_FACTORY;
 
     QgsRectangle boundingBox() const override;
+    bool isValid( QString &error SIP_OUT, int flags = 0 ) const override;
 
     /**
      * Returns the x-coordinate of the specified node in the line string.
     * \param index index of node, where the first node in the line is 0
     * \returns x-coordinate of node, or 0.0 if index is out of bounds
-    * \see setXAt()
     */
     virtual double xAt( int index ) const = 0;
 
@@ -159,14 +175,76 @@ class CORE_EXPORT QgsCurve: public QgsAbstractGeometry
      * Returns the y-coordinate of the specified node in the line string.
      * \param index index of node, where the first node in the line is 0
      * \returns y-coordinate of node, or 0.0 if index is out of bounds
-     * \see setYAt()
      */
     virtual double yAt( int index ) const = 0;
 
     /**
      * Returns a QPolygonF representing the points.
      */
-    QPolygonF asQPolygonF() const;
+    virtual QPolygonF asQPolygonF() const;
+
+    /**
+     * Returns an interpolated point on the curve at the specified \a distance.
+     *
+     * If z or m values are present, the output z and m will be interpolated using
+     * the existing vertices' z or m values.
+     *
+     * If distance is negative, or is greater than the length of the curve, NULLPTR
+     * will be returned.
+     *
+     * \since QGIS 3.4
+     */
+    virtual QgsPoint *interpolatePoint( double distance ) const = 0 SIP_FACTORY;
+
+    /**
+     * Returns a new curve representing a substring of this curve.
+     *
+     * The \a startDistance and \a endDistance arguments specify the length along the curve
+     * which the substring should start and end at. If the \a endDistance is greater than the
+     * total length of the curve then any "extra" length will be ignored.
+     *
+     * If z or m values are present, the output z and m will be interpolated using
+     * the existing vertices' z or m values.
+     *
+     * \since QGIS 3.4
+     */
+    virtual QgsCurve *curveSubstring( double startDistance, double endDistance ) const = 0 SIP_FACTORY;
+
+    /**
+     * Returns the straight distance of the curve, i.e. the direct/euclidean distance
+     * between the first and last vertex of the curve. (Also known as
+     * "as the crow flies" distance).
+     *
+     * \since QGIS 3.2
+     */
+    double straightDistance2d() const;
+
+    /**
+     * Returns the curve sinuosity, which is the ratio of the curve length() to curve
+     * straightDistance2d(). Larger numbers indicate a more "sinuous" curve (i.e. more
+     * "bendy"). The minimum value returned of 1.0 indicates a perfectly straight curve.
+     *
+     * If a curve isClosed(), it has infinite sinuosity and will return NaN.
+     *
+     * \since QGIS 3.2
+     */
+    double sinuosity() const;
+
+    //! Curve orientation
+    enum Orientation
+    {
+      Clockwise, //!< Clockwise orientation
+      CounterClockwise, //!< Counter-clockwise orientation
+    };
+
+    /**
+     * Returns the curve's orientation, e.g. clockwise or counter-clockwise.
+     *
+     * \warning The result is not predictable for non-closed curves.
+     *
+     * \since QGIS 3.6
+     */
+    Orientation orientation() const;
 
 #ifndef SIP_RUN
 
@@ -213,6 +291,9 @@ class CORE_EXPORT QgsCurve: public QgsAbstractGeometry
   private:
 
     mutable QgsRectangle mBoundingBox;
+
+    mutable bool mHasCachedValidity = false;
+    mutable QString mValidityFailureReason;
 };
 
-#endif // QGSCURVEV2_H
+#endif // QGSCURVE_H

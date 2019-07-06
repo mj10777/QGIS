@@ -57,6 +57,9 @@ class QTimer;
  * \ingroup core
  * Singleton offering an interface to manage the authentication configuration database
  * and to utilize configurations through various authentication method plugins
+ *
+ * QgsAuthManager should not usually be directly created, but rather accessed through
+ * QgsApplication::authManager().
  */
 class CORE_EXPORT QgsAuthManager : public QObject
 {
@@ -71,13 +74,13 @@ class CORE_EXPORT QgsAuthManager : public QObject
       WARNING = 1,
       CRITICAL = 2
     };
-    Q_ENUM( MessageLevel );
+    Q_ENUM( MessageLevel )
 
     /**
      * \brief init initialize QCA, prioritize qca-ossl plugin and optionally set up the authentication database
      * \param pluginPath the plugin path
      * \param authDatabasePath the authentication DB path
-     * \return true on success
+     * \return TRUE on success
      * \see QgsApplication::pluginPath
      * \see QgsApplication::qgisAuthDatabaseFilePath
      */
@@ -85,7 +88,7 @@ class CORE_EXPORT QgsAuthManager : public QObject
 
     ~QgsAuthManager() override;
 
-    //! Set up the application instance of the authentication database connection
+    //! Sets up the application instance of the authentication database connection
     QSqlDatabase authDatabaseConnection() const;
 
     //! Name of the authentication database table that stores configs
@@ -172,7 +175,7 @@ class CORE_EXPORT QgsAuthManager : public QObject
      * they forgot their password.
      * The created schedule timer will emit a request to gain access to the user,
      * through the given application, to prompt the erase operation (e.g. via a dialog);
-     * if no access to user interaction occurs wihtin 90 seconds, it cancels the schedule.
+     * if no access to user interaction occurs within 90 seconds, it cancels the schedule.
      * \note not available in Python bindings
      */
     void setScheduledAuthDatabaseErase( bool scheduleErase ) SIP_SKIP;
@@ -182,8 +185,8 @@ class CORE_EXPORT QgsAuthManager : public QObject
      * \note This can be called from the slot connected to a previously emitted scheduling signal,
      * so that the slot can ask for another emit later, if the slot noticies the current GUI
      * processing state is not ready for interacting with the user, e.g. project is still loading
-     * \param emitted Setting to false will cause signal to be emitted by the schedule timer.
-     * Setting to true will stop any emitting, but will not stop the schedule timer.
+     * \param emitted Setting to FALSE will cause signal to be emitted by the schedule timer.
+     * Setting to TRUE will stop any emitting, but will not stop the schedule timer.
      */
     void setScheduledAuthDatabaseEraseRequestEmitted( bool emitted ) { mScheduledDbEraseRequestEmitted = emitted; }
 
@@ -193,56 +196,56 @@ class CORE_EXPORT QgsAuthManager : public QObject
     //! Instantiate and register existing C++ core authentication methods from plugins
     bool registerCoreAuthMethods();
 
-    //! Get mapping of authentication config ids and their base configs (not decrypted data)
+    //! Gets mapping of authentication config ids and their base configs (not decrypted data)
     QgsAuthMethodConfigsMap availableAuthMethodConfigs( const QString &dataprovider = QString() );
 
     //! Sync the confg/authentication method cache with what is in database
     void updateConfigAuthMethods();
 
     /**
-     * Get authentication method from the config/provider cache
+     * Gets authentication method from the config/provider cache
      * \param authcfg Authentication config id
      */
     QgsAuthMethod *configAuthMethod( const QString &authcfg );
 
     /**
-     * Get key of authentication method associated with config ID
+     * Gets key of authentication method associated with config ID
      * \param authcfg
      */
     QString configAuthMethodKey( const QString &authcfg ) const;
 
     /**
-     * Get keys of supported authentication methods
+     * Gets keys of supported authentication methods
      */
     QStringList authMethodsKeys( const QString &dataprovider = QString() );
 
     /**
-     * Get authentication method from the config/provider cache via its key
+     * Gets authentication method from the config/provider cache via its key
      * \param authMethodKey Authentication method key
      */
     QgsAuthMethod *authMethod( const QString &authMethodKey );
 
     /**
-     * Get available authentication methods mapped to their key
+     * Gets available authentication methods mapped to their key
      * \param dataprovider Provider key filter, returning only methods that support a particular provider
      * \note not available in Python bindings
      */
     QgsAuthMethodsMap authMethodsMap( const QString &dataprovider = QString() ) SIP_SKIP;
 
     /**
-     * Get authentication method edit widget via its key
+     * Gets authentication method edit widget via its key
      * \param authMethodKey Authentication method key
      * \param parent Parent widget
      */
     QWidget *authMethodEditWidget( const QString &authMethodKey, QWidget *parent );
 
     /**
-     * Get supported authentication method expansion(s), e.g. NetworkRequest | DataSourceURI, as flags
+     * Gets supported authentication method expansion(s), e.g. NetworkRequest | DataSourceURI, as flags
      * \param authcfg
      */
     QgsAuthMethod::Expansions supportedAuthMethodExpansions( const QString &authcfg );
 
-    //! Get a unique generated 7-character string to assign to as config id
+    //! Gets a unique generated 7-character string to assign to as config id
     const QString uniqueConfigId() const;
 
     /**
@@ -252,15 +255,15 @@ class CORE_EXPORT QgsAuthManager : public QObject
     bool configIdUnique( const QString &id ) const;
 
     /**
-     * Return whether a string includes an authcfg ID token
+     * Returns whether a string includes an authcfg ID token
      * \param txt String to check
      */
     bool hasConfigId( const QString &txt ) const;
 
-    //! Return regular expression for authcfg=.{7} key/value token for authentication ids
+    //! Returns the regular expression for authcfg=.{7} key/value token for authentication ids
     QString configIdRegex() const { return AUTH_CFG_REGEX;}
 
-    //! Get list of authentication ids from database
+    //! Gets list of authentication ids from database
     QStringList configIds() const;
 
     /**
@@ -395,7 +398,7 @@ class CORE_EXPORT QgsAuthManager : public QObject
     const QSslCertificate certIdentity( const QString &id );
 
     /**
-     * Get a certificate identity bundle by \a id (sha hash).
+     * Gets a certificate identity bundle by \a id (sha hash).
      * \param id sha shash
      * \return a pair with the certificate and its SSL key
      * \note not available in Python bindings
@@ -494,7 +497,7 @@ class CORE_EXPORT QgsAuthManager : public QObject
     //! Store a certificate authority
     bool storeCertAuthority( const QSslCertificate &cert );
 
-    //! Get a certificate authority by id (sha hash)
+    //! Gets a certificate authority by id (sha hash)
 
     /**
      * \brief certAuthority get a certificate authority by \a id (sha hash)
@@ -577,10 +580,10 @@ class CORE_EXPORT QgsAuthManager : public QObject
      */
     QgsAuthCertUtils::CertTrustPolicy certificateTrustPolicy( const QSslCertificate &cert );
 
-    //! Set the default certificate trust policy perferred by user
+    //! Sets the default certificate trust policy preferred by user
     bool setDefaultCertTrustPolicy( QgsAuthCertUtils::CertTrustPolicy policy );
 
-    //! Get the default certificate trust policy perferred by user
+    //! Gets the default certificate trust policy preferred by user
     QgsAuthCertUtils::CertTrustPolicy defaultCertTrustPolicy();
 
     /**
@@ -641,15 +644,15 @@ class CORE_EXPORT QgsAuthManager : public QObject
 
     /**
      * Password helper enabled getter
-     * \note not available in Python bindings
+     * \note Available in Python bindings since QGIS 3.8.0
      */
-    bool passwordHelperEnabled() const SIP_SKIP;
+    bool passwordHelperEnabled() const;
 
     /**
      * Password helper enabled setter
-     * \note not available in Python bindings
+     * \note Available in Python bindings since QGIS 3.8.0
      */
-    void setPasswordHelperEnabled( const bool enabled ) SIP_SKIP;
+    void setPasswordHelperEnabled( bool enabled );
 
     /**
      * Password helper logging enabled getter
@@ -661,13 +664,13 @@ class CORE_EXPORT QgsAuthManager : public QObject
      * Password helper logging enabled setter
      * \note not available in Python bindings
      */
-    void setPasswordHelperLoggingEnabled( const bool enabled ) SIP_SKIP;
+    void setPasswordHelperLoggingEnabled( bool enabled ) SIP_SKIP;
 
     /**
      * Store the password manager into the wallet
-     * \note not available in Python bindings
+     * \note Available in Python bindings since QGIS 3.8.0
      */
-    bool passwordHelperSync() SIP_SKIP;
+    bool passwordHelperSync();
 
     //! The display name of the password helper (platform dependent)
     static const QString AUTH_PASSWORD_HELPER_DISPLAY_NAME;
@@ -735,7 +738,7 @@ class CORE_EXPORT QgsAuthManager : public QObject
      * the erase. It relies upon a slot connected to the signal in calling application
      * (the one that initiated the erase) to initiate the erase, when it is ready.
      * Upon activation, a receiving slot should get confimation from the user, then
-     * IMMEDIATELY call setScheduledAuthDatabaseErase( false ) to stop the scheduling timer.
+     * IMMEDIATELY call setScheduledAuthDatabaseErase( FALSE ) to stop the scheduling timer.
      * If receiving slot is NOT ready to initiate the erase, e.g. project is still loading,
      * it can skip the confirmation and request another signal emit from the scheduling timer.
      */
@@ -756,7 +759,7 @@ class CORE_EXPORT QgsAuthManager : public QObject
     //////////////////////////////////////////////////////////////////////////////
     // Password Helper methods
 
-    //! Return name for logging
+    //! Returns the name for logging
     QString passwordHelperName() const;
 
     //! Print a debug message in QGIS
@@ -845,7 +848,7 @@ class CORE_EXPORT QgsAuthManager : public QObject
     bool mAuthInit = false;
     QString mAuthDbPath;
 
-    QCA::Initializer *mQcaInitializer = nullptr;
+    std::unique_ptr<QCA::Initializer> mQcaInitializer;
 
     QHash<QString, QString> mConfigAuthMethods;
     QHash<QString, QgsAuthMethod *> mAuthMethods;
@@ -871,6 +874,10 @@ class CORE_EXPORT QgsAuthManager : public QObject
     QList<QSslCertificate> mTrustedCaCertsCache;
     // cache of SSL errors to be ignored in network connections, per sha-hostport
     QHash<QString, QSet<QSslError::SslError> > mIgnoredSslErrorsCache;
+
+    bool mHasCustomConfigByHost = false;
+    bool mHasCheckedIfCustomConfigByHostExists = false;
+    QMap< QString, QgsAuthConfigSslServer > mCustomConfigByHostCache;
 #endif
 
     //////////////////////////////////////////////////////////////////////////////
@@ -896,6 +903,8 @@ class CORE_EXPORT QgsAuthManager : public QObject
 
     //! password helper folder in the wallets
     static const QLatin1String AUTH_PASSWORD_HELPER_FOLDER_NAME;
+
+    mutable QMap<QThread *, QMetaObject::Connection> mConnectedThreads;
 
     friend class QgsApplication;
 

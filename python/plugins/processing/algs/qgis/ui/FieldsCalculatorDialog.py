@@ -21,12 +21,9 @@ __author__ = 'Alexander Bruy'
 __date__ = 'October 2013'
 __copyright__ = '(C) 2013, Alexander Bruy'
 
-# This will get replaced with a git SHA1 when you do a git archive
-
-__revision__ = '$Format:%H$'
-
 import os
 import re
+import warnings
 
 from qgis.PyQt import uic
 from qgis.PyQt.QtCore import Qt
@@ -40,9 +37,10 @@ from qgis.core import (Qgis,
                        QgsProperty,
                        QgsProject,
                        QgsMessageLog,
+                       QgsMapLayerType,
                        QgsProcessingOutputLayerDefinition)
-from qgis.gui import QgsEncodingFileDialog
-from qgis.utils import OverrideCursor
+from qgis.gui import QgsEncodingFileDialog, QgsGui
+from qgis.utils import OverrideCursor, iface
 
 from processing.core.ProcessingConfig import ProcessingConfig
 from processing.core.ProcessingLog import ProcessingLog
@@ -53,8 +51,10 @@ from processing.gui.PostgisTableSelector import PostgisTableSelector
 from processing.gui.ParameterGuiUtils import getFileFilter
 
 pluginPath = os.path.dirname(__file__)
-WIDGET, BASE = uic.loadUiType(
-    os.path.join(pluginPath, 'DlgFieldsCalculator.ui'))
+with warnings.catch_warnings():
+    warnings.filterwarnings("ignore", category=DeprecationWarning)
+    WIDGET, BASE = uic.loadUiType(
+        os.path.join(pluginPath, 'DlgFieldsCalculator.ui'))
 
 
 class FieldCalculatorFeedback(QgsProcessingFeedback):
@@ -67,7 +67,7 @@ class FieldCalculatorFeedback(QgsProcessingFeedback):
         QgsProcessingFeedback.__init__(self)
         self.dialog = dialog
 
-    def reportError(self, msg):
+    def reportError(self, msg, fatalError=False):
         self.dialog.error(msg)
 
 
@@ -83,6 +83,12 @@ class FieldsCalculatorDialog(BASE, WIDGET):
         self.layer = None
 
         self.cmbInputLayer.setFilters(QgsMapLayerProxyModel.VectorLayer)
+        try:
+            if iface.activeLayer().type() == QgsMapLayerType.VectorLayer:
+                self.cmbInputLayer.setLayer(iface.activeLayer())
+        except:
+            pass
+
         self.cmbInputLayer.layerChanged.connect(self.updateLayer)
         self.btnBrowse.clicked.connect(self.selectFile)
         self.mNewFieldGroupBox.toggled.connect(self.toggleExistingGroup)
@@ -237,6 +243,7 @@ class FieldsCalculatorDialog(BASE, WIDGET):
 
                 context = dataobjects.createContext()
                 ProcessingLog.addToLog(self.alg.asPythonCommand(parameters, context))
+                QgsGui.instance().processingRecentAlgorithmLog().push(self.alg.id())
 
                 self.executed, results = execute(self.alg, parameters, context, self.feedback)
                 self.setPercentage(0)
@@ -245,7 +252,8 @@ class FieldsCalculatorDialog(BASE, WIDGET):
                     handleAlgorithmResults(self.alg,
                                            context,
                                            self.feedback,
-                                           not keepOpen)
+                                           not keepOpen,
+                                           parameters)
                 self._wasExecuted = self.executed or self._wasExecuted
                 if not keepOpen:
                     QDialog.reject(self)

@@ -31,6 +31,7 @@
 #include "qgscubicrasterresampler.h"
 #include "qgsmultibandcolorrenderer.h"
 #include "qgssinglebandgrayrenderer.h"
+#include "qgsapplication.h"
 
 
 #include "qgsmessagelog.h"
@@ -57,7 +58,8 @@ QgsRendererRasterPropertiesWidget::QgsRendererRasterPropertiesWidget( QgsMapLaye
 
 {
   mRasterLayer = qobject_cast<QgsRasterLayer *>( layer );
-  if ( !mRasterLayer )
+
+  if ( !( mRasterLayer && mRasterLayer->isValid() ) )
     return;
 
   setupUi( this );
@@ -126,6 +128,10 @@ void QgsRendererRasterPropertiesWidget::rendererChanged()
 
 void QgsRendererRasterPropertiesWidget::apply()
 {
+
+  if ( ! mRasterLayer->isValid() )
+    return;
+
   mRasterLayer->brightnessFilter()->setBrightness( mSliderBrightness->value() );
   mRasterLayer->brightnessFilter()->setContrast( mSliderContrast->value() );
 
@@ -194,7 +200,8 @@ void QgsRendererRasterPropertiesWidget::syncToLayer( QgsRasterLayer *layer )
   cboRenderers->blockSignals( true );
   cboRenderers->clear();
   QgsRasterRendererRegistryEntry entry;
-  Q_FOREACH ( const QString &name, QgsApplication::rasterRendererRegistry()->renderersList() )
+  const auto constRenderersList = QgsApplication::rasterRendererRegistry()->renderersList();
+  for ( const QString &name : constRenderersList )
   {
     if ( QgsApplication::rasterRendererRegistry()->rendererData( name, entry ) )
     {
@@ -233,7 +240,7 @@ void QgsRendererRasterPropertiesWidget::syncToLayer( QgsRasterLayer *layer )
     comboGrayscale->setCurrentIndex( ( int ) hueSaturationFilter->grayscaleMode() );
 
     // Set initial state of saturation controls based on grayscale mode choice
-    toggleSaturationControls( ( int )hueSaturationFilter->grayscaleMode() );
+    toggleSaturationControls( static_cast<int>( hueSaturationFilter->grayscaleMode() ) );
 
     // Set initial state of colorize controls
     mColorizeCheck->setChecked( hueSaturationFilter->colorizeOn() );
@@ -338,7 +345,7 @@ void QgsRendererRasterPropertiesWidget::setRendererWidget( const QString &render
   {
     if ( rendererEntry.widgetCreateFunction ) // Single band color data renderer e.g. has no widget
     {
-      QgsDebugMsg( "renderer has widgetCreateFunction" );
+      QgsDebugMsg( QStringLiteral( "renderer has widgetCreateFunction" ) );
       // Current canvas extent (used to calc min/max) in layer CRS
       QgsRectangle myExtent = mMapCanvas->mapSettings().outputExtentToLayerExtent( mRasterLayer, mMapCanvas->extent() );
       if ( oldWidget )

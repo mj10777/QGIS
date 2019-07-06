@@ -79,7 +79,7 @@ void QgsWCSSourceSelect::populateLayerList()
         coverage != coverages.end();
         ++coverage )
   {
-    QgsDebugMsg( QString( "coverage orderId = %1 identifier = %2" ).arg( coverage->orderId ).arg( coverage->identifier ) );
+    QgsDebugMsg( QStringLiteral( "coverage orderId = %1 identifier = %2" ).arg( coverage->orderId ).arg( coverage->identifier ) );
 
     QgsTreeWidgetItem *lItem = createItem( coverage->orderId, QStringList() << coverage->identifier << coverage->title << coverage->abstract, items, coverageAndStyleCount, coverageParents, coverageParentNames );
 
@@ -143,7 +143,7 @@ void QgsWCSSourceSelect::addButtonClicked()
   }
 
   QString cache;
-  QgsDebugMsg( QString( "selectedCacheLoadControl = %1" ).arg( selectedCacheLoadControl() ) );
+  QgsDebugMsg( QStringLiteral( "selectedCacheLoadControl = %1" ).arg( selectedCacheLoadControl() ) );
   cache = QgsNetworkAccessManager::cacheLoadControlName( selectedCacheLoadControl() );
   uri.setParam( QStringLiteral( "cache" ), cache );
 
@@ -226,7 +226,6 @@ QStringList QgsWCSSourceSelect::selectedLayersFormats()
 
 QStringList QgsWCSSourceSelect::selectedLayersCrses()
 {
-
   QString identifier = selectedIdentifier();
   if ( identifier.isEmpty() ) { return QStringList(); }
 

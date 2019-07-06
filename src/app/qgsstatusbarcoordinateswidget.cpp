@@ -14,6 +14,7 @@
 ***************************************************************************/
 
 #include <QFont>
+#include <QFileInfo>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QLineEdit>
@@ -27,12 +28,17 @@
 #include "qgsmapcanvas.h"
 #include "qgsproject.h"
 #include "qgscoordinateutils.h"
+#include "qgsvectorlayer.h"
 
 
 QgsStatusBarCoordinatesWidget::QgsStatusBarCoordinatesWidget( QWidget *parent )
   : QWidget( parent )
   , mMousePrecisionDecimalPlaces( 0 )
 {
+  // calculate the size of two chars
+  mTwoCharSize = fontMetrics().width( QStringLiteral( "OO" ) );
+  mMinimumWidth = mTwoCharSize * 4;
+
   // add a label to show current position
   mLabel = new QLabel( QString(), this );
   mLabel->setObjectName( QStringLiteral( "mCoordsLabel" ) );
@@ -46,7 +52,6 @@ QgsStatusBarCoordinatesWidget::QgsStatusBarCoordinatesWidget( QWidget *parent )
 
   mLineEdit = new QLineEdit( this );
   mLineEdit->setMinimumWidth( 10 );
-  mLineEdit->setMaximumWidth( 300 );
   //mLineEdit->setMaximumHeight( 20 );
   mLineEdit->setContentsMargins( 0, 0, 0, 0 );
   mLineEdit->setAlignment( Qt::AlignCenter );
@@ -54,10 +59,6 @@ QgsStatusBarCoordinatesWidget::QgsStatusBarCoordinatesWidget( QWidget *parent )
 
   QRegExp coordValidator( "[+-]?\\d+\\.?\\d*\\s*,\\s*[+-]?\\d+\\.?\\d*" );
   mCoordsEditValidator = new QRegExpValidator( coordValidator, this );
-  mLineEdit->setWhatsThis( tr( "Shows the map coordinates at the "
-                               "current cursor position. The display is continuously updated "
-                               "as the mouse is moved. It also allows editing to set the canvas "
-                               "center to a given position. The format is longitude,latitude or east,north" ) );
   mLineEdit->setToolTip( tr( "Current map coordinate (longitude,latitude or east,north)" ) );
 
   //toggle to switch between mouse pos and extents display in status bar widget
@@ -114,7 +115,19 @@ void QgsStatusBarCoordinatesWidget::validateCoordinates()
   {
     return;
   }
-  if ( mLineEdit->text() == QLatin1String( "dizzy" ) )
+  else if ( mLineEdit->text() == QLatin1String( "world" ) )
+  {
+    world();
+  }
+  if ( mLineEdit->text() == QLatin1String( "contributors" ) )
+  {
+    contributors();
+  }
+  else if ( mLineEdit->text() == QLatin1String( "hackfests" ) )
+  {
+    hackfests();
+  }
+  else if ( mLineEdit->text() == QLatin1String( "dizzy" ) )
   {
     // sometimes you may feel a bit dizzy...
     if ( mDizzyTimer->isActive() )
@@ -134,6 +147,11 @@ void QgsStatusBarCoordinatesWidget::validateCoordinates()
     mMapCanvas->setProperty( "retro", !mMapCanvas->property( "retro" ).toBool() );
     refreshMapCanvas();
     return;
+  }
+  else if ( mLineEdit->text() == QStringLiteral( "bored" ) )
+  {
+    // it's friday afternoon and too late to start another piece of work...
+    emit weAreBored();
   }
 
   bool xOk = false;
@@ -186,6 +204,55 @@ void QgsStatusBarCoordinatesWidget::dizzy()
   mMapCanvas->setTransform( matrix );
 }
 
+void QgsStatusBarCoordinatesWidget::contributors()
+{
+  if ( !mMapCanvas )
+  {
+    return;
+  }
+  QString fileName = QgsApplication::pkgDataPath() + QStringLiteral( "/resources/data/contributors.json" );
+  QFileInfo fileInfo = QFileInfo( fileName );
+  const QgsVectorLayer::LayerOptions options { QgsProject::instance()->transformContext() };
+  QgsVectorLayer *layer = new QgsVectorLayer( fileInfo.absoluteFilePath(),
+      tr( "QGIS Contributors" ), QStringLiteral( "ogr" ), options );
+  // Register this layer with the layers registry
+  QgsProject::instance()->addMapLayer( layer );
+  layer->setAutoRefreshInterval( 500 );
+  layer->setAutoRefreshEnabled( true );
+}
+
+void QgsStatusBarCoordinatesWidget::world()
+{
+  if ( !mMapCanvas )
+  {
+    return;
+  }
+  QString fileName = QgsApplication::pkgDataPath() + QStringLiteral( "/resources/data/world_map.shp" );
+  QFileInfo fileInfo = QFileInfo( fileName );
+  const QgsVectorLayer::LayerOptions options { QgsProject::instance()->transformContext() };
+  QgsVectorLayer *layer = new QgsVectorLayer( fileInfo.absoluteFilePath(),
+      tr( "World Map" ), QStringLiteral( "ogr" ), options );
+  // Register this layer with the layers registry
+  QgsProject::instance()->addMapLayer( layer );
+}
+
+void QgsStatusBarCoordinatesWidget::hackfests()
+{
+  if ( !mMapCanvas )
+  {
+    return;
+  }
+  QString fileName = QgsApplication::pkgDataPath() + QStringLiteral( "/resources/data/qgis-hackfests.json" );
+  QFileInfo fileInfo = QFileInfo( fileName );
+  const QgsVectorLayer::LayerOptions options { QgsProject::instance()->transformContext() };
+  QgsVectorLayer *layer = new QgsVectorLayer( fileInfo.absoluteFilePath(),
+      tr( "QGIS Hackfests" ), QStringLiteral( "ogr" ), options );
+  // Register this layer with the layers registry
+  QgsProject::instance()->addMapLayer( layer );
+  layer->setAutoRefreshInterval( 500 );
+  layer->setAutoRefreshEnabled( true );
+}
+
 void QgsStatusBarCoordinatesWidget::extentsViewToggled( bool flag )
 {
   if ( flag )
@@ -223,13 +290,10 @@ void QgsStatusBarCoordinatesWidget::showMouseCoordinates( const QgsPointXY &p )
     return;
   }
 
-  mLineEdit->setText( QgsCoordinateUtils::formatCoordinateForProject( p, mMapCanvas->mapSettings().destinationCrs(),
+  mLineEdit->setText( QgsCoordinateUtils::formatCoordinateForProject( QgsProject::instance(), p, mMapCanvas->mapSettings().destinationCrs(),
                       mMousePrecisionDecimalPlaces ) );
 
-  if ( mLineEdit->width() > mLineEdit->minimumWidth() )
-  {
-    mLineEdit->setMinimumWidth( mLineEdit->width() );
-  }
+  ensureCoordinatesVisible();
 }
 
 
@@ -244,9 +308,19 @@ void QgsStatusBarCoordinatesWidget::showExtent()
   QgsRectangle myExtents = mMapCanvas->extent();
   mLabel->setText( tr( "Extents:" ) );
   mLineEdit->setText( myExtents.toString( true ) );
-  //ensure the label is big enough
-  if ( mLineEdit->width() > mLineEdit->minimumWidth() )
+
+  ensureCoordinatesVisible();
+}
+
+void QgsStatusBarCoordinatesWidget::ensureCoordinatesVisible()
+{
+
+  //ensure the label is big (and small) enough
+  int width = std::max( mLineEdit->fontMetrics().width( mLineEdit->text() ) + 16, mMinimumWidth );
+  if ( mLineEdit->minimumWidth() < width || ( mLineEdit->minimumWidth() - width ) > mTwoCharSize )
   {
-    mLineEdit->setMinimumWidth( mLineEdit->width() );
+    mLineEdit->setMinimumWidth( width );
+    mLineEdit->setMaximumWidth( width );
   }
 }
+

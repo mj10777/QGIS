@@ -22,7 +22,7 @@
 #include <QSharedDataPointer>
 #include "qgsfield_p.h"
 #include "qgis_core.h"
-#include "qgis.h"
+#include "qgis_sip.h"
 
 typedef QList<int> QgsAttributeList SIP_SKIP;
 
@@ -50,6 +50,7 @@ class CORE_EXPORT QgsField
     Q_GADGET
 
     Q_PROPERTY( bool isNumeric READ isNumeric )
+    Q_PROPERTY( bool isDateOrTime READ isDateOrTime )
     Q_PROPERTY( int length READ length WRITE setLength )
     Q_PROPERTY( int precision READ precision WRITE setPrecision )
     Q_PROPERTY( QVariant::Type type READ type WRITE setType )
@@ -153,11 +154,18 @@ class CORE_EXPORT QgsField
 
     /**
      * Returns if this field is numeric. Any integer or floating point type
-     * will return true for this.
+     * will return TRUE for this.
      *
      * \since QGIS 2.18
      */
     bool isNumeric() const;
+
+    /**
+     * Returns if this field is a date and/or time type.
+     *
+     * \since QGIS 3.6
+     */
+    bool isDateOrTime() const;
 
     /**
      * Set the field name.
@@ -205,8 +213,8 @@ class CORE_EXPORT QgsField
      * Returns the expression used when calculating the default value for the field.
      * \returns expression evaluated when calculating default values for field, or an
      * empty string if no default is set
-     * \since QGIS 3.0
      * \see setDefaultValueDefinition()
+     * \since QGIS 3.0
      */
     QgsDefaultValue defaultValueDefinition() const;
 
@@ -214,22 +222,22 @@ class CORE_EXPORT QgsField
      * Sets an expression to use when calculating the default value for the field.
      * \param defaultValueDefinition expression to evaluate when calculating default values for field. Pass
      * a default constructed QgsDefaultValue() to reset.
-     * \since QGIS 3.0
      * \see defaultValueDefinition()
+     * \since QGIS 3.0
      */
     void setDefaultValueDefinition( const QgsDefaultValue &defaultValueDefinition );
 
     /**
      * Returns constraints which are present for the field.
-     * \since QGIS 3.0
      * \see setConstraints()
+     * \since QGIS 3.0
      */
     const QgsFieldConstraints &constraints() const;
 
     /**
      * Sets constraints which are present for the field.
-     * \since QGIS 3.0
      * \see constraints()
+     * \since QGIS 3.0
      */
     void setConstraints( const QgsFieldConstraints &constraints );
 
@@ -257,7 +265,7 @@ class CORE_EXPORT QgsField
      *
      * \param v  The value to convert
      *
-     * \returns   True if the conversion was successful
+     * \returns   TRUE if the conversion was successful
      */
     bool convertCompatible( QVariant &v ) const;
 #ifdef SIP_RUN
@@ -326,7 +334,7 @@ class CORE_EXPORT QgsField
     void setEditorWidgetSetup( const QgsEditorWidgetSetup &v );
 
     /**
-     * Get the editor widget setup for the field.
+     * Gets the editor widget setup for the field.
      *
      * Defaults may be set by the provider and can be overridden
      * by manual field configuration.
@@ -334,6 +342,14 @@ class CORE_EXPORT QgsField
      * \returns the value
      */
     QgsEditorWidgetSetup editorWidgetSetup() const;
+
+#ifdef SIP_RUN
+    SIP_PYOBJECT __repr__();
+    % MethodCode
+    QString str = QStringLiteral( "<QgsField: %1 (%2)>" ).arg( sipCpp->name() ).arg( sipCpp->typeName() );
+    sipRes = PyUnicode_FromString( str.toUtf8().constData() );
+    % End
+#endif
 
   private:
 

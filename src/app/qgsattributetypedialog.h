@@ -64,17 +64,17 @@ class APP_EXPORT QgsAttributeTypeDialog: public QWidget, private Ui::QgsAttribut
     bool labelOnTop() const;
 
     /**
-     * Setter for lable alias
+     * Setter for label alias
      */
     void setAlias( const QString &alias );
 
     /**
-     * Getter for lable alias
+     * Getter for label alias
      */
     QString alias() const;
 
     /**
-     * Setter for lable comment
+     * Setter for label comment
      */
     void setComment( const QString &comment );
 
@@ -102,6 +102,16 @@ class APP_EXPORT QgsAttributeTypeDialog: public QWidget, private Ui::QgsAttribut
      * Getter for checkbox for not null
      */
     bool notNull() const;
+
+    /**
+     * Returns whether the not null constraint is set by the provider
+     */
+    bool notNullFromProvider() const;
+
+    /**
+     * Returns whether the unique constraint is set by the provider
+     */
+    bool uniqueFromProvider() const;
 
     /**
      * Sets whether the not null constraint is enforced.
@@ -137,14 +147,14 @@ class APP_EXPORT QgsAttributeTypeDialog: public QWidget, private Ui::QgsAttribut
      * Setter for constraint expression description
      * \param desc the expression description
      * \since QGIS 2.16
-     **/
+     */
     void setConstraintExpressionDescription( const QString &desc );
 
     /**
      * Getter for constraint expression description
      * \returns the expression description
      * \since QGIS 2.16
-     **/
+     */
     QString constraintExpressionDescription();
 
     /**

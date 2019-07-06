@@ -21,7 +21,6 @@
 #define QGSACCESSCONTROLPLUGIN_H
 
 #include <QMultiMap>
-#include <QList>
 #include <QString>
 #include "qgis_server.h"
 #include "qgis_sip.h"
@@ -31,7 +30,6 @@ SIP_IF_MODULE( HAVE_SERVER_PYTHON_PLUGINS )
 class QgsServerInterface;
 class QgsMapLayer;
 class QgsVectorLayer;
-class QgsExpression;
 class QgsFeature;
 
 
@@ -71,32 +69,32 @@ class SERVER_EXPORT QgsAccessControlFilter
       bool canDelete;
     };
 
-    //! Return the QgsServerInterface instance
+    //! Returns the QgsServerInterface instance
     const QgsServerInterface *serverInterface() const { return mServerInterface; }
 
     /**
-     * Return an additional expression filter
+     * Returns an additional expression filter
      * \param layer the layer to control
      * \returns the filter expression
      */
     virtual QString layerFilterExpression( const QgsVectorLayer *layer ) const;
 
     /**
-     * Return an additional subset string (typically SQL) filter
+     * Returns an additional subset string (typically SQL) filter
      * \param layer the layer to control
      * \returns the subset string
      */
     virtual QString layerFilterSubsetString( const QgsVectorLayer *layer ) const;
 
     /**
-     * Return the layer permissions
+     * Returns the layer permissions
      * \param layer the layer to control
      * \returns the permission to use on the layer
      */
     virtual LayerPermissions layerPermissions( const QgsMapLayer *layer ) const;
 
     /**
-     * Return the authorized layer attributes
+     * Returns the authorized layer attributes
      * \param layer the layer to control
      * \param attributes the current list of visible attribute
      * \returns the new list of visible attributes
@@ -107,7 +105,7 @@ class SERVER_EXPORT QgsAccessControlFilter
      * Are we authorized to modify the following geometry
      * \param layer the layer to control
      * \param feature the concerned feature
-     * \returns true if we are allowed to edit
+     * \returns TRUE if we are allowed to edit
      */
     virtual bool allowToEdit( const QgsVectorLayer *layer, const QgsFeature &feature ) const;
 

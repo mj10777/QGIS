@@ -18,7 +18,7 @@
 #define QGSTEXTFORMATWIDGET_H
 
 #include "ui_qgstextformatwidgetbase.h"
-#include "qgis.h"
+#include "qgis_sip.h"
 #include "qgstextrenderer.h"
 #include "qgsstringutils.h"
 #include "qgsguiutils.h"
@@ -32,7 +32,7 @@ class QgsCharacterSelectorDialog;
 /**
  * \class QgsTextFormatWidget
  * \ingroup gui
- * A widget for customising text formatting settings.
+ * A widget for customizing text formatting settings.
  *
  * QgsTextFormatWidget provides a widget for controlling the appearance of text rendered
  * using QgsTextRenderer. The widget includes all settings contained within
@@ -46,7 +46,7 @@ class QgsCharacterSelectorDialog;
  * \since QGIS 3.0
  */
 
-class GUI_EXPORT QgsTextFormatWidget : public QWidget, protected Ui::QgsTextFormatWidgetBase
+class GUI_EXPORT QgsTextFormatWidget : public QWidget, public QgsExpressionContextGenerator, protected Ui::QgsTextFormatWidgetBase
 {
     Q_OBJECT
     Q_PROPERTY( QgsTextFormat format READ format )
@@ -68,11 +68,17 @@ class GUI_EXPORT QgsTextFormatWidget : public QWidget, protected Ui::QgsTextForm
      */
     QgsTextFormat format() const;
 
+    /**
+     * Sets the current formatting settings
+     * \since QGIS 3.2
+     */
+    void setFormat( const QgsTextFormat &format );
+
   public slots:
 
     /**
      * Sets whether the widget should be shown in a compact dock mode.
-     * \param enabled set to true to show in dock mode.
+     * \param enabled set to TRUE to show in dock mode.
      */
     void setDockMode( bool enabled );
 
@@ -112,9 +118,11 @@ class GUI_EXPORT QgsTextFormatWidget : public QWidget, protected Ui::QgsTextForm
 
     /**
      * Controls whether data defined alignment buttons are enabled.
-     * \param enable set to true to enable alignment controls
+     * \param enable set to TRUE to enable alignment controls
      */
     void enableDataDefinedAlignment( bool enable );
+
+    QgsExpressionContext createExpressionContext() const override;
 
     //! Text substitution list
     QgsStringReplacementCollection mSubstitutions;
@@ -141,12 +149,24 @@ class GUI_EXPORT QgsTextFormatWidget : public QWidget, protected Ui::QgsTextForm
     //! Updates label placement options to reflect current state of widget
     void updatePlacementWidgets();
 
+    /**
+     * Sets the current text settings from a style entry.
+     * \since QGIS 3.10
+     */
+    virtual void setFormatFromStyle( const QString &name, QgsStyle::StyleEntity type );
+
+    /**
+     * Saves the current text settings to a style entry.
+     */
+    virtual void saveFormat();
+
   private:
     Mode mWidgetMode = Text;
     QgsMapCanvas *mMapCanvas = nullptr;
     QgsCharacterSelectorDialog *mCharDlg = nullptr;
     std::unique_ptr< QgsPaintEffect > mBufferEffect;
     std::unique_ptr< QgsPaintEffect > mBackgroundEffect;
+    QColor mPreviewBackgroundColor;
 
     QFontDatabase mFontDB;
 
@@ -204,13 +224,15 @@ class GUI_EXPORT QgsTextFormatWidget : public QWidget, protected Ui::QgsTextForm
     void updatePreview();
     void scrollPreview();
     void updateSvgWidgets( const QString &svgPath );
+    void updateAvailableShadowPositions();
+
 };
 
 
 /**
  * \class QgsTextFormatDialog
  * \ingroup gui
- * A simple dialog for customising text formatting settings.
+ * A simple dialog for customizing text formatting settings.
  *
  * QgsTextFormatDialog provides a dialog for controlling the appearance of text rendered
  * using QgsTextRenderer. The dialog includes all settings contained within
@@ -234,8 +256,6 @@ class GUI_EXPORT QgsTextFormatDialog : public QDialog
      */
     QgsTextFormatDialog( const QgsTextFormat &format, QgsMapCanvas *mapCanvas = nullptr, QWidget *parent SIP_TRANSFERTHIS = nullptr, Qt::WindowFlags fl = QgsGuiUtils::ModalDialogFlags );
 
-    ~QgsTextFormatDialog() override;
-
     /**
      * Returns the current formatting settings defined by the widget.
      */
@@ -249,7 +269,7 @@ class GUI_EXPORT QgsTextFormatDialog : public QDialog
 /**
  * \class QgsTextFormatPanelWidget
  * \ingroup gui
- * A panel widget for customising text formatting settings.
+ * A panel widget for customizing text formatting settings.
  *
  * QgsTextFormatPanelWidget provides a panel widget for controlling the appearance of text rendered
  * using QgsTextRenderer. The dialog includes all settings contained within

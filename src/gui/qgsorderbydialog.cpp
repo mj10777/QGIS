@@ -43,7 +43,8 @@ void QgsOrderByDialog::setOrderBy( const QgsFeatureRequest::OrderBy &orderBy )
   mOrderByTableWidget->setRowCount( orderBy.length() + 1 );
 
   int i = 0;
-  Q_FOREACH ( const QgsFeatureRequest::OrderByClause &orderByClause, orderBy )
+  const auto constOrderBy = orderBy;
+  for ( const QgsFeatureRequest::OrderByClause &orderByClause : constOrderBy )
   {
     setRow( i, orderByClause );
 
@@ -51,7 +52,7 @@ void QgsOrderByDialog::setOrderBy( const QgsFeatureRequest::OrderBy &orderBy )
   }
 
   // Add an empty widget at the end
-  setRow( i, QgsFeatureRequest::OrderByClause( QLatin1String( "" ) ) );
+  setRow( i, QgsFeatureRequest::OrderByClause( QString() ) );
 }
 
 QgsFeatureRequest::OrderBy QgsOrderByDialog::orderBy()
@@ -106,7 +107,7 @@ void QgsOrderByDialog::onExpressionChanged( const QString &expression )
   else if ( !expression.isEmpty() && row == mOrderByTableWidget->rowCount() - 1 )
   {
     mOrderByTableWidget->insertRow( mOrderByTableWidget->rowCount() );
-    setRow( row + 1, QgsFeatureRequest::OrderByClause( QLatin1String( "" ) ) );
+    setRow( row + 1, QgsFeatureRequest::OrderByClause( QString() ) );
   }
 }
 
@@ -149,7 +150,7 @@ bool QgsOrderByDialog::eventFilter( QObject *obj, QEvent *e )
     }
   }
 
-  return false;
+  return QDialog::eventFilter( obj, e );
 }
 
 void QgsOrderByDialog::showHelp()

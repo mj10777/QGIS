@@ -24,6 +24,10 @@
 #include "qgscolorschemeregistry.h"
 #include "qgscolorswatchgrid.h"
 #include "qgssymbollayerutils.h"
+#include "qgsapplication.h"
+#include "qgsguiutils.h"
+#include "qgsexpressioncontextutils.h"
+
 #include <QMenu>
 #include <QClipboard>
 #include <QDrag>
@@ -45,7 +49,7 @@ QgsSymbolButton::QgsSymbolButton( QWidget *parent, const QString &dialogTitle )
 
   //make sure height of button looks good under different platforms
   QSize size = QToolButton::minimumSizeHint();
-  int fontHeight = Qgis::UI_SCALE_FACTOR * fontMetrics().height() * 1.4;
+  int fontHeight = static_cast< int >( Qgis::UI_SCALE_FACTOR * fontMetrics().height() * 1.4 );
   mSizeHint = QSize( size.width(), std::max( size.height(), fontHeight ) );
 }
 
@@ -100,11 +104,13 @@ void QgsSymbolButton::showSettingsDialog()
   QgsSymbolWidgetContext symbolContext;
   symbolContext.setExpressionContext( &context );
   symbolContext.setMapCanvas( mMapCanvas );
+  symbolContext.setMessageBar( mMessageBar );
 
   QgsPanelWidget *panel = QgsPanelWidget::findParentPanel( this );
   if ( panel && panel->dockMode() )
   {
     QgsSymbolSelectorWidget *d = new QgsSymbolSelectorWidget( newSymbol, QgsStyle::defaultStyle(), mLayer, nullptr );
+    d->setPanelTitle( mDialogTitle );
     d->setContext( symbolContext );
     connect( d, &QgsPanelWidget::widgetChanged, this, &QgsSymbolButton::updateSymbolFromWidget );
     connect( d, &QgsPanelWidget::panelAccepted, this, &QgsSymbolButton::cleanUpSymbolSelector );
@@ -152,6 +158,16 @@ QgsMapCanvas *QgsSymbolButton::mapCanvas() const
 void QgsSymbolButton::setMapCanvas( QgsMapCanvas *mapCanvas )
 {
   mMapCanvas = mapCanvas;
+}
+
+void QgsSymbolButton::setMessageBar( QgsMessageBar *bar )
+{
+  mMessageBar = bar;
+}
+
+QgsMessageBar *QgsSymbolButton::messageBar() const
+{
+  return mMessageBar;
 }
 
 QgsVectorLayer *QgsSymbolButton::layer() const
@@ -276,7 +292,7 @@ void QgsSymbolButton::dragEnterEvent( QDragEnterEvent *e )
 
 void QgsSymbolButton::dragLeaveEvent( QDragLeaveEvent *e )
 {
-  Q_UNUSED( e );
+  Q_UNUSED( e )
   //reset button color
   updatePreview();
 }
@@ -307,20 +323,21 @@ void QgsSymbolButton::prepareMenu()
   //menu is opened, otherwise color schemes like the recent color scheme grid are meaningless
   mMenu->clear();
 
-  QAction *configureAction = new QAction( tr( "Configure symbol…" ), this );
+  QAction *configureAction = new QAction( tr( "Configure Symbol…" ), this );
   mMenu->addAction( configureAction );
   connect( configureAction, &QAction::triggered, this, &QgsSymbolButton::showSettingsDialog );
 
-  QAction *copySymbolAction = new QAction( tr( "Copy symbol" ), this );
+  QAction *copySymbolAction = new QAction( tr( "Copy Symbol" ), this );
   mMenu->addAction( copySymbolAction );
   connect( copySymbolAction, &QAction::triggered, this, &QgsSymbolButton::copySymbol );
-  QAction *pasteSymbolAction = new QAction( tr( "Paste symbol" ), this );
+  QAction *pasteSymbolAction = new QAction( tr( "Paste Symbol" ), this );
   //enable or disable paste action based on current clipboard contents. We always show the paste
   //action, even if it's disabled, to give hint to the user that pasting symbols is possible
   std::unique_ptr< QgsSymbol > tempSymbol( QgsSymbolLayerUtils::symbolFromMimeData( QApplication::clipboard()->mimeData() ) );
   if ( tempSymbol && tempSymbol->type() == mType )
   {
-    pasteSymbolAction->setIcon( QgsSymbolLayerUtils::symbolPreviewIcon( tempSymbol.get(), QSize( 16, 16 ), 1 ) );
+    const int iconSize = QgsGuiUtils::scaleIconSize( 16 );
+    pasteSymbolAction->setIcon( QgsSymbolLayerUtils::symbolPreviewIcon( tempSymbol.get(), QSize( iconSize, iconSize ), 1 ) );
   }
   else
   {
@@ -369,11 +386,11 @@ void QgsSymbolButton::prepareMenu()
 
   mMenu->addSeparator();
 
-  QAction *copyColorAction = new QAction( tr( "Copy color" ), this );
+  QAction *copyColorAction = new QAction( tr( "Copy Color" ), this );
   mMenu->addAction( copyColorAction );
   connect( copyColorAction, &QAction::triggered, this, &QgsSymbolButton::copyColor );
 
-  QAction *pasteColorAction = new QAction( tr( "Paste color" ), this );
+  QAction *pasteColorAction = new QAction( tr( "Paste Color" ), this );
   //enable or disable paste action based on current clipboard contents. We always show the paste
   //action, even if it's disabled, to give hint to the user that pasting colors is possible
   QColor clipColor;
@@ -470,6 +487,17 @@ void QgsSymbolButton::updatePreview( const QColor &color, QgsSymbol *tempSymbol 
   QIcon icon = QgsSymbolLayerUtils::symbolPreviewIcon( previewSymbol.get(), currentIconSize );
   setIconSize( currentIconSize );
   setIcon( icon );
+
+  // set tooltip
+  // create very large preview image
+  int width = static_cast< int >( Qgis::UI_SCALE_FACTOR * fontMetrics().width( 'X' ) * 23 );
+  int height = static_cast< int >( width / 1.61803398875 ); // golden ratio
+
+  QPixmap pm = QgsSymbolLayerUtils::symbolPreviewPixmap( previewSymbol.get(), QSize( width, height ), height / 20 );
+  QByteArray data;
+  QBuffer buffer( &data );
+  pm.save( &buffer, "PNG", 100 );
+  setToolTip( QStringLiteral( "<img src='data:image/png;base64, %3'>" ).arg( QString( data.toBase64() ) ) );
 }
 
 bool QgsSymbolButton::colorFromMimeData( const QMimeData *mimeData, QColor &resultColor, bool &hasAlpha )
@@ -490,7 +518,8 @@ bool QgsSymbolButton::colorFromMimeData( const QMimeData *mimeData, QColor &resu
 QPixmap QgsSymbolButton::createColorIcon( const QColor &color ) const
 {
   //create an icon pixmap
-  QPixmap pixmap( 16, 16 );
+  const int iconSize = QgsGuiUtils::scaleIconSize( 16 );
+  QPixmap pixmap( iconSize, iconSize );
   pixmap.fill( Qt::transparent );
 
   QPainter p;
@@ -501,7 +530,7 @@ QPixmap QgsSymbolButton::createColorIcon( const QColor &color ) const
 
   //draw border
   p.setPen( QColor( 197, 197, 197 ) );
-  p.drawRect( 0, 0, 15, 15 );
+  p.drawRect( 0, 0, iconSize - 1, iconSize - 1 );
   p.end();
   return pixmap;
 }

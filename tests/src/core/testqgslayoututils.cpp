@@ -22,6 +22,8 @@
 #include "qgslayoutitemmap.h"
 #include "qgsfontutils.h"
 #include "qgsrenderchecker.h"
+#include "qgsvectorlayer.h"
+
 #include <QStyleOptionGraphicsItem>
 
 class TestQgsLayoutUtils: public QObject
@@ -54,6 +56,7 @@ class TestQgsLayoutUtils: public QObject
     void largestRotatedRect(); //test largest rotated rect helper function
     void decodePaperOrientation();
     void scaleFactorFromItemStyle();
+    void mapLayerFromString();
 
   private:
 
@@ -111,8 +114,8 @@ void TestQgsLayoutUtils::rotate()
     double x = ( *it ).first.x1();
     double y = ( *it ).first.y1();
     QgsLayoutUtils::rotate( ( *it ).second, x, y );
-    QGSCOMPARENEAR( x, ( *it ).first.x2(), 4 * DBL_EPSILON );
-    QGSCOMPARENEAR( y, ( *it ).first.y2(), 4 * DBL_EPSILON );
+    QGSCOMPARENEAR( x, ( *it ).first.x2(), 4 * std::numeric_limits<double>::epsilon() );
+    QGSCOMPARENEAR( y, ( *it ).first.y2(), 4 * std::numeric_limits<double>::epsilon() );
   }
 }
 
@@ -139,7 +142,7 @@ void TestQgsLayoutUtils::normalizedAngle()
   {
     double result = QgsLayoutUtils::normalizedAngle( ( *it ).first );
     qDebug() << QStringLiteral( "actual: %1 expected: %2" ).arg( result ).arg( ( *it ).second );
-    QGSCOMPARENEAR( result, ( *it ).second, 4 * DBL_EPSILON );
+    QGSCOMPARENEAR( result, ( *it ).second, 4 * std::numeric_limits<double>::epsilon() );
 
   }
 
@@ -160,7 +163,7 @@ void TestQgsLayoutUtils::normalizedAngle()
   {
     double result = QgsLayoutUtils::normalizedAngle( ( *it ).first, true );
     qDebug() << QStringLiteral( "actual: %1 expected: %2" ).arg( result ).arg( ( *it ).second );
-    QGSCOMPARENEAR( result, ( *it ).second, 4 * DBL_EPSILON );
+    QGSCOMPARENEAR( result, ( *it ).second, 4 * std::numeric_limits<double>::epsilon() );
 
   }
 }
@@ -210,7 +213,7 @@ void TestQgsLayoutUtils::snappedAngle()
   QList< QPair< double, double > >::const_iterator it = testVals.constBegin();
   for ( ; it != testVals.constEnd(); ++it )
   {
-    QGSCOMPARENEAR( QgsLayoutUtils::snappedAngle( ( *it ).first ), ( *it ).second, 4 * DBL_EPSILON );
+    QGSCOMPARENEAR( QgsLayoutUtils::snappedAngle( ( *it ).first ), ( *it ).second, 4 * std::numeric_limits<double>::epsilon() );
   }
 }
 
@@ -282,6 +285,14 @@ void TestQgsLayoutUtils::createRenderContextFromLayout()
   QVERIFY( ( rc.flags() & QgsRenderContext::UseAdvancedEffects ) );
   QVERIFY( ( rc.flags() & QgsRenderContext::ForceVectorOutput ) );
 
+  // check text format is correctly set
+  l.renderContext().setTextRenderFormat( QgsRenderContext::TextFormatAlwaysOutlines );
+  rc = QgsLayoutUtils::createRenderContextForLayout( &l, nullptr );
+  QCOMPARE( rc.textRenderFormat(), QgsRenderContext::TextFormatAlwaysOutlines );
+  l.renderContext().setTextRenderFormat( QgsRenderContext::TextFormatAlwaysText );
+  rc = QgsLayoutUtils::createRenderContextForLayout( &l, nullptr );
+  QCOMPARE( rc.textRenderFormat(), QgsRenderContext::TextFormatAlwaysText );
+
   p.end();
 }
 
@@ -336,23 +347,31 @@ void TestQgsLayoutUtils::createRenderContextFromMap()
   QVERIFY( rc.painter() );
 
   // check render context flags are correctly set
-  l.renderContext().setFlags( 0 );
-  rc = QgsLayoutUtils::createRenderContextForLayout( &l, nullptr );
+  l.renderContext().setFlags( nullptr );
+  rc = QgsLayoutUtils::createRenderContextForMap( map2, &p );
   QVERIFY( !( rc.flags() & QgsRenderContext::Antialiasing ) );
   QVERIFY( !( rc.flags() & QgsRenderContext::UseAdvancedEffects ) );
   QVERIFY( ( rc.flags() & QgsRenderContext::ForceVectorOutput ) );
 
   l.renderContext().setFlag( QgsLayoutRenderContext::FlagAntialiasing );
-  rc = QgsLayoutUtils::createRenderContextForLayout( &l, nullptr );
+  rc = QgsLayoutUtils::createRenderContextForMap( map2, &p );
   QVERIFY( ( rc.flags() & QgsRenderContext::Antialiasing ) );
   QVERIFY( !( rc.flags() & QgsRenderContext::UseAdvancedEffects ) );
   QVERIFY( ( rc.flags() & QgsRenderContext::ForceVectorOutput ) );
 
   l.renderContext().setFlag( QgsLayoutRenderContext::FlagUseAdvancedEffects );
-  rc = QgsLayoutUtils::createRenderContextForLayout( &l, nullptr );
+  rc = QgsLayoutUtils::createRenderContextForMap( map2, &p );
   QVERIFY( ( rc.flags() & QgsRenderContext::Antialiasing ) );
   QVERIFY( ( rc.flags() & QgsRenderContext::UseAdvancedEffects ) );
   QVERIFY( ( rc.flags() & QgsRenderContext::ForceVectorOutput ) );
+
+  // check text format is correctly set
+  l.renderContext().setTextRenderFormat( QgsRenderContext::TextFormatAlwaysOutlines );
+  rc = QgsLayoutUtils::createRenderContextForMap( map2, &p );
+  QCOMPARE( rc.textRenderFormat(), QgsRenderContext::TextFormatAlwaysOutlines );
+  l.renderContext().setTextRenderFormat( QgsRenderContext::TextFormatAlwaysText );
+  rc = QgsLayoutUtils::createRenderContextForMap( map2, &p );
+  QCOMPARE( rc.textRenderFormat(), QgsRenderContext::TextFormatAlwaysText );
 
   p.end();
 }
@@ -437,7 +456,7 @@ void TestQgsLayoutUtils::scaledFontPixelSize()
 void TestQgsLayoutUtils::fontAscentMM()
 {
   mTestFont.setPointSize( 12 );
-  //platform specific font rendering differences mean these tests need to be very leniant
+  //platform specific font rendering differences mean these tests need to be very lenient
   QGSCOMPARENEAR( QgsLayoutUtils::fontAscentMM( mTestFont ), 3.9, 0.5 );
 }
 
@@ -450,14 +469,14 @@ void TestQgsLayoutUtils::fontDescentMM()
 void TestQgsLayoutUtils::fontHeightMM()
 {
   mTestFont.setPointSize( 12 );
-  //platform specific font rendering differences mean these tests need to be very leniant
+  //platform specific font rendering differences mean these tests need to be very lenient
   QGSCOMPARENEAR( QgsLayoutUtils::fontHeightMM( mTestFont ), 4.9, 0.5 );
 }
 
 void TestQgsLayoutUtils::fontHeightCharacterMM()
 {
   mTestFont.setPointSize( 12 );
-  //platform specific font rendering differences mean these tests need to be very leniant
+  //platform specific font rendering differences mean these tests need to be very lenient
   QGSCOMPARENEAR( QgsLayoutUtils::fontHeightCharacterMM( mTestFont, QChar( 'a' ) ), 2.4, 0.15 );
   QGSCOMPARENEAR( QgsLayoutUtils::fontHeightCharacterMM( mTestFont, QChar( 'l' ) ), 3.15, 0.16 );
   QGSCOMPARENEAR( QgsLayoutUtils::fontHeightCharacterMM( mTestFont, QChar( 'g' ) ), 3.2, 0.11 );
@@ -466,7 +485,7 @@ void TestQgsLayoutUtils::fontHeightCharacterMM()
 
 void TestQgsLayoutUtils::textWidthMM()
 {
-  //platform specific font rendering differences mean this test needs to be very leniant
+  //platform specific font rendering differences mean this test needs to be very lenient
   mTestFont.setPointSize( 12 );
   QGSCOMPARENEAR( QgsLayoutUtils::textWidthMM( mTestFont, QString( "test string" ) ), 20, 2 );
 
@@ -474,7 +493,7 @@ void TestQgsLayoutUtils::textWidthMM()
 
 void TestQgsLayoutUtils::textHeightMM()
 {
-  //platform specific font rendering differences mean this test needs to be very leniant
+  //platform specific font rendering differences mean this test needs to be very lenient
   mTestFont.setPointSize( 12 );
   QGSCOMPARENEAR( QgsLayoutUtils::textHeightMM( mTestFont, QString( "test string" ) ), 3.9, 0.2 );
   QGSCOMPARENEAR( QgsLayoutUtils::textHeightMM( mTestFont, QString( "test\nstring" ) ), 8.7, 0.2 );
@@ -593,7 +612,7 @@ void TestQgsLayoutUtils::largestRotatedRect()
              || ( qgsDoubleNear( rotatedRectBounds.height(), bounds.height(), 0.001 ) && ( rotatedRectBounds.width() <= bounds.width() ) ) );
 
     //also verify that aspect ratio of rectangle has not changed
-    QGSCOMPARENEAR( result.width() / result.height(), wideRect.width() / wideRect.height(), 4 * DBL_EPSILON );
+    QGSCOMPARENEAR( result.width() / result.height(), wideRect.width() / wideRect.height(), 4 * std::numeric_limits<double>::epsilon() );
   }
   //and again for the high rectangle
   for ( double rotation = 10; rotation < 360; rotation += 10 )
@@ -608,7 +627,7 @@ void TestQgsLayoutUtils::largestRotatedRect()
              || ( qgsDoubleNear( rotatedRectBounds.height(), bounds.height(), 0.001 ) && ( rotatedRectBounds.width() <= bounds.width() ) ) );
 
     //also verify that aspect ratio of rectangle has not changed
-    QGSCOMPARENEAR( result.width() / result.height(), highRect.width() / highRect.height(), 4 * DBL_EPSILON );
+    QGSCOMPARENEAR( result.width() / result.height(), highRect.width() / highRect.height(), 4 * std::numeric_limits<double>::epsilon() );
   }
 }
 
@@ -636,6 +655,28 @@ void TestQgsLayoutUtils::scaleFactorFromItemStyle()
   QCOMPARE( QgsLayoutUtils::scaleFactorFromItemStyle( &style ), 2.0 );
   style.matrix = QMatrix( 0, 2, 0, 0, 0, 0 );
   QCOMPARE( QgsLayoutUtils::scaleFactorFromItemStyle( &style ), 2.0 );
+}
+
+void TestQgsLayoutUtils::mapLayerFromString()
+{
+  // add some layers to a project
+  QgsVectorLayer *l1 = new QgsVectorLayer( QStringLiteral( "Point?field=col1:integer&field=col2:integer&field=col3:integer" ), QStringLiteral( "layer 1" ), QStringLiteral( "memory" ) );
+  QgsVectorLayer *l2 = new QgsVectorLayer( QStringLiteral( "Point?field=col1:integer&field=col2:integer&field=col3:integer" ), QStringLiteral( "layer 2" ), QStringLiteral( "memory" ) );
+  QgsVectorLayer *l2a = new QgsVectorLayer( QStringLiteral( "Point?field=col1:integer&field=col2:integer&field=col3:integer" ), QStringLiteral( "LAYER 2" ), QStringLiteral( "memory" ) );
+  QgsProject p;
+  p.addMapLayer( l1 );
+  p.addMapLayer( l2 );
+  p.addMapLayer( l2a );
+
+  QCOMPARE( QgsLayoutUtils::mapLayerFromString( "layer 1", &p ), l1 );
+  QCOMPARE( QgsLayoutUtils::mapLayerFromString( "LAYER 1", &p ), l1 );
+  QCOMPARE( QgsLayoutUtils::mapLayerFromString( "layer 2", &p ), l2 );
+  QCOMPARE( QgsLayoutUtils::mapLayerFromString( "LAYER 2", &p ), l2a );
+  QCOMPARE( QgsLayoutUtils::mapLayerFromString( l1->id(), &p ), l1 );
+  QCOMPARE( QgsLayoutUtils::mapLayerFromString( l2->id(), &p ), l2 );
+  QCOMPARE( QgsLayoutUtils::mapLayerFromString( l2a->id(), &p ), l2a );
+  QVERIFY( !QgsLayoutUtils::mapLayerFromString( "none", &p ) );
+
 }
 
 bool TestQgsLayoutUtils::renderCheck( const QString &testName, QImage &image, int mismatchCount )

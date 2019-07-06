@@ -4,10 +4,10 @@
 Tests for WFS-T provider using QGIS Server through qgis_wrapped_server.py.
 
 This is an integration test for QGIS Desktop WFS-T provider and QGIS Server
-WFS-T that check if QGIS can talk to and uderstand itself.
+WFS-T that check if QGIS can talk to and understand itself.
 
 The test uses testdata/wfs_transactional/wfs_transactional.qgs and three
-initially empty shapefiles layrs with points, lines and polygons.
+initially empty shapefiles layers with points, lines and polygons.
 
 All WFS-T calls are executed through the QGIS WFS data provider.
 
@@ -31,8 +31,6 @@ the Free Software Foundation; either version 2 of the License, or
 __author__ = 'Alessandro Pasotti'
 __date__ = '05/15/2016'
 __copyright__ = 'Copyright 2016, The QGIS Project'
-# This will get replaced with a git SHA1 when you do a git archive
-__revision__ = '$Format:%H$'
 
 
 import os
@@ -56,10 +54,8 @@ from qgis.testing import (
     unittest,
 )
 
-try:
-    QGIS_SERVER_WFST_PORT = os.environ['QGIS_SERVER_WFST_PORT']
-except:
-    QGIS_SERVER_WFST_PORT = '0'  # Auto
+# 0 = auto
+QGIS_SERVER_PORT = os.environ.get('QGIS_SERVER_PORT', '0')
 
 
 qgis_app = start_app()
@@ -70,7 +66,7 @@ class TestWFST(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         """Run before all tests"""
-        cls.port = QGIS_SERVER_WFST_PORT
+        cls.port = QGIS_SERVER_PORT
         # Create tmp folder
         cls.temp_path = tempfile.mkdtemp()
         cls.testdata_path = cls.temp_path + '/' + 'wfs_transactional' + '/'

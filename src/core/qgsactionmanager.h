@@ -61,7 +61,7 @@ class CORE_EXPORT QgsActionManager: public QObject
     /**
      * Add an action with the given name and action details.
      * Will happily have duplicate names and actions. If
-     * capture is true, when running the action using doAction(),
+     * capture is TRUE, when running the action using doAction(),
      * any stdout from the process will be captured and displayed in a
      * dialog box.
      */
@@ -70,7 +70,7 @@ class CORE_EXPORT QgsActionManager: public QObject
     /**
      * Add an action with the given name and action details.
      * Will happily have duplicate names and actions. If
-     * capture is true, when running the action using doAction(),
+     * capture is TRUE, when running the action using doAction(),
      * any stdout from the process will be captured and displayed in a
      * dialog box.
      */
@@ -113,14 +113,14 @@ class CORE_EXPORT QgsActionManager: public QObject
     void clearActions();
 
     /**
-     * Return a list of actions that are available in the given action scope.
+     * Returns a list of actions that are available in the given action scope.
      * If no action scope is provided, all actions will be returned.
      *
      * \since QGIS 3.0
      */
     QList<QgsAction> actions( const QString &actionScope = QString() ) const;
 
-    //! Return the layer
+    //! Returns the layer
     QgsVectorLayer *layer() const { return mLayer; }
 
     //! Writes the actions out in XML format
@@ -130,7 +130,7 @@ class CORE_EXPORT QgsActionManager: public QObject
     bool readXml( const QDomNode &layer_node );
 
     /**
-     * Get an action by its id.
+     * Gets an action by its id.
      *
      * \since QGIS 3.0
      */

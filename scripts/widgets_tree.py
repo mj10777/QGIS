@@ -21,8 +21,6 @@
 __author__ = 'Martin Dobias'
 __date__ = 'May 2011'
 __copyright__ = '(C) 2011, Martin Dobias'
-# This will get replaced with a git SHA1 when you do a git archive
-__revision__ = '$Format:%H$'
 
 """
 Reads .ui files from ../src/ui/ directory and write to stdout an XML describing
@@ -53,7 +51,7 @@ sys.modules['qwt_plot'] = qwt_plot
 # QgsRendererRulesTreeWidget
 # and QgsProjectionSelector cannot open db file
 from qgis import gui
-for m in ['qgscolorbutton', 'qgscolorrampcombobox', 'qgsprojectionselector', 'qgslabelpreview', 'qgsrulebasedrendererv2widget', 'qgscollapsiblegroupbox', 'qgsblendmodecombobox', 'qgsexpressionbuilderwidget', 'qgsrasterformatsaveoptionswidget', 'qgsrasterpyramidsoptionswidget', 'qgsscalecombobox', 'qgsfilterlineedit', 'qgsdualview']:
+for m in ['qgscolorbutton', 'qgscolorrampcombobox', 'qgsprojectionselector', 'qgslabelpreview', 'qgsrulebasedrendererwidget', 'qgscollapsiblegroupbox', 'qgsblendmodecombobox', 'qgsexpressionbuilderwidget', 'qgsrasterformatsaveoptionswidget', 'qgsrasterpyramidsoptionswidget', 'qgsscalecombobox', 'qgsfilterlineedit', 'qgsdualview']:
     sys.modules[m] = gui
 
 

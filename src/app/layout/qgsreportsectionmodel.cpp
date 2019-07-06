@@ -2,7 +2,7 @@
     qgsreportsectionmodel.cpp
     ---------------------
     begin                : December 2017
-    copyright            : (C) 2017 by Nyall Dawso
+    copyright            : (C) 2017 by Nyall Dawson
     email                : nyall dot dawson at gmail dot com
  ***************************************************************************
  *                                                                         *
@@ -15,6 +15,7 @@
 
 #include "qgsreportsectionmodel.h"
 #include "functional"
+#include "qgsguiutils.h"
 
 #ifdef ENABLE_MODELTEST
 #include "modeltest.h"
@@ -29,7 +30,7 @@ QgsReportSectionModel::QgsReportSectionModel( QgsReport *report, QObject *parent
 Qt::ItemFlags QgsReportSectionModel::flags( const QModelIndex &index ) const
 {
   if ( !index.isValid() )
-    return 0;
+    return nullptr;
 
   return QAbstractItemModel::flags( index );
 }
@@ -67,10 +68,11 @@ QVariant QgsReportSectionModel::data( const QModelIndex &index, int role ) const
 
           if ( section == mEditedSection )
           {
-            QPixmap pixmap( icon.pixmap( 16, 16 ) );
+            const int iconSize = QgsGuiUtils::scaleIconSize( 16 );
+            QPixmap pixmap( icon.pixmap( iconSize, iconSize ) );
 
             QPainter painter( &pixmap );
-            painter.drawPixmap( 0, 0, 16, 16, QgsApplication::getThemePixmap( "/mActionToggleEditing.svg" ) );
+            painter.drawPixmap( 0, 0, iconSize, iconSize, QgsApplication::getThemePixmap( QStringLiteral( "/mActionToggleEditing.svg" ) ) );
             painter.end();
 
             return QIcon( pixmap );
@@ -178,31 +180,6 @@ QModelIndex QgsReportSectionModel::parent( const QModelIndex &index ) const
     return QModelIndex();
   else
     return createIndex( parentSection->row(), 0, parentSection != mReport ? parentSection : nullptr );
-}
-
-bool QgsReportSectionModel::setData( const QModelIndex &index, const QVariant &value, int role )
-{
-  if ( !index.isValid() )
-    return false;
-
-  QgsAbstractReportSection *section = sectionForIndex( index );
-  ( void )section;
-  ( void )value;
-
-  if ( role != Qt::EditRole )
-    return false;
-
-  switch ( index.column() )
-  {
-    case 0:
-      return false;
-
-    default:
-      return false;
-  }
-
-  emit dataChanged( index, index );
-  return true;
 }
 
 QgsAbstractReportSection *QgsReportSectionModel::sectionForIndex( const QModelIndex &index ) const

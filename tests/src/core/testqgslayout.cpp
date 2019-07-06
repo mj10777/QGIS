@@ -33,6 +33,7 @@
 #include "qgslayertree.h"
 #include "qgslayoutitemattributetable.h"
 #include "qgsrasterlayer.h"
+#include "qgsexpressioncontextutils.h"
 
 class TestQgsLayout: public QObject
 {
@@ -69,6 +70,7 @@ class TestQgsLayout: public QObject
     void mapLayersRestoredFromTemplate();
     void mapLayersStyleOverrideRestoredFromTemplate();
     void atlasLayerRestoredFromTemplate();
+    void overviewStackingLayerRestoredFromTemplate();
 
   private:
     QString mReport;
@@ -841,9 +843,9 @@ void TestQgsLayout::georeference()
   t = exporter.computeGeoTransform( map );
   QGSCOMPARENEAR( t[0], 1925.0, 1.0 );
   QGSCOMPARENEAR( t[1], 0.211719, 0.0001 );
-  QGSCOMPARENEAR( t[2], 0.0, 4 * DBL_EPSILON );
+  QGSCOMPARENEAR( t[2], 0.0, 4 * std::numeric_limits<double>::epsilon() );
   QGSCOMPARENEAR( t[3], 3050, 1 );
-  QGSCOMPARENEAR( t[4], 0.0, 4 * DBL_EPSILON );
+  QGSCOMPARENEAR( t[4], 0.0, 4 * std::numeric_limits<double>::epsilon() );
   QGSCOMPARENEAR( t[5], -0.211694, 0.0001 );
   t.reset();
 
@@ -852,9 +854,9 @@ void TestQgsLayout::georeference()
   t = exporter.computeGeoTransform();
   QGSCOMPARENEAR( t[0], 1925.0, 1.0 );
   QGSCOMPARENEAR( t[1], 0.211719, 0.0001 );
-  QGSCOMPARENEAR( t[2], 0.0, 4 * DBL_EPSILON );
+  QGSCOMPARENEAR( t[2], 0.0, 4 * std::numeric_limits<double>::epsilon() );
   QGSCOMPARENEAR( t[3], 3050, 1 );
-  QGSCOMPARENEAR( t[4], 0.0, 4 * DBL_EPSILON );
+  QGSCOMPARENEAR( t[4], 0.0, 4 * std::numeric_limits<double>::epsilon() );
   QGSCOMPARENEAR( t[5], -0.211694, 0.0001 );
   t.reset();
 
@@ -862,9 +864,9 @@ void TestQgsLayout::georeference()
   t = exporter.computeGeoTransform( map, QRectF( 70, 100, 50, 60 ) );
   QGSCOMPARENEAR( t[0], 2100.0, 1.0 );
   QGSCOMPARENEAR( t[1], 0.211864, 0.0001 );
-  QGSCOMPARENEAR( t[2], 0.0, 4 * DBL_EPSILON );
+  QGSCOMPARENEAR( t[2], 0.0, 4 * std::numeric_limits<double>::epsilon() );
   QGSCOMPARENEAR( t[3], 2800, 1 );
-  QGSCOMPARENEAR( t[4], 0.0, 4 * DBL_EPSILON );
+  QGSCOMPARENEAR( t[4], 0.0, 4 * std::numeric_limits<double>::epsilon() );
   QGSCOMPARENEAR( t[5], -0.211864, 0.0001 );
   t.reset();
 
@@ -872,9 +874,9 @@ void TestQgsLayout::georeference()
   t = exporter.computeGeoTransform( map, QRectF(), 75 );
   QGSCOMPARENEAR( t[0], 1925.0, 1 );
   QGSCOMPARENEAR( t[1], 0.847603, 0.0001 );
-  QGSCOMPARENEAR( t[2], 0.0, 4 * DBL_EPSILON );
+  QGSCOMPARENEAR( t[2], 0.0, 4 * std::numeric_limits<double>::epsilon() );
   QGSCOMPARENEAR( t[3], 3050.0, 1 );
-  QGSCOMPARENEAR( t[4], 0.0, 4 * DBL_EPSILON );
+  QGSCOMPARENEAR( t[4], 0.0, 4 * std::numeric_limits<double>::epsilon() );
   QGSCOMPARENEAR( t[5], -0.846774, 0.0001 );
   t.reset();
 
@@ -1001,7 +1003,7 @@ void TestQgsLayout::legendRestoredFromTemplate()
   QgsLayoutItemLegend *legend3 = legends3.at( 0 );
   QVERIFY( legend3 );
 
-  //make sure customisation remains intact
+  //make sure customization remains intact
   QgsLegendModel *model3 = legend3->model();
   QgsLayerTreeNode *node3 = model3->rootGroup()->children().at( 0 );
   QgsLayerTreeLayer *layerNode3 = dynamic_cast< QgsLayerTreeLayer * >( node3 );
@@ -1262,6 +1264,45 @@ void TestQgsLayout::atlasLayerRestoredFromTemplate()
   c2.loadFromTemplate( doc, QgsReadWriteContext() );
   // check atlas layer
   QCOMPARE( c2.atlas()->coverageLayer(), layer2 );
+}
+
+void TestQgsLayout::overviewStackingLayerRestoredFromTemplate()
+{
+  // load some layers
+  QFileInfo vectorFileInfo( QStringLiteral( TEST_DATA_DIR ) + "/points.shp" );
+  QgsVectorLayer *layer = new QgsVectorLayer( vectorFileInfo.filePath(),
+      vectorFileInfo.completeBaseName(),
+      QStringLiteral( "ogr" ) );
+  QgsProject p;
+  p.addMapLayer( layer );
+
+  QgsPrintLayout c( &p );
+  QgsLayoutItemMap *map = new QgsLayoutItemMap( &c );
+  map->attemptSetSceneRect( QRectF( 1, 1, 10, 10 ) );
+  c.addLayoutItem( map );
+  map->overview()->setStackingLayer( layer );
+
+  // save composition to template
+  QDomDocument doc;
+  doc.appendChild( c.writeXml( doc, QgsReadWriteContext() ) );
+
+  // new project
+  QgsProject p2;
+  QgsVectorLayer *layer2 = new QgsVectorLayer( vectorFileInfo.filePath(),
+      vectorFileInfo.completeBaseName(),
+      QStringLiteral( "ogr" ) );
+  p2.addMapLayer( layer2 );
+
+  // make a new layout from template
+  QgsPrintLayout c2( &p2 );
+  c2.loadFromTemplate( doc, QgsReadWriteContext() );
+  // get legend from new composition
+  QList< QgsLayoutItemMap * > maps2;
+  c2.layoutItems( maps2 );
+  QgsLayoutItemMap *map2 = maps2.at( 0 );
+  QVERIFY( map2 );
+
+  QCOMPARE( map2->overview()->stackingLayer(), layer2 );
 }
 
 

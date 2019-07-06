@@ -26,6 +26,9 @@
 #include "qgsmaplayerlistutils.h"
 #include "qgsexception.h"
 #include "qgsprocessingfeedback.h"
+#include "qgsprocessingutils.h"
+
+class QgsProcessingLayerPostProcessorInterface;
 
 /**
  * \class QgsProcessingContext
@@ -65,6 +68,8 @@ class CORE_EXPORT QgsProcessingContext
     QgsProcessingContext( const QgsProcessingContext &other ) = delete;
     //! QgsProcessingContext cannot be copied
     QgsProcessingContext &operator=( const QgsProcessingContext &other ) = delete;
+
+    ~QgsProcessingContext();
 
     /**
      * Copies all settings which are safe for use across different threads from
@@ -153,27 +158,65 @@ class CORE_EXPORT QgsProcessingContext
      */
     QgsMapLayerStore *temporaryLayerStore() { return &tempLayerStore; }
 
-    //! Details for layers to load into projects.
-    struct LayerDetails
+    /**
+     * Details for layers to load into projects.
+     * \ingroup core
+     * \since QGIS 3.0
+     */
+    class CORE_EXPORT LayerDetails
     {
+      public:
 
-      /**
-       * Constructor for LayerDetails.
-       */
-      LayerDetails( const QString &name, QgsProject *project, const QString &outputName = QString() )
-        : name( name )
-        , outputName( outputName )
-        , project( project )
-      {}
+        /**
+         * Constructor for LayerDetails.
+         */
+        LayerDetails( const QString &name, QgsProject *project, const QString &outputName = QString(), QgsProcessingUtils::LayerHint layerTypeHint = QgsProcessingUtils::LayerHint::UnknownType )
+          : name( name )
+          , outputName( outputName )
+          , layerTypeHint( layerTypeHint )
+          , project( project )
+        {}
 
-      //! Friendly name for layer, to use when loading layer into project.
-      QString name;
+        //! Default constructor
+        LayerDetails() = default;
 
-      //! Associated output name from algorithm which generated the layer.
-      QString outputName;
+        //! Friendly name for layer, to use when loading layer into project.
+        QString name;
 
-      //! Destination project
-      QgsProject *project = nullptr;
+        //! Associated output name from algorithm which generated the layer.
+        QString outputName;
+
+        /**
+         * Layer type hint.
+         *
+         * \since QGIS 3.4
+         */
+        QgsProcessingUtils::LayerHint layerTypeHint = QgsProcessingUtils::LayerHint::UnknownType;
+
+        /**
+         * Layer post-processor. May be NULLPTR if no post-processing is required.
+         * \see setPostProcessor()
+         * \since QGIS 3.2
+         */
+        QgsProcessingLayerPostProcessorInterface *postProcessor() const;
+
+        /**
+         * Sets the layer post-processor. May be NULLPTR if no post-processing is required.
+         *
+         * Ownership of \a processor is transferred.
+         *
+         * \see postProcessor()
+         * \since QGIS 3.2
+         */
+        void setPostProcessor( QgsProcessingLayerPostProcessorInterface *processor SIP_TRANSFER );
+
+        //! Destination project
+        QgsProject *project = nullptr;
+
+      private:
+
+        // Ideally a unique_ptr, but cannot be due to use within QMap. Is cleaned up by QgsProcessingContext.
+        QgsProcessingLayerPostProcessorInterface *mPostProcessor = nullptr;
 
     };
 
@@ -181,6 +224,8 @@ class CORE_EXPORT QgsProcessingContext
      * Returns a map of layers (by ID or datasource) to LayerDetails, to load into the canvas upon completion of the algorithm or model.
      * \see setLayersToLoadOnCompletion()
      * \see addLayerToLoadOnCompletion()
+     * \see willLoadLayerOnCompletion()
+     * \see layerToLoadOnCompletionDetails()
      */
     QMap< QString, QgsProcessingContext::LayerDetails > layersToLoadOnCompletion() const
     {
@@ -188,24 +233,54 @@ class CORE_EXPORT QgsProcessingContext
     }
 
     /**
+     * Returns TRUE if the given \a layer (by ID or datasource) will be loaded into the current project
+     * upon completion of the algorithm or model.
+     * \see layersToLoadOnCompletion()
+     * \see setLayersToLoadOnCompletion()
+     * \see addLayerToLoadOnCompletion()
+     * \see layerToLoadOnCompletionDetails()
+     * \since QGIS 3.2
+     */
+    bool willLoadLayerOnCompletion( const QString &layer ) const
+    {
+      return mLayersToLoadOnCompletion.contains( layer );
+    }
+
+    /**
      * Sets the map of \a layers (by ID or datasource) to LayerDetails, to load into the canvas upon completion of the algorithm or model.
      * \see addLayerToLoadOnCompletion()
      * \see layersToLoadOnCompletion()
+     * \see willLoadLayerOnCompletion()
+     * \see layerToLoadOnCompletionDetails()
      */
-    void setLayersToLoadOnCompletion( const QMap< QString, QgsProcessingContext::LayerDetails > &layers )
-    {
-      mLayersToLoadOnCompletion = layers;
-    }
+    void setLayersToLoadOnCompletion( const QMap< QString, QgsProcessingContext::LayerDetails > &layers );
 
     /**
      * Adds a \a layer to load (by ID or datasource) into the canvas upon completion of the algorithm or model.
      * The \a details parameter dictates the LayerDetails.
      * \see setLayersToLoadOnCompletion()
      * \see layersToLoadOnCompletion()
+     * \see willLoadLayerOnCompletion()
+     * \see layerToLoadOnCompletionDetails()
      */
-    void addLayerToLoadOnCompletion( const QString &layer, const QgsProcessingContext::LayerDetails &details )
+    void addLayerToLoadOnCompletion( const QString &layer, const QgsProcessingContext::LayerDetails &details );
+
+    /**
+     * Returns a reference to the details for a given \a layer which is loaded on completion of the
+     * algorithm or model.
+     *
+     * \warning First check willLoadLayerOnCompletion(), or calling this method will incorrectly
+     * add \a layer as a layer to load on completion.
+     *
+     * \see willLoadLayerOnCompletion()
+     * \see addLayerToLoadOnCompletion()
+     * \see setLayersToLoadOnCompletion()
+     * \see layersToLoadOnCompletion()
+     * \since QGIS 3.2
+     */
+    QgsProcessingContext::LayerDetails &layerToLoadOnCompletionDetails( const QString &layer )
     {
-      mLayersToLoadOnCompletion.insert( layer, details );
+      return mLayersToLoadOnCompletion[ layer ];
     }
 
     /**
@@ -226,8 +301,8 @@ class CORE_EXPORT QgsProcessingContext
      * Sets a callback function to use when encountering an invalid geometry and
      * invalidGeometryCheck() is set to GeometryAbortOnInvalid. This function will be
      * called using the feature with invalid geometry as a parameter.
-     * \since QGIS 3.0
      * \see invalidGeometryCallback()
+     * \since QGIS 3.0
      */
 #ifndef SIP_RUN
     void setInvalidGeometryCallback( const std::function< void( const QgsFeature & ) > &callback ) { mInvalidGeometryCallback = callback; }
@@ -250,9 +325,9 @@ class CORE_EXPORT QgsProcessingContext
     /**
      * Returns the callback function to use when encountering an invalid geometry and
      * invalidGeometryCheck() is set to GeometryAbortOnInvalid.
-     * \since QGIS 3.0
      * \note not available in Python bindings
      * \see setInvalidGeometryCallback()
+     * \since QGIS 3.0
      */
     SIP_SKIP std::function< void( const QgsFeature & ) > invalidGeometryCallback() const { return mInvalidGeometryCallback; }
 
@@ -260,8 +335,8 @@ class CORE_EXPORT QgsProcessingContext
      * Sets a callback function to use when encountering a transform error when iterating
      * features. This function will be
      * called using the feature which encountered the transform error as a parameter.
-     * \since QGIS 3.0
      * \see transformErrorCallback()
+     * \since QGIS 3.0
      */
 #ifndef SIP_RUN
     void setTransformErrorCallback( const std::function< void( const QgsFeature & ) > &callback ) { mTransformErrorCallback = callback; }
@@ -284,10 +359,9 @@ class CORE_EXPORT QgsProcessingContext
     /**
      * Returns the callback function to use when encountering a transform error when iterating
      * features.
-     * \since QGIS 3.0
      * \note not available in Python bindings
      * \see setTransformErrorCallback()
-     * \see destinationCrs()
+     * \since QGIS 3.0
      */
     std::function< void( const QgsFeature & ) > transformErrorCallback() const { return mTransformErrorCallback; } SIP_SKIP
 
@@ -390,6 +464,44 @@ class CORE_EXPORT QgsProcessingContext
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS( QgsProcessingContext::Flags )
+
+
+/**
+ * An interface for layer post-processing handlers for execution following a processing algorithm operation.
+ *
+ * Note that post-processing of a layer will ONLY occur if that layer is set to be loaded into a QGIS project
+ * on algorithm completion. See QgsProcessingContext::layersToLoadOnCompletion().
+ *
+ * Algorithms that wish to set post-processing steps for generated layers should implement this interface
+ * in a separate class (NOT the algorithm class itself!).
+ *
+ * \ingroup core
+ * \since QGIS 3.2
+ */
+class CORE_EXPORT QgsProcessingLayerPostProcessorInterface
+{
+  public:
+
+    virtual ~QgsProcessingLayerPostProcessorInterface() = default;
+
+    /**
+      * Post-processes the specified \a layer, following successful execution of a processing algorithm. This method
+      * always runs in the main thread and can be used to setup renderers, editor widgets, metadata, etc for
+      * the given layer.
+      *
+      * Post-processing classes can utilize settings from the algorithm's \a context and report logging messages
+      * or errors via the given \a feedback object.
+      *
+      * In the case of an algorithm run as part of a larger model, the post-processing occurs following the completed
+      * execution of the entire model.
+      *
+      * Note that post-processing of a layer will ONLY occur if that layer is set to be loaded into a QGIS project
+      * on algorithm completion. See QgsProcessingContext::layersToLoadOnCompletion().
+      */
+    virtual void postProcessLayer( QgsMapLayer *layer, QgsProcessingContext &context, QgsProcessingFeedback *feedback ) = 0;
+
+};
+
 
 #endif // QGSPROCESSINGPARAMETERS_H
 

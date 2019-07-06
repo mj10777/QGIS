@@ -28,6 +28,8 @@
 #include "qgsgeometry.h"
 #include "qgsexception.h"
 #include "qgsmapsettings.h"
+#include "qgsexpressioncontextutils.h"
+#include "qgsgeometryengine.h"
 
 //QgsLayoutAttributeTableCompare
 
@@ -182,10 +184,15 @@ void QgsLayoutItemAttributeTable::atlasLayerChanged( QgsVectorLayer *layer )
     disconnect( mCurrentAtlasLayer, &QgsVectorLayer::layerModified, this, &QgsLayoutTable::refreshAttributes );
   }
 
+  const bool mustRebuildColumns = static_cast< bool >( mCurrentAtlasLayer ) || mColumns.empty();
   mCurrentAtlasLayer = layer;
 
-  //rebuild column list to match all columns from layer
-  resetColumns();
+  if ( mustRebuildColumns )
+  {
+    //rebuild column list to match all columns from layer
+    resetColumns();
+  }
+
   refreshAttributes();
 
   //listen for modifications to layer and refresh table when they occur
@@ -230,12 +237,14 @@ void QgsLayoutItemAttributeTable::setMap( QgsLayoutItemMap *map )
   {
     //disconnect from previous map
     disconnect( mMap, &QgsLayoutItemMap::extentChanged, this, &QgsLayoutTable::refreshAttributes );
+    disconnect( mMap, &QgsLayoutItemMap::mapRotationChanged, this, &QgsLayoutTable::refreshAttributes );
   }
   mMap = map;
   if ( mMap )
   {
     //listen out for extent changes in linked map
     connect( mMap, &QgsLayoutItemMap::extentChanged, this, &QgsLayoutTable::refreshAttributes );
+    connect( mMap, &QgsLayoutItemMap::mapRotationChanged, this, &QgsLayoutTable::refreshAttributes );
   }
   refreshAttributes();
   emit changed();
@@ -399,6 +408,8 @@ bool QgsLayoutItemAttributeTable::getTableContents( QgsLayoutTableContents &cont
   QgsExpressionContext context = createExpressionContext();
   context.setFields( layer->fields() );
 
+  QgsFeatureRequest req;
+
   //prepare filter expression
   std::unique_ptr<QgsExpression> filterExpression;
   bool activeFilter = false;
@@ -408,13 +419,18 @@ bool QgsLayoutItemAttributeTable::getTableContents( QgsLayoutTableContents &cont
     if ( !filterExpression->hasParserError() )
     {
       activeFilter = true;
+      req.setFilterExpression( mFeatureFilter );
+      req.setExpressionContext( context );
     }
   }
 
   QgsRectangle selectionRect;
+  QgsGeometry visibleRegion;
+  std::unique_ptr< QgsGeometryEngine > visibleMapEngine;
   if ( mMap && mShowOnlyVisibleFeatures )
   {
-    selectionRect = mMap->extent();
+    visibleRegion = QgsGeometry::fromQPolygonF( mMap->visibleExtentPolygon() );
+    selectionRect = visibleRegion.boundingBox();
     if ( layer )
     {
       //transform back to layer CRS
@@ -422,16 +438,38 @@ bool QgsLayoutItemAttributeTable::getTableContents( QgsLayoutTableContents &cont
       try
       {
         selectionRect = coordTransform.transformBoundingBox( selectionRect, QgsCoordinateTransform::ReverseTransform );
+        visibleRegion.transform( coordTransform, QgsCoordinateTransform::ReverseTransform );
       }
       catch ( QgsCsException &cse )
       {
-        Q_UNUSED( cse );
+        Q_UNUSED( cse )
         return false;
       }
     }
+    visibleMapEngine.reset( QgsGeometry::createGeometryEngine( visibleRegion.constGet() ) );
+    visibleMapEngine->prepareGeometry();
   }
 
-  QgsFeatureRequest req;
+  QgsGeometry atlasGeometry;
+  std::unique_ptr< QgsGeometryEngine > atlasGeometryEngine;
+  if ( mFilterToAtlasIntersection )
+  {
+    atlasGeometry = mLayout->reportContext().currentGeometry( layer->crs() );
+    if ( !atlasGeometry.isNull() )
+    {
+      if ( selectionRect.isNull() )
+      {
+        selectionRect = atlasGeometry.boundingBox();
+      }
+      else
+      {
+        selectionRect = selectionRect.intersect( atlasGeometry.boundingBox() );
+      }
+
+      atlasGeometryEngine.reset( QgsGeometry::createGeometryEngine( atlasGeometry.constGet() ) );
+      atlasGeometryEngine->prepareGeometry();
+    }
+  }
 
   if ( mSource == QgsLayoutItemAttributeTable::RelationChildren )
   {
@@ -469,23 +507,31 @@ bool QgsLayoutItemAttributeTable::getTableContents( QgsLayoutTableContents &cont
         continue;
       }
     }
+
+    // check against exact map bounds
+    if ( visibleMapEngine )
+    {
+      if ( !f.hasGeometry() )
+        continue;
+
+      if ( !visibleMapEngine->intersects( f.geometry().constGet() ) )
+        continue;
+    }
+
     //check against atlas feature intersection
     if ( mFilterToAtlasIntersection )
     {
-      if ( !f.hasGeometry() )
+      if ( !f.hasGeometry() || !atlasGeometryEngine )
       {
         continue;
       }
-      QgsFeature atlasFeature = mLayout->reportContext().feature();
-      if ( !atlasFeature.hasGeometry() ||
-           !f.geometry().intersects( atlasFeature.geometry() ) )
-      {
-        //feature falls outside current atlas feature
+
+      if ( !atlasGeometryEngine->intersects( f.geometry().constGet() ) )
         continue;
-      }
     }
 
     QgsLayoutTableRow currentRow;
+    currentRow.reserve( mColumns.count() );
 
     for ( QgsLayoutTableColumn *column : qgis::as_const( mColumns ) )
     {
@@ -548,8 +594,31 @@ void QgsLayoutItemAttributeTable::finalizeRestoreFromXml()
     {
       //if we have found a valid map item, listen out to extent changes on it and refresh the table
       connect( mMap, &QgsLayoutItemMap::extentChanged, this, &QgsLayoutTable::refreshAttributes );
+      connect( mMap, &QgsLayoutItemMap::mapRotationChanged, this, &QgsLayoutTable::refreshAttributes );
     }
   }
+}
+
+void QgsLayoutItemAttributeTable::refreshDataDefinedProperty( const QgsLayoutObject::DataDefinedProperty property )
+{
+  QgsExpressionContext context = createExpressionContext();
+
+  if ( mSource == QgsLayoutItemAttributeTable::LayerAttributes &&
+       ( property == QgsLayoutObject::AttributeTableSourceLayer || property == QgsLayoutObject::AllProperties ) )
+  {
+    mDataDefinedVectorLayer = nullptr;
+
+    QString currentLayerIdentifier;
+    if ( QgsVectorLayer *currentLayer = mVectorLayer.get() )
+      currentLayerIdentifier = currentLayer->id();
+
+    const QString layerIdentifier = mDataDefinedProperties.valueAsString( QgsLayoutObject::AttributeTableSourceLayer, context, currentLayerIdentifier );
+    QgsVectorLayer *ddLayer = qobject_cast< QgsVectorLayer * >( QgsLayoutUtils::mapLayerFromString( layerIdentifier, mLayout->project() ) );
+    if ( ddLayer )
+      mDataDefinedVectorLayer = ddLayer;
+  }
+
+  QgsLayoutMultiFrame::refreshDataDefinedProperty( property );
 }
 
 QVariant QgsLayoutItemAttributeTable::replaceWrapChar( const QVariant &variant ) const
@@ -570,7 +639,12 @@ QgsVectorLayer *QgsLayoutItemAttributeTable::sourceLayer() const
     case QgsLayoutItemAttributeTable::AtlasFeature:
       return mLayout->reportContext().layer();
     case QgsLayoutItemAttributeTable::LayerAttributes:
-      return mVectorLayer.get();
+    {
+      if ( mDataDefinedVectorLayer )
+        return mDataDefinedVectorLayer;
+      else
+        return mVectorLayer.get();
+    }
     case QgsLayoutItemAttributeTable::RelationChildren:
     {
       QgsRelation relation = mLayout->project()->relationManager()->relation( mRelationId );
@@ -618,6 +692,7 @@ QVector<QPair<int, bool> > QgsLayoutItemAttributeTable::sortAttributes() const
 
   //generate list of column index, bool for sort direction (to match 2.0 api)
   QVector<QPair<int, bool> > attributesBySortRank;
+  attributesBySortRank.reserve( sortedColumns.size() );
   for ( auto &column : qgis::as_const( sortedColumns ) )
   {
     attributesBySortRank.append( qMakePair( column.first,
@@ -681,7 +756,7 @@ bool QgsLayoutItemAttributeTable::readPropertiesFromElement( const QDomElement &
     return false;
 
   mSource = QgsLayoutItemAttributeTable::ContentSource( itemElem.attribute( QStringLiteral( "source" ), QStringLiteral( "0" ) ).toInt() );
-  mRelationId = itemElem.attribute( QStringLiteral( "relationId" ), QLatin1String( "" ) );
+  mRelationId = itemElem.attribute( QStringLiteral( "relationId" ), QString() );
 
   if ( mSource == QgsLayoutItemAttributeTable::AtlasFeature )
   {
@@ -692,7 +767,7 @@ bool QgsLayoutItemAttributeTable::readPropertiesFromElement( const QDomElement &
   mShowOnlyVisibleFeatures = itemElem.attribute( QStringLiteral( "showOnlyVisibleFeatures" ), QStringLiteral( "1" ) ).toInt();
   mFilterToAtlasIntersection = itemElem.attribute( QStringLiteral( "filterToAtlasIntersection" ), QStringLiteral( "0" ) ).toInt();
   mFilterFeatures = itemElem.attribute( QStringLiteral( "filterFeatures" ), QStringLiteral( "false" ) ) == QLatin1String( "true" );
-  mFeatureFilter = itemElem.attribute( QStringLiteral( "featureFilter" ), QLatin1String( "" ) );
+  mFeatureFilter = itemElem.attribute( QStringLiteral( "featureFilter" ), QString() );
   mMaximumNumberOfFeatures = itemElem.attribute( QStringLiteral( "maxFeatures" ), QStringLiteral( "5" ) ).toInt();
   mWrapString = itemElem.attribute( QStringLiteral( "wrapString" ) );
 
@@ -701,6 +776,7 @@ bool QgsLayoutItemAttributeTable::readPropertiesFromElement( const QDomElement &
   if ( mMap )
   {
     disconnect( mMap, &QgsLayoutItemMap::extentChanged, this, &QgsLayoutTable::refreshAttributes );
+    disconnect( mMap, &QgsLayoutItemMap::mapRotationChanged, this, &QgsLayoutTable::refreshAttributes );
     mMap = nullptr;
   }
   // setting new mMap occurs in finalizeRestoreFromXml

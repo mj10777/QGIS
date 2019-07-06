@@ -21,16 +21,13 @@ __author__ = 'Michael Minn'
 __date__ = 'May 2010'
 __copyright__ = '(C) 2010, Michael Minn'
 
-# This will get replaced with a git SHA1 when you do a git archive
-
-__revision__ = '$Format:%H$'
-
 import os
 import math
 
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtCore import QVariant
-from qgis.core import (QgsField,
+from qgis.core import (QgsApplication,
+                       QgsField,
                        QgsFeatureSink,
                        QgsFeature,
                        QgsGeometry,
@@ -43,6 +40,7 @@ from qgis.core import (QgsField,
                        QgsProcessingParameterEnum,
                        QgsProcessingParameterExtent,
                        QgsProcessingParameterNumber,
+                       QgsProcessingParameterDistance,
                        QgsProcessingParameterCrs,
                        QgsProcessingParameterFeatureSink,
                        QgsFields)
@@ -63,7 +61,10 @@ class Grid(QgisAlgorithm):
     OUTPUT = 'OUTPUT'
 
     def icon(self):
-        return QIcon(os.path.join(pluginPath, 'images', 'ftools', 'vector_grid.png'))
+        return QgsApplication.getThemeIcon("/algorithms/mAlgorithmCreateGrid.svg")
+
+    def svgIconPath(self):
+        return QgsApplication.iconPath("/algorithms/mAlgorithmCreateGrid.svg")
 
     def tags(self):
         return self.tr('grid,lines,polygons,vector,create,fishnet,diamond,hexagon').split(',')
@@ -89,18 +90,18 @@ class Grid(QgisAlgorithm):
 
         self.addParameter(QgsProcessingParameterExtent(self.EXTENT, self.tr('Grid extent')))
 
-        self.addParameter(QgsProcessingParameterNumber(self.HSPACING,
-                                                       self.tr('Horizontal spacing'), QgsProcessingParameterNumber.Double,
-                                                       0.0001, False, 0, 1000000000.0))
-        self.addParameter(QgsProcessingParameterNumber(self.VSPACING,
-                                                       self.tr('Vertical spacing'), QgsProcessingParameterNumber.Double,
-                                                       0.0001, False, 0, 1000000000.0))
-        self.addParameter(QgsProcessingParameterNumber(self.HOVERLAY,
-                                                       self.tr('Horizontal overlay'), QgsProcessingParameterNumber.Double,
-                                                       0.0, False, 0, 1000000000.0))
-        self.addParameter(QgsProcessingParameterNumber(self.VOVERLAY,
-                                                       self.tr('Vertical overlay'), QgsProcessingParameterNumber.Double,
-                                                       0.0, False, 0, 1000000000.0))
+        self.addParameter(QgsProcessingParameterDistance(self.HSPACING,
+                                                         self.tr('Horizontal spacing'),
+                                                         1.0, self.CRS, False, 0, 1000000000.0))
+        self.addParameter(QgsProcessingParameterDistance(self.VSPACING,
+                                                         self.tr('Vertical spacing'),
+                                                         1.0, self.CRS, False, 0, 1000000000.0))
+        self.addParameter(QgsProcessingParameterDistance(self.HOVERLAY,
+                                                         self.tr('Horizontal overlay'),
+                                                         0.0, self.CRS, False, 0, 1000000000.0))
+        self.addParameter(QgsProcessingParameterDistance(self.VOVERLAY,
+                                                         self.tr('Vertical overlay'),
+                                                         0.0, self.CRS, False, 0, 1000000000.0))
 
         self.addParameter(QgsProcessingParameterCrs(self.CRS, 'Grid CRS', 'ProjectCrs'))
 
@@ -154,6 +155,8 @@ class Grid(QgisAlgorithm):
             outputWkb = QgsWkbTypes.Polygon
         (sink, dest_id) = self.parameterAsSink(parameters, self.OUTPUT, context,
                                                fields, outputWkb, crs)
+        if sink is None:
+            raise QgsProcessingException(self.invalidSinkError(parameters, self.OUTPUT))
 
         if idx == 0:
             self._pointGrid(

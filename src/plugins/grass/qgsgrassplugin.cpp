@@ -26,6 +26,7 @@
 #include "qgsgrassselect.h"
 #include "qgsgrasstools.h"
 #include "qgsgrassutils.h"
+#include "qgsmessagebar.h"
 
 // includes
 #include "qgisinterface.h"
@@ -61,8 +62,8 @@ static const QString pluginIcon = QStringLiteral( ":/images/themes/default/grass
 /**
  * Constructor for the plugin. The plugin is passed a pointer to the main app
  * and an interface object that provides access to exposed functions in QGIS.
- * @param theQGisApp Pointer to the QGIS main window
- * @param qgisInterFace Pointer to the QGIS interface object
+ * \param theQGisApp Pointer to the QGIS main window
+ * \param qgisInterFace Pointer to the QGIS interface object
  */
 QgsGrassPlugin::QgsGrassPlugin( QgisInterface *qgisInterFace )
   : qGisInterface( qgisInterFace )
@@ -236,7 +237,7 @@ void QgsGrassPlugin::initGui()
   connect( qGisInterface, &QgisInterface::newProject, this, &QgsGrassPlugin::newProject );
 
   // Set icons to current theme
-  setCurrentTheme( QLatin1String( "" ) );
+  setCurrentTheme( QString() );
   // Connect theme change signal
   connect( qGisInterface, &QgisInterface::currentThemeChanged, this, &QgsGrassPlugin::setCurrentTheme );
 
@@ -321,7 +322,7 @@ void QgsGrassPlugin::onLayerWasAdded( QgsMapLayer *mapLayer )
 
 void QgsGrassPlugin::onCurrentLayerChanged( QgsMapLayer *layer )
 {
-  Q_UNUSED( layer );
+  Q_UNUSED( layer )
   resetEditActions();
 }
 
@@ -430,7 +431,7 @@ void QgsGrassPlugin::onFieldsChanged()
   QgsDebugMsg( "uri = " + uri );
   Q_FOREACH ( QgsMapLayer *layer, QgsProject::instance()->mapLayers().values() )
   {
-    if ( !layer || layer->type() != QgsMapLayer::VectorLayer )
+    if ( !layer || layer->type() != QgsMapLayerType::VectorLayer )
     {
       continue;
     }
@@ -537,7 +538,7 @@ void QgsGrassPlugin::mapsetChanged()
     }
     catch ( QgsGrass::Exception &e )
     {
-      Q_UNUSED( e );
+      Q_UNUSED( e )
       QgsDebugMsg( "Cannot read GRASS CRS : " + QString( e.what() ) );
       mCrs = QgsCoordinateReferenceSystem();
     }
@@ -565,7 +566,7 @@ void QgsGrassPlugin::newVector()
 
   QgsGrassElementDialog dialog( qGisInterface->mainWindow() );
   name = dialog.getItem( QStringLiteral( "vector" ), tr( "New vector name" ),
-                         tr( "New vector name" ), QLatin1String( "" ), QLatin1String( "" ), &ok );
+                         tr( "New vector name" ), QString(), QString(), &ok );
 
   if ( !ok )
     return;
@@ -579,7 +580,7 @@ void QgsGrassPlugin::newVector()
   G_TRY
   {
     Map = QgsGrass::vectNewMapStruct();
-    Vect_open_new( Map, name.toUtf8().data(), 0 );
+    Vect_open_new( Map, name.toUtf8().constData(), 0 );
 
     Vect_build( Map );
     Vect_set_release_support( Map );
@@ -625,7 +626,7 @@ void QgsGrassPlugin::onNewLayer( QString uri, QString name )
 
 void QgsGrassPlugin::postRender( QPainter *painter )
 {
-  Q_UNUSED( painter );
+  Q_UNUSED( painter )
   // We have to redraw rectangle, because canvas->mapRenderer()->destinationCrs is set after GRASS plugin constructor! This way it is redrawn also if canvas CRS has changed.
   displayRegion();
 }
@@ -728,12 +729,12 @@ void QgsGrassPlugin::projectRead()
   bool ok;
   QString gisdbase = QgsProject::instance()->readPath(
                        QgsProject::instance()->readEntry(
-                         QStringLiteral( "GRASS" ), QStringLiteral( "/WorkingGisdbase" ), QLatin1String( "" ), &ok ).trimmed()
+                         QStringLiteral( "GRASS" ), QStringLiteral( "/WorkingGisdbase" ), QString(), &ok ).trimmed()
                      );
   QString location = QgsProject::instance()->readEntry(
-                       QStringLiteral( "GRASS" ), QStringLiteral( "/WorkingLocation" ), QLatin1String( "" ), &ok ).trimmed();
+                       QStringLiteral( "GRASS" ), QStringLiteral( "/WorkingLocation" ), QString(), &ok ).trimmed();
   QString mapset = QgsProject::instance()->readEntry(
-                     QStringLiteral( "GRASS" ), QStringLiteral( "/WorkingMapset" ), QLatin1String( "" ), &ok ).trimmed();
+                     QStringLiteral( "GRASS" ), QStringLiteral( "/WorkingMapset" ), QString(), &ok ).trimmed();
 
   if ( gisdbase.isEmpty() || location.isEmpty() || mapset.isEmpty() )
   {
@@ -799,7 +800,7 @@ void QgsGrassPlugin::unload()
 
   Q_FOREACH ( QgsMapLayer *layer, QgsProject::instance()->mapLayers().values() )
   {
-    if ( !layer || layer->type() != QgsMapLayer::VectorLayer )
+    if ( !layer || layer->type() != QgsMapLayerType::VectorLayer )
     {
       continue;
     }
@@ -849,7 +850,7 @@ void QgsGrassPlugin::unload()
 // Set icons to the current theme
 void QgsGrassPlugin::setCurrentTheme( QString themeName )
 {
-  Q_UNUSED( themeName );
+  Q_UNUSED( themeName )
   if ( mToolBarPointer )
   {
     mOpenMapsetAction->setIcon( getThemeIcon( QStringLiteral( "grass_open_mapset.png" ) ) );

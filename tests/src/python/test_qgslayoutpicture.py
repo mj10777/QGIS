@@ -9,8 +9,6 @@ the Free Software Foundation; either version 2 of the License, or
 __author__ = '(C) 2017 by Nyall Dawson'
 __date__ = '23/10/2017'
 __copyright__ = 'Copyright 2017, The QGIS Project'
-# This will get replaced with a git SHA1 when you do a git archive
-__revision__ = '$Format:%H$'
 
 import qgis  # NOQA
 
@@ -18,7 +16,7 @@ import os
 import socketserver
 import threading
 import http.server
-from qgis.PyQt.QtCore import QRectF
+from qgis.PyQt.QtCore import QRectF, QDir
 
 from qgis.core import (QgsLayoutItemPicture,
                        QgsLayout,
@@ -70,6 +68,14 @@ class TestQgsLayoutPicture(unittest.TestCase, LayoutItemTestCase):
         self.picture.setFrameEnabled(True)
         self.layout.addLayoutItem(self.picture)
 
+    def setUp(self):
+        self.report = "<h1>Python QgsLayoutItemPicture Tests</h1>\n"
+
+    def tearDown(self):
+        report_file_path = "%s/qgistest.html" % QDir.tempPath()
+        with open(report_file_path, 'a') as report_file:
+            report_file.write(self.report)
+
     def testResizeZoom(self):
         """Test picture resize zoom mode."""
         self.picture.setResizeMode(QgsLayoutItemPicture.Zoom)
@@ -77,17 +83,18 @@ class TestQgsLayoutPicture(unittest.TestCase, LayoutItemTestCase):
         checker = QgsLayoutChecker('composerpicture_resize_zoom', self.layout)
         checker.setControlPathPrefix("composer_picture")
         testResult, message = checker.testLayout()
+        self.report += checker.report()
 
         assert testResult, message
 
-    @unittest.skip('test is broken for qt5/python3 - feature works')
     def testRemoteImage(self):
         """Test fetching remote picture."""
         self.picture.setPicturePath('http://localhost:' + str(TestQgsLayoutPicture.port) + '/qgis_local_server/logo.png')
 
-        checker = QgsLayoutChecker('picture_remote', self.layout)
+        checker = QgsLayoutChecker('composerpicture_remote', self.layout)
         checker.setControlPathPrefix("composer_picture")
         testResult, message = checker.testLayout()
+        self.report += checker.report()
 
         self.picture.setPicturePath(self.pngImage)
         assert testResult, message

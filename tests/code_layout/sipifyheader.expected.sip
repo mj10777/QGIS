@@ -53,11 +53,11 @@ Documentation goes here
 
 Here's some comment mentioning another class QgsAutoAwesomemater.makeAwesome.
 
-.. versionadded:: 3.0
-
 .. note::
 
    some other note
+
+.. versionadded:: 3.0
 %End
 
 %TypeHeaderCode
@@ -93,6 +93,7 @@ typedef QtClass<QVariant> QtClassQVariantBase;
       QString mName;
       int mCount;
       QgsMapLayer *mLayer;
+      QList<QAction *> contextMenuActions;
     };
 
     static const int MONTHS;
@@ -161,7 +162,7 @@ is not very interesting!
 
     void LongDocStringMethodWithBrief();
 %Docstring
- some brief
+some brief
 My long doc ``string``
 is not very interesting!
 Here's some comment mentioning another class QgsAutoAwesomemater.makeLessAwesome.
@@ -169,7 +170,7 @@ Here's some comment mentioning another class QgsAutoAwesomemater.makeLessAwesome
 
     MyPointer *pointerReturnValue();
 %Docstring
-I return a pointer. If something bad happens, I return None.
+I return a pointer. If something bad happens, I return ``None``.
 
 :return: pointer to something cool
 %End

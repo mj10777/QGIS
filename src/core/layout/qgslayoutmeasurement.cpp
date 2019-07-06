@@ -16,7 +16,7 @@
  ***************************************************************************/
 
 #include "qgslayoutmeasurement.h"
-
+#include "qgis.h"
 #include <QStringList>
 
 QgsLayoutMeasurement::QgsLayoutMeasurement( const double length, const QgsUnitTypes::LayoutUnit units )
@@ -40,12 +40,12 @@ QgsLayoutMeasurement QgsLayoutMeasurement::decodeMeasurement( const QString &str
   return QgsLayoutMeasurement( parts[0].toDouble(), QgsUnitTypes::decodeLayoutUnit( parts[1] ) );
 }
 
-bool QgsLayoutMeasurement::operator==( const QgsLayoutMeasurement &other ) const
+bool QgsLayoutMeasurement::operator==( const QgsLayoutMeasurement other ) const
 {
   return other.units() == mUnits && qgsDoubleNear( other.length(), mLength );
 }
 
-bool QgsLayoutMeasurement::operator!=( const QgsLayoutMeasurement &other ) const
+bool QgsLayoutMeasurement::operator!=( const QgsLayoutMeasurement other ) const
 {
   return ( ! operator==( other ) );
 }

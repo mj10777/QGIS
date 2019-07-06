@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>825</width>
-    <height>588</height>
+    <height>856</height>
    </rect>
   </property>
   <property name="minimumSize">
@@ -23,8 +23,8 @@
    <iconset resource="../../images/images.qrc">
     <normaloff>:/images/icons/qgis-icon-16x16.png</normaloff>:/images/icons/qgis-icon-16x16.png</iconset>
   </property>
-  <layout class="QGridLayout" name="gridLayout">
-   <item row="0" column="0">
+  <layout class="QVBoxLayout" name="verticalLayout_26">
+   <item>
     <widget class="QSplitter" name="mOptionsSplitter">
      <property name="orientation">
       <enum>Qt::Horizontal</enum>
@@ -74,6 +74,9 @@
            <width>150</width>
            <height>16777215</height>
           </size>
+         </property>
+         <property name="toolTip">
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;If the remove duplicate nodes option is activated, duplicate vertices will automatically be removed from geometries which are edited on this layer.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
          </property>
          <property name="horizontalScrollBarPolicy">
           <enum>Qt::ScrollBarAlwaysOff</enum>
@@ -201,7 +204,7 @@
           </property>
           <property name="icon">
            <iconset resource="../../images/images.qrc">
-            <normaloff>:/images/themes/default/propertyicons/join.png</normaloff>:/images/themes/default/propertyicons/join.png</iconset>
+            <normaloff>:/images/themes/default/propertyicons/join.svg</normaloff>:/images/themes/default/propertyicons/join.svg</iconset>
           </property>
          </item>
          <item>
@@ -303,7 +306,19 @@
           </property>
           <property name="icon">
            <iconset resource="../../images/images.qrc">
-            <normaloff>:/images/themes/default/propertyicons/overlay.png</normaloff>:/images/themes/default/propertyicons/overlay.png</iconset>
+            <normaloff>:/images/themes/default/propertyicons/overlay.svg</normaloff>:/images/themes/default/propertyicons/overlay.svg</iconset>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Digitizing</string>
+          </property>
+          <property name="toolTip">
+           <string>Control geometry and topology constraints for digitizing operations.</string>
+          </property>
+          <property name="icon">
+           <iconset resource="../../images/images.qrc">
+            <normaloff>:/images/themes/default/propertyicons/digitizing.svg</normaloff>:/images/themes/default/propertyicons/digitizing.svg</iconset>
           </property>
          </item>
         </widget>
@@ -345,7 +360,7 @@
           </sizepolicy>
          </property>
          <property name="currentIndex">
-          <number>0</number>
+          <number>18</number>
          </property>
          <widget class="QWidget" name="mOptsPage_Information">
           <layout class="QVBoxLayout" name="verticalLayout_5">
@@ -421,8 +436,8 @@
                <rect>
                 <x>0</x>
                 <y>0</y>
-                <width>651</width>
-                <height>537</height>
+                <width>662</width>
+                <height>804</height>
                </rect>
               </property>
               <layout class="QVBoxLayout" name="verticalLayout_9">
@@ -538,12 +553,12 @@ border-radius: 2px;</string>
                 </widget>
                </item>
                <item>
-                <widget class="QgsCollapsibleGroupBox" name="indexGroupBox_2">
+                <widget class="QgsCollapsibleGroupBox" name="mGeometryGroupBox">
                  <property name="focusPolicy">
                   <enum>Qt::StrongFocus</enum>
                  </property>
                  <property name="title">
-                  <string>Coordinate reference system</string>
+                  <string>Geometry and Coordinate Reference System</string>
                  </property>
                  <property name="checkable">
                   <bool>false</bool>
@@ -574,14 +589,14 @@ border-radius: 2px;</string>
                     <item>
                      <widget class="QPushButton" name="pbnIndex">
                       <property name="text">
-                       <string>Create spatial index</string>
+                       <string>Create Spatial Index</string>
                       </property>
                      </widget>
                     </item>
                     <item>
                      <widget class="QPushButton" name="pbnUpdateExtents">
                       <property name="text">
-                       <string>Update extents</string>
+                       <string>Update Extents</string>
                       </property>
                      </widget>
                     </item>
@@ -619,7 +634,7 @@ border-radius: 2px;</string>
                   </sizepolicy>
                  </property>
                  <property name="title">
-                  <string>Provider feature filter</string>
+                  <string>Provider Feature Filter</string>
                  </property>
                  <layout class="QGridLayout" name="gridLayout_4">
                   <item row="1" column="1">
@@ -663,6 +678,19 @@ border-radius: 2px;</string>
                  <zorder>pbnQueryBuilder</zorder>
                 </widget>
                </item>
+               <item>
+                <spacer name="verticalSpacer_3">
+                 <property name="orientation">
+                  <enum>Qt::Vertical</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>20</width>
+                   <height>0</height>
+                  </size>
+                 </property>
+                </spacer>
+               </item>
               </layout>
              </widget>
             </widget>
@@ -696,8 +724,8 @@ border-radius: 2px;</string>
                <rect>
                 <x>0</x>
                 <y>0</y>
-                <width>651</width>
-                <height>537</height>
+                <width>662</width>
+                <height>804</height>
                </rect>
               </property>
               <layout class="QVBoxLayout" name="verticalLayout_18">
@@ -882,8 +910,8 @@ border-radius: 2px;</string>
                <rect>
                 <x>0</x>
                 <y>0</y>
-                <width>651</width>
-                <height>537</height>
+                <width>662</width>
+                <height>804</height>
                </rect>
               </property>
               <layout class="QVBoxLayout" name="verticalLayout_23">
@@ -1277,8 +1305,8 @@ border-radius: 2px;</string>
                <rect>
                 <x>0</x>
                 <y>0</y>
-                <width>651</width>
-                <height>537</height>
+                <width>662</width>
+                <height>804</height>
                </rect>
               </property>
               <layout class="QVBoxLayout" name="verticalLayout_21">
@@ -1349,20 +1377,38 @@ border-radius: 2px;</string>
                <number>0</number>
               </property>
               <item row="0" column="0">
-               <widget class="QLabel" name="label">
-                <property name="text">
-                 <string>Display expression</string>
+               <widget class="QGroupBox" name="groupBox_22">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
                 </property>
+                <property name="title">
+                 <string>Display Name</string>
+                </property>
+                <layout class="QGridLayout" name="gridLayout_50">
+                 <item row="0" column="0">
+                  <widget class="QgsFieldExpressionWidget" name="mDisplayExpressionWidget" native="true">
+                   <property name="focusPolicy">
+                    <enum>Qt::StrongFocus</enum>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="0">
+                  <widget class="QLabel" name="labelDisplayNameInfo">
+                   <property name="text">
+                    <string>The feature display name is used in identify results, locator searches and the attribute table's dual view list.</string>
+                   </property>
+                   <property name="wordWrap">
+                    <bool>true</bool>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
                </widget>
               </item>
-              <item row="0" column="1">
-               <widget class="QgsFieldExpressionWidget" name="mDisplayExpressionWidget" native="true">
-                <property name="focusPolicy">
-                 <enum>Qt::StrongFocus</enum>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="0" colspan="2">
+              <item row="1" column="0">
                <widget class="QGroupBox" name="groupBox_2">
                 <property name="sizePolicy">
                  <sizepolicy hsizetype="Preferred" vsizetype="MinimumExpanding">
@@ -1371,7 +1417,7 @@ border-radius: 2px;</string>
                  </sizepolicy>
                 </property>
                 <property name="title">
-                 <string>Map Tip</string>
+                 <string>HTML Map Tip</string>
                 </property>
                 <layout class="QGridLayout" name="gridLayout_8">
                  <item row="1" column="2">
@@ -1416,6 +1462,16 @@ border-radius: 2px;</string>
                    </property>
                   </widget>
                  </item>
+                 <item row="3" column="0" colspan="3">
+                  <widget class="QLabel" name="labelMapTipInfo">
+                   <property name="text">
+                    <string>The HTML map tips are shown when moving mouse over features of the currently selected layer when the 'Show Map Tips' action is toggled on. If no HTML code is set, the feature display name is used.</string>
+                   </property>
+                   <property name="wordWrap">
+                    <bool>true</bool>
+                   </property>
+                  </widget>
+                 </item>
                 </layout>
                </widget>
               </item>
@@ -1451,8 +1507,8 @@ border-radius: 2px;</string>
                <rect>
                 <x>0</x>
                 <y>0</y>
-                <width>696</width>
-                <height>521</height>
+                <width>734</width>
+                <height>790</height>
                </rect>
               </property>
               <layout class="QVBoxLayout" name="verticalLayout_32">
@@ -1471,7 +1527,7 @@ border-radius: 2px;</string>
                <item>
                 <widget class="QgsCollapsibleGroupBox" name="mScaleVisibilityGroupBox">
                  <property name="title">
-                  <string>Scale dependen&amp;t visibility</string>
+                  <string>Scale Dependen&amp;t Visibility</string>
                  </property>
                  <property name="checkable">
                   <bool>true</bool>
@@ -1490,7 +1546,7 @@ border-radius: 2px;</string>
                <item>
                 <widget class="QGroupBox" name="mSimplifyDrawingGroupBox">
                  <property name="title">
-                  <string>Simplify &amp;geometry</string>
+                  <string>Simplify &amp;Geometry</string>
                  </property>
                  <property name="checkable">
                   <bool>true</bool>
@@ -1623,7 +1679,7 @@ border-radius: 2px;</string>
                  <item>
                   <widget class="QDoubleSpinBox" name="mRefreshLayerIntervalSpinBox">
                    <property name="toolTip">
-                    <string>Higher values result in more simplification</string>
+                    <string>Lower values result in more data refreshing. Canvas updates are deferred in order to avoid refreshing multiple times if more than one layer has an auto update interval set.</string>
                    </property>
                    <property name="decimals">
                     <number>2</number>
@@ -1815,7 +1871,7 @@ border-radius: 2px;</string>
            <item>
             <widget class="QGroupBox" name="groupBox_5">
              <property name="title">
-              <string>Data dependencies</string>
+              <string>Data Dependencies</string>
              </property>
              <layout class="QVBoxLayout" name="verticalLayout_24">
               <item>
@@ -1865,9 +1921,12 @@ border-radius: 2px;</string>
             <number>0</number>
            </property>
            <item>
-            <widget class="QGroupBox" name="groupBox_3">
+            <widget class="QgsVectorLayerLegendWidget" name="mLegendWidget" native="true"/>
+           </item>
+           <item>
+            <widget class="QgsCollapsibleGroupBox" name="groupBox_3">
              <property name="title">
-              <string>Embedded widgets in legend</string>
+              <string>Embedded Widgets in Legend</string>
              </property>
              <layout class="QVBoxLayout" name="verticalLayout_22">
               <item>
@@ -1905,8 +1964,8 @@ border-radius: 2px;</string>
                <rect>
                 <x>0</x>
                 <y>0</y>
-                <width>651</width>
-                <height>537</height>
+                <width>662</width>
+                <height>804</height>
                </rect>
               </property>
               <layout class="QVBoxLayout" name="verticalLayout_13">
@@ -1953,10 +2012,10 @@ border-radius: 2px;</string>
                     <item>
                      <widget class="QLineEdit" name="mLayerDataUrlLineEdit">
                       <property name="toolTip">
-                       <string>An URL of the data presentation.</string>
+                       <string>A URL of the data presentation.</string>
                       </property>
                       <property name="placeholderText">
-                       <string>An URL of the data presentation.</string>
+                       <string>A URL of the data presentation.</string>
                       </property>
                      </widget>
                     </item>
@@ -2226,10 +2285,10 @@ border-radius: 2px;</string>
                     <item>
                      <widget class="QLineEdit" name="mLayerLegendUrlLineEdit">
                       <property name="toolTip">
-                       <string>An URL of the legend image.</string>
+                       <string>A URL of the legend image.</string>
                       </property>
                       <property name="placeholderText">
-                       <string>An URL of the legend image.</string>
+                       <string>A URL of the legend image.</string>
                       </property>
                      </widget>
                     </item>
@@ -2261,11 +2320,6 @@ border-radius: 2px;</string>
                         <string>image/jpeg</string>
                        </property>
                       </item>
-                      <item>
-                       <property name="text">
-                        <string>image/jpg</string>
-                       </property>
-                      </item>
                      </widget>
                     </item>
                    </layout>
@@ -2292,13 +2346,125 @@ border-radius: 2px;</string>
            </item>
           </layout>
          </widget>
+         <widget class="QWidget" name="mOptsPage_Digitizing">
+          <layout class="QGridLayout" name="gridLayout_12">
+           <property name="leftMargin">
+            <number>0</number>
+           </property>
+           <property name="topMargin">
+            <number>0</number>
+           </property>
+           <property name="rightMargin">
+            <number>0</number>
+           </property>
+           <property name="bottomMargin">
+            <number>0</number>
+           </property>
+           <item row="0" column="0">
+            <widget class="QScrollArea" name="scrollArea_2">
+             <property name="widgetResizable">
+              <bool>true</bool>
+             </property>
+             <widget class="QWidget" name="scrollAreaWidgetContents_2">
+              <property name="geometry">
+               <rect>
+                <x>0</x>
+                <y>0</y>
+                <width>658</width>
+                <height>800</height>
+               </rect>
+              </property>
+              <layout class="QVBoxLayout" name="verticalLayout_20">
+               <item>
+                <widget class="QGroupBox" name="mGeometryAutoFixesGroupBox">
+                 <property name="title">
+                  <string>Automatic Fixes</string>
+                 </property>
+                 <layout class="QGridLayout" name="gridLayout">
+                  <item row="0" column="0" colspan="2">
+                   <widget class="QCheckBox" name="mRemoveDuplicateNodesCheckbox">
+                    <property name="text">
+                     <string>Remove duplicate nodes</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="1" column="0">
+                   <widget class="QLabel" name="label">
+                    <property name="toolTip">
+                     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The geometry precision defines the maximum precision to of geometry coordinates that should be stored on this layer. A snap to grid algorithm will be applied on every geometry entering this layer, resulting in coordinates being rounded to multiples of this value. The operation is applied in this layer's coordinate reference system.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                    </property>
+                    <property name="text">
+                     <string>Geometry precision</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="1" column="1">
+                   <layout class="QHBoxLayout" name="horizontalLayout_11" stretch="0,0">
+                    <item>
+                     <widget class="QLabel" name="mPrecisionUnitsLabel">
+                      <property name="text">
+                       <string>[Units]</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item>
+                     <widget class="QLineEdit" name="mGeometryPrecisionLineEdit">
+                      <property name="inputMethodHints">
+                       <set>Qt::ImhFormattedNumbersOnly</set>
+                      </property>
+                      <property name="text">
+                       <string/>
+                      </property>
+                      <property name="placeholderText">
+                       <string>[No precision restriction]</string>
+                      </property>
+                     </widget>
+                    </item>
+                   </layout>
+                  </item>
+                 </layout>
+                </widget>
+               </item>
+               <item>
+                <widget class="QGroupBox" name="mGeometryValidationGroupBox">
+                 <property name="title">
+                  <string>Geometry checks</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QGroupBox" name="mTopologyChecksGroupBox">
+                 <property name="title">
+                  <string>Topology checks</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <spacer name="verticalSpacer_4">
+                 <property name="orientation">
+                  <enum>Qt::Vertical</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>20</width>
+                   <height>40</height>
+                  </size>
+                 </property>
+                </spacer>
+               </item>
+              </layout>
+             </widget>
+            </widget>
+           </item>
+          </layout>
+         </widget>
         </widget>
        </item>
       </layout>
      </widget>
     </widget>
    </item>
-   <item row="1" column="0">
+   <item>
     <widget class="QFrame" name="mButtonBoxFrame">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
@@ -2342,15 +2508,15 @@ border-radius: 2px;</string>
  </widget>
  <customwidgets>
   <customwidget>
-   <class>QgsScrollArea</class>
-   <extends>QScrollArea</extends>
-   <header>qgsscrollarea.h</header>
-   <container>1</container>
-  </customwidget>
-  <customwidget>
    <class>QgsCollapsibleGroupBox</class>
    <extends>QGroupBox</extends>
    <header>qgscollapsiblegroupbox.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>QgsScrollArea</class>
+   <extends>QScrollArea</extends>
+   <header>qgsscrollarea.h</header>
    <container>1</container>
   </customwidget>
   <customwidget>
@@ -2403,6 +2569,12 @@ border-radius: 2px;</string>
    <extends>QWidget</extends>
    <header>qgscodeeditorhtml.h</header>
   </customwidget>
+  <customwidget>
+   <class>QgsVectorLayerLegendWidget</class>
+   <extends>QWidget</extends>
+   <header>qgsvectorlayerlegendwidget.h</header>
+   <container>1</container>
+  </customwidget>
  </customwidgets>
  <tabstops>
   <tabstop>mSearchLineEdit</tabstop>
@@ -2412,7 +2584,7 @@ border-radius: 2px;</string>
   <tabstop>mLayerOrigNameLineEdit</tabstop>
   <tabstop>txtDisplayName</tabstop>
   <tabstop>cboProviderEncoding</tabstop>
-  <tabstop>indexGroupBox_2</tabstop>
+  <tabstop>mGeometryGroupBox</tabstop>
   <tabstop>mCrsSelector</tabstop>
   <tabstop>pbnIndex</tabstop>
   <tabstop>pbnUpdateExtents</tabstop>
@@ -2464,6 +2636,7 @@ border-radius: 2px;</string>
   <tabstop>mLayerMetadataUrlFormatComboBox</tabstop>
   <tabstop>mLayerLegendUrlLineEdit</tabstop>
   <tabstop>mLayerLegendUrlFormatComboBox</tabstop>
+  <tabstop>mRemoveDuplicateNodesCheckbox</tabstop>
  </tabstops>
  <resources>
   <include location="../../images/images.qrc"/>

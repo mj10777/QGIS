@@ -28,19 +28,17 @@ from builtins import range
 # this will disable the dbplugin if the connector raise an ImportError
 from .connector import OracleDBConnector
 
-from qgis.PyQt.QtCore import Qt
+from qgis.PyQt.QtCore import Qt, QCoreApplication
 from qgis.PyQt.QtGui import QIcon, QKeySequence
 from qgis.PyQt.QtWidgets import QAction, QApplication, QMessageBox
 
-from qgis.core import QgsVectorLayer, NULL, QgsSettings
+from qgis.core import QgsApplication, QgsVectorLayer, NULL, QgsSettings
 
 from ..plugin import ConnectionError, InvalidDataException, DBPlugin, \
     Database, Schema, Table, VectorTable, TableField, TableConstraint, \
     TableIndex, TableTrigger
 
 from qgis.core import QgsCredentials
-
-from . import resources_rc  # NOQA
 
 
 def classFactory():
@@ -51,7 +49,7 @@ class OracleDBPlugin(DBPlugin):
 
     @classmethod
     def icon(self):
-        return QIcon(":/db_manager/oracle/icon")
+        return QgsApplication.getThemeIcon("/mIconOracle.svg")
 
     @classmethod
     def typeName(self):
@@ -59,7 +57,7 @@ class OracleDBPlugin(DBPlugin):
 
     @classmethod
     def typeNameString(self):
-        return 'Oracle Spatial'
+        return QCoreApplication.translate('db_manager', 'Oracle Spatial')
 
     @classmethod
     def providerName(self):
@@ -82,7 +80,7 @@ class OracleDBPlugin(DBPlugin):
         conn_name = self.connectionName()
         settings = QgsSettings()
         settings.beginGroup(u"/{0}/{1}".format(
-                            self.connectionSettingsKey(), conn_name))
+            self.connectionSettingsKey(), conn_name))
 
         if not settings.contains("database"):  # non-existent entry?
             raise InvalidDataException(
@@ -93,7 +91,8 @@ class OracleDBPlugin(DBPlugin):
         uri = QgsDataSourceUri()
 
         settingsList = ["host", "port", "database", "username", "password"]
-        host, port, database, username, password = [settings.value(x, "", type=str) for x in settingsList]
+        host, port, database, username, password = [
+            settings.value(x, "", type=str) for x in settingsList]
 
         # get all of the connexion options
 
@@ -192,6 +191,11 @@ class ORDatabase(Database):
         from .data_model import ORSqlResultModel
         return ORSqlResultModel(self, sql, parent)
 
+    def sqlResultModelAsync(self, sql, parent):
+        from .data_model import ORSqlResultModelAsync
+
+        return ORSqlResultModelAsync(self, sql, parent)
+
     def toSqlLayer(self, sql, geomCol, uniqueCol,
                    layerName=u"QueryLayer", layerType=None,
                    avoidSelectById=False, filter=""):
@@ -199,7 +203,8 @@ class ORDatabase(Database):
         uri = self.uri()
         con = self.database().connector
 
-        uri.setDataSource(u"", u"({})".format(sql), geomCol, filter, uniqueCol.strip(u'"'))
+        uri.setDataSource(u"", u"({}\n)".format(
+            sql), geomCol, filter, uniqueCol.strip(u'"'))
         if avoidSelectById:
             uri.disableSelectAtId(True)
         provider = self.dbplugin().providerName()
@@ -209,7 +214,7 @@ class ORDatabase(Database):
         if not vlayer.isValid():
 
             wkbType, srid = con.getTableMainGeomType(
-                u"({})".format(sql), geomCol)
+                u"({}\n)".format(sql), geomCol)
             uri.setWkbType(wkbType)
             if srid:
                 uri.setSrid(str(srid))
@@ -238,17 +243,17 @@ class ORDatabase(Database):
         mainWindow.registerAction(action, None, self.deleteActionSlot)
         action.setShortcuts(QKeySequence.Delete)
 
-        action = QAction(QIcon(":/db_manager/actions/create_table"),
+        action = QAction(QgsApplication.getThemeIcon("/mActionCreateTable.svg"),
                          QApplication.translate(
                              "DBManagerPlugin", "&Create Table…"), self)
         mainWindow.registerAction(action, QApplication.translate(
             "DBManagerPlugin", "&Table"), self.createTableActionSlot)
-        action = QAction(QIcon(":/db_manager/actions/edit_table"),
+        action = QAction(QgsApplication.getThemeIcon("/mActionEditTable.svg"),
                          QApplication.translate(
                              "DBManagerPlugin", "&Edit Table…"), self)
         mainWindow.registerAction(action, QApplication.translate(
             "DBManagerPlugin", "&Table"), self.editTableActionSlot)
-        action = QAction(QIcon(":/db_manager/actions/del_table"),
+        action = QAction(QgsApplication.getThemeIcon("/mActionDeleteTable.svg"),
                          QApplication.translate(
                              "DBManagerPlugin", "&Delete Table/View…"), self)
         mainWindow.registerAction(action, QApplication.translate(
@@ -257,6 +262,9 @@ class ORDatabase(Database):
             "DBManagerPlugin", "&Empty Table…"), self)
         mainWindow.registerAction(action, QApplication.translate(
             "DBManagerPlugin", "&Table"), self.emptyTableActionSlot)
+
+    def supportsComment(self):
+        return False
 
 
 class ORSchema(Schema):
@@ -400,18 +408,12 @@ class ORTable(Table):
             for idx in indexes:
                 if idx.isUnique and len(idx.columns) == 1:
                     fld = idx.fields()[idx.columns[0]]
-                    if (fld.dataType == u"NUMBER" and
-                            not fld.modifier and
-                            fld.notNull and
-                            fld not in ret):
+                    if (fld.dataType == u"NUMBER" and not fld.modifier and fld.notNull and fld not in ret):
                         ret.append(fld)
 
         # and finally append the other suitable fields
         for fld in self.fields():
-            if (fld.dataType == u"NUMBER" and
-                    not fld.modifier and
-                    fld.notNull and
-                    fld not in ret):
+            if (fld.dataType == u"NUMBER" and not fld.modifier and fld.notNull and fld not in ret):
                 ret.append(fld)
 
         if onlyOne:
@@ -511,15 +513,12 @@ class ORTableField(TableField):
 
         # find out whether fields are part of primary key
         for con in self.table().constraints():
-            if (con.type == ORTableConstraint.TypePrimaryKey and
-                    self.name == con.column):
+            if con.type == ORTableConstraint.TypePrimaryKey and self.name == con.column:
                 self.primaryKey = True
                 break
 
     def type2String(self):
-        if (u"TIMESTAMP" in self.dataType or
-            self.dataType in [u"DATE", u"SDO_GEOMETRY",
-                              u"BINARY_FLOAT", u"BINARY_DOUBLE"]):
+        if (u"TIMESTAMP" in self.dataType or self.dataType in [u"DATE", u"SDO_GEOMETRY", u"BINARY_FLOAT", u"BINARY_DOUBLE"]):
             return u"{}".format(self.dataType)
         if self.charMaxLen in [None, -1]:
             return u"{}".format(self.dataType)
@@ -556,7 +555,6 @@ class ORTableField(TableField):
 
 
 class ORTableConstraint(TableConstraint):
-
     TypeCheck, TypeForeignKey, TypePrimaryKey, \
         TypeUnique, TypeUnknown = list(range(5))
 

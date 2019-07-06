@@ -29,13 +29,12 @@
 #include <QFileDialog>
 #include <QHBoxLayout>
 #include <QFormLayout>
+#include <QPlainTextEdit>
 
-#include "qgsvectorlayer.h"
 #include "ui_qgsattributesformproperties.h"
 #include "qgis_app.h"
 #include "qgsaddattrdialog.h"
 #include "qgslogger.h"
-#include "qgsproject.h"
 #include "qgsexpressionbuilderdialog.h"
 #include "qgsfieldcalculator.h"
 #include "qgsfieldexpressionwidget.h"
@@ -70,6 +69,16 @@ class APP_EXPORT QgsAttributesFormProperties : public QWidget, private Ui_QgsAtt
       bool showUnlinkButton = true;
     };
 
+    struct QmlElementEditorConfiguration
+    {
+      QString qmlCode;
+    };
+
+    struct HtmlElementEditorConfiguration
+    {
+      QString htmlCode;
+    };
+
     class DnDTreeItemData : public QTreeWidgetItem
     {
       public:
@@ -77,22 +86,26 @@ class APP_EXPORT QgsAttributesFormProperties : public QWidget, private Ui_QgsAtt
         {
           Field,
           Relation,
-          Container
+          Container,
+          QmlWidget,
+          HtmlWidget
         };
 
         //do we need that
         DnDTreeItemData() = default;
 
-        DnDTreeItemData( Type type, const QString &name )
+        DnDTreeItemData( Type type, const QString &name, const QString &displayName, const QColor &backgroundColor = QColor() )
           : mType( type )
           , mName( name )
-          , mColumnCount( 1 )
-          , mShowAsGroupBox( false )
-          , mShowLabel( true )
+          , mDisplayName( displayName )
+          , mBackgroundColor( backgroundColor )
         {}
 
         QString name() const { return mName; }
         void setName( const QString &name ) { mName = name; }
+
+        QString displayName() const { return mDisplayName; }
+        void setDisplayName( const QString &displayName ) { mDisplayName = displayName; }
 
         Type type() const { return mType; }
         void setType( Type type ) { mType = type; }
@@ -114,14 +127,28 @@ class APP_EXPORT QgsAttributesFormProperties : public QWidget, private Ui_QgsAtt
         RelationEditorConfiguration relationEditorConfiguration() const;
         void setRelationEditorConfiguration( RelationEditorConfiguration relationEditorConfiguration );
 
+        QmlElementEditorConfiguration qmlElementEditorConfiguration() const;
+        void setQmlElementEditorConfiguration( QmlElementEditorConfiguration qmlElementEditorConfiguration );
+
+        HtmlElementEditorConfiguration htmlElementEditorConfiguration() const;
+        void setHtmlElementEditorConfiguration( HtmlElementEditorConfiguration htmlElementEditorConfiguration );
+
+        QColor backgroundColor() const;
+        void setBackgroundColor( const QColor &backgroundColor );
+
       private:
         Type mType = Field;
         QString mName;
+        QString mDisplayName;
+
         int mColumnCount = 1;
         bool mShowAsGroupBox = false;
         bool mShowLabel = true;
         QgsOptionalExpression mVisibilityExpression;
         RelationEditorConfiguration mRelationEditorConfiguration;
+        QmlElementEditorConfiguration mQmlElementEditorConfiguration;
+        HtmlElementEditorConfiguration mHtmlElementEditorConfiguration;
+        QColor mBackgroundColor;
     };
 
 
@@ -137,10 +164,6 @@ class APP_EXPORT QgsAttributesFormProperties : public QWidget, private Ui_QgsAtt
       bool mEditableEnabled =  true ;
       bool mLabelOnTop =  false ;
       QgsFieldConstraints mFieldConstraints;
-      QgsFieldConstraints::Constraints mConstraints = nullptr;
-      QHash< QgsFieldConstraints::Constraint, QgsFieldConstraints::ConstraintStrength > mConstraintStrength;
-      QString mConstraint;
-      QString mConstraintDescription;
       QPushButton *mButton = nullptr;
       QString mEditorWidgetType;
       QMap<QString, QVariant> mEditorWidgetConfig;
@@ -172,7 +195,6 @@ class APP_EXPORT QgsAttributesFormProperties : public QWidget, private Ui_QgsAtt
     void init();
     void apply();
 
-    void onAttributeSelectionChanged();
 
     void loadRelations();
 
@@ -196,7 +218,13 @@ class APP_EXPORT QgsAttributesFormProperties : public QWidget, private Ui_QgsAtt
     QgsAttributeTypeDialog *mAttributeTypeDialog = nullptr;
     QgsAttributeRelationEdit *mAttributeRelationEdit = nullptr;
 
+  private slots:
+
+    void onInvertSelectionButtonClicked( bool checked );
+    void onAttributeSelectionChanged();
+
   private:
+
     void loadAttributeTypeDialog();
     void storeAttributeTypeDialog( );
 
@@ -208,7 +236,7 @@ class APP_EXPORT QgsAttributesFormProperties : public QWidget, private Ui_QgsAtt
     QString mInitFilePath;
     QString mInitCode;
 
-    QTreeWidgetItem *loadAttributeEditorTreeItem( QgsAttributeEditorElement *const widgetDef, QTreeWidgetItem *parent, DnDTree *tree );
+    QTreeWidgetItem *loadAttributeEditorTreeItem( QgsAttributeEditorElement *widgetDef, QTreeWidgetItem *parent, DnDTree *tree );
 
   private slots:
     void addTabOrGroupButton();
@@ -254,7 +282,7 @@ class DnDTree : public QTreeWidget
 
 
     Type type() const;
-    void setType( const Type &value );
+    void setType( DnDTree::Type value );
 
   protected:
     void dragMoveEvent( QDragMoveEvent *event ) override;

@@ -33,17 +33,17 @@ class QgsOracleFeatureSource : public QgsAbstractFeatureSource
   public:
     explicit QgsOracleFeatureSource( const QgsOracleProvider *p );
 
-    virtual QgsFeatureIterator getFeatures( const QgsFeatureRequest &request );
+    QgsFeatureIterator getFeatures( const QgsFeatureRequest &request ) override;
 
   protected:
     QgsDataSourceUri mUri;
     QgsFields mFields;
 
-    QString mGeometryColumn;          //! name of the geometry column
-    int mSrid;                        //! srid of column
-    bool mHasSpatialIndex;            //! has spatial index of geometry column
-    QgsWkbTypes::Type mDetectedGeomType;  //! geometry type detected in the database
-    QgsWkbTypes::Type mRequestedGeomType; //! geometry type requested in the uri
+    QString mGeometryColumn;          //!< Name of the geometry column
+    int mSrid;                        //!< Srid of column
+    bool mHasSpatialIndex;            //!< Has spatial index of geometry column
+    QgsWkbTypes::Type mDetectedGeomType;  //!< Geometry type detected in the database
+    QgsWkbTypes::Type mRequestedGeomType; //!< Geometry type requested in the uri
     QString mSqlWhereClause;
     QgsOraclePrimaryKeyType mPrimaryKeyType;
     QList<int> mPrimaryKeyAttrs;
@@ -62,22 +62,24 @@ class QgsOracleFeatureIterator : public QgsAbstractFeatureIteratorFromSource<Qgs
   public:
     QgsOracleFeatureIterator( QgsOracleFeatureSource *source, bool ownSource, const QgsFeatureRequest &request );
 
-    ~QgsOracleFeatureIterator();
+    ~QgsOracleFeatureIterator() override;
 
-    virtual bool rewind() override;
-    virtual bool close() override;
+    bool rewind() override;
+    bool close() override;
 
   protected:
-    virtual bool fetchFeature( QgsFeature &feature ) override;
+    bool fetchFeature( QgsFeature &feature ) override;
     bool nextFeatureFilterExpression( QgsFeature &f ) override;
 
-    bool openQuery( QString whereClause, QVariantList args, bool showLog = true );
+    bool openQuery( const QString &whereClause, const QVariantList &args, bool showLog = true );
+
+    bool execQuery( const QString &query, const QVariantList &args, int retryCount = 0 );
 
     QgsOracleConn *mConnection = nullptr;
     QSqlQuery mQry;
-    bool mRewind;
-    bool mExpressionCompiled;
-    bool mFetchGeometry;
+    bool mRewind = false;
+    bool mExpressionCompiled = false;
+    bool mFetchGeometry = false;
     QgsAttributeList mAttributeList;
     QString mSql;
     QVariantList mArgs;

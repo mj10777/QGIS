@@ -79,7 +79,7 @@ QSize QgsLayoutRuler::minimumSizeHint() const
 
 void QgsLayoutRuler::paintEvent( QPaintEvent *event )
 {
-  Q_UNUSED( event );
+  Q_UNUSED( event )
   if ( !mView || !mView->currentLayout() )
   {
     return;
@@ -287,7 +287,8 @@ void QgsLayoutRuler::drawGuideMarkers( QPainter *p, QgsLayout *layout )
   p->save();
   p->setRenderHint( QPainter::Antialiasing, true );
   p->setPen( Qt::NoPen );
-  Q_FOREACH ( QgsLayoutGuide *guide, guides )
+  const auto constGuides = guides;
+  for ( QgsLayoutGuide *guide : constGuides )
   {
     if ( visiblePages.contains( guide->page() ) )
     {
@@ -375,8 +376,9 @@ QgsLayoutGuide *QgsLayoutRuler::guideAtPoint( QPoint localPoint ) const
   QList< QgsLayoutItemPage * > visiblePages = mView->visiblePages();
   QList< QgsLayoutGuide * > guides = mView->currentLayout()->guides().guides( mOrientation == Qt::Horizontal ? Qt::Vertical : Qt::Horizontal );
   QgsLayoutGuide *closestGuide = nullptr;
-  double minDelta = DBL_MAX;
-  Q_FOREACH ( QgsLayoutGuide *guide, guides )
+  double minDelta = std::numeric_limits<double>::max();
+  const auto constGuides = guides;
+  for ( QgsLayoutGuide *guide : constGuides )
   {
     if ( visiblePages.contains( guide->page() ) )
     {
@@ -715,7 +717,7 @@ void QgsLayoutRuler::mousePressEvent( QMouseEvent *event )
 
 void QgsLayoutRuler::mouseReleaseEvent( QMouseEvent *event )
 {
-  if ( mView->currentLayout() )
+  if ( !mView->currentLayout() )
     return;
 
   if ( event->button() == Qt::LeftButton )

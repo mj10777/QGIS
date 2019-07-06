@@ -17,6 +17,7 @@
 
 #include <QStringList>
 #include <QObject>
+#include <QMutex>
 
 #include "qgsspatialiteutils.h"
 
@@ -70,10 +71,10 @@ class QgsSpatiaLiteConnection : public QObject
 
     Error fetchTables( bool loadGeometrylessTables );
 
-    //! Return list of tables. fetchTables() function has to be called before
+    //! Returns list of tables. fetchTables() function has to be called before
     QList<TableEntry> tables() { return mTables; }
 
-    //! Return additional error message (if an error occurred before)
+    //! Returns additional error message (if an error occurred before)
     QString errorMessage() { return mErrorMsg; }
 
     //! Updates the Internal Statistics
@@ -102,9 +103,6 @@ class QgsSpatiaLiteConnection : public QObject
      * thus completely freeing the client application to take care of them.
      */
     bool getTableInfoAbstractInterface( sqlite3 *handle, bool loadGeometrylessTables );
-
-    //! Cleaning well-formatted SQL strings
-    QString quotedValue( QString value ) const;
 
     //! Checks if geometry_columns_auth table exists
     bool checkGeometryColumnsAuth( sqlite3 *handle );
@@ -178,6 +176,7 @@ class QgsSqliteHandle
     bool mIsValid;
 
     static QMap < QString, QgsSqliteHandle * > sHandles;
+    static QMutex sHandleMutex;
 };
 
 

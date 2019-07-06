@@ -45,7 +45,7 @@ class QgsWFSFeatureHitsAsyncRequest: public QgsWfsRequest
 
     void launch( const QUrl &url );
 
-    //! Return result of request, or -1 if not known/error
+    //! Returns result of request, or -1 if not known/error
     int numberMatched() const { return mNumberMatched; }
 
   signals:
@@ -135,7 +135,7 @@ class QgsWFSFeatureDownloader: public QgsWfsRequest
     void hideProgressDialog();
 
   private:
-    QUrl buildURL( int startIndex, int maxFeatures, bool forHits );
+    QUrl buildURL( qint64 startIndex, int maxFeatures, bool forHits );
     void pushError( const QString &errorMsg );
     QString sanitizeFilter( QString filter );
 
@@ -150,13 +150,15 @@ class QgsWFSFeatureDownloader: public QgsWfsRequest
      * If the progress dialog should be shown immediately, or if it should be
         let to QProgressDialog logic to decide when to show it */
     bool mProgressDialogShowImmediately;
-    bool mSupportsPaging;
+    int mPageSize;
     bool mRemoveNSPrefix;
     int mNumberMatched;
+    bool mUseProgressDialog = false;
     QWidget *mMainWindow = nullptr;
     QTimer *mTimer = nullptr;
     QgsWFSFeatureHitsAsyncRequest mFeatureHitsAsyncRequest;
-    int mTotalDownloadedFeatureCount;
+    qint64 mTotalDownloadedFeatureCount;
+    QMutex mMutexCreateProgressDialog;
 };
 
 //! Downloader thread
@@ -167,7 +169,7 @@ class QgsWFSThreadedFeatureDownloader: public QThread
     explicit QgsWFSThreadedFeatureDownloader( QgsWFSSharedData *shared );
     ~QgsWFSThreadedFeatureDownloader() override;
 
-    //! Return downloader object
+    //! Returns downloader object
     QgsWFSFeatureDownloader *downloader() { return mDownloader; }
 
     //! Starts thread and wait for it to be started
@@ -216,13 +218,17 @@ class QgsWFSFeatureIterator : public QObject,
     void featureReceivedSynchronous( const QVector<QgsWFSFeatureGmlIdPair> &list );
     void endOfDownload( bool success );
     void checkInterruption();
+    void timeout();
 
   private:
+
+    //! Translate mRequest to a request compatible of the Spatialite cache
+    QgsFeatureRequest buildRequestCache( int gencounter );
 
     bool fetchFeature( QgsFeature &f ) override;
 
     //! Copies feature attributes / geometry from srcFeature to dstFeature
-    void copyFeature( const QgsFeature &srcFeature, QgsFeature &dstFeature );
+    void copyFeature( const QgsFeature &srcFeature, QgsFeature &dstFeature, bool srcIsCache );
 
     std::shared_ptr<QgsWFSSharedData> mShared;  //!< Mutable data shared between provider and feature sources
 
@@ -233,6 +239,7 @@ class QgsWFSFeatureIterator : public QObject,
     QEventLoop *mLoop = nullptr;
     QgsFeatureIterator mCacheIterator;
     QgsFeedback *mInterruptionChecker = nullptr;
+    bool mTimeoutOccurred = false;
 
     //! this mutex synchronizes the mWriterXXXX variables between featureReceivedSynchronous() and fetchFeature()
     QMutex mMutex;

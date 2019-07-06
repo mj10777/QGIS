@@ -29,6 +29,77 @@
    <property name="spacing">
     <number>3</number>
    </property>
+   <item row="6" column="0">
+    <widget class="QgsDualView" name="mMainView">
+     <property name="currentIndex">
+      <number>-1</number>
+     </property>
+    </widget>
+   </item>
+   <item row="5" column="0">
+    <widget class="QFrame" name="mUpdateExpressionBox">
+     <layout class="QHBoxLayout" name="horizontalLayout_3">
+      <property name="spacing">
+       <number>3</number>
+      </property>
+      <property name="leftMargin">
+       <number>3</number>
+      </property>
+      <property name="topMargin">
+       <number>1</number>
+      </property>
+      <property name="rightMargin">
+       <number>0</number>
+      </property>
+      <property name="bottomMargin">
+       <number>3</number>
+      </property>
+      <item>
+       <widget class="QgsFieldComboBox" name="mFieldCombo"/>
+      </item>
+      <item>
+       <widget class="QLabel" name="label">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="text">
+         <string>=</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QgsFieldExpressionWidget" name="mUpdateExpressionText" native="true">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="focusPolicy">
+         <enum>Qt::StrongFocus</enum>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QToolButton" name="mRunFieldCalc">
+        <property name="text">
+         <string>Update All</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QToolButton" name="mRunFieldCalcSelected">
+        <property name="text">
+         <string>Update Selected</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
    <item row="8" column="0">
     <layout class="QHBoxLayout">
      <property name="leftMargin">
@@ -120,6 +191,9 @@
          <property name="checkable">
           <bool>true</bool>
          </property>
+         <property name="autoRaise">
+          <bool>true</bool>
+         </property>
          <attribute name="buttonGroup">
           <string notr="true">mMainViewButtonGroup</string>
          </attribute>
@@ -141,6 +215,9 @@
           <bool>true</bool>
          </property>
          <property name="checked">
+          <bool>true</bool>
+         </property>
+         <property name="autoRaise">
           <bool>true</bool>
          </property>
          <attribute name="buttonGroup">
@@ -189,78 +266,7 @@
      <addaction name="separator"/>
      <addaction name="mActionSetStyles"/>
      <addaction name="separator"/>
-     <addaction name="mActionFeatureActions"/>
-    </widget>
-   </item>
-   <item row="6" column="0">
-    <widget class="QgsDualView" name="mMainView">
-     <property name="currentIndex">
-      <number>-1</number>
-     </property>
-    </widget>
-   </item>
-   <item row="5" column="0">
-    <widget class="QFrame" name="mUpdateExpressionBox">
-     <layout class="QHBoxLayout" name="horizontalLayout_3">
-      <property name="spacing">
-       <number>3</number>
-      </property>
-      <property name="leftMargin">
-       <number>3</number>
-      </property>
-      <property name="topMargin">
-       <number>1</number>
-      </property>
-      <property name="rightMargin">
-       <number>0</number>
-      </property>
-      <property name="bottomMargin">
-       <number>3</number>
-      </property>
-      <item>
-       <widget class="QgsFieldComboBox" name="mFieldCombo"/>
-      </item>
-      <item>
-       <widget class="QLabel" name="label">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
-        <property name="text">
-         <string>=</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QgsFieldExpressionWidget" name="mUpdateExpressionText" native="true">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
-        <property name="focusPolicy">
-         <enum>Qt::StrongFocus</enum>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QToolButton" name="mRunFieldCalc">
-        <property name="text">
-         <string>Update All</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QToolButton" name="mRunFieldCalcSelected">
-        <property name="text">
-         <string>Update Selected</string>
-        </property>
-       </widget>
-      </item>
-     </layout>
+     <addaction name="mActionDockUndock"/>
     </widget>
    </item>
   </layout>
@@ -387,14 +393,11 @@
    <property name="toolTip">
     <string>Save edits (Ctrl+S)</string>
    </property>
-   <property name="shortcut">
-    <string>Ctrl+S</string>
-   </property>
   </action>
   <action name="mActionReload">
    <property name="icon">
     <iconset resource="../../images/images.qrc">
-     <normaloff>:/images/themes/default/mActionDraw.svg</normaloff>:/images/themes/default/mActionDraw.svg</iconset>
+     <normaloff>:/images/themes/default/mActionRefresh.svg</normaloff>:/images/themes/default/mActionRefresh.svg</iconset>
    </property>
    <property name="text">
     <string>Reload the table</string>
@@ -415,7 +418,7 @@
   <action name="mActionDeleteSelected">
    <property name="icon">
     <iconset resource="../../images/images.qrc">
-     <normaloff>:/images/themes/default/mActionDeleteSelected.svg</normaloff>:/images/themes/default/mActionDeleteSelected.svg</iconset>
+     <normaloff>:/images/themes/default/mActionDeleteSelectedFeatures.svg</normaloff>:/images/themes/default/mActionDeleteSelectedFeatures.svg</iconset>
    </property>
    <property name="text">
     <string>Delete selected features</string>
@@ -585,9 +588,6 @@
    <property name="toolTip">
     <string>Delete field (Ctrl+L)</string>
    </property>
-   <property name="shortcut">
-    <string>Ctrl+L</string>
-   </property>
   </action>
   <action name="mActionAddAttribute">
    <property name="icon">
@@ -634,13 +634,19 @@
     <string>Conditional formatting</string>
    </property>
   </action>
-  <action name="mActionFeatureActions">
+  <action name="mActionDockUndock">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
    <property name="icon">
     <iconset resource="../../images/images.qrc">
-     <normaloff>:/images/themes/default/mAction.svg</normaloff>:/images/themes/default/mAction.svg</iconset>
+     <normaloff>:/images/themes/default/mDockify.svg</normaloff>:/images/themes/default/mDockify.svg</iconset>
    </property>
    <property name="text">
-    <string>Actions</string>
+    <string>Dock Attribute Table</string>
+   </property>
+   <property name="toolTip">
+    <string>Dock Attribute Table</string>
    </property>
   </action>
  </widget>

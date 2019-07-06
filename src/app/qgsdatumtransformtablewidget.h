@@ -37,10 +37,16 @@ class APP_EXPORT QgsDatumTransformTableModel : public QAbstractTableModel
 
     enum TableColumns
     {
+#if PROJ_VERSION_MAJOR>=6
+      SourceCrsColumn  = 0,
+      DestinationCrsColumn,
+      ProjDefinitionColumn,
+#else
       SourceCrsColumn  = 0,
       SourceTransformColumn,
       DestinationCrsColumn,
       DestinationTransformColumn,
+#endif
     };
 
     QgsDatumTransformTableModel( QObject *parent = nullptr );
@@ -73,8 +79,7 @@ class APP_EXPORT QgsDatumTransformTableWidget : public QWidget, private Ui::QgsD
     Q_OBJECT
 
   public:
-    explicit QgsDatumTransformTableWidget( QWidget *parent = 0 );
-    ~QgsDatumTransformTableWidget();
+    explicit QgsDatumTransformTableWidget( QWidget *parent = nullptr );
 
     void setTransformContext( const QgsCoordinateTransformContext &context )
     {
@@ -96,8 +101,12 @@ class APP_EXPORT QgsDatumTransformTableWidget : public QWidget, private Ui::QgsD
     //! edit currently selected datum transform
     void editDatumTransform();
 
+  private slots:
+
+    void selectionChanged( const QItemSelection &selected = QItemSelection(), const QItemSelection &deselected = QItemSelection() );
+
   private:
-    QgsDatumTransformTableModel *mModel = new QgsDatumTransformTableModel( this );
+    QgsDatumTransformTableModel *mModel = nullptr;
 };
 
 

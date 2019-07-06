@@ -16,6 +16,7 @@
  ***************************************************************************/
 
 #include "qgsserverprojectutils.h"
+#include "qgsproject.h"
 
 bool QgsServerProjectUtils::owsServiceCapabilities( const QgsProject &project )
 {
@@ -108,6 +109,21 @@ bool QgsServerProjectUtils::wmsUseLayerIds( const QgsProject &project )
 int QgsServerProjectUtils::wmsImageQuality( const QgsProject &project )
 {
   return project.readNumEntry( QStringLiteral( "WMSImageQuality" ), QStringLiteral( "/" ), -1 );
+}
+
+int QgsServerProjectUtils::wmsTileBuffer( const QgsProject &project )
+{
+  return project.readNumEntry( QStringLiteral( "WMSTileBuffer" ), QStringLiteral( "/" ), 0 );
+}
+
+int QgsServerProjectUtils::wmsMaxAtlasFeatures( const QgsProject &project )
+{
+  return project.readNumEntry( QStringLiteral( "WMSMaxAtlasFeatures" ), QStringLiteral( "/" ), 1 );
+}
+
+double QgsServerProjectUtils::wmsDefaultMapUnitsPerMm( const QgsProject &project )
+{
+  return project.readDoubleEntry( QStringLiteral( "WMSDefaultMapUnitsPerMm" ), QStringLiteral( "/" ), 1 );
 }
 
 bool QgsServerProjectUtils::wmsInfoFormatSia2045( const QgsProject &project )
@@ -330,4 +346,9 @@ QString QgsServerProjectUtils::wcsServiceUrl( const QgsProject &project )
 QStringList QgsServerProjectUtils::wcsLayerIds( const QgsProject &project )
 {
   return project.readListEntry( QStringLiteral( "WCSLayers" ), QStringLiteral( "/" ) );
+}
+
+QString QgsServerProjectUtils::wmtsServiceUrl( const QgsProject &project )
+{
+  return project.readEntry( QStringLiteral( "WMTSUrl" ), QStringLiteral( "/" ), "" );
 }

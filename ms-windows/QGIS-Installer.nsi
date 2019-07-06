@@ -37,14 +37,15 @@ RequestExecutionLevel admin
 
 !addplugindir osgeo4w/untgz
 !addplugindir osgeo4w/nsis
+!addplugindir osgeo4w/inetc
 
 ;----------------------------------------------------------------------------------------------------------------------------
 
 ;Publisher variables
 
 !define PUBLISHER "QGIS Development Team"
-!define WEB_SITE "http://qgis.org"
-!define WIKI_PAGE "http://qgis.org/en/docs/"
+!define WEB_SITE "https://qgis.org"
+!define WIKI_PAGE "https://qgis.org/en/docs/"
 
 ;----------------------------------------------------------------------------------------------------------------------------
 
@@ -341,6 +342,7 @@ Section "QGIS" SecQGIS
 
 	;HKEY_LOCAL_MACHINE Uninstall entries
 	WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${QGIS_BASE}" "DisplayName" "${DISPLAYED_NAME}"
+	WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${QGIS_BASE}" "DisplayVersion" "${VERSION_NUMBER}"
 	WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${QGIS_BASE}" "UninstallString" "$INSTALL_DIR\uninstall.exe"
 	WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${QGIS_BASE}" "DisplayIcon" "$INSTALL_DIR\icons\QGIS.ico"
 	WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${QGIS_BASE}" "EstimatedSize" 1
@@ -369,9 +371,16 @@ Section "QGIS" SecQGIS
 	IfFileExists "$INSTALL_DIR\etc\reboot" RebootNecessary NoRebootNecessary
 
 RebootNecessary:
+	IfSilent FlagRebootNecessary
 	SetRebootFlag true
+	Return
+
+FlagRebootNecessary:
+	SetErrorLevel 3010 ; ERROR_SUCCESS_REBOOT_REQUIRED
+	Return
 
 NoRebootNecessary:
+	Return
 
 SectionEnd
 !endif
@@ -385,7 +394,7 @@ Function DownloadDataSet
 	StrCpy $DOWNLOAD_MESSAGE_ "$DOWNLOAD_MESSAGE_The archive is about $ARCHIVE_SIZE_MB MB and may take"
 	StrCpy $DOWNLOAD_MESSAGE_ "$DOWNLOAD_MESSAGE_ several minutes to be downloaded.$\r$\n"
 	StrCpy $DOWNLOAD_MESSAGE_ "$DOWNLOAD_MESSAGE_$\r$\n"
-	StrCpy $DOWNLOAD_MESSAGE_ "$DOWNLOAD_MESSAGE_The $EXTENDED_ARCHIVE_NAME will be copyed to:$\r$\n"
+	StrCpy $DOWNLOAD_MESSAGE_ "$DOWNLOAD_MESSAGE_The $EXTENDED_ARCHIVE_NAME will be copied to:$\r$\n"
 	StrCpy $DOWNLOAD_MESSAGE_ "$DOWNLOAD_MESSAGE_$GIS_DATABASE\$CUSTOM_UNTAR_FOLDER.$\r$\n"
 	StrCpy $DOWNLOAD_MESSAGE_ "$DOWNLOAD_MESSAGE_$\r$\n"
 	StrCpy $DOWNLOAD_MESSAGE_ "$DOWNLOAD_MESSAGE_Press OK to continue or Cancel to skip the download and complete the ${QGIS_BASE}"
@@ -396,9 +405,9 @@ Function DownloadDataSet
 	download:
 	SetShellVarContext current
 	InitPluginsDir
-	NSISdl::download "$HTTP_PATH/$ARCHIVE_NAME" "$TEMP\$ARCHIVE_NAME"
-	Pop $0
-	StrCmp $0 "success" download_ok download_failed
+	inetc::get /caption "$ARCHIVE_NAME" /canceltext "Cancel" "$HTTP_PATH/$ARCHIVE_NAME" "$TEMP\$ARCHIVE_NAME" /end
+	Pop $0 # return value = exit code, "OK" means OK
+	StrCmp $0 "OK" download_ok download_failed
 
 	download_ok:
 	InitPluginsDir
@@ -435,7 +444,7 @@ Section /O "North Carolina Data Set" SecNorthCarolinaSDB
 	;Set the size (in KB) of the unpacked archive file
 	AddSize 293314
 
-	StrCpy $HTTP_PATH "http://grass.osgeo.org/sampledata"
+	StrCpy $HTTP_PATH "https://grass.osgeo.org/sampledata"
 	StrCpy $ARCHIVE_NAME "nc_spm_latest.tar.gz"
 	StrCpy $EXTENDED_ARCHIVE_NAME "North Carolina"
 	StrCpy $ORIGINAL_UNTAR_FOLDER "nc_spm_08"
@@ -453,7 +462,7 @@ Section /O "South Dakota (Spearfish) Data Set" SecSpearfishSDB
 	;Set the size (in KB) of the unpacked archive file
 	AddSize 42171
 
-	StrCpy $HTTP_PATH "http://grass.osgeo.org/sampledata"
+	StrCpy $HTTP_PATH "https://grass.osgeo.org/sampledata"
 	StrCpy $ARCHIVE_NAME "spearfish_grass60data-0.3.tar.gz"
 	StrCpy $EXTENDED_ARCHIVE_NAME "South Dakota (Spearfish)"
 	StrCpy $ORIGINAL_UNTAR_FOLDER "spearfish60"
@@ -471,7 +480,7 @@ Section /O "Alaska Data Set" SecAlaskaSDB
 	;Set the size (in KB) of the unpacked archive file
 	AddSize 33914
 
-	StrCpy $HTTP_PATH "http://qgis.org/downloads/data"
+	StrCpy $HTTP_PATH "https://qgis.org/downloads/data"
 	StrCpy $ARCHIVE_NAME "qgis_sample_data.tar.gz"
 	StrCpy $EXTENDED_ARCHIVE_NAME "Alaska"
 	StrCpy $ORIGINAL_UNTAR_FOLDER "qgis_sample_data"
@@ -530,9 +539,10 @@ Section "Uninstall"
 
 	;remove the Desktop ShortCut
 	SetShellVarContext all
-	Delete "$DESKTOP\QGIS Desktop (${VERSION_NUMBER}).lnk"
-	Delete "$DESKTOP\QGIS Browser (${VERSION_NUMBER}).lnk"
-	Delete "$DESKTOP\OSGeo4W.lnk"
+	Delete "$DESKTOP\${QGIS_BASE}\QGIS Desktop (${VERSION_NUMBER}).lnk"
+	Delete "$DESKTOP\${QGIS_BASE}\QGIS Browser (${VERSION_NUMBER}).lnk"
+	Delete "$DESKTOP\${QGIS_BASE}\OSGeo4W.lnk"
+	RmDir "$DESKTOP\${QGIS_BASE}"
 
 	;remove the Programs Start ShortCut
 	SetShellVarContext all

@@ -23,7 +23,7 @@ QgsExpressionBuilderDialog::QgsExpressionBuilderDialog( QgsVectorLayer *layer, c
   , mRecentKey( key )
 {
   setupUi( this );
-  QgsGui::instance()->enableAutoGeometryRestore( this );
+  QgsGui::enableAutoGeometryRestore( this );
 
   connect( builder, &QgsExpressionBuilderWidget::parserErrorChanged, this, &QgsExpressionBuilderDialog::syncOkButtonEnabledState );
   connect( builder, &QgsExpressionBuilderWidget::evalErrorChanged, this, &QgsExpressionBuilderDialog::syncOkButtonEnabledState );
@@ -50,6 +50,16 @@ void QgsExpressionBuilderDialog::setExpressionText( const QString &text )
 QString QgsExpressionBuilderDialog::expressionText()
 {
   return builder->expressionText();
+}
+
+QString QgsExpressionBuilderDialog::expectedOutputFormat()
+{
+  return builder->expectedOutputFormat();
+}
+
+void QgsExpressionBuilderDialog::setExpectedOutputFormat( const QString &expected )
+{
+  builder->setExpectedOutputFormat( expected );
 }
 
 QgsExpressionContext QgsExpressionBuilderDialog::expressionContext() const

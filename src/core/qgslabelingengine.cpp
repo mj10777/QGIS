@@ -25,9 +25,10 @@
 #include "problem.h"
 #include "qgsrendercontext.h"
 #include "qgsmaplayer.h"
+#include "qgssymbol.h"
+#include "qgsexpressioncontextutils.h"
 
-
-// helper function for checking for job cancelation within PAL
+// helper function for checking for job cancellation within PAL
 static bool _palIsCanceled( void *ctx )
 {
   return ( reinterpret_cast< QgsRenderContext * >( ctx ) )->renderingStopped();
@@ -81,15 +82,22 @@ QgsLabelingEngine::~QgsLabelingEngine()
   qDeleteAll( mSubProviders );
 }
 
+void QgsLabelingEngine::setMapSettings( const QgsMapSettings &mapSettings )
+{
+  mMapSettings = mapSettings;
+  if ( mResults )
+    mResults->setMapSettings( mapSettings );
+}
+
 QList< QgsMapLayer * > QgsLabelingEngine::participatingLayers() const
 {
   QSet< QgsMapLayer * > layers;
-  Q_FOREACH ( QgsAbstractLabelProvider *provider, mProviders )
+  for ( QgsAbstractLabelProvider *provider : mProviders )
   {
     if ( provider->layer() )
       layers << provider->layer();
   }
-  Q_FOREACH ( QgsAbstractLabelProvider *provider, mSubProviders )
+  for ( QgsAbstractLabelProvider *provider : mSubProviders )
   {
     if ( provider->layer() )
       layers << provider->layer();
@@ -125,9 +133,6 @@ void QgsLabelingEngine::processProvider( QgsAbstractLabelProvider *provider, Qgs
                               flags.testFlag( QgsAbstractLabelProvider::DrawLabels ),
                               flags.testFlag( QgsAbstractLabelProvider::DrawAllLabels ) );
 
-  // extra flags for placement of labels for linestrings
-  l->setArrangementFlags( static_cast< pal::LineArrangementFlags >( provider->linePlacementFlags() ) );
-
   // set label mode (label per feature is the default)
   l->setLabelMode( flags.testFlag( QgsAbstractLabelProvider::LabelPerFeaturePart ) ? pal::Layer::LabelPerFeaturePart : pal::Layer::LabelPerFeature );
 
@@ -153,16 +158,13 @@ void QgsLabelingEngine::processProvider( QgsAbstractLabelProvider *provider, Qgs
     case QgsPalLayerSettings::ShowAll:
       upsdnlabels = pal::Layer::ShowAll;
       break;
-    default:
-      Q_ASSERT( "unsupported upside-down label setting" && false );
-      return;
   }
   l->setUpsidedownLabels( upsdnlabels );
 
 
-  QList<QgsLabelFeature *> features = provider->labelFeatures( context );
+  const QList<QgsLabelFeature *> features = provider->labelFeatures( context );
 
-  Q_FOREACH ( QgsLabelFeature *feature, features )
+  for ( QgsLabelFeature *feature : features )
   {
     try
     {
@@ -170,14 +172,15 @@ void QgsLabelingEngine::processProvider( QgsAbstractLabelProvider *provider, Qgs
     }
     catch ( std::exception &e )
     {
-      Q_UNUSED( e );
-      QgsDebugMsgLevel( QString( "Ignoring feature %1 due PAL exception:" ).arg( feature->id() ) + QString::fromLatin1( e.what() ), 4 );
+      Q_UNUSED( e )
+      QgsDebugMsgLevel( QStringLiteral( "Ignoring feature %1 due PAL exception:" ).arg( feature->id() ) + QString::fromLatin1( e.what() ), 4 );
       continue;
     }
   }
 
   // any sub-providers?
-  Q_FOREACH ( QgsAbstractLabelProvider *subProvider, provider->subProviders() )
+  const auto subproviders = provider->subProviders();
+  for ( QgsAbstractLabelProvider *subProvider : subproviders )
   {
     mSubProviders << subProvider;
     processProvider( subProvider, context, p );
@@ -193,7 +196,6 @@ void QgsLabelingEngine::run( QgsRenderContext &context )
   pal::SearchMethod s;
   switch ( settings.searchMethod() )
   {
-    default:
     case QgsLabelingEngineSettings::Chain:
       s = pal::CHAIN;
       break;
@@ -223,7 +225,7 @@ void QgsLabelingEngine::run( QgsRenderContext &context )
 
 
   // for each provider: get labels and register them in PAL
-  Q_FOREACH ( QgsAbstractLabelProvider *provider, mProviders )
+  for ( QgsAbstractLabelProvider *provider : qgis::as_const( mProviders ) )
   {
     bool appendedLayerScope = false;
     if ( QgsMapLayer *ml = provider->layer() )
@@ -244,7 +246,33 @@ void QgsLabelingEngine::run( QgsRenderContext &context )
   QgsGeometry extentGeom = QgsGeometry::fromRect( mMapSettings.visibleExtent() );
   QPolygonF visiblePoly = mMapSettings.visiblePolygon();
   visiblePoly.append( visiblePoly.at( 0 ) ); //close polygon
-  QgsGeometry mapBoundaryGeom = QgsGeometry::fromQPolygonF( visiblePoly );
+
+  // get map label boundary geometry - if one hasn't been explicitly set, we use the whole of the map's visible polygon
+  QgsGeometry mapBoundaryGeom = !mMapSettings.labelBoundaryGeometry().isNull() ? mMapSettings.labelBoundaryGeometry() : QgsGeometry::fromQPolygonF( visiblePoly );
+
+  // label blocking regions work by "chopping away" those regions from the permissible labeling area
+  const QList< QgsLabelBlockingRegion > blockingRegions = mMapSettings.labelBlockingRegions();
+  for ( const QgsLabelBlockingRegion &region : blockingRegions )
+  {
+    mapBoundaryGeom = mapBoundaryGeom.difference( region.geometry );
+  }
+
+  if ( settings.flags() & QgsLabelingEngineSettings::DrawCandidates )
+  {
+    // draw map boundary
+    QgsFeature f;
+    f.setGeometry( mapBoundaryGeom );
+    QgsStringMap properties;
+    properties.insert( QStringLiteral( "style" ), QStringLiteral( "no" ) );
+    properties.insert( QStringLiteral( "style_border" ), QStringLiteral( "solid" ) );
+    properties.insert( QStringLiteral( "color_border" ), QStringLiteral( "#0000ff" ) );
+    properties.insert( QStringLiteral( "width_border" ), QStringLiteral( "0.3" ) );
+    properties.insert( QStringLiteral( "joinstyle" ), QStringLiteral( "miter" ) );
+    std::unique_ptr< QgsFillSymbol > boundarySymbol( QgsFillSymbol::createSimple( properties ) );
+    boundarySymbol->startRender( context );
+    boundarySymbol->renderFeature( f, context );
+    boundarySymbol->stopRender( context );
+  }
 
   if ( !qgsDoubleNear( mMapSettings.rotation(), 0.0 ) )
   {
@@ -256,8 +284,7 @@ void QgsLabelingEngine::run( QgsRenderContext &context )
 
   QgsRectangle extent = extentGeom.boundingBox();
 
-
-  p.registerCancelationCallback( &_palIsCanceled, reinterpret_cast< void * >( &context ) );
+  p.registerCancellationCallback( &_palIsCanceled, reinterpret_cast< void * >( &context ) );
 
   QTime t;
   t.start();
@@ -270,7 +297,7 @@ void QgsLabelingEngine::run( QgsRenderContext &context )
   }
   catch ( std::exception &e )
   {
-    Q_UNUSED( e );
+    Q_UNUSED( e )
     QgsDebugMsgLevel( "PAL EXCEPTION :-( " + QString::fromLatin1( e.what() ), 4 );
     return;
   }
@@ -284,7 +311,7 @@ void QgsLabelingEngine::run( QgsRenderContext &context )
   // features are pre-rotated but not scaled/translated,
   // so we only disable rotation here. Ideally, they'd be
   // also pre-scaled/translated, as suggested here:
-  // https://issues.qgis.org/issues/11856
+  // https://github.com/qgis/QGIS/issues/20071
   QgsMapToPixel xform = mMapSettings.mapToPixel();
   xform.setMapRotation( 0, 0, 0 );
 #else
@@ -312,7 +339,7 @@ void QgsLabelingEngine::run( QgsRenderContext &context )
   // find the solution
   QList<pal::LabelPosition *> labels = p.solveProblem( problem.get(), settings.testFlag( QgsLabelingEngineSettings::UseAllLabels ) );
 
-  QgsDebugMsgLevel( QString( "LABELING work:  %1 ms ... labels# %2" ).arg( t.elapsed() ).arg( labels.size() ), 4 );
+  QgsDebugMsgLevel( QStringLiteral( "LABELING work:  %1 ms ... labels# %2" ).arg( t.elapsed() ).arg( labels.size() ), 4 );
   t.restart();
 
   if ( context.renderingStopped() )
@@ -342,7 +369,7 @@ void QgsLabelingEngine::run( QgsRenderContext &context )
   // Reset composition mode for further drawing operations
   painter->setCompositionMode( QPainter::CompositionMode_SourceOver );
 
-  QgsDebugMsgLevel( QString( "LABELING draw:  %1 ms" ).arg( t.elapsed() ), 4 );
+  QgsDebugMsgLevel( QStringLiteral( "LABELING draw:  %1 ms" ).arg( t.elapsed() ), 4 );
 }
 
 QgsLabelingResults *QgsLabelingEngine::takeResults()
@@ -365,7 +392,6 @@ QgsAbstractLabelProvider::QgsAbstractLabelProvider( QgsMapLayer *layer, const QS
   , mProviderId( providerId )
   , mFlags( DrawLabels )
   , mPlacement( QgsPalLayerSettings::AroundPoint )
-  , mLinePlacementFlags( 0 )
   , mPriority( 0.5 )
   , mObstacleType( QgsPalLayerSettings::PolygonInterior )
   , mUpsidedownLabels( QgsPalLayerSettings::Upright )
@@ -380,7 +406,8 @@ QgsAbstractLabelProvider::QgsAbstractLabelProvider( QgsMapLayer *layer, const QS
 QString QgsLabelingUtils::encodePredefinedPositionOrder( const QVector<QgsPalLayerSettings::PredefinedPointPosition> &positions )
 {
   QStringList predefinedOrderString;
-  Q_FOREACH ( QgsPalLayerSettings::PredefinedPointPosition position, positions )
+  const auto constPositions = positions;
+  for ( QgsPalLayerSettings::PredefinedPointPosition position : constPositions )
   {
     switch ( position )
     {
@@ -422,14 +449,15 @@ QString QgsLabelingUtils::encodePredefinedPositionOrder( const QVector<QgsPalLay
         break;
     }
   }
-  return predefinedOrderString.join( QStringLiteral( "," ) );
+  return predefinedOrderString.join( ',' );
 }
 
 QVector<QgsPalLayerSettings::PredefinedPointPosition> QgsLabelingUtils::decodePredefinedPositionOrder( const QString &positionString )
 {
   QVector<QgsPalLayerSettings::PredefinedPointPosition> result;
-  QStringList predefinedOrderList = positionString.split( ',' );
-  Q_FOREACH ( const QString &position, predefinedOrderList )
+  const QStringList predefinedOrderList = positionString.split( ',' );
+  result.reserve( predefinedOrderList.size() );
+  for ( const QString &position : predefinedOrderList )
   {
     QString cleaned = position.trimmed().toUpper();
     if ( cleaned == QLatin1String( "TL" ) )
@@ -458,4 +486,40 @@ QVector<QgsPalLayerSettings::PredefinedPointPosition> QgsLabelingUtils::decodePr
       result << QgsPalLayerSettings::BottomRight;
   }
   return result;
+}
+
+QString QgsLabelingUtils::encodeLinePlacementFlags( pal::LineArrangementFlags flags )
+{
+  QStringList parts;
+  if ( flags & pal::FLAG_ON_LINE )
+    parts << QStringLiteral( "OL" );
+  if ( flags & pal::FLAG_ABOVE_LINE )
+    parts << QStringLiteral( "AL" );
+  if ( flags & pal::FLAG_BELOW_LINE )
+    parts << QStringLiteral( "BL" );
+  if ( !( flags & pal::FLAG_MAP_ORIENTATION ) )
+    parts << QStringLiteral( "LO" );
+  return parts.join( ',' );
+}
+
+pal::LineArrangementFlags QgsLabelingUtils::decodeLinePlacementFlags( const QString &string )
+{
+  pal::LineArrangementFlags flags = nullptr;
+  const QStringList flagList = string.split( ',' );
+  bool foundLineOrientationFlag = false;
+  for ( const QString &flag : flagList )
+  {
+    QString cleaned = flag.trimmed().toUpper();
+    if ( cleaned == QLatin1String( "OL" ) )
+      flags |= pal::FLAG_ON_LINE;
+    else if ( cleaned == QLatin1String( "AL" ) )
+      flags |= pal::FLAG_ABOVE_LINE;
+    else if ( cleaned == QLatin1String( "BL" ) )
+      flags |= pal::FLAG_BELOW_LINE;
+    else if ( cleaned == QLatin1String( "LO" ) )
+      foundLineOrientationFlag = true;
+  }
+  if ( !foundLineOrientationFlag )
+    flags |= pal::FLAG_MAP_ORIENTATION;
+  return flags;
 }

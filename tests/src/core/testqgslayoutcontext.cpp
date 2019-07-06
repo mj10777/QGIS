@@ -23,6 +23,7 @@
 #include "qgsgeometry.h"
 #include "qgsproject.h"
 #include "qgslayout.h"
+#include "qgsexpressionutils.h"
 #include <QObject>
 #include "qgstest.h"
 #include <QtTest/QSignalSpy>
@@ -42,6 +43,7 @@ class TestQgsLayoutContext: public QObject
     void layer();
     void dpi();
     void renderContextFlags();
+    void textFormat();
     void boundingBoxes();
     void exportLayer();
     void geometry();
@@ -145,6 +147,12 @@ void TestQgsLayoutContext::layer()
   context.setLayer( nullptr );
   QVERIFY( !context.layer() );
 
+  QgsLayout l( QgsProject::instance() );
+  l.reportContext().setLayer( layer );
+  //test that expression context created for layout contains report context layer scope
+  QgsExpressionContext expContext  = l.createExpressionContext();
+  QCOMPARE( QgsExpressionUtils::getVectorLayer( expContext.variable( "layer" ), nullptr ), layer );
+
   delete layer;
 }
 
@@ -167,7 +175,7 @@ void TestQgsLayoutContext::dpi()
 void TestQgsLayoutContext::renderContextFlags()
 {
   QgsLayoutRenderContext context( nullptr );
-  context.setFlags( 0 );
+  context.setFlags( nullptr );
   QgsRenderContext::Flags flags = context.renderContextFlags();
   QVERIFY( !( flags & QgsRenderContext::Antialiasing ) );
   QVERIFY( !( flags & QgsRenderContext::UseAdvancedEffects ) );
@@ -184,6 +192,15 @@ void TestQgsLayoutContext::renderContextFlags()
   QVERIFY( ( flags & QgsRenderContext::Antialiasing ) );
   QVERIFY( ( flags & QgsRenderContext::UseAdvancedEffects ) );
   QVERIFY( ( flags & QgsRenderContext::ForceVectorOutput ) );
+}
+
+void TestQgsLayoutContext::textFormat()
+{
+  QgsLayoutRenderContext context( nullptr );
+  context.setTextRenderFormat( QgsRenderContext::TextFormatAlwaysOutlines );
+  QCOMPARE( context.textRenderFormat(), QgsRenderContext::TextFormatAlwaysOutlines );
+  context.setTextRenderFormat( QgsRenderContext::TextFormatAlwaysText );
+  QCOMPARE( context.textRenderFormat(), QgsRenderContext::TextFormatAlwaysText );
 }
 
 void TestQgsLayoutContext::boundingBoxes()

@@ -20,6 +20,7 @@
 #include "qgssymbollayerutils.h"
 #include "qgsstyle.h"
 #include "qgsvectorlayer.h"
+#include "qgsexpressioncontextutils.h"
 
 QgsFieldConditionalFormatWidget::QgsFieldConditionalFormatWidget( QWidget *parent )
   : QWidget( parent )
@@ -201,14 +202,15 @@ void QgsFieldConditionalFormatWidget::setPresets( const QList<QgsConditionalStyl
 {
   mPresets.clear();
   mPresetsModel->clear();
-  Q_FOREACH ( const QgsConditionalStyle &style, styles )
+  const auto constStyles = styles;
+  for ( const QgsConditionalStyle &style : constStyles )
   {
     if ( style.isValid() )
     {
       QStandardItem *item = new QStandardItem( QStringLiteral( "abc - 123" ) );
-      if ( style.backgroundColor().isValid() )
+      if ( style.validBackgroundColor() )
         item->setBackground( style.backgroundColor() );
-      if ( style.textColor().isValid() )
+      if ( style.validTextColor() )
         item->setForeground( style.textColor() );
       if ( style.symbol() )
         item->setIcon( style.icon() );
@@ -301,7 +303,8 @@ void QgsFieldConditionalFormatWidget::reloadStyles()
 {
   mModel->clear();
 
-  Q_FOREACH ( const QgsConditionalStyle &style, getStyles() )
+  const auto constGetStyles = getStyles();
+  for ( const QgsConditionalStyle &style : constGetStyles )
   {
     QStandardItem *item = new QStandardItem( style.displayText() );
     item->setIcon( QIcon( style.renderPreview() ) );
@@ -311,7 +314,7 @@ void QgsFieldConditionalFormatWidget::reloadStyles()
 
 void QgsFieldConditionalFormatWidget::fieldChanged( const QString &fieldName )
 {
-  Q_UNUSED( fieldName );
+  Q_UNUSED( fieldName )
   reloadStyles();
 }
 

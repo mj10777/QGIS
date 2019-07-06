@@ -30,6 +30,7 @@
 #include "qgsproject.h"
 #include "qgssymbollayerutils.h"
 #include "qgslayertreeutils.h"
+#include "qgslayoututils.h"
 #include <QDomDocument>
 #include <QDomElement>
 #include <QPainter>
@@ -42,9 +43,18 @@ QgsLayoutItemLegend::QgsLayoutItemLegend( QgsLayout *layout )
   connect( &layout->atlasComposition(), &QgsAtlasComposition::renderEnded, this, &QgsLayoutItemLegend::onAtlasEnded );
 #endif
 
+  mTitle = mSettings.title();
+
   // Connect to the main layertreeroot.
   // It serves in "auto update mode" as a medium between the main app legend and this one
   connect( mLayout->project()->layerTreeRoot(), &QgsLayerTreeNode::customPropertyChanged, this, &QgsLayoutItemLegend::nodeCustomPropertyChanged );
+
+  // If project colors change, we need to redraw legend, as legend symbols may rely on project colors
+  connect( mLayout->project(), &QgsProject::projectColorsChanged, this, [ = ]
+  {
+    invalidateCache();
+    update();
+  } );
 }
 
 QgsLayoutItemLegend *QgsLayoutItemLegend::create( QgsLayout *layout )
@@ -60,6 +70,11 @@ int QgsLayoutItemLegend::type() const
 QIcon QgsLayoutItemLegend::icon() const
 {
   return QgsApplication::getThemeIcon( QStringLiteral( "/mLayoutItemLegend.svg" ) );
+}
+
+QgsLayoutItem::Flags QgsLayoutItemLegend::itemFlags() const
+{
+  return QgsLayoutItem::FlagOverridesPaint;
 }
 
 void QgsLayoutItemLegend::paint( QPainter *painter, const QStyleOptionGraphicsItem *itemStyle, QWidget *pWidget )
@@ -100,27 +115,31 @@ void QgsLayoutItemLegend::paint( QPainter *painter, const QStyleOptionGraphicsIt
   //adjust box if width or height is too small
   if ( mSizeToContents )
   {
-    QSizeF size = legendRenderer.minimumSize();
+    QgsRenderContext context = QgsLayoutUtils::createRenderContextForLayout( mLayout, nullptr );
+    QSizeF size = legendRenderer.minimumSize( &context );
     if ( mForceResize )
     {
       mForceResize = false;
+
       //set new rect, respecting position mode and data defined size/position
-      QRectF targetRect = QRectF( pos().x(), pos().y(), size.width(), size.height() );
-      attemptSetSceneRect( targetRect );
+      QgsLayoutSize newSize = mLayout->convertFromLayoutUnits( size, sizeWithUnits().units() );
+      attemptResize( newSize );
     }
     else if ( size.height() > rect().height() || size.width() > rect().width() )
     {
       //need to resize box
-      QRectF targetRect = QRectF( pos().x(), pos().y(), rect().width(), rect().height() );
-      if ( size.height() > targetRect.height() )
-        targetRect.setHeight( size.height() );
-      if ( size.width() > rect().width() )
-        targetRect.setWidth( size.width() );
+      QSizeF targetSize = rect().size();
+      if ( size.height() > targetSize.height() )
+        targetSize.setHeight( size.height() );
+      if ( size.width() > targetSize.width() )
+        targetSize.setWidth( size.width() );
 
+      QgsLayoutSize newSize = mLayout->convertFromLayoutUnits( targetSize, sizeWithUnits().units() );
       //set new rect, respecting position mode and data defined size/position
-      attemptSetSceneRect( targetRect );
+      attemptResize( newSize );
     }
   }
+
   QgsLayoutItem::paint( painter, itemStyle, pWidget );
 }
 
@@ -156,9 +175,9 @@ void QgsLayoutItemLegend::draw( QgsLayoutItemRenderContext &context )
   }
 
   QgsLegendRenderer legendRenderer( mLegendModel.get(), mSettings );
-  legendRenderer.setLegendSize( mSizeToContents ? QSize() : rect().size() );
+  legendRenderer.setLegendSize( rect().size() );
 
-  legendRenderer.drawLegend( painter );
+  legendRenderer.drawLegend( context.renderContext() );
 
   painter->restore();
 }
@@ -177,14 +196,15 @@ void QgsLayoutItemLegend::adjustBoxSize()
     return;
   }
 
+  QgsRenderContext context = QgsLayoutUtils::createRenderContextForLayout( mLayout, nullptr );
   QgsLegendRenderer legendRenderer( mLegendModel.get(), mSettings );
-  QSizeF size = legendRenderer.minimumSize();
-  QgsDebugMsg( QString( "width = %1 height = %2" ).arg( size.width() ).arg( size.height() ) );
+  QSizeF size = legendRenderer.minimumSize( &context );
+  QgsDebugMsg( QStringLiteral( "width = %1 height = %2" ).arg( size.width() ).arg( size.height() ) );
   if ( size.isValid() )
   {
-    QRectF targetRect = QRectF( pos().x(), pos().y(), size.width(), size.height() );
+    QgsLayoutSize newSize = mLayout->convertFromLayoutUnits( size, sizeWithUnits().units() );
     //set new rect, respecting position mode and data defined size/position
-    attemptSetSceneRect( targetRect );
+    attemptResize( newSize );
   }
 }
 
@@ -347,6 +367,16 @@ void QgsLayoutItemLegend::setSymbolWidth( double w )
   mSettings.setSymbolSize( QSizeF( w, mSettings.symbolSize().height() ) );
 }
 
+void QgsLayoutItemLegend::setSymbolAlignment( Qt::AlignmentFlag alignment )
+{
+  mSettings.setSymbolAlignment( alignment );
+}
+
+Qt::AlignmentFlag QgsLayoutItemLegend::symbolAlignment() const
+{
+  return mSettings.symbolAlignment();
+}
+
 double QgsLayoutItemLegend::symbolHeight() const
 {
   return mSettings.symbolSize().height();
@@ -447,11 +477,6 @@ void QgsLayoutItemLegend::setRasterStrokeWidth( double width )
   mSettings.setRasterStrokeWidth( width );
 }
 
-void QgsLayoutItemLegend::synchronizeWithModel()
-{
-  adjustBoxSize();
-  updateFilterByMap( false );
-}
 
 void QgsLayoutItemLegend::updateLegend()
 {
@@ -474,6 +499,10 @@ bool QgsLayoutItemLegend::writePropertiesToElement( QDomElement &legendElem, QDo
 
   legendElem.setAttribute( QStringLiteral( "symbolWidth" ), QString::number( mSettings.symbolSize().width() ) );
   legendElem.setAttribute( QStringLiteral( "symbolHeight" ), QString::number( mSettings.symbolSize().height() ) );
+
+  legendElem.setAttribute( QStringLiteral( "symbolAlignment" ), mSettings.symbolAlignment() );
+
+  legendElem.setAttribute( QStringLiteral( "symbolAlignment" ), mSettings.symbolAlignment() );
   legendElem.setAttribute( QStringLiteral( "lineSpacing" ), QString::number( mSettings.lineSpacing() ) );
 
   legendElem.setAttribute( QStringLiteral( "rasterBorder" ), mSettings.drawRasterStroke() );
@@ -563,6 +592,8 @@ bool QgsLayoutItemLegend::readPropertiesFromElement( const QDomElement &itemElem
   mSettings.setColumnSpace( itemElem.attribute( QStringLiteral( "columnSpace" ), QStringLiteral( "2.0" ) ).toDouble() );
 
   mSettings.setSymbolSize( QSizeF( itemElem.attribute( QStringLiteral( "symbolWidth" ), QStringLiteral( "7.0" ) ).toDouble(), itemElem.attribute( QStringLiteral( "symbolHeight" ), QStringLiteral( "14.0" ) ).toDouble() ) );
+  mSettings.setSymbolAlignment( static_cast< Qt::AlignmentFlag >( itemElem.attribute( QStringLiteral( "symbolAlignment" ), QString::number( Qt::AlignLeft ) ).toInt() ) );
+
   mSettings.setWmsLegendSize( QSizeF( itemElem.attribute( QStringLiteral( "wmsLegendWidth" ), QStringLiteral( "50" ) ).toDouble(), itemElem.attribute( QStringLiteral( "wmsLegendHeight" ), QStringLiteral( "25" ) ).toDouble() ) );
   mSettings.setLineSpacing( itemElem.attribute( QStringLiteral( "lineSpacing" ), QStringLiteral( "1.0" ) ).toDouble() );
 
@@ -730,7 +761,8 @@ void QgsLayoutItemLegend::mapLayerStyleOverridesChanged()
   {
     mLegendModel->setLayerStyleOverrides( mMap->layerStyleOverrides() );
 
-    Q_FOREACH ( QgsLayerTreeLayer *nodeLayer, mLegendModel->rootGroup()->findLayers() )
+    const auto constFindLayers = mLegendModel->rootGroup()->findLayers();
+    for ( QgsLayerTreeLayer *nodeLayer : constFindLayers )
       mLegendModel->refreshLayerLegend( nodeLayer );
   }
 
@@ -761,7 +793,7 @@ void QgsLayoutItemLegend::doUpdateFilterByMap()
 
   if ( mMap && ( mLegendFilterByMap || filterByExpression || mInAtlas ) )
   {
-    int dpi = mLayout->renderContext().dpi();
+    double dpi = mLayout->renderContext().dpi();
 
     QgsRectangle requestRectangle = mMap->requestedExtent();
 
@@ -805,6 +837,33 @@ void QgsLayoutItemLegend::onAtlasEnded()
 {
   mInAtlas = false;
   updateFilterByMap();
+}
+
+QgsExpressionContext QgsLayoutItemLegend::createExpressionContext() const
+{
+  QgsExpressionContext context = QgsLayoutItem::createExpressionContext();
+
+  // We only want the last scope from the map's expression context, as this contains
+  // the map specific variables. We don't want the rest of the map's context, because that
+  // will contain duplicate global, project, layout, etc scopes.
+
+  if ( mMap )
+  {
+    context.appendScope( mMap->createExpressionContext().popScope() );
+  }
+
+  QgsExpressionContextScope *scope = new QgsExpressionContextScope( tr( "Legend Settings" ) );
+
+  scope->addVariable( QgsExpressionContextScope::StaticVariable( QStringLiteral( "legend_title" ), title(), true ) );
+  scope->addVariable( QgsExpressionContextScope::StaticVariable( QStringLiteral( "legend_column_count" ), columnCount(), true ) );
+  scope->addVariable( QgsExpressionContextScope::StaticVariable( QStringLiteral( "legend_split_layers" ), splitLayer(), true ) );
+  scope->addVariable( QgsExpressionContextScope::StaticVariable( QStringLiteral( "legend_wrap_string" ), wrapString(), true ) );
+  scope->addVariable( QgsExpressionContextScope::StaticVariable( QStringLiteral( "legend_filter_by_map" ), legendFilterByMapEnabled(), true ) );
+  scope->addVariable( QgsExpressionContextScope::StaticVariable( QStringLiteral( "legend_filter_out_atlas" ), legendFilterOutAtlas(), true ) );
+
+  context.appendScope( scope );
+
+  return context;
 }
 
 // -------------------------------------------------------------------------

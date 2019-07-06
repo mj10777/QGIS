@@ -21,17 +21,14 @@ __author__ = 'Nyall Dawson'
 __date__ = 'July 2017'
 __copyright__ = '(C) 2017, Nyall Dawson'
 
-# This will get replaced with a git SHA1 when you do a git archive323
-
-__revision__ = '$Format:%H$'
-
 import os
 
 from qgis.core import (QgsGeometry,
                        QgsWkbTypes,
                        QgsPropertyDefinition,
                        QgsProcessingParameters,
-                       QgsProcessingParameterNumber)
+                       QgsProcessingParameterNumber,
+                       QgsProcessingFeatureSource)
 
 
 from processing.algs.qgis.QgisAlgorithm import QgisFeatureBasedAlgorithm
@@ -85,6 +82,9 @@ class SetMValue(QgisFeatureBasedAlgorithm):
             self.m_property = parameters[self.M_VALUE]
         return True
 
+    def sourceFlags(self):
+        return QgsProcessingFeatureSource.FlagSkipGeometryValidityChecks
+
     def processFeature(self, feature, context, feedback):
         input_geometry = feature.geometry()
         if input_geometry:
@@ -100,4 +100,7 @@ class SetMValue(QgisFeatureBasedAlgorithm):
 
             feature.setGeometry(QgsGeometry(new_geom))
 
-        return feature
+        return [feature]
+
+    def supportInPlaceEdit(self, layer):
+        return super().supportInPlaceEdit(layer) and QgsWkbTypes.hasM(layer.wkbType())

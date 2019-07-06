@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 ###########################################################################
 #    before_script.sh
 #    ---------------------
@@ -15,26 +16,30 @@
 
 set -e
 
+DOCKER_DEPS_PUSH=$( [[ $TRAVIS_REPO_SLUG =~ qgis/QGIS ]] && [[ "${TRAVIS_EVENT_TYPE}" != "pull_request" ]] && echo "true" || echo "false" )
+
+.ci/travis/scripts/echo_travis_var.sh
+
 pushd .docker
 
-echo "travis_fold:start:docker"
+echo "travis_fold:start:docker_build"
+echo "${bold}Docker build deps${endbold}"
 docker --version
 docker-compose --version
-docker-compose -f $DOCKER_COMPOSE config
-#docker pull ubuntu:16.04
+docker-compose -f ${TRAVIS_BUILD_DIR}/.ci/travis/linux/docker-compose.travis.yml config
 docker pull "qgis/qgis3-build-deps:${DOCKER_TAG}" || true
-if [[ $DOCKER_DEPS_IMAGE_REBUILD =~ true ]]; then
-  docker build --no-cache -t "qgis/qgis3-build-deps:${DOCKER_TAG}" .
-else
-  docker build --cache-from "qgis/qgis3-build-deps:${DOCKER_TAG}" -t "qgis/qgis3-build-deps:${DOCKER_TAG}" .
-fi
-echo "travis_fold:end:docker"
+docker build --cache-from "qgis/qgis3-build-deps:${DOCKER_TAG}" -t "qgis/qgis3-build-deps:${DOCKER_TAG}" -f ${DOCKER_BUILD_DEPS_FILE} .
+echo "travis_fold:end:docker_build"
+
+echo "travis_fold:start:docker_push"
+echo "${bold}Docker push deps${endbold}"
 # image should be pushed even if QGIS build fails
 # but push is achieved only on branches (not for PRs)
-if [[ $DOCKER_PUSH =~ true ]]; then
+if [[ $DOCKER_DEPS_PUSH =~ true ]]; then
+  echo "push to qgis/qgis3-build-deps:${DOCKER_TAG}"
   docker login -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD"
-  #docker tag "qgis/qgis3-build-deps:${DOCKER_TAG}" "qgis/qgis3-build-deps:latest"
   docker push "qgis/qgis3-build-deps:${DOCKER_TAG}"
 fi
+echo "travis_fold:end:docker_push"
 
 popd

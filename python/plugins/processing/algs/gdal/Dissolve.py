@@ -21,11 +21,7 @@ __author__ = 'Giovanni Manghi'
 __date__ = 'January 2015'
 __copyright__ = '(C) 2015, Giovanni Manghi'
 
-# This will get replaced with a git SHA1 when you do a git archive
-
-__revision__ = '$Format:%H$'
-
-from qgis.core import (QgsProcessing,
+from qgis.core import (QgsProcessingException,
                        QgsProcessingParameterDefinition,
                        QgsProcessingParameterFeatureSource,
                        QgsProcessingParameterField,
@@ -60,7 +56,7 @@ class Dissolve(GdalAlgorithm):
                                                       self.tr('Dissolve field'),
                                                       None,
                                                       self.INPUT,
-                                                      QgsProcessingParameterField.Any))
+                                                      QgsProcessingParameterField.Any, optional=True))
         self.addParameter(QgsProcessingParameterString(self.GEOMETRY,
                                                        self.tr('Geometry column name'),
                                                        defaultValue='geometry'))
@@ -84,7 +80,7 @@ class Dissolve(GdalAlgorithm):
                                                   self.tr('Numeric attribute to calculate statistics on'),
                                                   None,
                                                   self.INPUT,
-                                                  QgsProcessingParameterField.Any,
+                                                  QgsProcessingParameterField.Numeric,
                                                   optional=True))
         params.append(QgsProcessingParameterString(self.OPTIONS,
                                                    self.tr('Additional creation options'),
@@ -113,13 +109,18 @@ class Dissolve(GdalAlgorithm):
         return 'ogr2ogr'
 
     def getConsoleCommands(self, parameters, context, feedback, executing=True):
-        fields = self.parameterAsSource(parameters, self.INPUT, context).fields()
+        source = self.parameterAsSource(parameters, self.INPUT, context)
+        if source is None:
+            raise QgsProcessingException(self.invalidSourceError(parameters, self.INPUT))
+
+        fields = source.fields()
         ogrLayer, layerName = self.getOgrCompatibleSource(self.INPUT, parameters, context, feedback, executing)
         geometry = self.parameterAsString(parameters, self.GEOMETRY, context)
         fieldName = self.parameterAsString(parameters, self.FIELD, context)
 
         options = self.parameterAsString(parameters, self.OPTIONS, context)
         outFile = self.parameterAsOutputLayer(parameters, self.OUTPUT, context)
+        self.setOutputValue(self.OUTPUT, outFile)
 
         output, outputFormat = GdalUtils.ogrConnectionStringAndFormat(outFile, context)
 
@@ -131,43 +132,46 @@ class Dissolve(GdalAlgorithm):
             other_fields.append(f.name())
 
         if other_fields:
-            other_fields = ', {}'.format(','.join(other_fields))
+            other_fields = ',*'
         else:
             other_fields = ''
 
         arguments = []
         arguments.append(output)
         arguments.append(ogrLayer)
+        arguments.append('-nlt PROMOTE_TO_MULTI')
         arguments.append('-dialect')
         arguments.append('sqlite')
         arguments.append('-sql')
 
         tokens = []
-        if self.parameterAsBool(parameters, self.COUNT_FEATURES, context):
+        if self.parameterAsBoolean(parameters, self.COUNT_FEATURES, context):
             tokens.append("COUNT({}) AS count".format(geometry))
 
-        if self.parameterAsBool(parameters, self.COMPUTE_AREA, context):
+        if self.parameterAsBoolean(parameters, self.COMPUTE_AREA, context):
             tokens.append("SUM(ST_Area({0})) AS area, ST_Perimeter(ST_Union({0})) AS perimeter".format(geometry))
 
-        statsField = self.parameterAsString(parameters, self.FIELD, context)
-        if statsField and self.parameterAsBool(parameters, self.COMPUTE_STATISTICS, context):
+        statsField = self.parameterAsString(parameters, self.STATISTICS_ATTRIBUTE, context)
+        if statsField and self.parameterAsBoolean(parameters, self.COMPUTE_STATISTICS, context):
             tokens.append("SUM({0}) AS sum, MIN({0}) AS min, MAX({0}) AS max, AVG({0}) AS avg".format(statsField))
 
         params = ','.join(tokens)
         if params:
-            if self.parameterAsBool(parameters, self.KEEP_ATTRIBUTES, context):
-                sql = "SELECT ST_Union({}) AS {}{}, {} FROM {} GROUP BY {}".format(geometry, geometry, other_fields, params, layerName, fieldName)
-            else:
-                sql = "SELECT ST_Union({}) AS {}, {}, {} FROM {} GROUP BY {}".format(geometry, geometry, fieldName, params, layerName, fieldName)
+            params = ', ' + params
+
+        group_by = ''
+        if fieldName:
+            group_by = ' GROUP BY {}'.format(fieldName)
+
+        if self.parameterAsBoolean(parameters, self.KEEP_ATTRIBUTES, context):
+            sql = "SELECT ST_Union({}) AS {}{}{} FROM '{}'{}".format(geometry, geometry, other_fields, params, layerName, group_by)
         else:
-            if self.parameterAsBool(parameters, self.KEEP_ATTRIBUTES, context):
-                sql = "SELECT ST_Union({}) AS {}{} FROM {} GROUP BY {}".format(geometry, geometry, other_fields, layerName, fieldName)
-            else:
-                sql = "SELECT ST_Union({}) AS {}, {} FROM {} GROUP BY {}".format(geometry, geometry, fieldName, layerName, fieldName)
+            sql = "SELECT ST_Union({}) AS {}{}{} FROM '{}'{}".format(geometry, geometry, ', ' + fieldName if fieldName else '',
+                                                                     params, layerName, group_by)
 
         arguments.append(sql)
 
-        if self.parameterAsBool(parameters, self.EXPLODE_COLLECTIONS, context):
+        if self.parameterAsBoolean(parameters, self.EXPLODE_COLLECTIONS, context):
             arguments.append('-explodecollections')
 
         if options:
@@ -176,4 +180,4 @@ class Dissolve(GdalAlgorithm):
         if outputFormat:
             arguments.append('-f {}'.format(outputFormat))
 
-        return ['ogr2ogr', GdalUtils.escapeAndJoin(arguments)]
+        return [self.commandName(), GdalUtils.escapeAndJoin(arguments)]

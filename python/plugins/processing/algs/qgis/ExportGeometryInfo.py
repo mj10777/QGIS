@@ -21,23 +21,23 @@ __author__ = 'Victor Olaya'
 __date__ = 'August 2012'
 __copyright__ = '(C) 2012, Victor Olaya'
 
-# This will get replaced with a git SHA1 when you do a git archive
-
-__revision__ = '$Format:%H$'
-
 import os
+import math
 
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtCore import QVariant
 
 from qgis.core import (NULL,
+                       QgsApplication,
                        QgsCoordinateTransform,
                        QgsField,
                        QgsFields,
                        QgsWkbTypes,
+                       QgsPointXY,
                        QgsFeatureSink,
                        QgsDistanceArea,
                        QgsProcessingUtils,
+                       QgsProcessingException,
                        QgsProcessingParameterFeatureSource,
                        QgsProcessingParameterEnum,
                        QgsProcessingParameterFeatureSink)
@@ -55,10 +55,13 @@ class ExportGeometryInfo(QgisAlgorithm):
     OUTPUT = 'OUTPUT'
 
     def icon(self):
-        return QIcon(os.path.join(pluginPath, 'images', 'ftools', 'export_geometry.png'))
+        return QgsApplication.getThemeIcon("/algorithms/mAlgorithmAddGeometryAttributes.svg")
+
+    def svgIconPath(self):
+        return QgsApplication.iconPath("/algorithms/mAlgorithmAddGeometryAttributes.svg")
 
     def tags(self):
-        return self.tr('export,add,information,measurements,areas,lengths,perimeters,latitudes,longitudes,x,y,z,extract,points,lines,polygons').split(',')
+        return self.tr('export,add,information,measurements,areas,lengths,perimeters,latitudes,longitudes,x,y,z,extract,points,lines,polygons,sinuosity,fields').split(',')
 
     def group(self):
         return self.tr('Vector geometry')
@@ -86,10 +89,13 @@ class ExportGeometryInfo(QgisAlgorithm):
         return 'exportaddgeometrycolumns'
 
     def displayName(self):
-        return self.tr('Export geometry columns')
+        return self.tr('Add geometry attributes')
 
     def processAlgorithm(self, parameters, context, feedback):
         source = self.parameterAsSource(parameters, self.INPUT, context)
+        if source is None:
+            raise QgsProcessingException(self.invalidSourceError(parameters, self.INPUT))
+
         method = self.parameterAsEnum(parameters, self.METHOD, context)
 
         wkb_type = source.wkbType()
@@ -101,19 +107,27 @@ class ExportGeometryInfo(QgisAlgorithm):
             new_fields.append(QgsField('perimeter', QVariant.Double))
         elif QgsWkbTypes.geometryType(wkb_type) == QgsWkbTypes.LineGeometry:
             new_fields.append(QgsField('length', QVariant.Double))
+            if not QgsWkbTypes.isMultiType(source.wkbType()):
+                new_fields.append(QgsField('straightdis', QVariant.Double))
+                new_fields.append(QgsField('sinuosity', QVariant.Double))
         else:
-            new_fields.append(QgsField('xcoord', QVariant.Double))
-            new_fields.append(QgsField('ycoord', QVariant.Double))
-            if QgsWkbTypes.hasZ(source.wkbType()):
-                self.export_z = True
-                new_fields.append(QgsField('zcoord', QVariant.Double))
-            if QgsWkbTypes.hasM(source.wkbType()):
-                self.export_m = True
-                new_fields.append(QgsField('mvalue', QVariant.Double))
+            if QgsWkbTypes.isMultiType(source.wkbType()):
+                new_fields.append(QgsField('numparts', QVariant.Int))
+            else:
+                new_fields.append(QgsField('xcoord', QVariant.Double))
+                new_fields.append(QgsField('ycoord', QVariant.Double))
+                if QgsWkbTypes.hasZ(source.wkbType()):
+                    self.export_z = True
+                    new_fields.append(QgsField('zcoord', QVariant.Double))
+                if QgsWkbTypes.hasM(source.wkbType()):
+                    self.export_m = True
+                    new_fields.append(QgsField('mvalue', QVariant.Double))
 
         fields = QgsProcessingUtils.combineFields(fields, new_fields)
         (sink, dest_id) = self.parameterAsSink(parameters, self.OUTPUT, context,
                                                fields, wkb_type, source.sourceCrs())
+        if sink is None:
+            raise QgsProcessingException(self.invalidSinkError(parameters, self.OUTPUT))
 
         coordTransform = None
 
@@ -163,14 +177,9 @@ class ExportGeometryInfo(QgisAlgorithm):
         return {self.OUTPUT: dest_id}
 
     def point_attributes(self, geometry):
-        pt = None
+        attrs = []
         if not geometry.isMultipart():
             pt = geometry.constGet()
-        else:
-            if geometry.numGeometries() > 0:
-                pt = geometry.geometryN(0)
-        attrs = []
-        if pt:
             attrs.append(pt.x())
             attrs.append(pt.y())
             # add point z/m
@@ -178,10 +187,22 @@ class ExportGeometryInfo(QgisAlgorithm):
                 attrs.append(pt.z())
             if self.export_m:
                 attrs.append(pt.m())
+        else:
+            attrs = [geometry.constGet().numGeometries()]
         return attrs
 
     def line_attributes(self, geometry):
-        return [self.distance_area.measureLength(geometry)]
+        if geometry.isMultipart():
+            return [self.distance_area.measureLength(geometry)]
+        else:
+            curve = geometry.constGet()
+            p1 = curve.startPoint()
+            p2 = curve.endPoint()
+            straight_distance = self.distance_area.measureLine(QgsPointXY(p1), QgsPointXY(p2))
+            sinuosity = curve.sinuosity()
+            if math.isnan(sinuosity):
+                sinuosity = NULL
+            return [self.distance_area.measureLength(geometry), straight_distance, sinuosity]
 
     def polygon_attributes(self, geometry):
         area = self.distance_area.measureArea(geometry)

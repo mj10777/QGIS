@@ -21,13 +21,10 @@ __author__ = 'Victor Olaya'
 __date__ = 'October 2012'
 __copyright__ = '(C) 2012, Victor Olaya'
 
-# This will get replaced with a git SHA1 when you do a git archive
-
-__revision__ = '$Format:%H$'
-
 from qgis.core import (QgsVectorLayerExporter,
                        QgsSettings,
                        QgsFeatureSink,
+                       QgsProcessing,
                        QgsProcessingException,
                        QgsProcessingParameterFeatureSource,
                        QgsProcessingParameterString,
@@ -40,7 +37,6 @@ from processing.tools import postgis
 
 
 class ImportIntoPostGIS(QgisAlgorithm):
-
     DATABASE = 'DATABASE'
     TABLENAME = 'TABLENAME'
     SCHEMA = 'SCHEMA'
@@ -65,7 +61,8 @@ class ImportIntoPostGIS(QgisAlgorithm):
 
     def initAlgorithm(self, config=None):
         self.addParameter(QgsProcessingParameterFeatureSource(self.INPUT,
-                                                              self.tr('Layer to import')))
+                                                              self.tr('Layer to import'),
+                                                              types=[QgsProcessing.TypeVector]))
 
         db_param = QgsProcessingParameterString(
             self.DATABASE,
@@ -94,7 +91,8 @@ class ImportIntoPostGIS(QgisAlgorithm):
         self.addParameter(table_param)
 
         self.addParameter(QgsProcessingParameterField(self.PRIMARY_KEY,
-                                                      self.tr('Primary key field'), None, self.INPUT, QgsProcessingParameterField.Any, False, True))
+                                                      self.tr('Primary key field'), None, self.INPUT,
+                                                      QgsProcessingParameterField.Any, False, True))
         self.addParameter(QgsProcessingParameterString(self.GEOMETRY_COLUMN,
                                                        self.tr('Geometry column'), 'geom'))
         self.addParameter(QgsProcessingParameterString(self.ENCODING,
@@ -109,28 +107,37 @@ class ImportIntoPostGIS(QgisAlgorithm):
         self.addParameter(QgsProcessingParameterBoolean(self.DROP_STRING_LENGTH,
                                                         self.tr('Drop length constraints on character fields'), False))
         self.addParameter(QgsProcessingParameterBoolean(self.FORCE_SINGLEPART,
-                                                        self.tr('Create single-part geometries instead of multi-part'), False))
+                                                        self.tr('Create single-part geometries instead of multi-part'),
+                                                        False))
 
     def name(self):
         return 'importintopostgis'
 
     def displayName(self):
-        return self.tr('Import into PostGIS')
+        return self.tr('Export to PostgreSQL')
+
+    def shortDescription(self):
+        return self.tr('Exports a vector layer to a PostgreSQL database')
+
+    def tags(self):
+        return self.tr('import,postgis,table,layer,into,copy').split(',')
 
     def processAlgorithm(self, parameters, context, feedback):
         connection = self.parameterAsString(parameters, self.DATABASE, context)
         db = postgis.GeoDB.from_name(connection)
 
         schema = self.parameterAsString(parameters, self.SCHEMA, context)
-        overwrite = self.parameterAsBool(parameters, self.OVERWRITE, context)
-        createIndex = self.parameterAsBool(parameters, self.CREATEINDEX, context)
-        convertLowerCase = self.parameterAsBool(parameters, self.LOWERCASE_NAMES, context)
-        dropStringLength = self.parameterAsBool(parameters, self.DROP_STRING_LENGTH, context)
-        forceSinglePart = self.parameterAsBool(parameters, self.FORCE_SINGLEPART, context)
+        overwrite = self.parameterAsBoolean(parameters, self.OVERWRITE, context)
+        createIndex = self.parameterAsBoolean(parameters, self.CREATEINDEX, context)
+        convertLowerCase = self.parameterAsBoolean(parameters, self.LOWERCASE_NAMES, context)
+        dropStringLength = self.parameterAsBoolean(parameters, self.DROP_STRING_LENGTH, context)
+        forceSinglePart = self.parameterAsBoolean(parameters, self.FORCE_SINGLEPART, context)
         primaryKeyField = self.parameterAsString(parameters, self.PRIMARY_KEY, context) or 'id'
         encoding = self.parameterAsString(parameters, self.ENCODING, context)
 
         source = self.parameterAsSource(parameters, self.INPUT, context)
+        if source is None:
+            raise QgsProcessingException(self.invalidSourceError(parameters, self.INPUT))
 
         table = self.parameterAsString(parameters, self.TABLENAME, context)
         if table:
@@ -138,7 +145,7 @@ class ImportIntoPostGIS(QgisAlgorithm):
         if not table or table == '':
             table = source.sourceName()
             table = table.replace('.', '_')
-        table = table.replace(' ', '').lower()[0:62]
+        table = table.replace(' ', '')[0:62]
         providerName = 'postgres'
 
         geomColumn = self.parameterAsString(parameters, self.GEOMETRY_COLUMN, context)

@@ -10,10 +10,6 @@ IF (CMAKE_BUILD_TYPE MATCHES Debug OR CMAKE_BUILD_TYPE MATCHES RelWithDebInfo)
   ADD_DEFINITIONS(-DQGSMSDEBUG=1)
 ENDIF (CMAKE_BUILD_TYPE MATCHES Debug OR CMAKE_BUILD_TYPE MATCHES RelWithDebInfo)
 
-IF (ENABLE_TESTS)
-  ADD_DEFINITIONS(-DENABLE_MS_TESTS=1)
-ENDIF (ENABLE_TESTS)
-
 ADD_SUBDIRECTORY(services)
 
 ########################################################
@@ -24,31 +20,32 @@ SET(QGIS_SERVER_SRCS
   qgsbufferserverresponse.cpp
   qgscapabilitiescache.cpp
   qgsconfigcache.cpp
-  qgsconfigparserutils.cpp
   qgsfcgiserverrequest.cpp
   qgsfcgiserverresponse.cpp
   qgsfilterresponsedecorator.cpp
   qgsfilterrestorer.cpp
-  qgsmslayercache.cpp
   qgsrequesthandler.cpp
   qgsserver.cpp
+  qgsserverparameters.cpp
   qgsserverexception.cpp
   qgsserverinterface.cpp
   qgsserverinterfaceimpl.cpp
   qgsserverlogger.cpp
   qgsserverprojectutils.cpp
+  qgsserverfeatureid.cpp
   qgsserverrequest.cpp
   qgsserverresponse.cpp
   qgsserversettings.cpp
   qgsservice.cpp
-  qgsservicemodule.cpp
   qgsservicenativeloader.cpp
   qgsserviceregistry.cpp
   qgsfeaturefilterprovidergroup.cpp
   qgsfeaturefilter.cpp
+  qgsstorebadlayerinfo.cpp
 )
 
 SET (QGIS_SERVER_HDRS
+  qgsservicemodule.h
   qgsmapserviceexception.h
 )
 
@@ -56,9 +53,9 @@ SET (QGIS_SERVER_HDRS
 SET (QGIS_SERVER_MOC_HDRS
   qgscapabilitiescache.h
   qgsconfigcache.h
-  qgsmslayercache.h
   qgsserverlogger.h
   qgsserversettings.h
+  qgsserverparameters.h
 )
 
 
@@ -74,6 +71,8 @@ IF (WITH_SERVER_PLUGINS)
     qgsserverfilter.cpp
     qgsaccesscontrolfilter.cpp
     qgsaccesscontrol.cpp
+    qgsservercachefilter.cpp
+    qgsservercachemanager.cpp
   )
 ENDIF (WITH_SERVER_PLUGINS)
 
@@ -88,8 +87,6 @@ ENDIF(MSVC)
 INCLUDE_DIRECTORIES(SYSTEM
   ${GDAL_INCLUDE_DIR}
   ${FCGI_INCLUDE_DIR}
-  ${GEOS_INCLUDE_DIR}
-  ${PROJ_INCLUDE_DIR}
   ${POSTGRES_INCLUDE_DIR}
 )
 INCLUDE_DIRECTORIES(
@@ -120,6 +117,7 @@ INCLUDE_DIRECTORIES(
   ${CMAKE_BINARY_DIR}/src/python
   ${CMAKE_BINARY_DIR}/src/analysis
   ${CMAKE_BINARY_DIR}/src/server
+  ${CMAKE_SOURCE_DIR}/external
 )
 
 ADD_LIBRARY(qgis_server SHARED ${QGIS_SERVER_SRCS} ${QGIS_SERVER_MOC_SRCS} ${QGIS_SERVER_HDRS} ${QGIS_SERVER_MOC_HDRS})

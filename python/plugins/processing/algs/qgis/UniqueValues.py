@@ -21,29 +21,27 @@ __author__ = 'Victor Olaya'
 __date__ = 'August 2012'
 __copyright__ = '(C) 2012, Victor Olaya'
 
-# This will get replaced with a git SHA1 when you do a git archive
-
-__revision__ = '$Format:%H$'
-
 import os
 import codecs
 
 from qgis.PyQt.QtGui import QIcon
 
-from qgis.core import (QgsCoordinateReferenceSystem,
+from qgis.core import (QgsApplication,
+                       QgsCoordinateReferenceSystem,
                        QgsWkbTypes,
                        QgsFeature,
                        QgsFeatureSink,
                        QgsFeatureRequest,
                        QgsFields,
                        QgsProcessing,
+                       QgsProcessingException,
                        QgsProcessingParameterField,
                        QgsProcessingParameterFeatureSource,
                        QgsProcessingParameterFeatureSink,
                        QgsProcessingOutputNumber,
                        QgsProcessingOutputString,
-                       QgsProcessingParameterFileDestination,
-                       QgsProcessingOutputHtml)
+                       QgsProcessingFeatureSource,
+                       QgsProcessingParameterFileDestination)
 
 from processing.algs.qgis.QgisAlgorithm import QgisAlgorithm
 
@@ -60,7 +58,10 @@ class UniqueValues(QgisAlgorithm):
     OUTPUT_HTML_FILE = 'OUTPUT_HTML_FILE'
 
     def icon(self):
-        return QIcon(os.path.join(pluginPath, 'images', 'ftools', 'unique.png'))
+        return QgsApplication.getThemeIcon("/algorithms/mAlgorithmUniqueValues.svg")
+
+    def svgIconPath(self):
+        return QgsApplication.iconPath("/algorithms/mAlgorithmUniqueValues.svg")
 
     def group(self):
         return self.tr('Vector analysis')
@@ -81,7 +82,6 @@ class UniqueValues(QgisAlgorithm):
         self.addParameter(QgsProcessingParameterFeatureSink(self.OUTPUT, self.tr('Unique values'), optional=True, defaultValue=''))
 
         self.addParameter(QgsProcessingParameterFileDestination(self.OUTPUT_HTML_FILE, self.tr('HTML report'), self.tr('HTML files (*.html)'), None, True))
-        self.addOutput(QgsProcessingOutputHtml(self.OUTPUT_HTML_FILE, self.tr('HTML report')))
         self.addOutput(QgsProcessingOutputNumber(self.TOTAL_VALUES, self.tr('Total unique values')))
         self.addOutput(QgsProcessingOutputString(self.UNIQUE_VALUES, self.tr('Unique values')))
 
@@ -93,6 +93,9 @@ class UniqueValues(QgisAlgorithm):
 
     def processAlgorithm(self, parameters, context, feedback):
         source = self.parameterAsSource(parameters, self.INPUT, context)
+        if source is None:
+            raise QgsProcessingException(self.invalidSourceError(parameters, self.INPUT))
+
         field_names = self.parameterAsFields(parameters, self.FIELDS, context)
 
         fields = QgsFields()
@@ -120,7 +123,7 @@ class UniqueValues(QgisAlgorithm):
             request = QgsFeatureRequest().setFlags(QgsFeatureRequest.NoGeometry)
             request.setSubsetOfAttributes(field_indices)
             total = 100.0 / source.featureCount() if source.featureCount() else 0
-            for current, f in enumerate(source.getFeatures(request)):
+            for current, f in enumerate(source.getFeatures(request, QgsProcessingFeatureSource.FlagSkipGeometryValidityChecks)):
                 if feedback.isCanceled():
                     break
 

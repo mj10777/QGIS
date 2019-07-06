@@ -66,13 +66,13 @@ class GUI_EXPORT QgsFeatureListComboBox : public QComboBox
 
     /**
      * The display expression will be used to display features as well as
-     * the the value to match the typed text against.
+     * the value to match the typed text against.
      */
     QString displayExpression() const;
 
     /**
      * The display expression will be used to display features as well as
-     * the the value to match the typed text against.
+     * the value to match the typed text against.
      */
     void setDisplayExpression( const QString &displayExpression );
 
@@ -81,6 +81,14 @@ class GUI_EXPORT QgsFeatureListComboBox : public QComboBox
      * This can be used to integrate additional spatial or other constraints.
      */
     QString filterExpression() const;
+
+    /**
+     * Returns the current index of the NULL value, or -1 if NULL values are
+     * not allowed.
+     *
+     * \since QGIS 3.2
+     */
+    int nullIndex() const;
 
     /**
      * An additional expression to further restrict the available features.
@@ -140,6 +148,13 @@ class GUI_EXPORT QgsFeatureListComboBox : public QComboBox
     void keyPressEvent( QKeyEvent *event ) override;
 
   signals:
+
+    /**
+     * The underlying model has been updated.
+     *
+     * \since QGIS 3.2
+     */
+    void modelUpdated();
 
     /**
      * The layer from which features should be listed.
@@ -204,7 +219,10 @@ class GUI_EXPORT QgsFeatureListComboBox : public QComboBox
     QgsFilterLineEdit *mLineEdit;
     bool mPopupRequested = false;
     bool mIsCurrentlyEdited = false;
+    bool mHasStoredEditState = false;
     LineEditState mLineEditState;
+
+    friend class TestQgsFeatureListComboBox;
 };
 
 #endif // QGSFIELDLISTCOMBOBOX_H

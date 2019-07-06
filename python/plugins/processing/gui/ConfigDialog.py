@@ -21,11 +21,8 @@ __author__ = 'Victor Olaya'
 __date__ = 'August 2012'
 __copyright__ = '(C) 2012, Victor Olaya'
 
-# This will get replaced with a git SHA1 when you do a git archive
-
-__revision__ = '$Format:%H$'
-
 import os
+import warnings
 
 from qgis.PyQt import uic
 from qgis.PyQt.QtCore import Qt, QEvent
@@ -61,8 +58,10 @@ from processing.gui.menus import defaultMenuEntries, menusSettingsGroup
 
 
 pluginPath = os.path.split(os.path.dirname(__file__))[0]
-WIDGET, BASE = uic.loadUiType(
-    os.path.join(pluginPath, 'ui', 'DlgConfig.ui'))
+with warnings.catch_warnings():
+    warnings.filterwarnings("ignore", category=DeprecationWarning)
+    WIDGET, BASE = uic.loadUiType(
+        os.path.join(pluginPath, 'ui', 'DlgConfig.ui'))
 
 
 class ConfigOptionsPage(QgsOptionsPageWidget):
@@ -108,11 +107,7 @@ class ConfigDialog(BASE, WIDGET):
         super(ConfigDialog, self).__init__(None)
         self.setupUi(self)
 
-        self.groupIcon = QIcon()
-        self.groupIcon.addPixmap(self.style().standardPixmap(
-            QStyle.SP_DirClosedIcon), QIcon.Normal, QIcon.Off)
-        self.groupIcon.addPixmap(self.style().standardPixmap(
-            QStyle.SP_DirOpenIcon), QIcon.Normal, QIcon.On)
+        self.groupIcon = QgsApplication.getThemeIcon('mIconFolder.svg')
 
         self.model = QStandardItemModel()
         self.tree.setModel(self.model)
@@ -400,6 +395,8 @@ class SettingDelegate(QStyledItemDelegate):
         setting = index.model().data(index, Qt.UserRole)
         if setting.valuetype == Setting.SELECTION:
             editor.setCurrentIndex(editor.findText(value))
+        elif setting.valuetype in (Setting.FLOAT, Setting.INT):
+            editor.setValue(value)
         else:
             editor.setText(value)
 
@@ -508,6 +505,8 @@ class MultipleDirectorySelector(QWidget):
         text = self.lineEdit.text()
         if text != '':
             items = text.split(';')
+        else:
+            items = []
 
         dlg = DirectorySelectorDialog(None, items)
         if dlg.exec_():

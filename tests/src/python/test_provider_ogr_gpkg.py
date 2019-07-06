@@ -9,8 +9,6 @@ the Free Software Foundation; either version 2 of the License, or
 __author__ = 'Even Rouault'
 __date__ = '2016-04-21'
 __copyright__ = 'Copyright 2016, Even Rouault'
-# This will get replaced with a git SHA1 when you do a git archive
-__revision__ = '$Format:%H$'
 
 import os
 import re
@@ -24,10 +22,12 @@ from osgeo import gdal, ogr
 from qgis.core import (QgsFeature,
                        QgsCoordinateReferenceSystem,
                        QgsFeatureRequest,
+                       QgsFeatureSink,
                        QgsFields,
                        QgsField,
                        QgsFieldConstraints,
                        QgsGeometry,
+                       QgsProviderRegistry,
                        QgsRectangle,
                        QgsSettings,
                        QgsVectorLayer,
@@ -94,6 +94,25 @@ class TestPyQgsOGRProviderGpkg(unittest.TestCase):
         shutil.rmtree(cls.basetestpath, True)
 
         QgsSettings().clear()
+
+    def testDecodeUri(self):
+
+        filename = '/home/to/path/my_file.gpkg'
+
+        registry = QgsProviderRegistry.instance()
+        uri = filename
+        components = registry.decodeUri('ogr', uri)
+        self.assertEqual(components["path"], filename)
+
+        uri = '{}|layername=test'.format(filename)
+        components = registry.decodeUri('ogr', uri)
+        self.assertEqual(components["path"], filename)
+        self.assertEqual(components["layerName"], 'test')
+
+        uri = '{}|layerid=0'.format(filename)
+        components = registry.decodeUri('ogr', uri)
+        self.assertEqual(components["path"], filename)
+        self.assertEqual(components["layerId"], 0)
 
     def testSingleToMultiPolygonPromotion(self):
 
@@ -196,7 +215,7 @@ class TestPyQgsOGRProviderGpkg(unittest.TestCase):
 
     @unittest.skip(int(gdal.VersionInfo('VERSION_NUM')) < GDAL_COMPUTE_VERSION(2, 1, 2))
     def testGeopackageExtentUpdate(self):
-        ''' test https://issues.qgis.org/issues/15273 '''
+        ''' test https://github.com/qgis/QGIS/issues/23209 '''
         tmpfile = os.path.join(self.basetestpath, 'testGeopackageExtentUpdate.gpkg')
         ds = ogr.GetDriverByName('GPKG').CreateDataSource(tmpfile)
         lyr = ds.CreateLayer('test', geom_type=ogr.wkbPoint)
@@ -259,6 +278,89 @@ class TestPyQgsOGRProviderGpkg(unittest.TestCase):
         vl.setSubsetString("SELECT fid, foo FROM test WHERE foo = 'baz'")
         got = [feat for feat in vl.getFeatures()]
         self.assertEqual(len(got), 1)
+        del vl
+
+        testdata_path = unitTestDataPath('provider')
+        shutil.copy(os.path.join(testdata_path, 'bug_19826.gpkg'), tmpfile)
+        vl = QgsVectorLayer('{}|layerid=0'.format(tmpfile, 'test', 'ogr'))
+        vl.setSubsetString("name = 'two'")
+        got = [feat for feat in vl.getFeatures()]
+        self.assertEqual(len(got), 1)
+
+        attributes = got[0].attributes()
+        self.assertEqual(got[0].id(), 2)
+        self.assertEqual(attributes[0], 2)
+        self.assertEqual(attributes[1], 'two')
+        self.assertNotEqual(attributes[2], None)
+
+        # Request by FeatureId on a subset layer
+        got = [feat for feat in vl.getFeatures(QgsFeatureRequest(2))]
+        self.assertEqual(len(got), 1)
+        attributes = got[0].attributes()
+        self.assertEqual(got[0].id(), 2)
+        self.assertEqual(attributes[0], 2)
+        self.assertEqual(attributes[1], 'two')
+        self.assertNotEqual(attributes[2], None)
+
+        request = QgsFeatureRequest(2).setSubsetOfAttributes([0])
+        got = [feat for feat in vl.getFeatures(request)]
+        self.assertEqual(len(got), 1)
+        attributes = got[0].attributes()
+        self.assertEqual(got[0].id(), 2)
+        self.assertEqual(attributes[0], 2)
+        self.assertEqual(attributes[1], None)
+        self.assertEqual(attributes[2], None)
+
+        # Request by FeatureId on a subset layer. The name = 'two' filter
+        # only returns FID 2, so requesting on FID 1 should return nothing
+        # but this is broken now.
+        got = [feat for feat in vl.getFeatures(QgsFeatureRequest(1))]
+        self.assertEqual(len(got), 1) # this is the current behavior, broken
+
+    def testEditSubsetString(self):
+
+        tmpfile = os.path.join(self.basetestpath, 'testEditSubsetString.gpkg')
+        ds = ogr.GetDriverByName('GPKG').CreateDataSource(tmpfile)
+        lyr = ds.CreateLayer('test', geom_type=ogr.wkbMultiPolygon)
+        lyr.CreateField(ogr.FieldDefn('foo', ogr.OFTString))
+        f = ogr.Feature(lyr.GetLayerDefn())
+        f['foo'] = 'bar'
+        lyr.CreateFeature(f)
+        f = None
+        f = ogr.Feature(lyr.GetLayerDefn())
+        f['foo'] = 'baz'
+        lyr.CreateFeature(f)
+        f = None
+        ds = None
+
+        vl = QgsVectorLayer('{}|layerid=0'.format(tmpfile), 'test', 'ogr')
+        self.assertEqual(vl.dataProvider().featureCount(), 2)
+
+        # Test adding features
+        vl.setSubsetString("foo = 'baz'")
+        self.assertTrue(vl.startEditing())
+        feature = QgsFeature(vl.fields())
+        feature['foo'] = 'abc'
+        vl.addFeature(feature)
+        vl.commitChanges()
+        vl.setSubsetString(None)
+        self.assertEqual(vl.dataProvider().featureCount(), 3)
+
+        # Test deleting a feature
+        vl.setSubsetString("foo = 'baz'")
+        self.assertTrue(vl.startEditing())
+        vl.deleteFeature(1)
+        vl.commitChanges()
+        vl.setSubsetString(None)
+        self.assertEqual(vl.dataProvider().featureCount(), 2)
+
+        # Test editing a feature
+        vl.setSubsetString("foo = 'baz'")
+        self.assertTrue(vl.startEditing())
+        vl.changeAttributeValue(2, 1, 'xx')
+        vl.commitChanges()
+        vl.setSubsetString(None)
+        self.assertEqual(set((feat['foo'] for feat in vl.getFeatures())), set(['xx', 'abc']))
 
     def testStyle(self):
 
@@ -385,7 +487,7 @@ class TestPyQgsOGRProviderGpkg(unittest.TestCase):
         self.assertEqual(errmsg, "")
         self.assertEqual(idlist, ['1', '3', '4', '2'])
         self.assertEqual(namelist, ['name', 'name2', 'name3', 'name_test2'])
-        self.assertEqual(desclist, ['description_bis', 'description2', 'description3', 'name_test2'])
+        self.assertEqual(desclist, ['description_bis', 'description2', 'description3', 'description_test2'])
 
         # Check that layers_style table is not list in subLayers()
         vl = QgsVectorLayer(tmpfile, 'test', 'ogr')
@@ -435,27 +537,24 @@ class TestPyQgsOGRProviderGpkg(unittest.TestCase):
         uri = 'point?field=f1:int'
         uri += '&field=f2:double(6,4)'
         uri += '&field=f3:string(20)'
-        lyr = QgsVectorLayer(uri, "x", "memory")
-        self.assertTrue(lyr.isValid())
-        f = QgsFeature(lyr.fields())
+        mem_lyr = QgsVectorLayer(uri, "x", "memory")
+        self.assertTrue(mem_lyr.isValid())
+        f = QgsFeature(mem_lyr.fields())
         f['f1'] = 1
         f['f2'] = 123.456
         f['f3'] = '12345678.90123456789'
-        f2 = QgsFeature(lyr.fields())
+        f2 = QgsFeature(mem_lyr.fields())
         f2['f1'] = 2
-        lyr.dataProvider().addFeatures([f, f2])
+        mem_lyr.dataProvider().addFeatures([f, f2])
 
+        # Test creating new DB
         tmpfile = os.path.join(self.basetestpath, 'testSimulatedDBManagerImport.gpkg')
-        ds = ogr.GetDriverByName('GPKG').CreateDataSource(tmpfile)
-        ds = None
         options = {}
-        options['update'] = True
         options['driverName'] = 'GPKG'
-        options['layerName'] = 'my_out_table'
-        err = QgsVectorLayerExporter.exportLayer(lyr, tmpfile, "ogr", lyr.crs(), False, options)
+        err = QgsVectorLayerExporter.exportLayer(mem_lyr, tmpfile, "ogr", mem_lyr.crs(), False, options)
         self.assertEqual(err[0], QgsVectorLayerExporter.NoError,
                          'unexpected import error {0}'.format(err))
-        lyr = QgsVectorLayer(tmpfile + "|layername=my_out_table", "y", "ogr")
+        lyr = QgsVectorLayer(tmpfile, "y", "ogr")
         self.assertTrue(lyr.isValid())
         features = lyr.getFeatures()
         f = next(features)
@@ -465,26 +564,56 @@ class TestPyQgsOGRProviderGpkg(unittest.TestCase):
         f = next(features)
         self.assertEqual(f['f1'], 2)
         features = None
+        del lyr
 
-        # Test overwriting without overwrite option
-        err = QgsVectorLayerExporter.exportLayer(lyr, tmpfile, "ogr", lyr.crs(), False, options)
-        self.assertEqual(err[0], QgsVectorLayerExporter.ErrCreateDataSource)
+        # Test updating existing DB, by adding a new layer
+        mem_lyr = QgsVectorLayer(uri, "x", "memory")
+        self.assertTrue(mem_lyr.isValid())
+        f = QgsFeature(mem_lyr.fields())
+        f['f1'] = 1
+        f['f2'] = 2
+        mem_lyr.dataProvider().addFeatures([f])
 
-        # Test overwriting
-        lyr = QgsVectorLayer(uri, "x", "memory")
-        self.assertTrue(lyr.isValid())
-        f = QgsFeature(lyr.fields())
-        f['f1'] = 3
-        lyr.dataProvider().addFeatures([f])
-        options['overwrite'] = True
-        err = QgsVectorLayerExporter.exportLayer(lyr, tmpfile, "ogr", lyr.crs(), False, options)
+        options = {}
+        options['update'] = True
+        options['driverName'] = 'GPKG'
+        options['layerName'] = 'my_out_table'
+        err = QgsVectorLayerExporter.exportLayer(mem_lyr, tmpfile, "ogr", mem_lyr.crs(), False, options)
         self.assertEqual(err[0], QgsVectorLayerExporter.NoError,
                          'unexpected import error {0}'.format(err))
         lyr = QgsVectorLayer(tmpfile + "|layername=my_out_table", "y", "ogr")
         self.assertTrue(lyr.isValid())
         features = lyr.getFeatures()
         f = next(features)
+        self.assertEqual(f['f1'], 1)
+        self.assertEqual(f['f2'], 2)
+        features = None
+        del lyr
+
+        # Test overwriting without overwrite option
+        err = QgsVectorLayerExporter.exportLayer(mem_lyr, tmpfile, "ogr", mem_lyr.crs(), False, options)
+        self.assertEqual(err[0], QgsVectorLayerExporter.ErrCreateDataSource)
+
+        # Test overwriting, without specifying a layer name
+        mem_lyr = QgsVectorLayer(uri, "x", "memory")
+        self.assertTrue(mem_lyr.isValid())
+        f = QgsFeature(mem_lyr.fields())
+        f['f1'] = 3
+        f['f2'] = 4
+        mem_lyr.dataProvider().addFeatures([f])
+
+        options = {}
+        options['driverName'] = 'GPKG'
+        options['overwrite'] = True
+        err = QgsVectorLayerExporter.exportLayer(mem_lyr, tmpfile, "ogr", mem_lyr.crs(), False, options)
+        self.assertEqual(err[0], QgsVectorLayerExporter.NoError,
+                         'unexpected import error {0}'.format(err))
+        lyr = QgsVectorLayer(tmpfile, "y", "ogr")
+        self.assertTrue(lyr.isValid())
+        features = lyr.getFeatures()
+        f = next(features)
         self.assertEqual(f['f1'], 3)
+        self.assertEqual(f['f2'], 4)
         features = None
 
     def testExportLayerToExistingDatabase(self):
@@ -514,7 +643,7 @@ class TestPyQgsOGRProviderGpkg(unittest.TestCase):
         self.assertEqual(lyr2.wkbType(), QgsWkbTypes.Point)
 
     def testGeopackageTwoLayerEdition(self):
-        ''' test https://issues.qgis.org/issues/17034 '''
+        ''' test https://github.com/qgis/QGIS/issues/24933 '''
         tmpfile = os.path.join(self.basetestpath, 'testGeopackageTwoLayerEdition.gpkg')
         ds = ogr.GetDriverByName('GPKG').CreateDataSource(tmpfile)
         lyr = ds.CreateLayer('layer1', geom_type=ogr.wkbPoint)
@@ -838,11 +967,14 @@ class TestPyQgsOGRProviderGpkg(unittest.TestCase):
         self.assertTrue(vl.dataProvider().capabilities() & QgsVectorDataProvider.CreateSpatialIndex)
         self.assertTrue(vl.dataProvider().createSpatialIndex())
 
-    def testSubSetStringEditable_bug17795(self):
-        """Test that a layer is not editable after setting a subset and it's reverted to editable after the filter is removed"""
+    def testSubSetStringEditable_bug17795_but_with_modified_behavior(self):
+        """Test that a layer is editable after setting a subset"""
+
+        tmpfile = os.path.join(self.basetestpath, 'testSubSetStringEditable_bug17795.gpkg')
+        shutil.copy(TEST_DATA_DIR + '/' + 'provider/bug_17795.gpkg', tmpfile)
 
         isEditable = QgsVectorDataProvider.ChangeAttributeValues
-        testPath = TEST_DATA_DIR + '/' + 'provider/bug_17795.gpkg|layername=bug_17795'
+        testPath = tmpfile + '|layername=bug_17795'
 
         vl = QgsVectorLayer(testPath, 'subset_test', 'ogr')
         self.assertTrue(vl.isValid())
@@ -856,7 +988,7 @@ class TestPyQgsOGRProviderGpkg(unittest.TestCase):
         vl = QgsVectorLayer(testPath, 'subset_test', 'ogr')
         vl.setSubsetString('"category" = \'one\'')
         self.assertTrue(vl.isValid())
-        self.assertFalse(vl.dataProvider().capabilities() & isEditable)
+        self.assertTrue(vl.dataProvider().capabilities() & isEditable)
 
         vl.setSubsetString('')
         self.assertTrue(vl.dataProvider().capabilities() & isEditable)
@@ -868,7 +1000,10 @@ class TestPyQgsOGRProviderGpkg(unittest.TestCase):
         def _lessdigits(s):
             return re.sub(r'(\d+\.\d{3})\d+', r'\1', s)
 
-        testPath = TEST_DATA_DIR + '/' + 'provider/bug_17795.gpkg|layername=bug_17795'
+        tmpfile = os.path.join(self.basetestpath, 'testSubsetStringExtent_bug17863.gpkg')
+        shutil.copy(TEST_DATA_DIR + '/' + 'provider/bug_17795.gpkg', tmpfile)
+
+        testPath = tmpfile + '|layername=bug_17795'
         subSetString = '"name" = \'int\''
         subSet = '|layername=bug_17795|subset=%s' % subSetString
 
@@ -896,6 +1031,335 @@ class TestPyQgsOGRProviderGpkg(unittest.TestCase):
         # This was failing in bug 17863
         self.assertEqual(_lessdigits(subSet_vl.extent().toString()), filtered_extent)
         self.assertNotEqual(_lessdigits(subSet_vl.extent().toString()), unfiltered_extent)
+
+    def testRequestWithoutGeometryOnLayerMixedGeometry(self):
+        """ Test bugfix for https://github.com/qgis/QGIS/issues/26907 """
+
+        # Issue is more a generic one of the OGR provider, but easy to trigger with GPKG
+
+        tmpfile = os.path.join(self.basetestpath, 'testRequestWithoutGeometryOnLayerMixedGeometry.gpkg')
+        ds = ogr.GetDriverByName('GPKG').CreateDataSource(tmpfile)
+        lyr = ds.CreateLayer('test', geom_type=ogr.wkbUnknown, options=['SPATIAL_INDEX=NO'])
+        f = ogr.Feature(lyr.GetLayerDefn())
+        f.SetGeometry(ogr.CreateGeometryFromWkt('POINT(0 1)'))
+        lyr.CreateFeature(f)
+        f = ogr.Feature(lyr.GetLayerDefn())
+        f.SetGeometry(ogr.CreateGeometryFromWkt('LINESTRING(0 0,1 0)'))
+        lyr.CreateFeature(f)
+        f = ogr.Feature(lyr.GetLayerDefn())
+        f.SetGeometry(ogr.CreateGeometryFromWkt('LINESTRING(0 0,1 0)'))
+        lyr.CreateFeature(f)
+        f = None
+        ds = None
+
+        vl = QgsVectorLayer(u'{}'.format(tmpfile) + "|geometrytype=Point|layername=" + "test", 'test', u'ogr')
+        self.assertTrue(vl.isValid())
+        request = QgsFeatureRequest().setFlags(QgsFeatureRequest.NoGeometry)
+        features = [f for f in vl.getFeatures(request)]
+        self.assertEqual(len(features), 1)
+
+    def testAddingTwoIntFieldsWithWidth(self):
+        """ Test buggfix for https://github.com/qgis/QGIS/issues/26840 """
+
+        tmpfile = os.path.join(self.basetestpath, 'testRequestWithoutGeometryOnLayerMixedGeometry.gpkg')
+        ds = ogr.GetDriverByName('GPKG').CreateDataSource(tmpfile)
+        lyr = ds.CreateLayer('test', geom_type=ogr.wkbPoint, options=['SPATIAL_INDEX=NO'])
+        lyr.CreateField(ogr.FieldDefn('a', ogr.OFTInteger))
+        ds = None
+
+        vl = QgsVectorLayer(u'{}'.format(tmpfile) + "|layername=" + "test", 'test', u'ogr')
+        self.assertTrue(vl.isValid())
+
+        vl.startEditing()
+        self.assertTrue(vl.addAttribute(QgsField("b", QVariant.Int, "integer", 10)))
+        self.assertTrue(vl.commitChanges())
+
+        vl.startEditing()
+        self.assertTrue(vl.addAttribute(QgsField("c", QVariant.Int, "integer", 10)))
+        self.assertTrue(vl.commitChanges())
+
+    def testApproxFeatureCountAndExtent(self):
+        """ Test perf improvement for for https://github.com/qgis/QGIS/issues/26292 """
+
+        tmpfile = os.path.join(self.basetestpath, 'testApproxFeatureCountAndExtent.gpkg')
+        ds = ogr.GetDriverByName('GPKG').CreateDataSource(tmpfile)
+        lyr = ds.CreateLayer('test', geom_type=ogr.wkbPoint)
+        f = ogr.Feature(lyr.GetLayerDefn())
+        f.SetGeometry(ogr.CreateGeometryFromWkt('POINT(0 1)'))
+        lyr.CreateFeature(f)
+        f = ogr.Feature(lyr.GetLayerDefn())
+        f.SetGeometry(ogr.CreateGeometryFromWkt('POINT(2 3)'))
+        lyr.CreateFeature(f)
+        fid = f.GetFID()
+        f = ogr.Feature(lyr.GetLayerDefn())
+        f.SetGeometry(ogr.CreateGeometryFromWkt('POINT(4 5)'))
+        lyr.CreateFeature(f)
+        lyr.DeleteFeature(fid)
+        ds = None
+        ds = ogr.Open(tmpfile, update=1)
+        ds.ExecuteSQL('DROP TABLE gpkg_ogr_contents')
+        ds = None
+
+        os.environ['QGIS_GPKG_FC_THRESHOLD'] = '1'
+        vl = QgsVectorLayer(u'{}'.format(tmpfile) + "|layername=" + "test", 'test', u'ogr')
+        self.assertTrue(vl.isValid())
+        fc = vl.featureCount()
+        del os.environ['QGIS_GPKG_FC_THRESHOLD']
+        self.assertEqual(fc, 3) # didn't notice the hole
+
+        reference = QgsGeometry.fromRect(QgsRectangle(0, 1, 4, 5))
+        provider_extent = QgsGeometry.fromRect(vl.extent())
+        self.assertTrue(QgsGeometry.compare(provider_extent.asPolygon()[0], reference.asPolygon()[0], 0.00001),
+                        provider_extent.asPolygon()[0])
+
+    def testRegenerateFid(self):
+        """ Test regenerating feature ids """
+
+        fields = QgsFields()
+        fields.append(QgsField('fid', QVariant.Int))
+        fields.append(QgsField('f1', QVariant.Int))
+        tmpfile = os.path.join(self.basetestpath, 'testRegenerateFid.gpkg')
+        options = {}
+        options['update'] = True
+        options['driverName'] = 'GPKG'
+        options['layerName'] = 'table1'
+        exporter = QgsVectorLayerExporter(tmpfile, "ogr", fields, QgsWkbTypes.Polygon, QgsCoordinateReferenceSystem(3111), False, options, QgsFeatureSink.RegeneratePrimaryKey)
+        self.assertFalse(exporter.errorCode(),
+                         'unexpected export error {}: {}'.format(exporter.errorCode(), exporter.errorMessage()))
+
+        feat = QgsFeature(fields)
+
+        feat['fid'] = 0
+        feat['f1'] = 10
+        exporter.addFeature(feat)
+
+        feat['fid'] = 0
+        feat['f1'] = 20
+        exporter.addFeature(feat)
+
+        feat['fid'] = 1
+        feat['f1'] = 30
+        exporter.addFeature(feat)
+
+        feat['fid'] = 1
+        feat['f1'] = 40
+        exporter.addFeature(feat)
+
+        del exporter
+        # make sure layers exist
+        lyr = QgsVectorLayer('{}|layername=table1'.format(tmpfile), "lyr1", "ogr")
+        self.assertTrue(lyr.isValid())
+        self.assertEqual(lyr.crs().authid(), 'EPSG:3111')
+        self.assertEqual(lyr.wkbType(), QgsWkbTypes.Polygon)
+
+        values = set([f['f1'] for f in lyr.getFeatures()])
+        self.assertEqual(values, set([10, 20, 30, 40]))
+
+        fids = set([f['fid'] for f in lyr.getFeatures()])
+        self.assertEqual(len(fids), 4)
+
+    def testTransaction(self):
+
+        tmpfile = os.path.join(self.basetestpath, 'testTransaction.gpkg')
+        ds = ogr.GetDriverByName('GPKG').CreateDataSource(tmpfile)
+        lyr = ds.CreateLayer('lyr1', geom_type=ogr.wkbPoint)
+        f = ogr.Feature(lyr.GetLayerDefn())
+        f.SetGeometry(ogr.CreateGeometryFromWkt('POINT(0 1)'))
+        lyr.CreateFeature(f)
+        lyr = ds.CreateLayer('lyr2', geom_type=ogr.wkbPoint)
+        f = ogr.Feature(lyr.GetLayerDefn())
+        f.SetGeometry(ogr.CreateGeometryFromWkt('POINT(2 3)'))
+        lyr.CreateFeature(f)
+        f = ogr.Feature(lyr.GetLayerDefn())
+        f.SetGeometry(ogr.CreateGeometryFromWkt('POINT(4 5)'))
+        lyr.CreateFeature(f)
+        ds = None
+
+        vl1 = QgsVectorLayer(u'{}'.format(tmpfile) + "|layername=" + "lyr1", 'test', u'ogr')
+        self.assertTrue(vl1.isValid())
+        vl2 = QgsVectorLayer(u'{}'.format(tmpfile) + "|layername=" + "lyr2", 'test', u'ogr')
+        self.assertTrue(vl2.isValid())
+
+        # prepare a project with transactions enabled
+        p = QgsProject()
+        p.setAutoTransaction(True)
+        p.addMapLayers([vl1, vl2])
+
+        self.assertTrue(vl1.startEditing())
+        self.assertIsNotNone(vl1.dataProvider().transaction())
+        self.assertTrue(vl1.deleteFeature(1))
+
+        # An iterator opened on the layer should see the feature deleted
+        self.assertEqual(len([f for f in vl1.getFeatures(QgsFeatureRequest())]), 0)
+
+        # But not if opened from another connection
+        vl1_external = QgsVectorLayer(u'{}'.format(tmpfile) + "|layername=" + "lyr1", 'test', u'ogr')
+        self.assertTrue(vl1_external.isValid())
+        self.assertEqual(len([f for f in vl1_external.getFeatures(QgsFeatureRequest())]), 1)
+        del vl1_external
+
+        self.assertTrue(vl1.commitChanges())
+
+        # Should still get zero features on vl1
+        self.assertEqual(len([f for f in vl1.getFeatures(QgsFeatureRequest())]), 0)
+        self.assertEqual(len([f for f in vl2.getFeatures(QgsFeatureRequest())]), 2)
+
+        # Test undo/redo
+        self.assertTrue(vl2.startEditing())
+        self.assertIsNotNone(vl2.dataProvider().transaction())
+        self.assertTrue(vl2.editBuffer().deleteFeature(1))
+        self.assertEqual(len([f for f in vl2.getFeatures(QgsFeatureRequest())]), 1)
+        self.assertTrue(vl2.editBuffer().deleteFeature(2))
+        self.assertEqual(len([f for f in vl2.getFeatures(QgsFeatureRequest())]), 0)
+        vl2.undoStack().undo()
+        self.assertEqual(len([f for f in vl2.getFeatures(QgsFeatureRequest())]), 1)
+        vl2.undoStack().undo()
+        self.assertEqual(len([f for f in vl2.getFeatures(QgsFeatureRequest())]), 2)
+        vl2.undoStack().redo()
+        self.assertEqual(len([f for f in vl2.getFeatures(QgsFeatureRequest())]), 1)
+        self.assertTrue(vl2.commitChanges())
+
+        self.assertEqual(len([f for f in vl2.getFeatures(QgsFeatureRequest())]), 1)
+        del vl1
+        del vl2
+
+        vl2_external = QgsVectorLayer(u'{}'.format(tmpfile) + "|layername=" + "lyr2", 'test', u'ogr')
+        self.assertTrue(vl2_external.isValid())
+        self.assertEqual(len([f for f in vl2_external.getFeatures(QgsFeatureRequest())]), 1)
+        del vl2_external
+
+    def testJson(self):
+        if int(gdal.VersionInfo('VERSION_NUM')) < GDAL_COMPUTE_VERSION(2, 4, 0):
+            return
+
+        tmpfile = os.path.join(self.basetestpath, 'test_json.gpkg')
+        testdata_path = unitTestDataPath('provider')
+        shutil.copy(os.path.join(unitTestDataPath('provider'), 'test_json.gpkg'), tmpfile)
+
+        vl = QgsVectorLayer('{}|layerid=0'.format(tmpfile, 'foo', 'ogr'))
+        self.assertTrue(vl.isValid())
+
+        fields = vl.dataProvider().fields()
+        self.assertEqual(fields.at(fields.indexFromName('json_content')).type(), QVariant.Map)
+
+        fi = vl.getFeatures(QgsFeatureRequest())
+        f = QgsFeature()
+
+        #test reading dict value from attribute
+        while fi.nextFeature(f):
+            if f['fid'] == 1:
+                self.assertIsInstance(f['json_content'], dict)
+                self.assertEqual(f['json_content'], {'foo': 'bar'})
+                #test changing dict value in attribute
+                f['json_content'] = {'foo': 'baz'}
+                self.assertEqual(f['json_content'], {'foo': 'baz'})
+                #test changint dict to list
+                f['json_content'] = ['eins', 'zwei', 'drei']
+                self.assertEqual(f['json_content'], ['eins', 'zwei', 'drei'])
+                #test changing list value in attribute
+                f['json_content'] = ['eins', 'zwei', 'drei', 4]
+                self.assertEqual(f['json_content'], ['eins', 'zwei', 'drei', 4])
+                #test changing to complex json structure
+                f['json_content'] = {'name': 'Lily', 'age': '0', 'cars': {'car1': ['fiat tipo', 'fiat punto', 'davoser schlitten'], 'car2': 'bobbycar', 'car3': 'tesla'}}
+                self.assertEqual(f['json_content'], {'name': 'Lily', 'age': '0', 'cars': {'car1': ['fiat tipo', 'fiat punto', 'davoser schlitten'], 'car2': 'bobbycar', 'car3': 'tesla'}})
+
+        #test adding attribute
+        vl.startEditing()
+        self.assertTrue(vl.addAttribute(QgsField('json_content2', QVariant.Map, "JSON", 60, 0, 'no comment', QVariant.String)))
+        self.assertTrue(vl.commitChanges())
+
+        vl.startEditing()
+        self.assertTrue(vl.addAttribute(QgsField('json_content3', QVariant.Map, "JSON", 60, 0, 'no comment', QVariant.String)))
+        self.assertTrue(vl.commitChanges())
+
+        #test setting values to new attributes
+        while fi.nextFeature(f):
+            if f['fid'] == 2:
+                f['json_content'] = {'uno': 'foo'}
+                f['json_content2'] = ['uno', 'due', 'tre']
+                f['json_content3'] = {'uno': ['uno', 'due', 'tre']}
+                self.assertEqual(f['json_content'], {'foo': 'baz'})
+                self.assertEqual(f['json_content2'], ['uno', 'due', 'tre'])
+                self.assertEqual(f['json_content3'], {'uno': ['uno', 'due', 'tre']})
+
+        #test deleting attribute
+        vl.startEditing()
+        self.assertTrue(vl.deleteAttribute(vl.fields().indexFromName('json_content3')))
+        self.assertTrue(vl.commitChanges())
+
+        #test if index of existent field is not -1 and the one of the deleted is -1
+        self.assertNotEqual(vl.fields().indexFromName('json_content2'), -1)
+        self.assertEqual(vl.fields().indexFromName('json_content3'), -1)
+
+    def test_quote_identifier(self):
+        """Regression #21100"""
+
+        tmpfile = os.path.join(self.basetestpath, 'bug_21100-wierd_field_names.gpkg')  # spellok
+        shutil.copy(os.path.join(unitTestDataPath(''), 'bug_21100-wierd_field_names.gpkg'), tmpfile) # spellok
+        vl = QgsVectorLayer('{}|layerid=0'.format(tmpfile), 'foo', 'ogr')
+        self.assertTrue(vl.isValid())
+        for i in range(1, len(vl.fields())):
+            self.assertEqual(vl.uniqueValues(i), {'a', 'b', 'c'})
+
+    def testGeopackageLayerMetadata(self):
+        """
+        Geopackage layer description and identifier should be read into layer metadata automatically
+        """
+        tmpfile = os.path.join(self.basetestpath, 'testGeopackageLayerMetadata.gpkg')
+        ds = ogr.GetDriverByName('GPKG').CreateDataSource(tmpfile)
+        lyr = ds.CreateLayer('layer1', geom_type=ogr.wkbPoint)
+        lyr.SetMetadataItem('DESCRIPTION', "my desc")
+        lyr.SetMetadataItem('IDENTIFIER', "my title")  # see geopackage specs -- "'identifier' is analogous to 'title'"
+        lyr.CreateField(ogr.FieldDefn('attr', ogr.OFTInteger))
+        f = ogr.Feature(lyr.GetLayerDefn())
+        f.SetGeometry(ogr.CreateGeometryFromWkt('POINT(0 0)'))
+        lyr.CreateFeature(f)
+        f = None
+        vl1 = QgsVectorLayer(u'{}'.format(tmpfile) + "|layername=" + "layer1", 'test', u'ogr')
+        self.assertTrue(vl1.isValid())
+        self.assertEqual(vl1.metadata().title(), 'my title')
+        self.assertEqual(vl1.metadata().abstract(), 'my desc')
+
+    def testUniqueValuesOnFidColumn(self):
+        """Test regression #21311 OGR provider returns an empty set for GPKG uniqueValues"""
+
+        tmpfile = os.path.join(self.basetestpath, 'testGeopackageUniqueValuesOnFidColumn.gpkg')
+        ds = ogr.GetDriverByName('GPKG').CreateDataSource(tmpfile)
+        lyr = ds.CreateLayer('test', geom_type=ogr.wkbPolygon)
+        lyr.CreateField(ogr.FieldDefn('str_field', ogr.OFTString))
+        f = ogr.Feature(lyr.GetLayerDefn())
+        f.SetGeometry(ogr.CreateGeometryFromWkt('POLYGON ((0 0,0 1,1 1,1 0,0 0))'))
+        f.SetField('str_field', 'one')
+        lyr.CreateFeature(f)
+        f = ogr.Feature(lyr.GetLayerDefn())
+        f.SetGeometry(ogr.CreateGeometryFromWkt('POLYGON ((0 0,0 2,2 2,2 0,0 0))'))
+        f.SetField('str_field', 'two')
+        lyr.CreateFeature(f)
+        f = None
+        ds = None
+        vl1 = QgsVectorLayer('{}'.format(tmpfile) + "|layername=" + "test", 'test', 'ogr')
+        self.assertTrue(vl1.isValid())
+        self.assertEqual(vl1.uniqueValues(0), {1, 2})
+        self.assertEqual(vl1.uniqueValues(1), {'one', 'two'})
+
+    def testForeignKeyViolation(self):
+        """Test that we can open a dataset with a foreign key violation"""
+
+        tmpfile = os.path.join(self.basetestpath, 'testForeignKeyViolation.gpkg')
+        ds = ogr.GetDriverByName('GPKG').CreateDataSource(tmpfile)
+        lyr = ds.CreateLayer('test', geom_type=ogr.wkbPoint)
+        f = ogr.Feature(lyr.GetLayerDefn())
+        f.SetGeometry(ogr.CreateGeometryFromWkt('POINT(0 1)'))
+        lyr.CreateFeature(f)
+        ds.ExecuteSQL("PRAGMA foreign_keys = OFF")
+        ds.ExecuteSQL("CREATE TABLE foo(id INTEGER)")
+        ds.ExecuteSQL("CREATE TABLE bar(fkey INTEGER, CONSTRAINT fkey_constraint FOREIGN KEY (fkey) REFERENCES foo(id))")
+        ds.ExecuteSQL("INSERT INTO bar VALUES (1)")
+        ds = None
+        vl = QgsVectorLayer('{}'.format(tmpfile) + "|layername=" + "test", 'test', 'ogr')
+        self.assertTrue(vl.isValid())
+        fids = set([f['fid'] for f in vl.getFeatures()])
+        self.assertEqual(len(fids), 1)
 
 
 if __name__ == '__main__':

@@ -12,8 +12,8 @@
  *   (at your option) any later version.                                   *
  *                                                                         *
  ***************************************************************************/
-#ifndef QGSGRADUATEDSYMBOLRENDERERV2_H
-#define QGSGRADUATEDSYMBOLRENDERERV2_H
+#ifndef QGSGRADUATEDSYMBOLRENDERER_H
+#define QGSGRADUATEDSYMBOLRENDERER_H
 
 #include "qgis_core.h"
 #include "qgis_sip.h"
@@ -69,7 +69,7 @@ class CORE_EXPORT QgsRendererRange
      * \param doc DOM document
      * \param element destination DOM element
      * \param props graduated renderer properties
-     * \param firstRange set to true if the range is the first range, where the lower value uses a <= test
+     * \param firstRange set to TRUE if the range is the first range, where the lower value uses a <= test
      * rather than a < test.
      */
     void toSld( QDomDocument &doc, QDomElement &element, QgsStringMap props, bool firstRange = false ) const;
@@ -147,16 +147,18 @@ class CORE_EXPORT QgsGraduatedSymbolRenderer : public QgsFeatureRenderer
 
     ~QgsGraduatedSymbolRenderer() override;
 
-    QgsSymbol *symbolForFeature( QgsFeature &feature, QgsRenderContext &context ) override;
-    QgsSymbol *originalSymbolForFeature( QgsFeature &feature, QgsRenderContext &context ) override;
+    QgsSymbol *symbolForFeature( const QgsFeature &feature, QgsRenderContext &context ) const override;
+    QgsSymbol *originalSymbolForFeature( const QgsFeature &feature, QgsRenderContext &context ) const override;
     void startRender( QgsRenderContext &context, const QgsFields &fields ) override;
     void stopRender( QgsRenderContext &context ) override;
     QSet<QString> usedAttributes( const QgsRenderContext &context ) const override;
+    bool filterNeedsGeometry() const override;
     QString dump() const override;
     QgsGraduatedSymbolRenderer *clone() const override SIP_FACTORY;
     void toSld( QDomDocument &doc, QDomElement &element, const QgsStringMap &props = QgsStringMap() ) const override;
     QgsFeatureRenderer::Capabilities capabilities() override { return SymbolLevels | Filter; }
-    QgsSymbolList symbols( QgsRenderContext &context ) override;
+    QgsSymbolList symbols( QgsRenderContext &context ) const override;
+    bool accept( QgsStyleEntityVisitorInterface *visitor ) const override;
 
     QString classAttribute() const { return mAttrName; }
     void setClassAttribute( const QString &attr ) { mAttrName = attr; }
@@ -180,7 +182,7 @@ class CORE_EXPORT QgsGraduatedSymbolRenderer : public QgsFeatureRenderer
      * Add a breakpoint by splitting existing classes so that the specified
      * value becomes a break between two classes.
      * \param breakValue position to insert break
-     * \param updateSymbols set to true to reapply ramp colors to the new
+     * \param updateSymbols set to TRUE to reapply ramp colors to the new
      * symbol ranges
      * \since QGIS 2.9
      */
@@ -194,14 +196,14 @@ class CORE_EXPORT QgsGraduatedSymbolRenderer : public QgsFeatureRenderer
 
     /**
      * Tests whether classes assigned to the renderer have ranges which overlap.
-     * \returns true if ranges overlap
+     * \returns TRUE if ranges overlap
      * \since QGIS 2.10
      */
     bool rangesOverlap() const;
 
     /**
      * Tests whether classes assigned to the renderer have gaps between the ranges.
-     * \returns true if ranges have gaps
+     * \returns TRUE if ranges have gaps
      * \since QGIS 2.10
      */
     bool rangesHaveGaps() const;
@@ -223,16 +225,90 @@ class CORE_EXPORT QgsGraduatedSymbolRenderer : public QgsFeatureRenderer
     void setMode( Mode mode ) { mMode = mode; }
 
     /**
+     * Returns if we want to classify symmetric around a given value
+     * \since QGIS 3.4
+     */
+    bool useSymmetricMode() const { return mUseSymmetricMode; }
+
+    /**
+     * Set if we want to classify symmetric around a given value
+     * \since QGIS 3.4
+     */
+    void setUseSymmetricMode( bool useSymmetricMode ) { mUseSymmetricMode = useSymmetricMode; }
+
+    /**
+     * Returns the pivot value for symmetric classification
+     * \since QGIS 3.4
+     */
+    double symmetryPoint() const { return mSymmetryPoint; }
+
+    /**
+     * Set the pivot point
+     * \since QGIS 3.4
+     */
+    void setSymmetryPoint( double symmetryPoint ) { mSymmetryPoint = symmetryPoint; }
+
+    /**
+     * Returns the list of breaks used in the prettybreaks mode. Needed to recover this list in saved configuration, or when property window in closed and reopened
+     * \note Not available in Python bindings, not stable API
+     * \since QGIS 3.4
+     */
+    QStringList listForCboPrettyBreaks() const { return mListForCboPrettyBreaks; } SIP_SKIP
+
+    /**
+     * Set the list of breaks used in the prettybreaks mode, which is needed to recover this list in saved configuration, or when property window is closed and reopened
+     * \note Not available in Python bindings, not stable API
+     * \since QGIS 3.4
+     */
+    void setListForCboPrettyBreaks( const QStringList &listForCboPrettyBreaks ) { mListForCboPrettyBreaks = listForCboPrettyBreaks; } SIP_SKIP
+
+    /**
+     * Returns if we want to have a central class astride the pivot value
+     * \since QGIS 3.4
+     */
+    bool astride() const { return mAstride; }
+
+    /**
+     * Set if we want a central class astride the pivot value
+     * \since QGIS 3.4
+     */
+    void setAstride( bool astride ) { mAstride = astride; }
+
+    /**
+     * Remove the breaks that are above the existing opposite sign classes to keep colors symmetrically balanced around symmetryPoint
+     * Does not put a break on the symmetryPoint. This is done before.
+     * \param breaks The breaks of an already-done classification
+     * \param symmetryPoint The point around which we want a symmetry
+     * \param astride A bool indicating if the symmetry is made astride the symmetryPoint or not ( [-1,1] vs. [-1,0][0,1] )
+     * \since QGIS 3.4
+     */
+    static void makeBreaksSymmetric( QList<double> &breaks, double symmetryPoint, bool astride );
+
+    /**
+     * Compute the equal interval classification
+     * \param minimum The minimum value of the distribution
+     * \param maximum The maximum value of the distribution
+     * \param classes The number of classes desired
+     * \param useSymmetricMode A bool indicating if we want to have classes and hence colors ramp symmetric around a value
+     * \param symmetryPoint The point around which we want a symmetry
+     * \param astride A bool indicating if the symmetry is made astride the symmetryPoint or not ( [-1,1] vs. [-1,0][0,1] )
+     */
+    static QList<double> calcEqualIntervalBreaks( double minimum, double maximum, int classes, bool useSymmetricMode, double symmetryPoint, bool astride );
+
+    /**
      * Recalculate classes for a layer
      * \param vlayer  The layer being rendered (from which data values are calculated)
      * \param mode    The calculation mode
      * \param nclasses The number of classes to calculate (approximate for some modes)
-     * \since QGIS 2.6
+     * \param useSymmetricMode A bool indicating if we want to have classes and hence colors ramp symmetric around a value
+     * \param symmetryPoint The value around which the classes will be symmetric if useSymmetricMode is checked
+     * \param astride A bool indicating if the symmetry is made astride the symmetryPoint or not ( [-1,1] vs. [-1,0][0,1] )
+     * \since QGIS 2.6 (three first arguments) and 3.4 (three last arguments)
      */
-    void updateClasses( QgsVectorLayer *vlayer, Mode mode, int nclasses );
+    void updateClasses( QgsVectorLayer *vlayer, Mode mode, int nclasses, bool useSymmetricMode = false, double symmetryPoint = 0.0, bool astride = false );
 
     /**
-     * Return the label format used to generate default classification labels
+     * Returns the label format used to generate default classification labels
      * \since QGIS 2.6
      */
     const QgsRendererRangeLabelFormat &labelFormat() const { return mLabelFormat; }
@@ -240,14 +316,14 @@ class CORE_EXPORT QgsGraduatedSymbolRenderer : public QgsFeatureRenderer
     /**
      * Set the label format used to generate default classification labels
      * \param labelFormat The string appended to classification labels
-     * \param updateRanges If true then ranges ending with the old unit string are updated to the new.
+     * \param updateRanges If TRUE then ranges ending with the old unit string are updated to the new.
      * \since QGIS 2.6
      */
     void setLabelFormat( const QgsRendererRangeLabelFormat &labelFormat, bool updateRanges = false );
 
     /**
      * Reset the label decimal places to a numberbased on the minimum class interval
-     * \param updateRanges if true then ranges currently using the default label will be updated
+     * \param updateRanges if TRUE then ranges currently using the default label will be updated
      * \since QGIS 2.6
      */
     void calculateLabelPrecision( bool updateRanges = true );
@@ -261,6 +337,10 @@ class CORE_EXPORT QgsGraduatedSymbolRenderer : public QgsFeatureRenderer
      * \param symbol base symbol
      * \param ramp color ramp for classes
      * \param legendFormat
+     * \param useSymmetricMode A bool indicating if we want to have classes and hence colors ramp symmetric around a value
+     * \param symmetryPoint The value around which the classes will be symmetric if useSymmetricMode is checked
+     * \param listForCboPrettyBreaks The list of potential pivot values for symmetric mode with prettybreaks mode
+     * \param astride A bool indicating if the symmetry is made astride the symmetryPoint or not ( [-1,1] vs. [-1,0][0,1] )
      * \returns new QgsGraduatedSymbolRenderer object
      */
     static QgsGraduatedSymbolRenderer *createRenderer( QgsVectorLayer *vlayer,
@@ -269,14 +349,18 @@ class CORE_EXPORT QgsGraduatedSymbolRenderer : public QgsFeatureRenderer
         Mode mode,
         QgsSymbol *symbol SIP_TRANSFER,
         QgsColorRamp *ramp SIP_TRANSFER,
-        const QgsRendererRangeLabelFormat &legendFormat = QgsRendererRangeLabelFormat() );
+        const QgsRendererRangeLabelFormat &legendFormat = QgsRendererRangeLabelFormat(),
+        bool useSymmetricMode = false,
+        double symmetryPoint = 0.0,
+        QStringList listForCboPrettyBreaks = QStringList(),
+        bool astride = false );
 
     //! create renderer from XML element
     static QgsFeatureRenderer *create( QDomElement &element, const QgsReadWriteContext &context ) SIP_FACTORY;
 
     QDomElement save( QDomDocument &doc, const QgsReadWriteContext &context ) override;
     QgsLegendSymbolList legendSymbolItems() const override;
-    QSet< QString > legendKeysForFeature( QgsFeature &feature, QgsRenderContext &context ) override;
+    QSet< QString > legendKeysForFeature( const QgsFeature &feature, QgsRenderContext &context ) const override;
 
     /**
      * Returns the renderer's source symbol, which is the base symbol used for the each classes' symbol before applying
@@ -331,13 +415,13 @@ class CORE_EXPORT QgsGraduatedSymbolRenderer : public QgsFeatureRenderer
     void setSymbolSizes( double minSize, double maxSize );
 
     /**
-     * return the min symbol size when graduated by size
+     * Returns the min symbol size when graduated by size
      * \since QGIS 2.10
      */
     double minSymbolSize() const;
 
     /**
-     * return the max symbol size when graduated by size
+     * Returns the max symbol size when graduated by size
      * \since QGIS 2.10
      */
     double maxSymbolSize() const;
@@ -349,7 +433,7 @@ class CORE_EXPORT QgsGraduatedSymbolRenderer : public QgsFeatureRenderer
     };
 
     /**
-     * return the method used for graduation (either size or color)
+     * Returns the method used for graduation (either size or color)
      * \since QGIS 2.10
      */
     GraduatedMethod graduatedMethod() const { return mGraduatedMethod; }
@@ -379,7 +463,7 @@ class CORE_EXPORT QgsGraduatedSymbolRenderer : public QgsFeatureRenderer
      * different symbol sizes collapsed in one legend node or separated across multiple legend nodes etc.
      *
      * When renderer does not use data-defined size or does not use marker symbols, these settings will be ignored.
-     * Takes ownership of the passed settings objects. Null pointer is a valid input that disables data-defined
+     * Takes ownership of the passed settings objects. NULLPTR is a valid input that disables data-defined
      * size legend.
      * \since QGIS 3.0
      */
@@ -387,7 +471,7 @@ class CORE_EXPORT QgsGraduatedSymbolRenderer : public QgsFeatureRenderer
 
     /**
      * Returns configuration of appearance of legend when using data-defined size for marker symbols.
-     * Will return null if the functionality is disabled.
+     * Will return NULLPTR if the functionality is disabled.
      * \since QGIS 3.0
      */
     QgsDataDefinedSizeLegend *dataDefinedSizeLegend() const;
@@ -403,12 +487,16 @@ class CORE_EXPORT QgsGraduatedSymbolRenderer : public QgsFeatureRenderer
     std::unique_ptr<QgsExpression> mExpression;
     GraduatedMethod mGraduatedMethod = GraduatedColor;
     //! attribute index (derived from attribute name in startRender)
+
     int mAttrNum = -1;
     bool mCounting = false;
 
     std::unique_ptr<QgsDataDefinedSizeLegend> mDataDefinedSizeLegend;
 
-    QgsSymbol *symbolForValue( double value );
+    /**
+     * Gets the symbol which is used to represent \a value.
+     */
+    QgsSymbol *symbolForValue( double value ) const;
 
     /**
      * Returns the matching legend key for a value.
@@ -418,12 +506,17 @@ class CORE_EXPORT QgsGraduatedSymbolRenderer : public QgsFeatureRenderer
     //! \note not available in Python bindings
     static const char *graduatedMethodStr( GraduatedMethod method ) SIP_SKIP;
 
+    bool mUseSymmetricMode = false;
+    double mSymmetryPoint = 0.0;
+    QStringList mListForCboPrettyBreaks = QStringList();
+    bool mAstride = false;
+
   private:
 
     /**
      * Returns calculated value used for classifying a feature.
      */
-    QVariant valueForFeature( QgsFeature &feature, QgsRenderContext &context ) const;
+    QVariant valueForFeature( const QgsFeature &feature, QgsRenderContext &context ) const;
 
     //! Returns list of legend symbol items from individual ranges
     QgsLegendSymbolList baseLegendSymbolItems() const;
@@ -435,4 +528,4 @@ class CORE_EXPORT QgsGraduatedSymbolRenderer : public QgsFeatureRenderer
 
 };
 
-#endif // QGSGRADUATEDSYMBOLRENDERERV2_H
+#endif // QGSGRADUATEDSYMBOLRENDERER_H

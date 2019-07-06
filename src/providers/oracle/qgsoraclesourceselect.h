@@ -36,6 +36,7 @@ class QStringList;
 class QgsOracleColumnTypeThread;
 class QgisApp;
 class QgsOracleSourceSelect;
+class QgsProxyProgressTask;
 
 class QgsOracleSourceSelectDelegate : public QItemDelegate
 {
@@ -44,17 +45,16 @@ class QgsOracleSourceSelectDelegate : public QItemDelegate
   public:
     explicit QgsOracleSourceSelectDelegate( QObject *parent = nullptr )
       : QItemDelegate( parent )
-      , mConn( nullptr )
     {}
 
-    ~QgsOracleSourceSelectDelegate()
+    ~QgsOracleSourceSelectDelegate() override
     {
       setConn( nullptr );
     }
 
-    QWidget *createEditor( QWidget *parent, const QStyleOptionViewItem &option, const QModelIndex &index ) const;
-    void setModelData( QWidget *editor, QAbstractItemModel *model, const QModelIndex &index ) const;
-    void setEditorData( QWidget *editor, const QModelIndex &index ) const;
+    QWidget *createEditor( QWidget *parent, const QStyleOptionViewItem &option, const QModelIndex &index ) const override;
+    void setModelData( QWidget *editor, QAbstractItemModel *model, const QModelIndex &index ) const override;
+    void setEditorData( QWidget *editor, const QModelIndex &index ) const override;
 
     void setConnectionInfo( const QgsDataSourceUri &connInfo ) { mConnInfo = connInfo; }
 
@@ -71,7 +71,7 @@ class QgsOracleSourceSelectDelegate : public QItemDelegate
   private:
     QgsDataSourceUri mConnInfo;
     //! lazily initialized connection (to detect possible primary keys)
-    mutable QgsOracleConn *mConn;
+    mutable QgsOracleConn *mConn = nullptr;
 };
 
 
@@ -91,7 +91,7 @@ class QgsOracleSourceSelect : public QgsAbstractDataSourceWidget, private Ui::Qg
     //! Constructor
     QgsOracleSourceSelect( QWidget *parent = nullptr, Qt::WindowFlags fl = QgsGuiUtils::ModalDialogFlags, QgsProviderRegistry::WidgetMode widgetMode = QgsProviderRegistry::WidgetMode::None );
     //! Destructor
-    ~QgsOracleSourceSelect();
+    ~QgsOracleSourceSelect() override;
     //! Populate the connection list combo box
     void populateConnectionList();
     //! String list containing the selected tables
@@ -99,8 +99,6 @@ class QgsOracleSourceSelect : public QgsAbstractDataSourceWidget, private Ui::Qg
 
   signals:
     void addDatabaseLayers( QStringList const &layerPathList, QString const &providerKey );
-    void progress( int, int );
-    void progressMessage( QString );
 
   public slots:
     //! Determines the tables the user selected and closes the dialog
@@ -130,7 +128,7 @@ class QgsOracleSourceSelect : public QgsAbstractDataSourceWidget, private Ui::Qg
     void on_cmbConnections_currentIndexChanged( const QString &text );
     void setSql( const QModelIndex &index );
     //! Store the selected database
-    void setLayerType( QgsOracleLayerProperty layerProperty );
+    void setLayerType( const QgsOracleLayerProperty &layerProperty );
     void on_mTablesTreeView_clicked( const QModelIndex &index );
     void on_mTablesTreeView_doubleClicked( const QModelIndex &index );
     void treeWidgetSelectionChanged( const QItemSelection &selected, const QItemSelection &deselected );
@@ -154,11 +152,12 @@ class QgsOracleSourceSelect : public QgsAbstractDataSourceWidget, private Ui::Qg
     void setConnectionListPosition();
     // Combine the schema, table and column data into a single string
     // useful for display to the user
-    QString fullDescription( QString schema, QString table, QString column, QString type );
+    QString fullDescription( const QString &schema, const QString &table, const QString &column, const QString &type );
     // The column labels
     QStringList mColumnLabels;
     // Our thread for doing long running queries
     QgsOracleColumnTypeThread *mColumnTypeThread = nullptr;
+    QgsProxyProgressTask *mColumnTypeTask = nullptr;
     QgsDataSourceUri mConnInfo;
     QStringList mSelectedTables;
     // Storage for the range of layer type icons
@@ -173,7 +172,7 @@ class QgsOracleSourceSelect : public QgsAbstractDataSourceWidget, private Ui::Qg
     QPushButton *mAddButton = nullptr;
 
     void finishList();
-    bool mIsConnected;
+    bool mIsConnected = false;
 
     void showHelp();
 

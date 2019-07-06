@@ -22,6 +22,7 @@
 #include "qgis.h"
 #include "qgsunittypes.h"
 #include "qgsguiutils.h"
+#include "qgsscalewidget.h"
 #include "qgshelp.h"
 #include "qgis_app.h"
 
@@ -30,6 +31,9 @@ class QgsRelationManagerDialog;
 class QgsStyle;
 class QgsExpressionContext;
 class QgsLayerTreeGroup;
+class QgsMetadataWidget;
+class QgsTreeWidgetItem;
+class QgsLayerCapabilitiesModel;
 
 /**
  * Dialog to set project level properties
@@ -45,6 +49,7 @@ class APP_EXPORT QgsProjectProperties : public QgsOptionsDialogBase, private Ui:
     //! Constructor
     QgsProjectProperties( QgsMapCanvas *mapCanvas, QWidget *parent = nullptr, Qt::WindowFlags fl = QgsGuiUtils::ModalDialogFlags );
 
+    void setCurrentPage( const QString & );
 
     ~QgsProjectProperties() override;
 
@@ -54,7 +59,7 @@ class APP_EXPORT QgsProjectProperties : public QgsOptionsDialogBase, private Ui:
     QString title() const;
     void title( QString const &title );
 
-    //! Accessor for projection
+    //! Returns the projection as a WKT string
     QString projectionWkt();
 
   public slots:
@@ -88,13 +93,30 @@ class APP_EXPORT QgsProjectProperties : public QgsOptionsDialogBase, private Ui:
     //! A scale in the list of project scales changed
     void scaleItemChanged( QListWidgetItem *changedScaleItem );
 
+    //! generate the ts file with the locale selected in the checkbox
+    void onGenerateTsFileButton() const;
+
     /**
      * Set WMS default extent to current canvas extent
      */
     void pbnWMSExtCanvas_clicked();
+
+    /**
+     *
+     */
     void pbnWMSAddSRS_clicked();
     void pbnWMSRemoveSRS_clicked();
     void pbnWMSSetUsedSRS_clicked();
+
+    /**
+     * Slots to link WMS CRS list to WMTS Grids tree view
+     */
+    void lwWmsRowsInserted( const QModelIndex &parent, int first, int last );
+    void lwWmsRowsRemoved( const QModelIndex &parent, int first, int last );
+
+    /**
+     *
+     */
     void mAddWMSPrintLayoutButton_clicked();
     void mRemoveWMSPrintLayoutButton_clicked();
     void mAddLayerRestrictionButton_clicked();
@@ -127,6 +149,13 @@ class APP_EXPORT QgsProjectProperties : public QgsOptionsDialogBase, private Ui:
     void pbtnStyleLine_clicked();
     void pbtnStyleFill_clicked();
     void pbtnStyleColorRamp_clicked();
+
+    /**
+     * Slot to link WMTS checkboxes in tree widget
+     */
+    void twWmtsItemChanged( QTreeWidgetItem *item, int column );
+    void twWmtsGridItemDoubleClicked( QTreeWidgetItem *item, int column );
+    void twWmtsGridItemChanged( QTreeWidgetItem *item, int column );
 
     /**
      * Slot to link WFS checkboxes
@@ -167,14 +196,21 @@ class APP_EXPORT QgsProjectProperties : public QgsOptionsDialogBase, private Ui:
       DecimalDegrees, //!< Decimal degrees
       DegreesMinutes, //!< Degrees, decimal minutes
       DegreesMinutesSeconds, //!< Degrees, minutes, seconds
-      MapUnits, //! Show coordinates in map units
+      MapUnits, //!< Show coordinates in map units
     };
 
     QgsRelationManagerDialog *mRelationManagerDlg = nullptr;
     QgsMapCanvas *mMapCanvas = nullptr;
     QgsStyle *mStyle = nullptr;
+    QgsMetadataWidget *mMetadataWidget = nullptr;
+    QgsLayerCapabilitiesModel *mLayerCapabilitiesModel = nullptr;
+
+    QDoubleSpinBox *mWMSDefaultMapUnitsPerMm = nullptr;
+    QgsScaleWidget *mWMSDefaultMapUnitScale = nullptr;
 
     QgsCoordinateReferenceSystem mCrs;
+
+    void checkPageWidgetNameMap();
 
     void populateStyles();
     void editSymbol( QComboBox *cbo );
@@ -205,6 +241,10 @@ class APP_EXPORT QgsProjectProperties : public QgsOptionsDialogBase, private Ui:
     QList<EllipsoidDefs> mEllipsoidList;
     int mEllipsoidIndex;
 
+    //! populate WMTS tree
+    void populateWmtsTree( const QgsLayerTreeGroup *treeGroup, QgsTreeWidgetItem *treeItem );
+    //! add WMTS Grid definition based on CRS
+    void addWmtsGrid( const QString &crsStr );
     //! Check OWS configuration
     void checkOWS( QgsLayerTreeGroup *treeGroup, QStringList &owsNames, QStringList &encodingMessages );
 

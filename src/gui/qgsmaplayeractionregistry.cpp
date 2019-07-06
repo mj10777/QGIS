@@ -15,32 +15,30 @@
 
 #include "qgsmaplayeractionregistry.h"
 #include "qgsgui.h"
+#include "qgsvectorlayer.h"
 
-QgsMapLayerAction::QgsMapLayerAction( const QString &name, QObject *parent, Targets targets, const QIcon &icon )
+QgsMapLayerAction::QgsMapLayerAction( const QString &name, QObject *parent, Targets targets, const QIcon &icon, QgsMapLayerAction::Flags flags )
   : QAction( icon, name, parent )
-  , mSingleLayer( false )
-  , mSpecificLayerType( false )
-  , mLayerType( QgsMapLayer::VectorLayer )
   , mTargets( targets )
+  , mFlags( flags )
 {
 }
 
-QgsMapLayerAction::QgsMapLayerAction( const QString &name, QObject *parent, QgsMapLayer *layer, Targets targets, const QIcon &icon )
+QgsMapLayerAction::QgsMapLayerAction( const QString &name, QObject *parent, QgsMapLayer *layer, Targets targets, const QIcon &icon, QgsMapLayerAction::Flags flags )
   : QAction( icon, name, parent )
   , mSingleLayer( true )
   , mActionLayer( layer )
-  , mSpecificLayerType( false )
-  , mLayerType( QgsMapLayer::VectorLayer )
   , mTargets( targets )
+  , mFlags( flags )
 {
 }
 
-QgsMapLayerAction::QgsMapLayerAction( const QString &name, QObject *parent, QgsMapLayer::LayerType layerType, Targets targets, const QIcon &icon )
+QgsMapLayerAction::QgsMapLayerAction( const QString &name, QObject *parent, QgsMapLayerType layerType, Targets targets, const QIcon &icon, QgsMapLayerAction::Flags flags )
   : QAction( icon, name, parent )
-  , mSingleLayer( false )
   , mSpecificLayerType( true )
   , mLayerType( layerType )
   , mTargets( targets )
+  , mFlags( flags )
 {
 }
 
@@ -50,8 +48,24 @@ QgsMapLayerAction::~QgsMapLayerAction()
   QgsGui::mapLayerActionRegistry()->removeMapLayerAction( this );
 }
 
+QgsMapLayerAction::Flags QgsMapLayerAction::flags() const
+{
+  return mFlags;
+}
+
 bool QgsMapLayerAction::canRunUsingLayer( QgsMapLayer *layer ) const
 {
+  if ( mFlags & EnabledOnlyWhenEditable )
+  {
+    // action is only enabled for editable layers
+    if ( !layer )
+      return false;
+    if ( layer->type() != QgsMapLayerType::VectorLayer )
+      return false;
+    if ( !qobject_cast<QgsVectorLayer *>( layer )->isEditable() )
+      return false;
+  }
+
   //check layer details
   if ( !mSingleLayer && !mSpecificLayerType )
   {
@@ -64,7 +78,7 @@ bool QgsMapLayerAction::canRunUsingLayer( QgsMapLayer *layer ) const
     //action is a single layer type and layer matches
     return true;
   }
-  else if ( mSpecificLayerType && layer->type() == mLayerType )
+  else if ( mSpecificLayerType && layer && layer->type() == mLayerType )
   {
     //action is for a layer type and layer type matches
     return true;
@@ -88,6 +102,11 @@ void QgsMapLayerAction::triggerForLayer( QgsMapLayer *layer )
   emit triggeredForLayer( layer );
 }
 
+bool QgsMapLayerAction::isEnabledOnlyWhenEditable() const
+{
+  return mFlags & EnabledOnlyWhenEditable;
+}
+
 //
 // Main class begins now...
 //
@@ -107,7 +126,8 @@ QList< QgsMapLayerAction * > QgsMapLayerActionRegistry::mapLayerActions( QgsMapL
 {
   QList< QgsMapLayerAction * > validActions;
 
-  Q_FOREACH ( QgsMapLayerAction *action, mMapLayerActionList )
+  const auto constMMapLayerActionList = mMapLayerActionList;
+  for ( QgsMapLayerAction *action : constMMapLayerActionList )
   {
     if ( action->canRunUsingLayer( layer ) && ( targets & action->targets() ) )
     {

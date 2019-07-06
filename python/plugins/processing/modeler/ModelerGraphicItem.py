@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 
 """
 ***************************************************************************
@@ -22,24 +23,27 @@ __author__ = 'Victor Olaya'
 __date__ = 'August 2012'
 __copyright__ = '(C) 2012, Victor Olaya'
 
-# This will get replaced with a git SHA1 when you do a git archive
-
-__revision__ = '$Format:%H$'
-
 import os
 import math
 
 from qgis.PyQt.QtCore import Qt, QPointF, QRectF
-from qgis.PyQt.QtGui import QFont, QFontMetricsF, QPen, QBrush, QColor, QPolygonF, QPicture, QPainter
-from qgis.PyQt.QtWidgets import QGraphicsItem, QMessageBox, QMenu
+from qgis.PyQt.QtGui import QFont, QFontMetricsF, QPen, QBrush, QColor, QPolygonF, QPicture, QPainter, QPalette
+from qgis.PyQt.QtWidgets import QApplication, QGraphicsItem, QMessageBox, QMenu
 from qgis.PyQt.QtSvg import QSvgRenderer
 from qgis.core import (QgsProcessingParameterDefinition,
                        QgsProcessingModelParameter,
                        QgsProcessingModelOutput,
                        QgsProcessingModelChildAlgorithm,
-                       QgsProcessingModelAlgorithm)
+                       QgsProcessingModelAlgorithm,
+                       QgsProject)
+from qgis.gui import (
+    QgsProcessingParameterDefinitionDialog,
+    QgsProcessingParameterWidgetContext
+)
 from processing.modeler.ModelerParameterDefinitionDialog import ModelerParameterDefinitionDialog
 from processing.modeler.ModelerParametersDialog import ModelerParametersDialog
+from processing.tools.dataobjects import createContext
+from qgis.utils import iface
 
 pluginPath = os.path.split(os.path.dirname(__file__))[0]
 
@@ -51,17 +55,23 @@ class ModelerGraphicItem(QGraphicsItem):
 
     def __init__(self, element, model, controls, scene=None):
         super(ModelerGraphicItem, self).__init__(None)
+        self.setAcceptHoverEvents(True)
         self.controls = controls
         self.model = model
         self.scene = scene
         self.element = element
+        self.hover_over_item = False
         if isinstance(element, QgsProcessingModelParameter):
             svg = QSvgRenderer(os.path.join(pluginPath, 'images', 'input.svg'))
             self.picture = QPicture()
             painter = QPainter(self.picture)
             svg.render(painter)
             self.pixmap = None
-            self.text = self.model.parameterDefinition(element.parameterName()).description()
+            paramDef = self.model.parameterDefinition(element.parameterName())
+            if paramDef:
+                self.text = paramDef.description()
+            else:
+                self.text = 'Error ({})'.format(element.parameterName())
         elif isinstance(element, QgsProcessingModelOutput):
             # Output name
             svg = QSvgRenderer(os.path.join(pluginPath, 'images', 'output.svg'))
@@ -71,15 +81,24 @@ class ModelerGraphicItem(QGraphicsItem):
             self.pixmap = None
             self.text = element.name()
         else:
+            if element.algorithm().svgIconPath():
+                svg = QSvgRenderer(element.algorithm().svgIconPath())
+                size = svg.defaultSize()
+                self.picture = QPicture()
+                painter = QPainter(self.picture)
+                painter.scale(16 / size.width(), 16 / size.width())
+                svg.render(painter)
+                self.pixmap = None
+            else:
+                self.pixmap = element.algorithm().icon().pixmap(15, 15)
             self.text = element.description()
-            self.pixmap = element.algorithm().icon().pixmap(15, 15)
         self.arrows = []
         self.setFlag(QGraphicsItem.ItemIsMovable, True)
         self.setFlag(QGraphicsItem.ItemIsSelectable, True)
         self.setFlag(QGraphicsItem.ItemSendsGeometryChanges, True)
         self.setZValue(1000)
 
-        if not isinstance(element, QgsProcessingModelOutput) and controls:
+        if controls:
             svg = QSvgRenderer(os.path.join(pluginPath, 'images', 'edit.svg'))
             picture = QPicture()
             painter = QPainter(picture)
@@ -162,6 +181,31 @@ class ModelerGraphicItem(QGraphicsItem):
     def mouseDoubleClickEvent(self, event):
         self.editElement()
 
+    def hoverEnterEvent(self, event):
+        self.updateToolTip(event)
+
+    def hoverMoveEvent(self, event):
+        self.updateToolTip(event)
+
+    def hoverLeaveEvent(self, event):
+        self.setToolTip('')
+        if self.hover_over_item:
+            self.hover_over_item = False
+            self.update()
+            self.repaintArrows()
+
+    def updateToolTip(self, event):
+        prev_status = self.hover_over_item
+        if self.itemRect().contains(event.pos()):
+            self.setToolTip(self.text)
+            self.hover_over_item = True
+        else:
+            self.setToolTip('')
+            self.hover_over_item = False
+        if self.hover_over_item != prev_status:
+            self.update()
+            self.repaintArrows()
+
     def contextMenuEvent(self, event):
         if isinstance(self.element, QgsProcessingModelOutput):
             return
@@ -191,30 +235,66 @@ class ModelerGraphicItem(QGraphicsItem):
                                 'The selected algorithm depends on other currently non-active algorithms.\n'
                                 'Activate them them before trying to activate it.')
 
+    def create_widget_context(self):
+        """
+        Returns a new widget context for use in the model editor
+        """
+        widget_context = QgsProcessingParameterWidgetContext()
+        widget_context.setProject(QgsProject.instance())
+        if iface is not None:
+            widget_context.setMapCanvas(iface.mapCanvas())
+        widget_context.setModel(self.model)
+        return widget_context
+
     def editElement(self):
         if isinstance(self.element, QgsProcessingModelParameter):
-            dlg = ModelerParameterDefinitionDialog(self.model,
-                                                   param=self.model.parameterDefinition(self.element.parameterName()))
-            if dlg.exec_() and dlg.param is not None:
+            existing_param = self.model.parameterDefinition(self.element.parameterName())
+            new_param = None
+            if ModelerParameterDefinitionDialog.use_legacy_dialog(param=existing_param):
+                # boo, old api
+                dlg = ModelerParameterDefinitionDialog(self.model,
+                                                       param=existing_param)
+                if dlg.exec_():
+                    new_param = dlg.param
+            else:
+                # yay, use new API!
+                context = createContext()
+                widget_context = self.create_widget_context()
+                dlg = QgsProcessingParameterDefinitionDialog(type=existing_param.type(),
+                                                             context=context,
+                                                             widgetContext=widget_context,
+                                                             definition=existing_param,
+                                                             algorithm=self.model)
+                if dlg.exec_():
+                    new_param = dlg.createParameter(existing_param.name())
+
+            if new_param is not None:
                 self.model.removeModelParameter(self.element.parameterName())
-                self.element.setParameterName(dlg.param.name())
-                self.element.setDescription(dlg.param.name())
-                self.model.addModelParameter(dlg.param, self.element)
-                self.text = dlg.param.description()
+                self.element.setParameterName(new_param.name())
+                self.element.setDescription(new_param.name())
+                self.model.addModelParameter(new_param, self.element)
+                self.text = new_param.description()
                 self.scene.dialog.repaintModel()
         elif isinstance(self.element, QgsProcessingModelChildAlgorithm):
-            dlg = None
-            try:
-                dlg = self.element.algorithm().getCustomModelerParametersDialog(self.model, self.element.childId())
-            except:
-                pass
-            if not dlg:
-                dlg = ModelerParametersDialog(self.element.algorithm(), self.model, self.element.childId())
+            elemAlg = self.element.algorithm()
+            dlg = ModelerParametersDialog(elemAlg, self.model, self.element.childId(), self.element.configuration())
             if dlg.exec_():
                 alg = dlg.createAlgorithm()
                 alg.setChildId(self.element.childId())
                 self.updateAlgorithm(alg)
                 self.scene.dialog.repaintModel()
+
+        elif isinstance(self.element, QgsProcessingModelOutput):
+            child_alg = self.model.childAlgorithm(self.element.childId())
+            param_name = '{}:{}'.format(self.element.childId(), self.element.name())
+            dlg = ModelerParameterDefinitionDialog(self.model,
+                                                   param=self.model.parameterDefinition(param_name))
+            if dlg.exec_() and dlg.param is not None:
+                model_output = child_alg.modelOutput(self.element.name())
+                model_output.setDescription(dlg.param.description())
+                model_output.setDefaultValue(dlg.param.defaultValue())
+                model_output.setMandatory(not (dlg.param.flags() & QgsProcessingParameterDefinition.FlagOptional))
+                self.model.updateDestinationParameters()
 
     def updateAlgorithm(self, alg):
         existing_child = self.model.childAlgorithm(alg.childId())
@@ -250,6 +330,11 @@ class ModelerGraphicItem(QGraphicsItem):
             else:
                 self.scene.dialog.haschanged = True
                 self.scene.dialog.repaintModel()
+        elif isinstance(self.element, QgsProcessingModelOutput):
+            self.model.childAlgorithm(self.element.childId()).removeModelOutput(self.element.name())
+            self.model.updateDestinationParameters()
+            self.scene.dialog.haschanged = True
+            self.scene.dialog.repaintModel()
 
     def getAdjustedText(self, text):
         font = QFont('Verdana', 8)
@@ -266,11 +351,14 @@ class ModelerGraphicItem(QGraphicsItem):
             w = fm.width(text)
         return text
 
-    def paint(self, painter, option, widget=None):
-        rect = QRectF(-(ModelerGraphicItem.BOX_WIDTH + 2) / 2.0,
+    def itemRect(self):
+        return QRectF(-(ModelerGraphicItem.BOX_WIDTH + 2) / 2.0,
                       -(ModelerGraphicItem.BOX_HEIGHT + 2) / 2.0,
                       ModelerGraphicItem.BOX_WIDTH + 2,
                       ModelerGraphicItem.BOX_HEIGHT + 2)
+
+    def paint(self, painter, option, widget=None):
+        rect = self.itemRect()
 
         if isinstance(self.element, QgsProcessingModelParameter):
             color = QColor(238, 242, 131)
@@ -287,6 +375,8 @@ class ModelerGraphicItem(QGraphicsItem):
         if self.isSelected():
             stroke = selected
             color = color.darker(110)
+        if self.hover_over_item:
+            color = color.darker(105)
         painter.setPen(QPen(stroke, 0))  # 0 width "cosmetic" pen
         painter.setBrush(QBrush(color, Qt.SolidPattern))
         painter.drawRect(rect)
@@ -303,7 +393,7 @@ class ModelerGraphicItem(QGraphicsItem):
         h = fm.ascent()
         pt = QPointF(-ModelerGraphicItem.BOX_WIDTH / 2 + 25, ModelerGraphicItem.BOX_HEIGHT / 2.0 - h + 1)
         painter.drawText(pt, text)
-        painter.setPen(QPen(Qt.black))
+        painter.setPen(QPen(QApplication.palette().color(QPalette.WindowText)))
         if isinstance(self.element, QgsProcessingModelChildAlgorithm):
             h = -(fm.height() * 1.2)
             h = h - ModelerGraphicItem.BOX_HEIGHT / 2.0 + 5
@@ -372,6 +462,10 @@ class ModelerGraphicItem(QGraphicsItem):
         else:
             return QPointF(0, 0)
 
+    def repaintArrows(self):
+        for arrow in self.arrows:
+            arrow.update()
+
     def itemChange(self, change, value):
         if change == QGraphicsItem.ItemPositionHasChanged:
             for arrow in self.arrows:
@@ -385,8 +479,10 @@ class ModelerGraphicItem(QGraphicsItem):
                 self.model.parameterComponent(self.element.parameterName()).setPosition(self.pos())
             elif isinstance(self.element, QgsProcessingModelOutput):
                 self.model.childAlgorithm(self.element.childId()).modelOutput(self.element.name()).setPosition(self.pos())
+        elif change == QGraphicsItem.ItemSelectedChange:
+            self.repaintArrows()
 
-        return value
+        return super().itemChange(change, value)
 
     def polygon(self):
         font = QFont('Verdana', 8)

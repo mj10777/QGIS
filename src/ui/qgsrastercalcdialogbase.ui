@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>756</width>
-    <height>637</height>
+    <height>644</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -25,7 +25,7 @@
       </property>
       <widget class="QGroupBox" name="mRasterBandsGroupBox">
        <property name="title">
-        <string>Raster bands</string>
+        <string>Raster Bands</string>
        </property>
        <layout class="QGridLayout" name="gridLayout_2">
         <item row="0" column="0">
@@ -35,7 +35,7 @@
       </widget>
       <widget class="QGroupBox" name="mResultGroupBox">
        <property name="title">
-        <string>Result layer</string>
+        <string>Result Layer</string>
        </property>
        <layout class="QGridLayout" name="gridLayout_4" columnstretch="0,1,1,0">
         <item row="3" column="0" colspan="4">
@@ -48,14 +48,14 @@
            </widget>
           </item>
           <item row="3" column="4">
-           <widget class="QSpinBox" name="mNRowsSpinBox">
+           <widget class="QgsSpinBox" name="mNRowsSpinBox">
             <property name="maximum">
              <number>999999999</number>
             </property>
            </widget>
           </item>
           <item row="2" column="1">
-           <widget class="QDoubleSpinBox" name="mYMinSpinBox">
+           <widget class="QgsDoubleSpinBox" name="mYMinSpinBox">
             <property name="decimals">
              <number>5</number>
             </property>
@@ -84,7 +84,7 @@
           <item row="1" column="3">
            <widget class="QLabel" name="mXMaxLabel">
             <property name="text">
-             <string>X Max</string>
+             <string>X max</string>
             </property>
            </widget>
           </item>
@@ -96,7 +96,7 @@
            </widget>
           </item>
           <item row="3" column="1">
-           <widget class="QSpinBox" name="mNColumnsSpinBox">
+           <widget class="QgsSpinBox" name="mNColumnsSpinBox">
             <property name="maximum">
              <number>999999999</number>
             </property>
@@ -110,7 +110,7 @@
            </widget>
           </item>
           <item row="2" column="4">
-           <widget class="QDoubleSpinBox" name="mYMaxSpinBox">
+           <widget class="QgsDoubleSpinBox" name="mYMaxSpinBox">
             <property name="decimals">
              <number>5</number>
             </property>
@@ -123,7 +123,7 @@
            </widget>
           </item>
           <item row="1" column="1">
-           <widget class="QDoubleSpinBox" name="mXMinSpinBox">
+           <widget class="QgsDoubleSpinBox" name="mXMinSpinBox">
             <property name="decimals">
              <number>5</number>
             </property>
@@ -136,7 +136,7 @@
            </widget>
           </item>
           <item row="1" column="4">
-           <widget class="QDoubleSpinBox" name="mXMaxSpinBox">
+           <widget class="QgsDoubleSpinBox" name="mXMaxSpinBox">
             <property name="decimals">
              <number>5</number>
             </property>
@@ -164,7 +164,7 @@
          </layout>
         </item>
         <item row="0" column="1" colspan="3">
-         <widget class="QgsFileWidget" name="mOutputLayer"/>
+         <widget class="QgsFileWidget" name="mOutputLayer" native="true"/>
         </item>
         <item row="1" column="0">
          <widget class="QLabel" name="mOutputFormatLabel">
@@ -176,7 +176,7 @@
         <item row="2" column="0">
          <widget class="QPushButton" name="mCurrentLayerExtentButton">
           <property name="text">
-           <string>Selected layer extent</string>
+           <string>Selected Layer Extent</string>
           </property>
          </widget>
         </item>
@@ -447,7 +447,7 @@
        <item>
         <widget class="QGroupBox" name="groupBox">
          <property name="title">
-          <string>Raster calculator expression</string>
+          <string>Raster Calculator Expression</string>
          </property>
          <layout class="QVBoxLayout" name="verticalLayout_2">
           <property name="leftMargin">
@@ -499,15 +499,25 @@
    <container>1</container>
   </customwidget>
   <customwidget>
+   <class>QgsFileWidget</class>
+   <extends>QWidget</extends>
+   <header>qgsfilewidget.h</header>
+  </customwidget>
+  <customwidget>
+   <class>QgsDoubleSpinBox</class>
+   <extends>QDoubleSpinBox</extends>
+   <header>qgsdoublespinbox.h</header>
+  </customwidget>
+  <customwidget>
    <class>QgsProjectionSelectionWidget</class>
    <extends>QWidget</extends>
    <header>qgsprojectionselectionwidget.h</header>
    <container>1</container>
   </customwidget>
   <customwidget>
-   <class>QgsFileWidget</class>
-   <extends>QWidget</extends>
-   <header>qgsfilewidget.h</header>
+   <class>QgsSpinBox</class>
+   <extends>QSpinBox</extends>
+   <header>qgsspinbox.h</header>
   </customwidget>
  </customwidgets>
  <tabstops>

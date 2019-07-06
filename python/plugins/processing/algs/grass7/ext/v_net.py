@@ -25,16 +25,12 @@ __author__ = 'Médéric Ribreux'
 __date__ = 'December 2015'
 __copyright__ = '(C) 2015, Médéric Ribreux'
 
-# This will get replaced with a git SHA1 when you do a git archive
-
-__revision__ = '$Format:%H$'
-
 import os
 from qgis.core import QgsProcessingException
 from processing.tools.system import getTempFilename
 
 
-def incorporatePoints(alg, parameters, context, pointLayerName='points', networkLayerName='input'):
+def incorporatePoints(alg, parameters, context, feedback, pointLayerName='points', networkLayerName='input'):
     """
     incorporate points with lines to form a GRASS network
     """
@@ -58,12 +54,12 @@ def incorporatePoints(alg, parameters, context, pointLayerName='points', network
         threshold = alg.parameterAsDouble(parameters, 'threshold', context)
 
         # Create the v.net connect command for point layer integration
-        command = u"v.net input={} points={} output={} operation=connect threshold={}".format(
+        command = 'v.net -s input={} points={} output={} operation=connect threshold={}'.format(
             lineLayer, pointLayer, intLayer, threshold)
         alg.commands.append(command)
 
         # Connect the point layer database to the layer 2 of the network
-        command = u"v.db.connect -o map={} table={} layer=2".format(intLayer, pointLayer)
+        command = 'v.db.connect -o map={} table={} layer=2'.format(intLayer, pointLayer)
         alg.commands.append(command)
 
         # remove undesired parameters
@@ -76,7 +72,7 @@ def incorporatePoints(alg, parameters, context, pointLayerName='points', network
     if 'threshold' in parameters:
         alg.removeParameter('threshold')
 
-    alg.processCommand(parameters, context)
+    alg.processCommand(parameters, context, feedback)
 
 
 def variableOutput(alg, layers, parameters, context, nocats=True):
@@ -96,18 +92,26 @@ def variableOutput(alg, layers, parameters, context, nocats=True):
     :param context:
     :param nocats: do not add categories.
     """
-    for outputName, typeList in list(layers.items()):
+    for outputName, typeList in layers.items():
         if not isinstance(typeList, list):
             continue
 
-        fileName = alg.parameterAsOutputLayer(parameters, outputName, context)
-        grassName = '{}{}'.format(typeList[0], alg.uniqueSuffix)
-        alg.exportVectorLayer(
-            grassName, fileName, typeList[1], typeList[2],
-            typeList[3])
+        file_name = alg.parameterAsOutputLayer(parameters, outputName, context)
+
+        src_layer = typeList[0]
+        output_type = typeList[1]
+        output_layer_number = typeList[2]
+        no_cats = typeList[3]
+
+        grass_name = '{}{}'.format(src_layer, alg.uniqueSuffix)
+        alg.exportVectorLayer(grassName=grass_name,
+                              fileName=file_name,
+                              layer=output_layer_number,
+                              exportnocat=no_cats,
+                              dataType=output_type)
 
 
-def processOutputs(alg, parameters, context):
+def processOutputs(alg, parameters, context, feedback):
     idx = alg.parameterAsInt(parameters, 'operation', context)
     operations = alg.parameterDefinition('operation').options()
     operation = operations[idx]

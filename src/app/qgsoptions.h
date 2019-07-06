@@ -61,14 +61,14 @@ class APP_EXPORT QgsOptions : public QgsOptionsDialogBase, private Ui::QgsOption
      */
     void setCurrentPage( const QString &pageWidgetName );
 
+    void setCurrentPage( int pageNumber );
+
   public slots:
     void cbxProjectDefaultNew_toggled( bool checked );
     void setCurrentProjectDefault();
     void resetProjectDefault();
     void browseTemplateFolder();
     void resetTemplateFolder();
-    //! Slot called when user chooses to change the project wide projection.
-    void leProjectGlobalCrs_crsChanged( const QgsCoordinateReferenceSystem &crs );
     //! Slot called when user chooses to change the default 'on the fly' projection.
     void leLayerGlobalCrs_crsChanged( const QgsCoordinateReferenceSystem &crs );
     void lstGdalDrivers_itemDoubleClicked( QTreeWidgetItem *item, int column );
@@ -95,7 +95,7 @@ class APP_EXPORT QgsOptions : public QgsOptionsDialogBase, private Ui::QgsOption
     void selectProjectOnLaunch();
 
     /**
-     * Return the desired state of newly added layers. If a layer
+     * Returns the desired state of newly added layers. If a layer
      * is to be drawn when added to the map, this function returns
      * true.
      */
@@ -112,9 +112,6 @@ class APP_EXPORT QgsOptions : public QgsOptionsDialogBase, private Ui::QgsOption
 
     //! Slot to select custom font family choice for app
     void mFontFamilyComboBox_currentFontChanged( const QFont &font );
-
-    //! Slot to set whether to use custom group boxes
-    void useCustomGroupBox( bool chkd );
 
     void mProxyTypeComboBox_currentIndexChanged( int idx );
 
@@ -238,7 +235,6 @@ class APP_EXPORT QgsOptions : public QgsOptionsDialogBase, private Ui::QgsOption
     void saveMinMaxLimits( QComboBox *cbox, const QString &name );
     void setZoomFactorValue();
     double zoomFactorValue();
-    QgsCoordinateReferenceSystem mDefaultCrs;
     QgsCoordinateReferenceSystem mLayerDefaultCrs;
     bool mLoadedGdalDriverList;
 
@@ -249,6 +245,10 @@ class APP_EXPORT QgsOptions : public QgsOptionsDialogBase, private Ui::QgsOption
 
     QListWidgetItem *addScaleToScaleList( const QString &newScale );
     void addScaleToScaleList( QListWidgetItem *newItem );
+
+    void refreshSchemeComboBox();
+
+    void updateSampleLocaleText();
 
   protected:
     QgisAppStyleSheet *mStyleSheetBuilder = nullptr;
@@ -262,6 +262,12 @@ class APP_EXPORT QgsOptions : public QgsOptionsDialogBase, private Ui::QgsOption
 
     QList< QgsOptionsPageWidget * > mAdditionalOptionWidgets;
     QgsLocatorOptionsWidget *mLocatorOptionsWidget = nullptr;
+
+    void updateActionsForCurrentColorScheme( QgsColorScheme *scheme );
+
+    void checkPageWidgetNameMap();
+
+    friend class QgsAppScreenShots;
 };
 
 #endif // #ifndef QGSOPTIONS_H

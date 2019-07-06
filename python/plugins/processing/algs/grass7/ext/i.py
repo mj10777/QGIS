@@ -21,13 +21,10 @@ __author__ = 'Médéric Ribreux'
 __date__ = 'April 2016'
 __copyright__ = '(C) 2016, Médéric Ribreux'
 
-# This will get replaced with a git SHA1 when you do a git archive
-
-__revision__ = '$Format:%H$'
-
 import os
 from processing.tools.system import (isWindows, getTempFilename)
 from processing.algs.grass7.Grass7Utils import Grass7Utils
+from qgis.PyQt.QtCore import QDir
 from qgis.core import QgsProcessingParameterString
 from qgis.core import QgsMessageLog
 
@@ -168,10 +165,10 @@ def verifyRasterNum(alg, parameters, context, rasters, mini, maxi=None):
     """Verify that we have at least n rasters in multipleInput"""
     num = len(alg.parameterAsLayerList(parameters, rasters, context))
     if num < mini:
-        return 'You need to set at least {} input rasters for this algorithm!'.format(mini)
+        return False, 'You need to set at least {} input rasters for this algorithm!'.format(mini)
     if maxi and num > maxi:
-        return 'You need to set a maximum of {} input rasters for this algorithm!'.format(maxi)
-    return None
+        return False, 'You need to set a maximum of {} input rasters for this algorithm!'.format(maxi)
+    return True, None
 
 
 # def file2Output(alg, output):
@@ -181,7 +178,7 @@ def verifyRasterNum(alg, parameters, context, rasters, mini, maxi=None):
 #     alg.removeOutputFromName(output)
 
 #     # Create output parameter
-#     param = getParameterFromString("ParameterString|{}|output file|None|False|False".format(output))
+#     param = getParameterFromString("ParameterString|{}|output file|None|False|False".format(output), 'GrassAlgorithm')
 #     param.value = outputFile.value
 #     alg.addParameter(param)
 
@@ -191,9 +188,9 @@ def verifyRasterNum(alg, parameters, context, rasters, mini, maxi=None):
 def createDestDir(alg, toFile):
     """ Generates an mkdir command for GRASS7 script """
     # Creates the destination directory
-    command = "{} {}".format(
+    command = "{} \"{}\"".format(
         "MD" if isWindows() else "mkdir -p",
-        os.path.dirname(toFile)
+        QDir.toNativeSeparators(os.path.dirname(toFile))
     )
     alg.commands.append(command)
 
@@ -201,10 +198,10 @@ def createDestDir(alg, toFile):
 def moveFile(alg, fromFile, toFile):
     """ Generates a move command for GRASS7 script """
     createDestDir(alg, toFile)
-    command = "{} {} {}".format(
+    command = "{} \"{}\" \"{}\"".format(
         "MOVE /Y" if isWindows() else "mv -f",
-        fromFile,
-        toFile
+        QDir.toNativeSeparators(fromFile),
+        QDir.toNativeSeparators(toFile)
     )
     alg.commands.append(command)
 
@@ -212,8 +209,8 @@ def moveFile(alg, fromFile, toFile):
 def copyFile(alg, fromFile, toFile):
     """ Generates a copy command for GRASS7 script """
     createDestDir(alg, toFile)
-    command = "{} {} {}".format(
+    command = "{} \"{}\" \"{}\"".format(
         "COPY /Y" if isWindows() else "cp -f",
-        fromFile,
-        toFile)
+        QDir.toNativeSeparators(fromFile),
+        QDir.toNativeSeparators(toFile))
     alg.commands.append(command)

@@ -49,7 +49,7 @@ class CORE_EXPORT QgsLayoutNodesItem: public QgsLayoutItem
      * \param point is the location of the new node (in scene coordinates)
      * \param checkArea is a flag to indicate if there's a space constraint.
      * \param radius is the space contraint and is used only if checkArea is
-     * true. Typically, if this flag is true, the new node has to be nearer
+     * true. Typically, if this flag is TRUE, the new node has to be nearer
      * than radius to the shape to be added.
      */
     bool addNode( QPointF point, bool checkArea = true, double radius = 10 );
@@ -72,7 +72,7 @@ class CORE_EXPORT QgsLayoutNodesItem: public QgsLayoutItem
      * \param point is the location to search for nodes from (in scene coordinates)
      * \param searchInRadius is a flag to indicate if the area of research is
      * limited in space.
-     * \param radius is only used if searchInRadius is true
+     * \param radius is only used if searchInRadius is TRUE
      */
     int nodeAtPosition( QPointF point, bool searchInRadius = true, double radius = 10 ) const;
 
@@ -80,7 +80,7 @@ class CORE_EXPORT QgsLayoutNodesItem: public QgsLayoutItem
      * Gets the position of a node in scene coordinates.
       * \param index of the node
       * \param position the position of the node
-      * \returns true if the index is valid and the position is set, false otherwise
+      * \returns TRUE if the index is valid and the position is set, FALSE otherwise
       */
     bool nodePosition( int index, QPointF &position ) const;
 
@@ -138,10 +138,10 @@ class CORE_EXPORT QgsLayoutNodesItem: public QgsLayoutItem
     double mMaxSymbolBleed = 0.0;
 
     //! Method called in addNode.
-    virtual bool _addNode( const int nodeIndex, QPointF newNode, const double radius ) = 0;
+    virtual bool _addNode( int nodeIndex, QPointF newNode, double radius ) = 0;
 
     //! Method called in removeNode.
-    virtual bool _removeNode( const int nodeIndex ) = 0;
+    virtual bool _removeNode( int nodeIndex ) = 0;
 
     //! Method called in paint.
     virtual void _draw( QgsLayoutItemRenderContext &context, const QStyleOptionGraphicsItem *itemStyle = nullptr ) = 0;

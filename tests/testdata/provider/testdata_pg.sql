@@ -20,9 +20,23 @@ SET client_min_messages = warning;
 --
 
 CREATE EXTENSION IF NOT EXISTS postgis;
+CREATE EXTENSION IF NOT EXISTS citext;
 
+
+--- Create qgis_test schema
 DROP SCHEMA IF EXISTS qgis_test CASCADE;
 CREATE SCHEMA qgis_test;
+GRANT ALL ON SCHEMA qgis_test TO public;
+ALTER DEFAULT PRIVILEGES IN SCHEMA qgis_test GRANT ALL ON TABLES TO public;
+ALTER DEFAULT PRIVILEGES IN SCHEMA qgis_test GRANT ALL ON SEQUENCES TO public;
+
+
+--- Create "CamelCaseSchema" schema
+DROP SCHEMA IF EXISTS "CamelCaseSchema" CASCADE;
+CREATE SCHEMA "CamelCaseSchema";
+GRANT ALL ON SCHEMA "CamelCaseSchema" TO public;
+ALTER DEFAULT PRIVILEGES IN SCHEMA "CamelCaseSchema" GRANT ALL ON TABLES TO public;
+ALTER DEFAULT PRIVILEGES IN SCHEMA "CamelCaseSchema" GRANT ALL ON SEQUENCES TO public;
 
 
 SET default_tablespace = '';
@@ -42,6 +56,8 @@ CREATE TABLE qgis_test."someData" (
     num_char text,
     geom public.geometry(Point,4326)
 );
+
+COMMENT ON TABLE qgis_test."someData" IS 'QGIS Test Table';
 
 CREATE TABLE qgis_test."some_poly_data" (
     pk SERIAL NOT NULL,
@@ -73,6 +89,14 @@ INSERT INTO qgis_test."some_poly_data" (pk, geom) VALUES
 (3, ST_GeomFromText('Polygon ((-68.4 75.8, -67.5 72.6, -68.6 73.7, -70.2 72.9, -68.4 75.8))', 4326) ),
 (4, NULL)
 ;
+
+
+CREATE TABLE qgis_test.array_tbl (id serial PRIMARY KEY, location int[], geom geometry(Point,3857));
+
+INSERT INTO qgis_test.array_tbl (location, geom) VALUES ('{1, 2, 3}', 'srid=3857;Point(913209.0358 5606025.2373)'::geometry);
+INSERT INTO qgis_test.array_tbl (location, geom) VALUES ('{}', 'srid=3857;Point(913214.6741 5606017.8743)'::geometry);
+INSERT INTO qgis_test.array_tbl (geom) VALUES ('srid=3857;Point(913204.9128 5606011.4565)'::geometry);
+
 
 -- Provider check with compound key
 
@@ -457,6 +481,8 @@ INSERT INTO qgis_test.rename_table (field1,field2) VALUES ('a','b');
 -- Table for editor widget types
 --
 
+DROP TABLE IF EXISTS qgis_editor_widget_styles;
+
 CREATE TABLE qgis_editor_widget_styles
 (
   schema_name TEXT NOT NULL,
@@ -491,6 +517,37 @@ INSERT INTO qgis_test.boolean_table VALUES
 (2, FALSE),
 (3, NULL);
 
+
+--------------------------------------
+-- Table for citext
+--
+
+CREATE TABLE qgis_test.citext_table
+(
+  id int PRIMARY KEY,
+  fld1 citext
+);
+
+INSERT INTO qgis_test.citext_table VALUES
+(1, 'test val'),
+(2, NULL);
+
+
+--------------------------------------
+-- Table for bytea
+--
+
+CREATE TABLE qgis_test.byte_a_table
+(
+  id int PRIMARY KEY,
+  fld1 bytea
+);
+
+INSERT INTO qgis_test.byte_a_table VALUES
+(1, encode('binvalue', 'base64')::bytea),
+(2, NULL);
+
+
 -----------------------------
 -- Table for constraint tests
 --
@@ -520,4 +577,43 @@ INSERT INTO qgis_test.check_constraints VALUES (
   1, -- id
   4, -- a
   3  -- b
+);
+
+
+---------------------------------------------
+--
+-- Table and view for tests on  checkPrimaryKeyUnicity
+--
+
+DROP TABLE IF EXISTS qgis_test.b21839_pk_unicity CASCADE;
+CREATE TABLE qgis_test.b21839_pk_unicity
+(
+  pk serial NOT NULL,
+  an_int integer NOT NULL,
+  a_unique_int integer NOT NULL,
+  geom geometry(Point),
+  CONSTRAINT b21839_pk_unicity_pkey PRIMARY KEY (pk)
 )
+WITH (
+  OIDS=FALSE
+);
+
+
+INSERT INTO qgis_test.b21839_pk_unicity(
+            pk, an_int, a_unique_int , geom)
+    VALUES (1, 1, 1, ST_GeomFromText('point( 1 1)'));
+
+
+INSERT INTO qgis_test.b21839_pk_unicity(
+            pk, an_int, a_unique_int, geom)
+    VALUES (2, 1, 2, ST_GeomFromText('point( 1 3)'));
+
+
+
+CREATE OR REPLACE VIEW qgis_test.b21839_pk_unicity_view AS
+ SELECT b21839_pk_unicity.pk,
+    b21839_pk_unicity.an_int,
+    b21839_pk_unicity.a_unique_int,
+    b21839_pk_unicity.geom
+   FROM qgis_test.b21839_pk_unicity;
+

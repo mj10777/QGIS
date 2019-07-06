@@ -29,6 +29,7 @@
 #include "qgssymbollayer.h"
 #include "qgsproject.h"
 #include "qgsmaplayerstylemanager.h"
+#include "qgsvectorlayer.h"
 
 #include "qgsprintlayout.h"
 #include "qgslayoutatlas.h"
@@ -65,9 +66,9 @@ void QgsCompositionConverter::initPropertyDefinitions()
     { QgsCompositionConverter::TestProperty, QgsPropertyDefinition( "dataDefinedProperty", QgsPropertyDefinition::DataTypeString, "invalid property", QString() ) },
     {
       QgsCompositionConverter::PresetPaperSize, QgsPropertyDefinition( "dataDefinedPaperSize", QgsPropertyDefinition::DataTypeString, QObject::tr( "Paper size" ), QObject::tr( "string " ) + QStringLiteral( "[<b>A5</b>|<b>A4</b>|<b>A3</b>|<b>A2</b>|<b>A1</b>|<b>A0</b>"
-          "<b>B5</b>|<b>B4</b>|<b>B3</b>|<b>B2</b>|<b>B1</b>|<b>B0</b>"
-          "<b>Legal</b>|<b>Ansi A</b>|<b>Ansi B</b>|<b>Ansi C</b>|<b>Ansi D</b>|<b>Ansi E</b>"
-          "<b>Arch A</b>|<b>Arch B</b>|<b>Arch C</b>|<b>Arch D</b>|<b>Arch E</b>|<b>Arch E1</b>]"
+          "|<b>B5</b>|<b>B4</b>|<b>B3</b>|<b>B2</b>|<b>B1</b>|<b>B0</b>"
+          "|<b>Legal</b>|<b>Ansi A</b>|<b>Ansi B</b>|<b>Ansi C</b>|<b>Ansi D</b>|<b>Ansi E</b>"
+          "|<b>Arch A</b>|<b>Arch B</b>|<b>Arch C</b>|<b>Arch D</b>|<b>Arch E</b>|<b>Arch E1</b>]"
                                                                                                                                                                                                             ) )
     },
     { QgsCompositionConverter::PaperWidth, QgsPropertyDefinition( "dataDefinedPaperWidth", QObject::tr( "Page width" ), QgsPropertyDefinition::DoublePositive ) },
@@ -125,10 +126,12 @@ std::unique_ptr< QgsPrintLayout > QgsCompositionConverter::createLayoutFromCompo
   std::unique_ptr< QgsPrintLayout > layout = qgis::make_unique< QgsPrintLayout >( project );
   layout->undoStack()->blockCommands( true );
 
+  layout->mCustomProperties.readXml( composerElement );
+
   // Guides
   layout->guides().setVisible( composerElement.attribute( QStringLiteral( "guidesVisible" ), QStringLiteral( "1" ) ).toInt() != 0 );
 
-  int printResolution = composerElement.attribute( "printResolution", "300" ).toInt();
+  int printResolution = composerElement.attribute( QStringLiteral( "printResolution" ), QStringLiteral( "300" ) ).toInt();
   layout->renderContext().setDpi( printResolution );
 
   // Create pages
@@ -142,9 +145,9 @@ std::unique_ptr< QgsPrintLayout > QgsCompositionConverter::createLayoutFromCompo
     QgsReadWriteContext context;
     if ( project )
       context.setPathResolver( project->pathResolver() );
-    QgsFillSymbol *symbol = QgsSymbolLayerUtils::loadSymbol<QgsFillSymbol>( symbolElement, context );
+    std::unique_ptr< QgsFillSymbol > symbol( QgsSymbolLayerUtils::loadSymbol<QgsFillSymbol>( symbolElement, context ) );
     if ( symbol )
-      layout->pageCollection()->setPageStyleSymbol( symbol );
+      layout->pageCollection()->setPageStyleSymbol( symbol.get() );
   }
 
   QString name = composerElement.attribute( QStringLiteral( "name" ) );
@@ -452,9 +455,32 @@ QList<QgsLayoutObject *> QgsCompositionConverter::addItemsFromCompositionXml( Qg
   return newItems;
 }
 
+bool QgsCompositionConverter::isCompositionTemplate( const QDomDocument &document )
+{
+  return document.elementsByTagName( QStringLiteral( "Composition" ) ).count() > 0;
+}
+
+QDomDocument QgsCompositionConverter::convertCompositionTemplate( const QDomDocument &document, QgsProject *project )
+{
+  QDomDocument doc;
+  QgsReadWriteContext context;
+  if ( project )
+    context.setPathResolver( project->pathResolver() );
+  if ( document.elementsByTagName( QStringLiteral( "Composition" ) ).count( ) > 0 )
+  {
+    QDomElement composerElem = document.elementsByTagName( QStringLiteral( "Composition" ) ).at( 0 ).toElement( );
+
+    std::unique_ptr<QgsLayout> layout = createLayoutFromCompositionXml( composerElem,
+                                        project );
+    QDomElement elem = layout->writeXml( doc, context );
+    doc.appendChild( elem );
+  }
+  return doc;
+}
+
 bool QgsCompositionConverter::readLabelXml( QgsLayoutItemLabel *layoutItem, const QDomElement &itemElem, const QgsProject *project )
 {
-  Q_UNUSED( project );
+  Q_UNUSED( project )
   if ( itemElem.isNull() )
   {
     return false;
@@ -515,7 +541,7 @@ bool QgsCompositionConverter::readLabelXml( QgsLayoutItemLabel *layoutItem, cons
 
 bool QgsCompositionConverter::readShapeXml( QgsLayoutItemShape *layoutItem, const QDomElement &itemElem, const QgsProject *project )
 {
-  Q_UNUSED( project );
+  Q_UNUSED( project )
   layoutItem->setShapeType( static_cast<QgsLayoutItemShape::Shape>( itemElem.attribute( QStringLiteral( "shapeType" ), QStringLiteral( "0" ) ).toInt() ) );
   layoutItem->setCornerRadius( QgsLayoutMeasurement( itemElem.attribute( QStringLiteral( "cornerRadius" ), QStringLiteral( "0" ) ).toDouble() ) );
 
@@ -951,7 +977,7 @@ bool QgsCompositionConverter::readMapXml( QgsLayoutItemMap *layoutItem, const QD
       mapGrid->setAnnotationDirection( QgsLayoutItemMapGrid::AnnotationDirection( annotationElem.attribute( QStringLiteral( "bottomDirection" ), QStringLiteral( "0" ) ).toInt() ), QgsLayoutItemMapGrid::Bottom );
       mapGrid->setAnnotationFrameDistance( annotationElem.attribute( QStringLiteral( "frameDistance" ), QStringLiteral( "0" ) ).toDouble() );
       QFont annotationFont;
-      annotationFont.fromString( annotationElem.attribute( QStringLiteral( "font" ), QLatin1String( "" ) ) );
+      annotationFont.fromString( annotationElem.attribute( QStringLiteral( "font" ), QString() ) );
       mapGrid->setAnnotationFont( annotationFont );
       mapGrid->setAnnotationFontColor( QgsSymbolLayerUtils::decodeColor( itemElem.attribute( QStringLiteral( "fontColor" ), QStringLiteral( "0,0,0,255" ) ) ) );
 
@@ -984,7 +1010,7 @@ bool QgsCompositionConverter::readMapXml( QgsLayoutItemMap *layoutItem, const QD
 
 bool QgsCompositionConverter::readScaleBarXml( QgsLayoutItemScaleBar *layoutItem, const QDomElement &itemElem, const QgsProject *project, const QgsStringMap &mapId2Uuid )
 {
-  Q_UNUSED( project );
+  Q_UNUSED( project )
   restoreGeneralComposeItemProperties( layoutItem, itemElem );
 
   layoutItem->setHeight( itemElem.attribute( QStringLiteral( "height" ), QStringLiteral( "5.0" ) ).toDouble() );
@@ -1006,9 +1032,11 @@ bool QgsCompositionConverter::readScaleBarXml( QgsLayoutItemScaleBar *layoutItem
   QFont f;
   if ( !QgsFontUtils::setFromXmlChildNode( f, itemElem, QStringLiteral( "scaleBarFont" ) ) )
   {
-    f.fromString( itemElem.attribute( QStringLiteral( "font" ), QLatin1String( "" ) ) );
+    f.fromString( itemElem.attribute( QStringLiteral( "font" ), QString() ) );
   }
+  Q_NOWARN_DEPRECATED_PUSH
   layoutItem->setFont( f );
+  Q_NOWARN_DEPRECATED_POP
 
   //colors
   //fill color
@@ -1101,18 +1129,22 @@ bool QgsCompositionConverter::readScaleBarXml( QgsLayoutItemScaleBar *layoutItem
 
     if ( redOk && greenOk && blueOk && alphaOk )
     {
+      Q_NOWARN_DEPRECATED_PUSH
       layoutItem->setFontColor( QColor( textRed, textGreen, textBlue, textAlpha ) );
+      Q_NOWARN_DEPRECATED_POP
     }
   }
   else
   {
     QColor c;
     c.setNamedColor( itemElem.attribute( QStringLiteral( "fontColor" ), QStringLiteral( "#000000" ) ) );
+    Q_NOWARN_DEPRECATED_PUSH
     layoutItem->setFontColor( c );
+    Q_NOWARN_DEPRECATED_POP
   }
 
   //style
-  QString styleString = itemElem.attribute( QStringLiteral( "style" ), QLatin1String( "" ) );
+  QString styleString = itemElem.attribute( QStringLiteral( "style" ), QString() );
   layoutItem->setStyle( QObject::tr( styleString.toLocal8Bit().data() ) );
 
   if ( itemElem.attribute( QStringLiteral( "unitType" ) ).isEmpty() )
@@ -1164,6 +1196,7 @@ bool QgsCompositionConverter::readLegendXml( QgsLayoutItemLegend *layoutItem, co
     pathResolver = project->pathResolver();
   QgsReadWriteContext context;
   context.setPathResolver( pathResolver );
+  context.setProjectTranslator( const_cast<QgsProject *>( project ) );
 
   //composer map: use uuid
   QString mapId = itemElem.attribute( QStringLiteral( "map" ), QStringLiteral( "-1" ) );
@@ -1269,19 +1302,19 @@ bool QgsCompositionConverter::readAtlasXml( QgsLayoutAtlas *atlasItem, const QDo
 
   atlasItem->setPageNameExpression( itemElem.attribute( QStringLiteral( "pageNameExpression" ), QString() ) );
   QString errorString;
-  atlasItem->setFilenameExpression( itemElem.attribute( QStringLiteral( "filenamePattern" ), QLatin1String( "" ) ), errorString );
+  atlasItem->setFilenameExpression( itemElem.attribute( QStringLiteral( "filenamePattern" ), QString() ), errorString );
   // note: no error reporting for errorString
   atlasItem->setSortFeatures( itemElem.attribute( QStringLiteral( "sortFeatures" ), QStringLiteral( "false" ) ) == QLatin1String( "true" ) );
   if ( atlasItem->sortFeatures() )
   {
-    atlasItem->setSortExpression( itemElem.attribute( QStringLiteral( "sortKey" ), QLatin1String( "" ) ) );
+    atlasItem->setSortExpression( itemElem.attribute( QStringLiteral( "sortKey" ), QString() ) );
     atlasItem->setSortAscending( itemElem.attribute( QStringLiteral( "sortAscending" ), QStringLiteral( "true" ) ) == QLatin1String( "true" ) );
   }
   atlasItem->setFilterFeatures( itemElem.attribute( QStringLiteral( "filterFeatures" ), QStringLiteral( "false" ) ) == QLatin1String( "true" ) );
   if ( atlasItem->filterFeatures( ) )
   {
     QString expErrorString;
-    atlasItem->setFilterExpression( itemElem.attribute( QStringLiteral( "featureFilter" ), QLatin1String( "" ) ), expErrorString );
+    atlasItem->setFilterExpression( itemElem.attribute( QStringLiteral( "featureFilter" ), QString() ), expErrorString );
     // note: no error reporting for errorString
   }
 
@@ -1293,7 +1326,7 @@ bool QgsCompositionConverter::readAtlasXml( QgsLayoutAtlas *atlasItem, const QDo
 
 bool QgsCompositionConverter::readHtmlXml( QgsLayoutItemHtml *layoutItem, const QDomElement &itemElem, const QgsProject *project )
 {
-  Q_UNUSED( project );
+  Q_UNUSED( project )
   readOldComposerObjectXml( layoutItem, itemElem );
 
   //first create the frames
@@ -1342,7 +1375,7 @@ bool QgsCompositionConverter::readHtmlXml( QgsLayoutItemHtml *layoutItem, const 
 bool QgsCompositionConverter::readTableXml( QgsLayoutItemAttributeTable *layoutItem, const QDomElement &itemElem, const QgsProject *project )
 {
 
-  Q_UNUSED( project );
+  Q_UNUSED( project )
   readOldComposerObjectXml( layoutItem, itemElem );
 
   //first create the frames
@@ -1369,14 +1402,14 @@ bool QgsCompositionConverter::readTableXml( QgsLayoutItemAttributeTable *layoutI
   layoutItem->setShowEmptyRows( itemElem.attribute( QStringLiteral( "showEmptyRows" ), QStringLiteral( "0" ) ).toInt() );
   if ( !QgsFontUtils::setFromXmlChildNode( layoutItem->mHeaderFont, itemElem, QStringLiteral( "headerFontProperties" ) ) )
   {
-    layoutItem->mHeaderFont.fromString( itemElem.attribute( QStringLiteral( "headerFont" ), QLatin1String( "" ) ) );
+    layoutItem->mHeaderFont.fromString( itemElem.attribute( QStringLiteral( "headerFont" ), QString() ) );
   }
   layoutItem->setHeaderFontColor( QgsSymbolLayerUtils::decodeColor( itemElem.attribute( QStringLiteral( "headerFontColor" ), QStringLiteral( "0,0,0,255" ) ) ) );
   layoutItem->setHeaderHAlignment( static_cast<QgsLayoutTable::HeaderHAlignment>( itemElem.attribute( QStringLiteral( "headerHAlignment" ), QStringLiteral( "0" ) ).toInt() ) ) ;
   layoutItem->setHeaderMode( static_cast<QgsLayoutTable::HeaderMode>( itemElem.attribute( QStringLiteral( "headerMode" ), QStringLiteral( "0" ) ).toInt() ) );
   if ( !QgsFontUtils::setFromXmlChildNode( layoutItem->mContentFont, itemElem, QStringLiteral( "contentFontProperties" ) ) )
   {
-    layoutItem->mContentFont.fromString( itemElem.attribute( QStringLiteral( "contentFont" ), QLatin1String( "" ) ) );
+    layoutItem->mContentFont.fromString( itemElem.attribute( QStringLiteral( "contentFont" ), QString() ) );
   }
   layoutItem->setContentFontColor( QgsSymbolLayerUtils::decodeColor( itemElem.attribute( QStringLiteral( "contentFontColor" ), QStringLiteral( "0,0,0,255" ) ) ) );
   layoutItem->setCellMargin( itemElem.attribute( QStringLiteral( "cellMargin" ), QStringLiteral( "1.0" ) ).toDouble() );
@@ -1401,8 +1434,8 @@ bool QgsCompositionConverter::readTableXml( QgsLayoutItemAttributeTable *layoutI
       QgsLayoutTableColumn *column = new QgsLayoutTableColumn;
       column->mHAlignment = static_cast< Qt::AlignmentFlag >( columnElem.attribute( QStringLiteral( "hAlignment" ), QString::number( Qt::AlignLeft ) ).toInt() );
       column->mVAlignment = static_cast< Qt::AlignmentFlag >( columnElem.attribute( QStringLiteral( "vAlignment" ), QString::number( Qt::AlignVCenter ) ).toInt() );
-      column->mHeading = columnElem.attribute( QStringLiteral( "heading" ), QLatin1String( "" ) );
-      column->mAttribute = columnElem.attribute( QStringLiteral( "attribute" ), QLatin1String( "" ) );
+      column->mHeading = columnElem.attribute( QStringLiteral( "heading" ), QString() );
+      column->mAttribute = columnElem.attribute( QStringLiteral( "attribute" ), QString() );
       column->mSortByRank = columnElem.attribute( QStringLiteral( "sortByRank" ), QStringLiteral( "0" ) ).toInt();
       column->mSortOrder = static_cast< Qt::SortOrder >( columnElem.attribute( QStringLiteral( "sortOrder" ), QString::number( Qt::AscendingOrder ) ).toInt() );
       column->mWidth = columnElem.attribute( QStringLiteral( "width" ), QStringLiteral( "0.0" ) ).toDouble();
@@ -1508,20 +1541,20 @@ bool QgsCompositionConverter::readXml( QgsLayoutItem *layoutItem, const QDomElem
   layoutItem->mTemplateUuid = itemElem.attribute( QStringLiteral( "templateUuid" ) );
 
   //id
-  QString id = itemElem.attribute( QStringLiteral( "id" ), QStringLiteral( "" ) );
+  QString id = itemElem.attribute( QStringLiteral( "id" ), QString() );
   layoutItem->setId( id );
 
   //frame
   QString frame = itemElem.attribute( QStringLiteral( "frame" ) );
-  layoutItem->setFrameEnabled( frame.compare( QStringLiteral( "true" ), Qt::CaseInsensitive ) == 0 ) ;
+  layoutItem->setFrameEnabled( frame.compare( QLatin1String( "true" ), Qt::CaseInsensitive ) == 0 ) ;
 
   //frame
   QString background = itemElem.attribute( QStringLiteral( "background" ) );
-  layoutItem->setBackgroundEnabled( background.compare( QStringLiteral( "true" ), Qt::CaseInsensitive ) == 0 );
+  layoutItem->setBackgroundEnabled( background.compare( QLatin1String( "true" ), Qt::CaseInsensitive ) == 0 );
 
   //position lock for mouse moves/resizes
   QString positionLock = itemElem.attribute( QStringLiteral( "positionLock" ) );
-  layoutItem->setLocked( positionLock.compare( QStringLiteral( "true" ), Qt::CaseInsensitive ) == 0 );
+  layoutItem->setLocked( positionLock.compare( QLatin1String( "true" ), Qt::CaseInsensitive ) == 0 );
 
   //visibility
   layoutItem->setVisibility( itemElem.attribute( QStringLiteral( "visibility" ), QStringLiteral( "1" ) ) != QStringLiteral( "0" ) );
@@ -1534,7 +1567,7 @@ bool QgsCompositionConverter::readXml( QgsLayoutItem *layoutItem, const QDomElem
       group->addItem( layoutItem );
     }
   }
-  layoutItem->mTemplateUuid = itemElem.attribute( "templateUuid" );
+  layoutItem->mTemplateUuid = itemElem.attribute( QStringLiteral( "templateUuid" ) );
 
 
   QRectF position = itemPosition( layoutItem, itemElem );
@@ -1681,7 +1714,7 @@ QgsProperty QgsCompositionConverter::readOldDataDefinedProperty( const QgsCompos
 
   QString active = ddElem.attribute( QStringLiteral( "active" ) );
   bool isActive = false;
-  if ( active.compare( QStringLiteral( "true" ), Qt::CaseInsensitive ) == 0 )
+  if ( active.compare( QLatin1String( "true" ), Qt::CaseInsensitive ) == 0 )
   {
     isActive = true;
   }
@@ -1690,7 +1723,7 @@ QgsProperty QgsCompositionConverter::readOldDataDefinedProperty( const QgsCompos
 
   QString useExpr = ddElem.attribute( QStringLiteral( "useExpr" ) );
   bool isExpression = false;
-  if ( useExpr.compare( QStringLiteral( "true" ), Qt::CaseInsensitive ) == 0 )
+  if ( useExpr.compare( QLatin1String( "true" ), Qt::CaseInsensitive ) == 0 )
   {
     isExpression = true;
   }

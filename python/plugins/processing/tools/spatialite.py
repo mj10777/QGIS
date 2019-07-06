@@ -21,10 +21,6 @@ __author__ = 'René-Luc Dhont'
 __date__ = 'November 2015'
 __copyright__ = '(C) 2015, René-Luc Dhont'
 
-# This will get replaced with a git SHA1 when you do a git archive
-
-__revision__ = '$Format:%H$'
-
 from qgis.utils import spatialite_connect
 import sqlite3 as sqlite
 import re
@@ -66,7 +62,7 @@ class GeoDB:
         try:
             self._exec_sql(c, u'SELECT spatialite_version()')
             rep = c.fetchall()
-            v = [int(x) if x.isdigit() else x for x in re.findall("\d+|[a-zA-Z]+", rep[0][0])]
+            v = [int(x) if x.isdigit() else x for x in re.findall(r"\d+|[a-zA-Z]+", rep[0][0])]
 
             # Add SpatiaLite support
             if v >= [4, 1, 0]:

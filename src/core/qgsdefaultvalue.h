@@ -17,6 +17,7 @@
 #define QGSDEFAULTVALUE_H
 
 #include "qgis_core.h"
+#include "qgis_sip.h"
 
 #include <QString>
 #include <QObject>
@@ -29,7 +30,7 @@
  *        side default values for fields.
  *
  * A QgsDefaultValue consists of an expression string that will be evaluated
- * on the client when a defeault field value needs to be generated.
+ * on the client when a default field value needs to be generated.
  *
  * Usual values for such an expression are
  *
@@ -46,7 +47,7 @@
  */
 class CORE_EXPORT QgsDefaultValue
 {
-    Q_GADGET
+    Q_GADGET SIP_SKIP
 
     Q_PROPERTY( QString expression READ expression WRITE setExpression )
     Q_PROPERTY( bool applyOnUpdate READ applyOnUpdate WRITE setApplyOnUpdate )
@@ -86,19 +87,21 @@ class CORE_EXPORT QgsDefaultValue
 
     /**
      * Returns if this default value should be applied.
-     * \returns false if the expression is a null string.
+     * \returns FALSE if the expression is a null string.
      */
     bool isValid() const;
 
     /**
      * Checks if a default value is set. Alias for isValid().
-     * \returns false if the expression is a null string.
+     * \returns FALSE if the expression is a null string.
      */
-    operator bool() const;
+    operator bool() const SIP_PYTHON_SPECIAL_BOOL( isValid );
 
   private:
     QString mExpression;
     bool mApplyOnUpdate = false;
 };
+
+Q_DECLARE_METATYPE( QgsDefaultValue )
 
 #endif // QGSDEFAULTVALUE_H

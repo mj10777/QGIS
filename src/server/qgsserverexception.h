@@ -30,7 +30,6 @@
  * \ingroup server
  * \class  QgsServerException
  * \brief Exception base class for server exceptions.
- *
  * \since QGIS 3.0
  */
 #ifndef SIP_RUN
@@ -50,12 +49,12 @@ class SERVER_EXPORT QgsServerException
     int responseCode() const { return mResponseCode; }
 
     /**
-     * Format the exception for sending to client
+     * Formats the exception for sending to client
      *
      * \param responseFormat QString to store the content type of the response format.
-     * \returns QByteArray the fermatted response.
+     * \returns QByteArray The formatted response.
      *
-     * The defaolt implementation return text/xml format.
+     * The default implementation returns text/xml format.
      */
     virtual QByteArray formatResponse( QString &responseFormat SIP_OUT ) const;
 
@@ -85,19 +84,18 @@ class SERVER_EXPORT QgsOgcServiceException
     QgsOgcServiceException( const QString &code, const QString &message, const QString &locator = QString(),
                             int responseCode = 200, const QString &version = QStringLiteral( "1.3.0" ) );
 
-    //! \returns message
+    //! Returns the exception message
     QString message() const { return mMessage; }
 
-    //! \returns code
+    //! Returns the exception code
     QString code()    const { return mCode; }
 
-    //! \returns locator
+    //! Returns the locator
     QString locator() const { return mLocator; }
 
-    //!return exception version
+    //! Returns the exception version
     QString version() const { return mVersion; }
 
-    //! Overridden from QgsServerException
     QByteArray formatResponse( QString &responseFormat SIP_OUT ) const override;
 
   private:
@@ -107,5 +105,27 @@ class SERVER_EXPORT QgsOgcServiceException
     QString mVersion;
 };
 
+/**
+ * \ingroup server
+ * \class  QgsBadRequestException
+ * \brief Exception thrown in case of malformed request
+ * \since QGIS 3.4
+ */
+#ifndef SIP_RUN
+class SERVER_EXPORT QgsBadRequestException: public QgsOgcServiceException
+{
+  public:
+
+    /**
+     * Constructor for QgsBadRequestException (HTTP error code 400).
+     * \param code Error code name
+     * \param message Exception message to return to the client
+     * \param locator Locator attribute according to OGC specifications
+     */
+    QgsBadRequestException( const QString &code, const QString &message, const QString &locator = QString() )
+      : QgsOgcServiceException( code, message, locator, 400 )
+    {}
+};
 #endif
 
+#endif

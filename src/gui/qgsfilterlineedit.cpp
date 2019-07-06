@@ -18,6 +18,7 @@
 #include "qgsfilterlineedit.h"
 #include "qgsapplication.h"
 #include "qgsanimatedicon.h"
+#include "qgis.h"
 
 #include <QAction>
 #include <QToolButton>
@@ -32,19 +33,8 @@ QgsFilterLineEdit::QgsFilterLineEdit( QWidget *parent, const QString &nullValue 
   // icon size is about 2/3 height of text, but minimum size of 16
   int iconSize = std::floor( std::max( Qgis::UI_SCALE_FACTOR * fontMetrics().height() * 0.75, 16.0 ) );
 
-  QIcon clearIcon;
-  clearIcon.addPixmap( QgsApplication::getThemeIcon( "/mIconClearText.svg" ).pixmap( QSize( iconSize, iconSize ) ), QIcon::Normal, QIcon::On );
-  clearIcon.addPixmap( QgsApplication::getThemeIcon( "/mIconClearTextHover.svg" ).pixmap( QSize( iconSize, iconSize ) ), QIcon::Selected, QIcon::On );
-  mClearAction = new QAction( clearIcon, QString(), this );
-  mClearAction->setCheckable( false );
-  addAction( mClearAction, QLineEdit::TrailingPosition );
-  connect( mClearAction, &QAction::triggered, this, &QgsFilterLineEdit::clearValue );
-
-  QIcon searchIcon = QgsApplication::getThemeIcon( "/search.svg" );
-  mSearchAction = new QAction( searchIcon, QString(), this );
-  mSearchAction->setCheckable( false );
-  addAction( mSearchAction, QLineEdit::LeadingPosition );
-  mSearchAction->setVisible( false );
+  mClearIcon.addPixmap( QgsApplication::getThemeIcon( "/mIconClearText.svg" ).pixmap( QSize( iconSize, iconSize ) ), QIcon::Normal, QIcon::On );
+  mClearIcon.addPixmap( QgsApplication::getThemeIcon( "/mIconClearTextHover.svg" ).pixmap( QSize( iconSize, iconSize ) ), QIcon::Selected, QIcon::On );
 
   connect( this, &QLineEdit::textChanged, this,
            &QgsFilterLineEdit::onTextChanged );
@@ -58,13 +48,41 @@ void QgsFilterLineEdit::setShowClearButton( bool visible )
 
 void QgsFilterLineEdit::setShowSearchIcon( bool visible )
 {
-  mSearchIconVisible = visible;
-  mSearchAction->setVisible( visible );
+  if ( visible && !mSearchAction )
+  {
+    QIcon searchIcon = QgsApplication::getThemeIcon( "/search.svg" );
+    mSearchAction = new QAction( searchIcon, QString(), this );
+    mSearchAction->setCheckable( false );
+    addAction( mSearchAction, QLineEdit::LeadingPosition );
+  }
+  else if ( !visible && mSearchAction )
+  {
+    mSearchAction->deleteLater();
+    mSearchAction = nullptr;
+  }
 }
 
 void QgsFilterLineEdit::updateClearIcon()
 {
-  mClearAction->setVisible( shouldShowClear() );
+  bool showClear = shouldShowClear();
+  if ( showClear && !mClearAction )
+  {
+    mClearAction = new QAction( mClearIcon, QString(), this );
+    mClearAction->setCheckable( false );
+    addAction( mClearAction, QLineEdit::TrailingPosition );
+    connect( mClearAction, &QAction::triggered, this, &QgsFilterLineEdit::clearValue );
+  }
+  else if ( !showClear && mClearAction )
+  {
+    // pretty freakin weird... seems the deleteLater call on the mClearAction
+    // isn't sufficient to actually remove the action from the line edit, and
+    // a kind of "ghost" action gets left behind... resulting in duplicate
+    // clear actions appearing if later we re-create the action.
+    // in summary: don't remove this "removeAction" call!
+    removeAction( mClearAction );
+    mClearAction->deleteLater();
+    mClearAction = nullptr;
+  }
 }
 
 void QgsFilterLineEdit::focusInEvent( QFocusEvent *e )
@@ -72,7 +90,16 @@ void QgsFilterLineEdit::focusInEvent( QFocusEvent *e )
   QLineEdit::focusInEvent( e );
   if ( e->reason() == Qt::MouseFocusReason && ( isNull() || mSelectOnFocus ) )
   {
-    mFocusInEvent = true;
+    mWaitingForMouseRelease = true;
+  }
+}
+
+void QgsFilterLineEdit::mouseReleaseEvent( QMouseEvent *e )
+{
+  QLineEdit::mouseReleaseEvent( e );
+  if ( mWaitingForMouseRelease )
+  {
+    mWaitingForMouseRelease = false;
     selectAll();
   }
 }
@@ -178,3 +205,22 @@ bool QgsFilterLineEdit::shouldShowClear() const
   }
   return false; //avoid warnings
 }
+
+bool QgsFilterLineEdit::event( QEvent *event )
+{
+  if ( event->type() == QEvent::ReadOnlyChange || event->type() == QEvent::EnabledChange )
+    updateClearIcon();
+
+  return QLineEdit::event( event );;
+}
+
+/// @cond PRIVATE
+void QgsSpinBoxLineEdit::focusInEvent( QFocusEvent *e )
+{
+  QgsFilterLineEdit::focusInEvent( e );
+  if ( isNull() )
+  {
+    clear();
+  }
+}
+/// @endcond

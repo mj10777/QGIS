@@ -25,7 +25,7 @@ QgsReportSectionLayout::QgsReportSectionLayout( QgsAbstractReportSection *parent
 
 QIcon QgsReportSectionLayout::icon() const
 {
-  return QgsApplication::getThemeIcon( QStringLiteral( "/mActionNewComposer.svg" ) );
+  return QgsApplication::getThemeIcon( QStringLiteral( "/mIconLayout.svg" ) );
 }
 
 QgsReportSectionLayout *QgsReportSectionLayout::clone() const
@@ -81,7 +81,7 @@ bool QgsReportSectionLayout::writePropertiesToElement( QDomElement &element, QDo
     bodyElement.appendChild( mBody->writeXml( doc, context ) );
     element.appendChild( bodyElement );
   }
-  element.setAttribute( QStringLiteral( "bodyEnabled" ), mBodyEnabled ? "1" : "0" );
+  element.setAttribute( QStringLiteral( "bodyEnabled" ), mBodyEnabled ? QStringLiteral( "1" ) : QStringLiteral( "0" ) );
   return true;
 }
 

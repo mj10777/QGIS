@@ -19,7 +19,8 @@
 #define QGSUNITTYPES_H
 
 #include "qgis_core.h"
-#include "qgis.h"
+#include "qgis_sip.h"
+#include <QObject>
 
 /***************************************************************************
  * This class is considered CRITICAL and any change MUST be accompanied with
@@ -39,6 +40,16 @@ class CORE_EXPORT QgsUnitTypes
     Q_GADGET
 
   public:
+    //! Systems of unit measurement
+    enum SystemOfMeasurement
+    {
+      UnknownSystem = 0, //!< Unknown system of measurement
+      MetricSystem, //!< International System of Units (SI)
+      ImperialSystem, //!< British Imperial
+      USCSSystem //!< United States customary system
+    };
+    Q_ENUM( SystemOfMeasurement )
+
     //! Units of distance
     enum DistanceUnit
     {
@@ -53,7 +64,7 @@ class CORE_EXPORT QgsUnitTypes
       DistanceMillimeters, //!< Millimeters
       DistanceUnknownUnit, //!< Unknown distance unit
     };
-    Q_ENUM( DistanceUnit );
+    Q_ENUM( DistanceUnit )
 
     /**
      * Types of distance units
@@ -77,11 +88,11 @@ class CORE_EXPORT QgsUnitTypes
       AreaAcres, //!< Acres
       AreaSquareNauticalMiles, //!< Square nautical miles
       AreaSquareDegrees, //!< Square degrees, for planar geographic CRS area measurements
-      AreaSquareCentimeters, //! Square centimeters
-      AreaSquareMillimeters, //! Square millimeters
+      AreaSquareCentimeters, //!< Square centimeters
+      AreaSquareMillimeters, //!< Square millimeters
       AreaUnknownUnit, //!< Unknown areal unit
     };
-    Q_ENUM( AreaUnit );
+    Q_ENUM( AreaUnit )
 
     //! Units of angles
     enum AngleUnit
@@ -94,7 +105,7 @@ class CORE_EXPORT QgsUnitTypes
       AngleTurn, //!< Turn/revolutions
       AngleUnknownUnit, //!< Unknown angle unit
     };
-    Q_ENUM( AngleUnit );
+    Q_ENUM( AngleUnit )
 
     //! Rendering size units
     enum RenderUnit
@@ -103,12 +114,12 @@ class CORE_EXPORT QgsUnitTypes
       RenderMapUnits, //!< Map units
       RenderPixels, //!< Pixels
       RenderPercentage, //!< Percentage of another measurement (e.g., canvas size, feature size)
-      RenderPoints, //! points (e.g., for font sizes)
-      RenderInches, //! Inches
+      RenderPoints, //!< Points (e.g., for font sizes)
+      RenderInches, //!< Inches
       RenderUnknownUnit, //!< Mixed or unknown units
       RenderMetersInMapUnits, //!< Meters value as Map units
     };
-    Q_ENUM( RenderUnit );
+    Q_ENUM( RenderUnit )
 
     //! Layout measurement units
     enum LayoutUnit
@@ -122,7 +133,7 @@ class CORE_EXPORT QgsUnitTypes
       LayoutPicas, //!< Typographic picas
       LayoutPixels //!< Pixels
     };
-    Q_ENUM( LayoutUnit );
+    Q_ENUM( LayoutUnit )
 
     //! Types of layout units
     enum LayoutUnitType
@@ -190,7 +201,7 @@ class CORE_EXPORT QgsUnitTypes
     /**
      * Decodes a distance unit from a string.
      * \param string string to decode
-     * \param ok optional boolean, will be set to true if string was converted successfully
+     * \param ok optional boolean, will be set to TRUE if string was converted successfully
      * \returns decoded units
      * \see encodeUnit()
      */
@@ -215,7 +226,8 @@ class CORE_EXPORT QgsUnitTypes
     /**
      * Converts a translated string to a distance unit.
      * \param string string representing a distance unit
-     * \param ok optional boolean, will be set to true if string was converted successfully
+     * \param ok optional boolean, will be set to TRUE if string was converted successfully
+     * \returns the distance unit
      * \see toString()
      */
     Q_INVOKABLE static QgsUnitTypes::DistanceUnit stringToDistanceUnit( const QString &string, bool *ok SIP_OUT = nullptr );
@@ -246,7 +258,7 @@ class CORE_EXPORT QgsUnitTypes
     /**
      * Decodes an areal unit from a string.
      * \param string string to decode
-     * \param ok optional boolean, will be set to true if string was converted successfully
+     * \param ok optional boolean, will be set to TRUE if string was converted successfully
      * \returns decoded units
      * \see encodeUnit()
     */
@@ -257,7 +269,7 @@ class CORE_EXPORT QgsUnitTypes
      * \param unit unit to convert to string
      * \see stringToAreaUnit()
      */
-    Q_INVOKABLE static QString toString( QgsUnitTypes::AreaUnit unit );
+    static QString toString( QgsUnitTypes::AreaUnit unit );
 
     /**
      * Returns a translated abbreviation representing an areal unit.
@@ -266,12 +278,13 @@ class CORE_EXPORT QgsUnitTypes
      *
      * \since QGIS 3.0
      */
-    Q_INVOKABLE static QString toAbbreviatedString( QgsUnitTypes::AreaUnit unit );
+    static QString toAbbreviatedString( QgsUnitTypes::AreaUnit unit );
 
     /**
      * Converts a translated string to an areal unit.
      * \param string string representing an areal unit
-     * \param ok optional boolean, will be set to true if string was converted successfully
+     * \param ok optional boolean, will be set to TRUE if string was converted successfully
+     * \returns the area unit
      * \see toString()
      */
     Q_INVOKABLE static AreaUnit stringToAreaUnit( const QString &string, bool *ok SIP_OUT = nullptr );
@@ -304,7 +317,7 @@ class CORE_EXPORT QgsUnitTypes
     /**
      * Decodes an angular unit from a string.
      * \param string string to decode
-     * \param ok optional boolean, will be set to true if string was converted successfully
+     * \param ok optional boolean, will be set to TRUE if string was converted successfully
      * \returns decoded units
      * \see encodeUnit()
     */
@@ -314,7 +327,7 @@ class CORE_EXPORT QgsUnitTypes
      * Returns a translated string representing an angular unit.
      * \param unit unit to convert to string
      */
-    Q_INVOKABLE static QString toString( QgsUnitTypes::AngleUnit unit );
+    static QString toString( QgsUnitTypes::AngleUnit unit );
 
     /**
      * Returns the conversion factor between the specified angular units.
@@ -361,11 +374,11 @@ class CORE_EXPORT QgsUnitTypes
      * \param distance distance to format
      * \param decimals number of decimal places to show
      * \param unit unit of distance
-     * \param keepBaseUnit set to false to allow conversion of large distances to more suitable units, e.g., meters to
+     * \param keepBaseUnit set to FALSE to allow conversion of large distances to more suitable units, e.g., meters to
      * kilometers
      * \returns formatted distance string
-     * \since QGIS 3.0
      * \see formatArea()
+     * \since QGIS 3.0
      */
     Q_INVOKABLE static QString formatDistance( double distance, int decimals, QgsUnitTypes::DistanceUnit unit, bool keepBaseUnit = false );
 
@@ -374,11 +387,11 @@ class CORE_EXPORT QgsUnitTypes
      * \param area area to format
      * \param decimals number of decimal places to show
      * \param unit unit of area
-     * \param keepBaseUnit set to false to allow conversion of large areas to more suitable units, e.g., square meters to
+     * \param keepBaseUnit set to FALSE to allow conversion of large areas to more suitable units, e.g., square meters to
      * square kilometers
      * \returns formatted area string
-     * \since QGIS 3.0
      * \see formatDistance()
+     * \since QGIS 3.0
      */
     Q_INVOKABLE static QString formatArea( double area, int decimals, QgsUnitTypes::AreaUnit unit, bool keepBaseUnit = false );
 
@@ -395,17 +408,26 @@ class CORE_EXPORT QgsUnitTypes
     /**
      * Decodes a render unit from a string.
      * \param string string to decode
-     * \param ok optional boolean, will be set to true if string was converted successfully
+     * \param ok optional boolean, will be set to TRUE if string was converted successfully
      * \returns decoded units
      * \see encodeUnit()
      */
     Q_INVOKABLE static QgsUnitTypes::RenderUnit decodeRenderUnit( const QString &string, bool *ok SIP_OUT = nullptr );
 
+
     /**
      * Returns a translated string representing a render \a unit.
      * \since QGIS 3.0
      */
-    Q_INVOKABLE static QString toString( QgsUnitTypes::RenderUnit unit );
+    static QString toString( QgsUnitTypes::RenderUnit unit );
+
+    /**
+     * Returns a translated abbreviation representing a render unit.
+     * \param unit unit to convert to string
+     *
+     * \since QGIS 3.8
+     */
+    Q_INVOKABLE static QString toAbbreviatedString( QgsUnitTypes::RenderUnit unit );
 
 
     // LAYOUT UNITS
@@ -422,7 +444,7 @@ class CORE_EXPORT QgsUnitTypes
     /**
      * Decodes a layout unit from a string.
      * \param string string to decode
-     * \param ok optional boolean, will be set to true if string was converted successfully
+     * \param ok optional boolean, will be set to TRUE if string was converted successfully
      * \returns decoded units
      * \see encodeUnit()
      * \since QGIS 3.0
@@ -434,21 +456,21 @@ class CORE_EXPORT QgsUnitTypes
      *
      * \since QGIS 3.0
     */
-    Q_INVOKABLE static QgsUnitTypes::LayoutUnitType unitType( const QgsUnitTypes::LayoutUnit units );
+    Q_INVOKABLE static QgsUnitTypes::LayoutUnitType unitType( QgsUnitTypes::LayoutUnit units );
 
     /**
      * Returns a translated abbreviation representing a layout \a unit (e.g. "mm").
      *
      * \since QGIS 3.0
      */
-    Q_INVOKABLE static QString toAbbreviatedString( QgsUnitTypes::LayoutUnit unit );
+    static QString toAbbreviatedString( QgsUnitTypes::LayoutUnit unit );
 
     /**
      * Returns a translated string representing a layout \a unit.
      *
      * \since QGIS 3.0
      */
-    Q_INVOKABLE static QString toString( QgsUnitTypes::LayoutUnit unit );
+    static QString toString( QgsUnitTypes::LayoutUnit unit );
 
 };
 

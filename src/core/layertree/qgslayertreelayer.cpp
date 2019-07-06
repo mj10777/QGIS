@@ -76,12 +76,12 @@ void QgsLayerTreeLayer::attachToLayer()
 
 QString QgsLayerTreeLayer::name() const
 {
-  return mRef ? mRef->name() : mLayerName;
+  return ( mRef && mUseLayerName ) ? mRef->name() : mLayerName;
 }
 
 void QgsLayerTreeLayer::setName( const QString &n )
 {
-  if ( mRef )
+  if ( mRef && mUseLayerName )
   {
     if ( mRef->name() == n )
       return;
@@ -164,14 +164,24 @@ void QgsLayerTreeLayer::layerWillBeDeleted()
 {
   Q_ASSERT( mRef );
 
+  emit layerWillBeUnloaded();
+
   mLayerName = mRef->name();
   // in theory we do not even need to do this - the weak ref should clear itself
   mRef.layer.clear();
   // layerId stays in the reference
 
-  emit layerWillBeUnloaded();
 }
 
+void QgsLayerTreeLayer::setUseLayerName( const bool use )
+{
+  mUseLayerName = use;
+}
+
+bool QgsLayerTreeLayer::useLayerName() const
+{
+  return mUseLayerName;
+}
 
 void QgsLayerTreeLayer::layerNameChanged()
 {

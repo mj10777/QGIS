@@ -28,13 +28,15 @@
 #include "qgsexception.h"
 #include "qgssettings.h"
 #include "qgsmapcanvas.h"
+#include "qgshelp.h"
+#include "qgsgui.h"
 
+#include <QButtonGroup>
 #include <QListWidgetItem>
 #include <QMessageBox>
 #include <QFileDialog>
 #include <QRadioButton>
 #include <QImageReader>
-#include "qgshelp.h"
 
 QgsArcGisServiceSourceSelect::QgsArcGisServiceSourceSelect( const QString &serviceName, ServiceType serviceType, QWidget *parent, Qt::WindowFlags fl, QgsProviderRegistry::WidgetMode widgetMode )
   : QgsAbstractDataSourceWidget( parent, fl, widgetMode )
@@ -42,6 +44,8 @@ QgsArcGisServiceSourceSelect::QgsArcGisServiceSourceSelect( const QString &servi
   , mServiceType( serviceType )
 {
   setupUi( this );
+  QgsGui::instance()->enableAutoGeometryRestore( this );
+
   connect( cmbConnections, static_cast<void ( QComboBox::* )( int )>( &QComboBox::activated ), this, &QgsArcGisServiceSourceSelect::cmbConnections_activated );
   setupButtons( buttonBox );
   connect( buttonBox, &QDialogButtonBox::helpRequested, this, &QgsArcGisServiceSourceSelect::showHelp );
@@ -68,7 +72,6 @@ QgsArcGisServiceSourceSelect::QgsArcGisServiceSourceSelect( const QString &servi
   treeView->setItemDelegate( new QgsAbstractDataSourceWidgetItemDelegate( treeView ) );
 
   QgsSettings settings;
-  restoreGeometry( settings.value( QStringLiteral( "Windows/SourceSelectDialog/geometry" ) ).toByteArray() );
   cbxUseTitleLayerName->setChecked( settings.value( QStringLiteral( "Windows/SourceSelectDialog/UseTitleLayerName" ), false ).toBool() );
 
   mModel = new QStandardItemModel();
@@ -77,8 +80,7 @@ QgsArcGisServiceSourceSelect::QgsArcGisServiceSourceSelect( const QString &servi
   mModel->setHorizontalHeaderItem( 2, new QStandardItem( QStringLiteral( "Abstract" ) ) );
   if ( serviceType == FeatureService )
   {
-    mModel->setHorizontalHeaderItem( 3, new QStandardItem( QStringLiteral( "Cache Feature" ) ) );
-    mModel->setHorizontalHeaderItem( 4, new QStandardItem( QStringLiteral( "Filter" ) ) );
+    mModel->setHorizontalHeaderItem( 3, new QStandardItem( QStringLiteral( "Filter" ) ) );
     gbImageEncoding->hide();
   }
   else
@@ -91,6 +93,7 @@ QgsArcGisServiceSourceSelect::QgsArcGisServiceSourceSelect( const QString &servi
   mModelProxy->setSourceModel( mModel );
   mModelProxy->setSortCaseSensitivity( Qt::CaseInsensitive );
   treeView->setModel( mModelProxy );
+  treeView->setSortingEnabled( true );
 
   connect( treeView, &QAbstractItemView::doubleClicked, this, &QgsArcGisServiceSourceSelect::treeWidgetItemDoubleClicked );
   connect( treeView->selectionModel(), &QItemSelectionModel::currentRowChanged, this, &QgsArcGisServiceSourceSelect::treeWidgetCurrentRowChanged );
@@ -99,7 +102,6 @@ QgsArcGisServiceSourceSelect::QgsArcGisServiceSourceSelect( const QString &servi
 QgsArcGisServiceSourceSelect::~QgsArcGisServiceSourceSelect()
 {
   QgsSettings settings;
-  settings.setValue( QStringLiteral( "Windows/SourceSelectDialog/geometry" ), saveGeometry() );
   settings.setValue( QStringLiteral( "Windows/SourceSelectDialog/UseTitleLayerName" ), cbxUseTitleLayerName->isChecked() );
 
   delete mProjectionSelector;
@@ -117,11 +119,11 @@ void QgsArcGisServiceSourceSelect::populateImageEncodings( const QStringList &av
     delete item;
   }
   bool first = true;
-  QList<QByteArray> supportedFormats = QImageReader::supportedImageFormats();
-  foreach ( const QString &encoding, availableEncodings )
+  const QList<QByteArray> supportedFormats = QImageReader::supportedImageFormats();
+  for ( const QString &encoding : availableEncodings )
   {
     bool supported = false;
-    foreach ( const QByteArray &fmt, supportedFormats )
+    for ( const QByteArray &fmt : supportedFormats )
     {
       if ( encoding.startsWith( fmt, Qt::CaseInsensitive ) )
       {
@@ -143,14 +145,14 @@ void QgsArcGisServiceSourceSelect::populateImageEncodings( const QStringList &av
 
 QString QgsArcGisServiceSourceSelect::getSelectedImageEncoding() const
 {
-  return mImageEncodingGroup ? mImageEncodingGroup->checkedButton()->text() : QString();
+  return mImageEncodingGroup && mImageEncodingGroup->checkedButton() ? mImageEncodingGroup->checkedButton()->text() : QString();
 }
 
 void QgsArcGisServiceSourceSelect::populateConnectionList()
 {
-  QStringList conns = QgsOwsConnection::connectionList( mServiceName );
+  const QStringList conns = QgsOwsConnection::connectionList( mServiceName );
   cmbConnections->clear();
-  foreach ( const QString &item, conns )
+  for ( const QString &item : conns )
   {
     cmbConnections->addItem( item );
   }
@@ -173,7 +175,7 @@ QString QgsArcGisServiceSourceSelect::getPreferredCrs( const QSet<QString> &crsS
 {
   if ( crsSet.size() < 1 )
   {
-    return QLatin1String( "" );
+    return QString();
   }
 
   //first: project CRS
@@ -207,7 +209,7 @@ void QgsArcGisServiceSourceSelect::refresh()
 
 void QgsArcGisServiceSourceSelect::addEntryToServerList()
 {
-  QgsNewHttpConnection nc( nullptr, QgsNewHttpConnection::ConnectionOther, QStringLiteral( "qgis/connections-%1/" ).arg( mServiceName.toLower() ) );
+  QgsNewHttpConnection nc( nullptr, QgsNewHttpConnection::ConnectionOther, QStringLiteral( "qgis/connections-%1/" ).arg( mServiceName.toLower() ), QString(), QgsNewHttpConnection::FlagShowHttpSettings );
   nc.setWindowTitle( tr( "Create a New %1 Connection" ).arg( mServiceName ) );
 
   if ( nc.exec() )
@@ -219,7 +221,7 @@ void QgsArcGisServiceSourceSelect::addEntryToServerList()
 
 void QgsArcGisServiceSourceSelect::modifyEntryOfServerList()
 {
-  QgsNewHttpConnection nc( nullptr, QgsNewHttpConnection::ConnectionOther, QStringLiteral( "qgis/connections-%1/" ).arg( mServiceName.toLower() ), cmbConnections->currentText() );
+  QgsNewHttpConnection nc( nullptr, QgsNewHttpConnection::ConnectionOther, QStringLiteral( "qgis/connections-%1/" ).arg( mServiceName.toLower() ), cmbConnections->currentText(), QgsNewHttpConnection::FlagShowHttpSettings );
   nc.setWindowTitle( tr( "Modify %1 Connection" ).arg( mServiceName ) );
 
   if ( nc.exec() )
@@ -265,16 +267,10 @@ void QgsArcGisServiceSourceSelect::connectToServer()
 
     if ( haveLayers )
     {
-      for ( int i = 0; i < treeView->header()->count(); ++i )
-      {
-        treeView->resizeColumnToContents( i );
-        if ( i < 2 && treeView->columnWidth( i ) > 300 )
-        {
-          treeView->setColumnWidth( i, 300 );
-        }
-      }
       treeView->selectionModel()->select( mModel->index( 0, 0 ), QItemSelectionModel::SelectCurrent | QItemSelectionModel::Rows );
       treeView->setFocus();
+
+      treeView->sortByColumn( 0, Qt::AscendingOrder );
     }
     else
     {
@@ -315,10 +311,8 @@ void QgsArcGisServiceSourceSelect::addButtonClicked()
   {
     try
     {
-      Q_NOWARN_DEPRECATED_PUSH
-      extent = QgsCoordinateTransform( canvasCrs, pCrs ).transform( extent );
-      Q_NOWARN_DEPRECATED_POP
-      QgsDebugMsg( QString( "canvas transform: Canvas CRS=%1, Provider CRS=%2, BBOX=%3" )
+      extent = QgsCoordinateTransform( canvasCrs, pCrs, QgsProject::instance()->transformContext() ).transform( extent );
+      QgsDebugMsg( QStringLiteral( "canvas transform: Canvas CRS=%1, Provider CRS=%2, BBOX=%3" )
                    .arg( canvasCrs.authid(), pCrs.authid(), extent.asWktCoordinates() ) );
     }
     catch ( const QgsCsException & )
@@ -337,21 +331,26 @@ void QgsArcGisServiceSourceSelect::addButtonClicked()
     {
       continue;
     }
+
     int row = idx.row();
-    QString layerTitle = mModel->item( row, 0 )->text(); //layer title/id
-    QString layerName = mModel->item( row, 1 )->text(); //layer name
-    bool cacheFeatures = mServiceType == FeatureService ? mModel->item( row, 3 )->checkState() == Qt::Checked : false;
-    QString filter = mServiceType == FeatureService ? mModel->item( row, 4 )->text() : QLatin1String( "" ); //optional filter specified by user
+    if ( !mModel->itemFromIndex( mModel->index( row, 0, idx.parent() ) )->data( IsLayerRole ).toBool() )
+      continue;
+
+    QString layerTitle = mModel->itemFromIndex( mModel->index( row, 0, idx.parent() ) )->text();  //layer title/id
+    QString layerName = mModel->itemFromIndex( mModel->index( row, 1, idx.parent() ) )->text(); //layer name
+    const QString layerUri = mModel->itemFromIndex( mModel->index( row, 0, idx.parent() ) )->data( UrlRole ).toString();
+    const QString layerId = mModel->itemFromIndex( mModel->index( row, 0, idx.parent() ) )->data( IdRole ).toString();
+    QString filter = mServiceType == FeatureService ? mModel->itemFromIndex( mModel->index( row, 3, idx.parent() ) )->text() : QString(); //optional filter specified by user
     if ( cbxUseTitleLayerName->isChecked() && !layerTitle.isEmpty() )
     {
       layerName = layerTitle;
     }
     QgsRectangle layerExtent;
-    if ( mServiceType == FeatureService && ( cbxFeatureCurrentViewExtent->isChecked() || !cacheFeatures ) )
+    if ( mServiceType == FeatureService && ( cbxFeatureCurrentViewExtent->isChecked() ) )
     {
       layerExtent = extent;
     }
-    QString uri = getLayerURI( connection, layerTitle, layerName, pCrsString, filter, layerExtent );
+    QString uri = getLayerURI( connection, layerUri.isEmpty() ? layerTitle : layerUri, layerName, pCrsString, filter, layerExtent, layerId );
 
     QgsDebugMsg( "Layer " + layerName + ", uri: " + uri );
     addServiceLayer( uri, layerName );
@@ -370,19 +369,20 @@ void QgsArcGisServiceSourceSelect::changeCrs()
 
 void QgsArcGisServiceSourceSelect::changeCrsFilter()
 {
-  QgsDebugMsg( "changeCRSFilter called" );
+  QgsDebugMsg( QStringLiteral( "changeCRSFilter called" ) );
   //evaluate currently selected typename and set the CRS filter in mProjectionSelector
   QModelIndex currentIndex = treeView->selectionModel()->currentIndex();
   if ( currentIndex.isValid() )
   {
     QString currentTypename = currentIndex.sibling( currentIndex.row(), 1 ).data().toString();
-    QgsDebugMsg( QString( "the current typename is: %1" ).arg( currentTypename ) );
+    QgsDebugMsg( QStringLiteral( "the current typename is: %1" ).arg( currentTypename ) );
 
     QMap<QString, QStringList>::const_iterator crsIterator = mAvailableCRS.constFind( currentTypename );
     if ( crsIterator != mAvailableCRS.constEnd() )
     {
       QSet<QString> crsNames;
-      foreach ( const QString &crsName, crsIterator.value() )
+      const QStringList crsNamesList = crsIterator.value();
+      for ( const QString &crsName : crsNamesList )
       {
         crsNames.insert( crsName );
       }
@@ -404,13 +404,13 @@ void QgsArcGisServiceSourceSelect::changeCrsFilter()
 
 void QgsArcGisServiceSourceSelect::cmbConnections_activated( int index )
 {
-  Q_UNUSED( index );
+  Q_UNUSED( index )
   QgsOwsConnection::setSelectedConnection( mServiceName, cmbConnections->currentText() );
 }
 
 void QgsArcGisServiceSourceSelect::treeWidgetItemDoubleClicked( const QModelIndex &index )
 {
-  QgsDebugMsg( "double-click called" );
+  QgsDebugMsg( QStringLiteral( "double-click called" ) );
   QgsOwsConnection connection( mServiceName, cmbConnections->currentText() );
   buildQuery( connection, index );
 }
@@ -418,7 +418,7 @@ void QgsArcGisServiceSourceSelect::treeWidgetItemDoubleClicked( const QModelInde
 void QgsArcGisServiceSourceSelect::treeWidgetCurrentRowChanged( const QModelIndex &current, const QModelIndex &previous )
 {
   Q_UNUSED( previous )
-  QgsDebugMsg( "treeWidget_currentRowChanged called" );
+  QgsDebugMsg( QStringLiteral( "treeWidget_currentRowChanged called" ) );
   changeCrsFilter();
   if ( mServiceType == FeatureService )
   {
@@ -429,7 +429,7 @@ void QgsArcGisServiceSourceSelect::treeWidgetCurrentRowChanged( const QModelInde
 
 void QgsArcGisServiceSourceSelect::buildQueryButtonClicked()
 {
-  QgsDebugMsg( "mBuildQueryButton click called" );
+  QgsDebugMsg( QStringLiteral( "mBuildQueryButton click called" ) );
   QgsOwsConnection connection( mServiceName, cmbConnections->currentText() );
   buildQuery( connection, treeView->selectionModel()->currentIndex() );
 }

@@ -16,7 +16,7 @@
 #define QGSFLOATINGWIDGET_H
 
 #include <QWidget>
-#include "qgis.h"
+#include "qgis_sip.h"
 #include "qgis_gui.h"
 
 class QgsFloatingWidgetEventFilter;
@@ -52,7 +52,7 @@ class GUI_EXPORT QgsFloatingWidget: public QWidget
       BottomMiddle, //!< Bottom center of widget
       BottomRight, //!< Bottom-right of widget
     };
-    Q_ENUM( AnchorPoint );
+    Q_ENUM( AnchorPoint )
 
     /**
      * Constructor for QgsFloatingWidget.

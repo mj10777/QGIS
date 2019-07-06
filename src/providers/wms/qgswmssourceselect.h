@@ -51,8 +51,6 @@ class QgsWMSSourceSelect : public QgsAbstractDataSourceWidget, private Ui::QgsWM
     //! Constructor
     QgsWMSSourceSelect( QWidget *parent = nullptr, Qt::WindowFlags fl = QgsGuiUtils::ModalDialogFlags, QgsProviderRegistry::WidgetMode widgetMode = QgsProviderRegistry::WidgetMode::None );
 
-    ~QgsWMSSourceSelect() override;
-
   public slots:
 
     //! Triggered when the provider's connections need to be refreshed
@@ -86,7 +84,7 @@ class QgsWMSSourceSelect : public QgsAbstractDataSourceWidget, private Ui::QgsWM
     //! Signaled when a layer selection is changed.
     void lstLayers_itemSelectionChanged();
 
-    //! Set status message to theMessage
+    //! Sets status message to theMessage
     void showStatusMessage( QString const &message );
 
     //! show whatever error is exposed by the QgsWmsProvider.
@@ -105,7 +103,7 @@ class QgsWMSSourceSelect : public QgsAbstractDataSourceWidget, private Ui::QgsWM
     //! Connection name
     QString connName();
 
-    //! Set the server connection combo box to that stored in the config file.
+    //! Sets the server connection combo box to that stored in the config file.
     void setConnectionListPosition();
 
     //! Add a few example servers to the list.
@@ -137,7 +135,7 @@ class QgsWMSSourceSelect : public QgsAbstractDataSourceWidget, private Ui::QgsWM
     /**
      * \brief Populate the layer list - private for now.
      *
-     * \retval false if the layers could not be retrieved or parsed -
+     * \returns FALSE if the layers could not be retrieved or parsed -
      *         see mWmsProvider->errorString() for more info
      */
     bool populateLayerList( const QgsWmsCapabilities &capabilities );

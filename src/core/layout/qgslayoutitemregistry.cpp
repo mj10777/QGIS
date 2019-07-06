@@ -31,6 +31,8 @@
 #include "qgslayoutframe.h"
 #include "qgsgloweffect.h"
 #include "qgseffectstack.h"
+#include "qgsvectorlayer.h"
+
 #include <QPainter>
 
 QgsLayoutItemRegistry::QgsLayoutItemRegistry( QObject *parent )
@@ -179,7 +181,7 @@ TestLayoutItem::TestLayoutItem( QgsLayout *layout )
 
 void TestLayoutItem::draw( QgsRenderContext &context, const QStyleOptionGraphicsItem *itemStyle )
 {
-  Q_UNUSED( itemStyle );
+  Q_UNUSED( itemStyle )
 
   QgsEffectStack stack;
   stack.appendEffect( new QgsDrawSourceEffect() );

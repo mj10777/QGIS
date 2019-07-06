@@ -15,7 +15,6 @@
 #ifndef QGSVECTORLAYERFEATURECOUNTER_H
 #define QGSVECTORLAYERFEATURECOUNTER_H
 
-#include "qgsvectorlayer.h"
 #include "qgsvectorlayerfeatureiterator.h"
 #include "qgsrenderer.h"
 #include "qgstaskmanager.h"
@@ -44,7 +43,7 @@ class CORE_EXPORT QgsVectorLayerFeatureCounter : public QgsTask
     bool run() override;
 
     /**
-     * Get the count for each symbol. Only valid after the symbolsCounted()
+     * Gets the count for each symbol. Only valid after the symbolsCounted()
      * signal has been emitted.
      *
      * \note Not available in Python bindings.
@@ -52,7 +51,7 @@ class CORE_EXPORT QgsVectorLayerFeatureCounter : public QgsTask
     QHash<QString, long> symbolFeatureCountMap() const SIP_SKIP;
 
     /**
-     * Get the feature count for a particular \a legendKey.
+     * Gets the feature count for a particular \a legendKey.
      * If the key has not been found, -1 will be returned.
      */
     long featureCount( const QString &legendKey ) const;
